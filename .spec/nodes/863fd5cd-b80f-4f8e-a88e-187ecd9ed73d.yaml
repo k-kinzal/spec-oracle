@@ -1,0 +1,7 @@
+id: 863fd5cd-b80f-4f8e-a88e-187ecd9ed73d
+content: Bidirectional cycles (A --Refines-> B and B --Refines-> A) are prohibited in the specification graph
+kind: Assertion
+metadata: {}
+created_at: 1771112157
+modified_at: 1771112157
+formality_layer: 0

@@ -2,8 +2,8 @@ id: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
 content: The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting
 kind: Constraint
 metadata:
-  function: Commands::Trace
   source_file: spec-cli/src/main.rs
+  function: Commands::Trace
 created_at: 1771062087
 modified_at: 1771062087
 formality_layer: 3

@@ -2,11 +2,11 @@ id: 922d3d6c-de1b-4fdf-8dfc-1e5f67fe083d
 content: Query and analysis
 kind: Assertion
 metadata:
-  source_file: proto/spec_oracle.proto
   inferred: 'true'
-  source_line: '18'
   confidence: '0.95'
+  source_line: '18'
   extractor: proto_rpc
+  source_file: proto/spec_oracle.proto
   rpc_name: Query
 created_at: 1771078430
 modified_at: 1771078430

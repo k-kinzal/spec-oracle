@@ -4,12 +4,12 @@ kind: Definition
 metadata:
   extractor: assertion
   source_file: /tmp/test_extract.rs
+  assertion: login(user, "correct_password").is_ok()
   inferred: 'true'
   confidence: '0.95'
+  source_line: '13'
   example_purpose: test_data
   is_example: 'true'
-  assertion: login(user, "correct_password").is_ok()
-  source_line: '13'
 created_at: 1771094226
 modified_at: 1771094226
 formality_layer: 3

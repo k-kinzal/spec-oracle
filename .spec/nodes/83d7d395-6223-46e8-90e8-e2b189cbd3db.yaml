@@ -3,11 +3,11 @@ content: 'Scenario: generate contract template returns none for non testable'
 kind: Scenario
 metadata:
   inferred: 'true'
-  test_function: generate_contract_template_returns_none_for_non_testable
   source_file: spec-core/src/graph.rs
+  test_function: generate_contract_template_returns_none_for_non_testable
   confidence: '0.9'
-  extractor: test
   source_line: '1912'
+  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

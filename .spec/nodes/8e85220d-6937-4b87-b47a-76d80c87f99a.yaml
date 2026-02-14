@@ -2,12 +2,12 @@ id: 8e85220d-6937-4b87-b47a-76d80c87f99a
 content: Represents a condition that an implementation must satisfy to be in the admissible set.
 kind: Constraint
 metadata:
-  source_line: '180'
-  source_file: spec-core/src/udaf.rs
-  extractor: doc
   inferred: 'true'
-  confidence: '0.8'
+  extractor: doc
   doc_comment: 'true'
+  source_file: spec-core/src/udaf.rs
+  source_line: '180'
+  confidence: '0.8'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 0

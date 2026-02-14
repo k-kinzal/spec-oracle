@@ -2,12 +2,12 @@ id: f3b07262-2e70-4e13-a492-252c48632372
 content: Inter-universe consistency (conversation.md U, D, A, f implementation)
 kind: Assertion
 metadata:
-  confidence: '0.95'
-  source_file: proto/spec_oracle.proto
-  source_line: '49'
   rpc_name: DetectInterUniverseInconsistencies
   inferred: 'true'
+  source_file: proto/spec_oracle.proto
+  confidence: '0.95'
   extractor: proto_rpc
+  source_line: '49'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

@@ -2,10 +2,10 @@ id: 51d204c0-d59a-4508-bdad-d32ec99c64f5
 content: 'RPC: List nodes'
 kind: Assertion
 metadata:
-  rpc_name: ListNodes
   inferred: 'true'
-  source_file: proto/spec_oracle.proto
   confidence: '0.95'
+  rpc_name: ListNodes
+  source_file: proto/spec_oracle.proto
   extractor: proto_rpc
   source_line: '9'
 created_at: 1771078430

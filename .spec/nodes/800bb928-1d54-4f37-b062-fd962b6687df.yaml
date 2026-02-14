@@ -2,12 +2,12 @@ id: 800bb928-1d54-4f37-b062-fd962b6687df
 content: 'RPC: Get node history'
 kind: Assertion
 metadata:
-  confidence: '0.95'
+  rpc_name: GetNodeHistory
+  extractor: proto_rpc
+  inferred: 'true'
   source_line: '45'
   source_file: proto/spec_oracle.proto
-  rpc_name: GetNodeHistory
-  inferred: 'true'
-  extractor: proto_rpc
+  confidence: '0.95'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

@@ -2,11 +2,11 @@ id: 2aa02359-7f35-413f-9a1c-91666c776b9b
 content: 'RPC: Find formalizations'
 kind: Assertion
 metadata:
+  extractor: proto_rpc
+  inferred: 'true'
   source_file: proto/spec_oracle.proto
   confidence: '0.95'
   rpc_name: FindFormalizations
-  inferred: 'true'
-  extractor: proto_rpc
   source_line: '28'
 created_at: 1771078430
 modified_at: 1771078430

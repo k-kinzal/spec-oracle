@@ -2,12 +2,12 @@ id: 4633bc90-2622-4a7b-baa3-bcd1055627f8
 content: 'RPC: Detect layer inconsistencies'
 kind: Assertion
 metadata:
-  source_file: proto/spec_oracle.proto
-  source_line: '21'
   inferred: 'true'
-  rpc_name: DetectLayerInconsistencies
   extractor: proto_rpc
   confidence: '0.95'
+  source_file: proto/spec_oracle.proto
+  source_line: '21'
+  rpc_name: DetectLayerInconsistencies
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

@@ -3,11 +3,11 @@ content: 'Scenario: detect no layer inconsistency correct direction'
 kind: Scenario
 metadata:
   test_function: detect_no_layer_inconsistency_correct_direction
-  extractor: test
   inferred: 'true'
+  source_line: '1781'
   confidence: '0.9'
   source_file: spec-core/src/graph.rs
-  source_line: '1781'
+  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3
