@@ -141,6 +141,28 @@ enum Commands {
     },
     /// Get compliance report for all specifications
     ComplianceReport,
+    /// Query graph state at a specific timestamp
+    QueryAtTimestamp {
+        /// Unix timestamp (seconds since epoch)
+        timestamp: i64,
+    },
+    /// Show changes between two timestamps
+    DiffTimestamps {
+        /// Start timestamp (unix seconds)
+        from: i64,
+        /// End timestamp (unix seconds)
+        to: i64,
+    },
+    /// Show history of changes for a node
+    NodeHistory {
+        /// Node ID
+        id: String,
+    },
+    /// Show compliance trend over time for a node
+    ComplianceTrend {
+        /// Node ID
+        id: String,
+    },
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -644,6 +666,154 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         indicator, score_pct, node.id, node_kind_name(node.kind),
                         node.content.chars().take(60).collect::<String>());
                 }
+            }
+        }
+        Commands::QueryAtTimestamp { timestamp } => {
+            let resp = client
+                .query_at_timestamp(Request::new(proto::QueryAtTimestampRequest {
+                    timestamp,
+                }))
+                .await?;
+            let result = resp.into_inner();
+
+            let dt = chrono::DateTime::from_timestamp(result.timestamp, 0)
+                .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                .unwrap_or_else(|| format!("timestamp {}", result.timestamp));
+
+            println!("Graph State at {}:\n", dt);
+            println!("  Nodes: {}", result.node_count);
+            println!("  Edges: {}", result.edge_count);
+
+            if !result.nodes.is_empty() {
+                println!("\n  Nodes:");
+                for node in result.nodes.iter().take(10) {
+                    println!("    [{}] {} - {}",
+                        node.id, node_kind_name(node.kind),
+                        node.content.chars().take(60).collect::<String>());
+                }
+                if result.nodes.len() > 10 {
+                    println!("    ... and {} more", result.nodes.len() - 10);
+                }
+            }
+        }
+        Commands::DiffTimestamps { from, to } => {
+            let resp = client
+                .diff_timestamps(Request::new(proto::DiffTimestampsRequest {
+                    from_timestamp: from,
+                    to_timestamp: to,
+                }))
+                .await?;
+            let result = resp.into_inner();
+
+            let from_dt = chrono::DateTime::from_timestamp(result.from_timestamp, 0)
+                .map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string())
+                .unwrap_or_else(|| format!("{}", result.from_timestamp));
+            let to_dt = chrono::DateTime::from_timestamp(result.to_timestamp, 0)
+                .map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string())
+                .unwrap_or_else(|| format!("{}", result.to_timestamp));
+
+            println!("Changes from {} to {}:\n", from_dt, to_dt);
+
+            if !result.added_nodes.is_empty() {
+                println!("  Added Nodes ({}):", result.added_nodes.len());
+                for node in result.added_nodes.iter().take(5) {
+                    println!("    + [{}] {} - {}",
+                        node.id, node_kind_name(node.kind),
+                        node.content.chars().take(60).collect::<String>());
+                }
+                if result.added_nodes.len() > 5 {
+                    println!("    ... and {} more", result.added_nodes.len() - 5);
+                }
+            }
+
+            if !result.removed_nodes.is_empty() {
+                println!("\n  Removed Nodes ({}):", result.removed_nodes.len());
+                for node in result.removed_nodes.iter().take(5) {
+                    println!("    - [{}] {} - {}",
+                        node.id, node_kind_name(node.kind),
+                        node.content.chars().take(60).collect::<String>());
+                }
+                if result.removed_nodes.len() > 5 {
+                    println!("    ... and {} more", result.removed_nodes.len() - 5);
+                }
+            }
+
+            if !result.modified_nodes.is_empty() {
+                println!("\n  Modified Nodes ({}):", result.modified_nodes.len());
+                for change in result.modified_nodes.iter().take(5) {
+                    if let (Some(from), Some(to)) = (&change.from_node, &change.to_node) {
+                        println!("    ~ [{}] {} -> {}",
+                            from.id,
+                            from.content.chars().take(30).collect::<String>(),
+                            to.content.chars().take(30).collect::<String>());
+                    }
+                }
+                if result.modified_nodes.len() > 5 {
+                    println!("    ... and {} more", result.modified_nodes.len() - 5);
+                }
+            }
+
+            if result.added_nodes.is_empty() && result.removed_nodes.is_empty() && result.modified_nodes.is_empty() {
+                println!("  No changes detected in this time range.");
+            }
+        }
+        Commands::NodeHistory { id } => {
+            let resp = client
+                .get_node_history(Request::new(proto::GetNodeHistoryRequest {
+                    node_id: id.clone(),
+                }))
+                .await?;
+            let result = resp.into_inner();
+
+            if let Some(node) = result.node {
+                println!("History for node '{}':", id);
+                println!("  Content: {}\n", node.content);
+
+                if result.events.is_empty() {
+                    println!("  No history events recorded.");
+                } else {
+                    println!("  Timeline ({} events):", result.events.len());
+                    for event in result.events {
+                        let dt = chrono::DateTime::from_timestamp(event.timestamp, 0)
+                            .map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string())
+                            .unwrap_or_else(|| format!("{}", event.timestamp));
+                        println!("    {} - {} - {}", dt, event.event_type, event.description);
+                    }
+                }
+            } else {
+                println!("Node '{}' not found.", id);
+            }
+        }
+        Commands::ComplianceTrend { id } => {
+            let resp = client
+                .get_compliance_trend(Request::new(proto::GetComplianceTrendRequest {
+                    node_id: id.clone(),
+                }))
+                .await?;
+            let result = resp.into_inner();
+
+            if let Some(node) = result.node {
+                println!("Compliance Trend for node '{}':", id);
+                println!("  Content: {}\n", node.content);
+
+                if result.data_points.is_empty() {
+                    println!("  No compliance data available.");
+                    println!("  Store compliance scores in metadata as 'compliance_<timestamp>'");
+                } else {
+                    println!("  Trend Direction: {}", result.trend_direction);
+                    println!("  Data Points ({}):", result.data_points.len());
+                    for point in result.data_points {
+                        let dt = chrono::DateTime::from_timestamp(point.timestamp, 0)
+                            .map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string())
+                            .unwrap_or_else(|| format!("{}", point.timestamp));
+                        let score_pct = (point.score * 100.0) as u32;
+                        let bar_length = (point.score * 20.0) as usize;
+                        let bar = "█".repeat(bar_length) + &"░".repeat(20 - bar_length);
+                        println!("    {} - {:3}% [{}]", dt, score_pct, bar);
+                    }
+                }
+            } else {
+                println!("Node '{}' not found or no compliance data.", id);
             }
         }
     }

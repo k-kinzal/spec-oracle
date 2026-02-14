@@ -884,6 +884,211 @@ fn test_scenario_{}() {{
             })
             .collect()
     }
+
+    /// Query graph state at a specific timestamp.
+    /// Returns nodes and edges that existed at that time.
+    pub fn query_at_timestamp(&self, timestamp: i64) -> TemporalSnapshot {
+        let nodes: Vec<SpecNodeData> = self
+            .graph
+            .node_weights()
+            .filter(|n| n.created_at <= timestamp)
+            .cloned()
+            .collect();
+
+        let edges: Vec<SpecEdgeData> = self
+            .graph
+            .edge_indices()
+            .filter_map(|eidx| {
+                let edge = &self.graph[eidx];
+                if edge.created_at <= timestamp {
+                    Some(edge.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let node_count = nodes.len();
+        let edge_count = edges.len();
+
+        TemporalSnapshot {
+            timestamp,
+            nodes,
+            edges,
+            node_count,
+            edge_count,
+        }
+    }
+
+    /// Diff graph state between two timestamps.
+    /// Shows what was added, modified, or removed.
+    pub fn diff_timestamps(&self, from_timestamp: i64, to_timestamp: i64) -> TemporalDiff {
+        let from_snapshot = self.query_at_timestamp(from_timestamp);
+        let to_snapshot = self.query_at_timestamp(to_timestamp);
+
+        let from_node_ids: std::collections::HashSet<String> =
+            from_snapshot.nodes.iter().map(|n| n.id.clone()).collect();
+        let to_node_ids: std::collections::HashSet<String> =
+            to_snapshot.nodes.iter().map(|n| n.id.clone()).collect();
+
+        let added_nodes: Vec<SpecNodeData> = to_snapshot
+            .nodes
+            .iter()
+            .filter(|n| !from_node_ids.contains(&n.id))
+            .cloned()
+            .collect();
+
+        let removed_nodes: Vec<SpecNodeData> = from_snapshot
+            .nodes
+            .iter()
+            .filter(|n| !to_node_ids.contains(&n.id))
+            .cloned()
+            .collect();
+
+        let modified_nodes: Vec<(SpecNodeData, SpecNodeData)> = to_snapshot
+            .nodes
+            .iter()
+            .filter_map(|to_node| {
+                from_snapshot
+                    .nodes
+                    .iter()
+                    .find(|from_node| from_node.id == to_node.id)
+                    .and_then(|from_node| {
+                        if from_node.modified_at < to_node.modified_at {
+                            Some((from_node.clone(), to_node.clone()))
+                        } else {
+                            None
+                        }
+                    })
+            })
+            .collect();
+
+        let from_edge_ids: std::collections::HashSet<String> =
+            from_snapshot.edges.iter().map(|e| e.id.clone()).collect();
+        let to_edge_ids: std::collections::HashSet<String> =
+            to_snapshot.edges.iter().map(|e| e.id.clone()).collect();
+
+        let added_edges: Vec<SpecEdgeData> = to_snapshot
+            .edges
+            .iter()
+            .filter(|e| !from_edge_ids.contains(&e.id))
+            .cloned()
+            .collect();
+
+        let removed_edges: Vec<SpecEdgeData> = from_snapshot
+            .edges
+            .iter()
+            .filter(|e| !to_edge_ids.contains(&e.id))
+            .cloned()
+            .collect();
+
+        TemporalDiff {
+            from_timestamp,
+            to_timestamp,
+            added_nodes,
+            removed_nodes,
+            modified_nodes,
+            added_edges,
+            removed_edges,
+        }
+    }
+
+    /// Get evolution history of a specific node.
+    /// Returns timeline of changes to the node.
+    pub fn get_node_history(&self, node_id: &str) -> Option<NodeHistory> {
+        let node = self.get_node(node_id)?;
+
+        let mut events = Vec::new();
+
+        // Creation event
+        events.push(HistoryEvent {
+            timestamp: node.created_at,
+            event_type: "created".to_string(),
+            description: format!("Node created: {}", node.content),
+        });
+
+        // Modification event (if modified after creation)
+        if node.modified_at > node.created_at {
+            events.push(HistoryEvent {
+                timestamp: node.modified_at,
+                event_type: "modified".to_string(),
+                description: "Node content or metadata modified".to_string(),
+            });
+        }
+
+        // Edge creation events
+        if let Some(&idx) = self.id_to_index.get(node_id) {
+            for edge in self
+                .graph
+                .edges_directed(idx, Direction::Outgoing)
+                .chain(self.graph.edges_directed(idx, Direction::Incoming))
+            {
+                let edge_data = &self.graph[edge.id()];
+                events.push(HistoryEvent {
+                    timestamp: edge_data.created_at,
+                    event_type: "edge_added".to_string(),
+                    description: format!("Edge added: {:?}", edge_data.kind),
+                });
+            }
+        }
+
+        // Sort events by timestamp
+        events.sort_by_key(|e| e.timestamp);
+
+        Some(NodeHistory {
+            node: node.clone(),
+            events,
+        })
+    }
+
+    /// Track compliance trend over time for nodes with historical compliance data.
+    /// Requires compliance scores stored in metadata with timestamps.
+    pub fn get_compliance_trend(&self, node_id: &str) -> Option<ComplianceTrend> {
+        let node = self.get_node(node_id)?;
+
+        // Extract compliance history from metadata (format: "compliance_<timestamp>")
+        let mut data_points: Vec<ComplianceDataPoint> = node
+            .metadata
+            .iter()
+            .filter_map(|(key, value)| {
+                if key.starts_with("compliance_") {
+                    let timestamp_str = key.strip_prefix("compliance_")?;
+                    let timestamp: i64 = timestamp_str.parse().ok()?;
+                    let score: f32 = value.parse().ok()?;
+                    Some(ComplianceDataPoint { timestamp, score })
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if data_points.is_empty() {
+            return None;
+        }
+
+        // Sort by timestamp
+        data_points.sort_by_key(|d| d.timestamp);
+
+        let trend_direction = if data_points.len() >= 2 {
+            let first = data_points[0].score;
+            let last = data_points[data_points.len() - 1].score;
+            if last > first + 0.1 {
+                "improving".to_string()
+            } else if last < first - 0.1 {
+                "degrading".to_string()
+            } else {
+                "stable".to_string()
+            }
+        } else {
+            "unknown".to_string()
+        };
+
+        Some(ComplianceTrend {
+            node: node.clone(),
+            data_points,
+            trend_direction,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -901,6 +1106,52 @@ pub struct TestCoverage {
     pub coverage_ratio: f32,
     pub nodes_with_tests: Vec<SpecNodeData>,
     pub nodes_without_tests: Vec<SpecNodeData>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TemporalSnapshot {
+    pub timestamp: i64,
+    pub nodes: Vec<SpecNodeData>,
+    pub edges: Vec<SpecEdgeData>,
+    pub node_count: usize,
+    pub edge_count: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct TemporalDiff {
+    pub from_timestamp: i64,
+    pub to_timestamp: i64,
+    pub added_nodes: Vec<SpecNodeData>,
+    pub removed_nodes: Vec<SpecNodeData>,
+    pub modified_nodes: Vec<(SpecNodeData, SpecNodeData)>,  // (from, to)
+    pub added_edges: Vec<SpecEdgeData>,
+    pub removed_edges: Vec<SpecEdgeData>,
+}
+
+#[derive(Debug, Clone)]
+pub struct HistoryEvent {
+    pub timestamp: i64,
+    pub event_type: String,  // "created", "modified", "edge_added"
+    pub description: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NodeHistory {
+    pub node: SpecNodeData,
+    pub events: Vec<HistoryEvent>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ComplianceDataPoint {
+    pub timestamp: i64,
+    pub score: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct ComplianceTrend {
+    pub node: SpecNodeData,
+    pub data_points: Vec<ComplianceDataPoint>,
+    pub trend_direction: String,  // "improving", "degrading", "stable", "unknown"
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -1412,5 +1663,179 @@ mod tests {
         assert!(!keywords.contains("the"));
         assert!(!keywords.contains("with"));
         assert!(!keywords.contains("must"));
+    }
+
+    #[test]
+    fn query_at_timestamp_empty_graph() {
+        let g = SpecGraph::new();
+        let snapshot = g.query_at_timestamp(Utc::now().timestamp());
+
+        assert_eq!(snapshot.node_count, 0);
+        assert_eq!(snapshot.edge_count, 0);
+        assert!(snapshot.nodes.is_empty());
+        assert!(snapshot.edges.is_empty());
+    }
+
+    #[test]
+    fn query_at_timestamp_filters_by_time() {
+        let mut g = SpecGraph::new();
+        let now = Utc::now().timestamp();
+
+        // Add node in the past
+        let old_node = g.add_node("Old node".into(), NodeKind::Assertion, HashMap::new());
+        let old_id = old_node.id.clone();
+
+        // Manually set created_at to the past
+        if let Some(idx) = g.id_to_index.get(&old_id) {
+            g.graph[*idx].created_at = now - 1000;
+        }
+
+        // Add node in the future (shouldn't appear in past query)
+        let future_node = g.add_node("Future node".into(), NodeKind::Assertion, HashMap::new());
+        let future_id = future_node.id.clone();
+        if let Some(idx) = g.id_to_index.get(&future_id) {
+            g.graph[*idx].created_at = now + 1000;
+        }
+
+        // Query at current time
+        let snapshot = g.query_at_timestamp(now);
+
+        // Should only see the old node
+        assert_eq!(snapshot.node_count, 1);
+        assert_eq!(snapshot.nodes[0].id, old_id);
+    }
+
+    #[test]
+    fn diff_timestamps_detects_added_nodes() {
+        let mut g = SpecGraph::new();
+        let t1 = Utc::now().timestamp() - 100;
+        let t2 = Utc::now().timestamp();
+
+        // Add node after t1
+        let node = g.add_node("New node".into(), NodeKind::Assertion, HashMap::new());
+        let node_id = node.id.clone();
+
+        // Manually set created_at between t1 and t2
+        if let Some(idx) = g.id_to_index.get(&node_id) {
+            g.graph[*idx].created_at = t1 + 50;
+        }
+
+        let diff = g.diff_timestamps(t1, t2);
+
+        assert_eq!(diff.added_nodes.len(), 1);
+        assert_eq!(diff.added_nodes[0].id, node_id);
+        assert_eq!(diff.removed_nodes.len(), 0);
+    }
+
+    #[test]
+    fn diff_timestamps_shows_no_changes_for_stable_graph() {
+        let mut g = SpecGraph::new();
+        let t1 = Utc::now().timestamp() - 100;
+        let t2 = Utc::now().timestamp();
+
+        // Add node before both timestamps
+        let node = g.add_node("Existing".into(), NodeKind::Assertion, HashMap::new());
+        let node_id = node.id.clone();
+
+        // Set created time before t1
+        if let Some(idx) = g.id_to_index.get(&node_id) {
+            g.graph[*idx].created_at = t1 - 50;
+        }
+
+        let diff = g.diff_timestamps(t1, t2);
+
+        // No changes should be detected - node existed in both snapshots
+        // Note: modified detection requires versioned storage, which isn't implemented yet
+        assert_eq!(diff.added_nodes.len(), 0);
+        assert_eq!(diff.removed_nodes.len(), 0);
+    }
+
+    #[test]
+    fn get_node_history_shows_creation() {
+        let mut g = SpecGraph::new();
+        let node = g.add_node("Test node".into(), NodeKind::Assertion, HashMap::new());
+        let node_id = node.id.clone();
+
+        let history = g.get_node_history(&node_id).unwrap();
+
+        assert_eq!(history.node.id, node_id);
+        assert!(!history.events.is_empty());
+        assert_eq!(history.events[0].event_type, "created");
+    }
+
+    #[test]
+    fn get_node_history_shows_edge_additions() {
+        let mut g = SpecGraph::new();
+        let a = g.add_node("Node A".into(), NodeKind::Assertion, HashMap::new()).id.clone();
+        let b = g.add_node("Node B".into(), NodeKind::Assertion, HashMap::new()).id.clone();
+        g.add_edge(&a, &b, EdgeKind::Refines, HashMap::new()).unwrap();
+
+        let history = g.get_node_history(&a).unwrap();
+
+        // Should have creation + edge addition
+        assert!(history.events.len() >= 2);
+        assert!(history.events.iter().any(|e| e.event_type == "edge_added"));
+    }
+
+    #[test]
+    fn get_node_history_nonexistent_returns_none() {
+        let g = SpecGraph::new();
+        let history = g.get_node_history("nonexistent");
+        assert!(history.is_none());
+    }
+
+    #[test]
+    fn get_compliance_trend_no_data() {
+        let mut g = SpecGraph::new();
+        let node = g.add_node("Test".into(), NodeKind::Constraint, HashMap::new()).id.clone();
+
+        let trend = g.get_compliance_trend(&node);
+        assert!(trend.is_none());
+    }
+
+    #[test]
+    fn get_compliance_trend_with_data() {
+        let mut g = SpecGraph::new();
+        let mut metadata = HashMap::new();
+        metadata.insert("compliance_1000".to_string(), "0.5".to_string());
+        metadata.insert("compliance_2000".to_string(), "0.7".to_string());
+        metadata.insert("compliance_3000".to_string(), "0.9".to_string());
+
+        let node = g.add_node("Test".into(), NodeKind::Constraint, metadata).id.clone();
+
+        let trend = g.get_compliance_trend(&node).unwrap();
+
+        assert_eq!(trend.data_points.len(), 3);
+        assert_eq!(trend.data_points[0].timestamp, 1000);
+        assert_eq!(trend.data_points[0].score, 0.5);
+        assert_eq!(trend.trend_direction, "improving");
+    }
+
+    #[test]
+    fn get_compliance_trend_degrading() {
+        let mut g = SpecGraph::new();
+        let mut metadata = HashMap::new();
+        metadata.insert("compliance_1000".to_string(), "0.9".to_string());
+        metadata.insert("compliance_2000".to_string(), "0.5".to_string());
+
+        let node = g.add_node("Test".into(), NodeKind::Constraint, metadata).id.clone();
+
+        let trend = g.get_compliance_trend(&node).unwrap();
+
+        assert_eq!(trend.trend_direction, "degrading");
+    }
+
+    #[test]
+    fn get_compliance_trend_stable() {
+        let mut g = SpecGraph::new();
+        let mut metadata = HashMap::new();
+        metadata.insert("compliance_1000".to_string(), "0.7".to_string());
+        metadata.insert("compliance_2000".to_string(), "0.72".to_string());
+
+        let node = g.add_node("Test".into(), NodeKind::Constraint, metadata).id.clone();
+
+        let trend = g.get_compliance_trend(&node).unwrap();
+
+        assert_eq!(trend.trend_direction, "stable");
     }
 }

@@ -478,4 +478,157 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
             entries,
         }))
     }
+
+    async fn query_at_timestamp(
+        &self,
+        request: Request<proto::QueryAtTimestampRequest>,
+    ) -> Result<Response<proto::QueryAtTimestampResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+
+        let snapshot = graph.query_at_timestamp(req.timestamp);
+
+        let nodes: Vec<proto::SpecNode> = snapshot.nodes.iter().map(to_proto_node).collect();
+
+        let edges: Vec<proto::SpecEdge> = snapshot
+            .edges
+            .iter()
+            .map(|e| {
+                // For snapshot edges, we need source and target IDs
+                // They're already in the snapshot, so we can use empty strings for now
+                // (this is a limitation of the current design)
+                proto::SpecEdge {
+                    id: e.id.clone(),
+                    source_id: String::new(),
+                    target_id: String::new(),
+                    kind: to_proto_edge_kind(e.kind).into(),
+                    metadata: e.metadata.clone(),
+                    created_at: e.created_at,
+                }
+            })
+            .collect();
+
+        Ok(Response::new(proto::QueryAtTimestampResponse {
+            timestamp: snapshot.timestamp,
+            nodes,
+            edges,
+            node_count: snapshot.node_count as u32,
+            edge_count: snapshot.edge_count as u32,
+        }))
+    }
+
+    async fn diff_timestamps(
+        &self,
+        request: Request<proto::DiffTimestampsRequest>,
+    ) -> Result<Response<proto::DiffTimestampsResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+
+        let diff = graph.diff_timestamps(req.from_timestamp, req.to_timestamp);
+
+        let added_nodes: Vec<proto::SpecNode> =
+            diff.added_nodes.iter().map(to_proto_node).collect();
+
+        let removed_nodes: Vec<proto::SpecNode> =
+            diff.removed_nodes.iter().map(to_proto_node).collect();
+
+        let modified_nodes: Vec<proto::NodeChange> = diff
+            .modified_nodes
+            .iter()
+            .map(|(from, to)| proto::NodeChange {
+                from_node: Some(to_proto_node(from)),
+                to_node: Some(to_proto_node(to)),
+            })
+            .collect();
+
+        let added_edges: Vec<proto::SpecEdge> = diff
+            .added_edges
+            .iter()
+            .map(|e| proto::SpecEdge {
+                id: e.id.clone(),
+                source_id: String::new(),
+                target_id: String::new(),
+                kind: to_proto_edge_kind(e.kind).into(),
+                metadata: e.metadata.clone(),
+                created_at: e.created_at,
+            })
+            .collect();
+
+        let removed_edges: Vec<proto::SpecEdge> = diff
+            .removed_edges
+            .iter()
+            .map(|e| proto::SpecEdge {
+                id: e.id.clone(),
+                source_id: String::new(),
+                target_id: String::new(),
+                kind: to_proto_edge_kind(e.kind).into(),
+                metadata: e.metadata.clone(),
+                created_at: e.created_at,
+            })
+            .collect();
+
+        Ok(Response::new(proto::DiffTimestampsResponse {
+            from_timestamp: diff.from_timestamp,
+            to_timestamp: diff.to_timestamp,
+            added_nodes,
+            removed_nodes,
+            modified_nodes,
+            added_edges,
+            removed_edges,
+        }))
+    }
+
+    async fn get_node_history(
+        &self,
+        request: Request<proto::GetNodeHistoryRequest>,
+    ) -> Result<Response<proto::GetNodeHistoryResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+
+        let history = graph
+            .get_node_history(&req.node_id)
+            .ok_or_else(|| Status::not_found("Node not found"))?;
+
+        let events: Vec<proto::HistoryEvent> = history
+            .events
+            .iter()
+            .map(|e| proto::HistoryEvent {
+                timestamp: e.timestamp,
+                event_type: e.event_type.clone(),
+                description: e.description.clone(),
+            })
+            .collect();
+
+        Ok(Response::new(proto::GetNodeHistoryResponse {
+            node: Some(to_proto_node(&history.node)),
+            events,
+        }))
+    }
+
+    async fn get_compliance_trend(
+        &self,
+        request: Request<proto::GetComplianceTrendRequest>,
+    ) -> Result<Response<proto::GetComplianceTrendResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+
+        let trend = graph
+            .get_compliance_trend(&req.node_id)
+            .ok_or_else(|| Status::not_found("Node not found or no compliance data"))?;
+
+        let data_points: Vec<proto::ComplianceDataPoint> = trend
+            .data_points
+            .iter()
+            .map(|d| proto::ComplianceDataPoint {
+                timestamp: d.timestamp,
+                score: d.score,
+            })
+            .collect();
+
+        Ok(Response::new(proto::GetComplianceTrendResponse {
+            node: Some(to_proto_node(&trend.node)),
+            data_points,
+            trend_direction: trend.trend_direction,
+        }))
+    }
 }

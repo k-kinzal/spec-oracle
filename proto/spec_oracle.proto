@@ -38,6 +38,12 @@ service SpecOracle {
   // Graded compliance
   rpc CalculateCompliance(CalculateComplianceRequest) returns (CalculateComplianceResponse);
   rpc GetComplianceReport(GetComplianceReportRequest) returns (GetComplianceReportResponse);
+
+  // Temporal queries
+  rpc QueryAtTimestamp(QueryAtTimestampRequest) returns (QueryAtTimestampResponse);
+  rpc DiffTimestamps(DiffTimestampsRequest) returns (DiffTimestampsResponse);
+  rpc GetNodeHistory(GetNodeHistoryRequest) returns (GetNodeHistoryResponse);
+  rpc GetComplianceTrend(GetComplianceTrendRequest) returns (GetComplianceTrendResponse);
 }
 
 // --- Node types ---
@@ -285,4 +291,66 @@ message ComplianceEntry {
   float keyword_overlap = 3;
   float structural_match = 4;
   string explanation = 5;
+}
+
+message QueryAtTimestampRequest {
+  int64 timestamp = 1;  // Unix timestamp
+}
+
+message QueryAtTimestampResponse {
+  int64 timestamp = 1;
+  repeated SpecNode nodes = 2;
+  repeated SpecEdge edges = 3;
+  uint32 node_count = 4;
+  uint32 edge_count = 5;
+}
+
+message DiffTimestampsRequest {
+  int64 from_timestamp = 1;
+  int64 to_timestamp = 2;
+}
+
+message DiffTimestampsResponse {
+  int64 from_timestamp = 1;
+  int64 to_timestamp = 2;
+  repeated SpecNode added_nodes = 3;
+  repeated SpecNode removed_nodes = 4;
+  repeated NodeChange modified_nodes = 5;
+  repeated SpecEdge added_edges = 6;
+  repeated SpecEdge removed_edges = 7;
+}
+
+message NodeChange {
+  SpecNode from_node = 1;
+  SpecNode to_node = 2;
+}
+
+message GetNodeHistoryRequest {
+  string node_id = 1;
+}
+
+message GetNodeHistoryResponse {
+  SpecNode node = 1;
+  repeated HistoryEvent events = 2;
+}
+
+message HistoryEvent {
+  int64 timestamp = 1;
+  string event_type = 2;  // "created", "modified", "edge_added"
+  string description = 3;
+}
+
+message GetComplianceTrendRequest {
+  string node_id = 1;
+}
+
+message GetComplianceTrendResponse {
+  SpecNode node = 1;
+  repeated ComplianceDataPoint data_points = 2;
+  string trend_direction = 3;  // "improving", "degrading", "stable", "unknown"
+}
+
+message ComplianceDataPoint {
+  int64 timestamp = 1;
+  float score = 2;
 }
