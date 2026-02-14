@@ -401,9 +401,9 @@ impl UDAFModel {
     /// U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)
     ///
     /// This is the core operation that realizes the theoretical model.
-    pub fn construct_u0(&mut self, graph: &crate::SpecGraph) -> Result<Vec<String>, String> {
-        // Collect all specifications from projection universes by executing transforms
-        let mut u0_specs = HashSet::new();
+    /// Returns the newly extracted InferredSpecification objects that should be ingested into the graph.
+    pub fn construct_u0(&mut self, graph: &crate::SpecGraph) -> Result<Vec<crate::InferredSpecification>, String> {
+        // Collect all newly extracted specifications from projection universes
         let mut newly_created_specs = Vec::new();
 
         // For each projection universe (U1, U2, U3...)
@@ -418,23 +418,9 @@ impl UDAFModel {
             if let Some(transform) = self.transforms.get(&inverse_transform_id) {
                 // Execute the transform strategy to extract/map specifications
                 let extracted_specs = self.execute_transform(transform, graph)?;
-
-                for spec_id in extracted_specs {
-                    if u0_specs.insert(spec_id.clone()) {
-                        newly_created_specs.push(spec_id);
-                    }
-                }
-            }
-
-            // Also include existing specifications from this universe
-            for spec_id in &universe.specifications {
-                u0_specs.insert(spec_id.clone());
+                newly_created_specs.extend(extracted_specs);
             }
         }
-
-        // Update U0 with the collected specifications
-        let u0 = self.universes.get_mut("U0").expect("U0 must exist");
-        u0.specifications = u0_specs;
 
         Ok(newly_created_specs)
     }
@@ -444,7 +430,7 @@ impl UDAFModel {
         &self,
         transform: &TransformFunction,
         graph: &crate::SpecGraph,
-    ) -> Result<Vec<String>, String> {
+    ) -> Result<Vec<crate::InferredSpecification>, String> {
         match &transform.strategy {
             TransformStrategy::ASTAnalysis { language, extractor_config } => {
                 // Execute AST analysis for the specified language
@@ -470,14 +456,14 @@ impl UDAFModel {
         &self,
         config: &HashMap<String, String>,
         graph: &crate::SpecGraph,
-    ) -> Result<Vec<String>, String> {
+    ) -> Result<Vec<crate::InferredSpecification>, String> {
         use crate::RustExtractor;
         use std::path::Path;
 
         // Get source files from config or find them in graph metadata
         let source_files = self.find_rust_source_files(config, graph)?;
 
-        let mut extracted_spec_ids = Vec::new();
+        let mut extracted_specs = Vec::new();
 
         for file_path in source_files {
             let path = Path::new(&file_path);
@@ -493,14 +479,9 @@ impl UDAFModel {
 
                     for spec in inferred_specs {
                         if spec.confidence >= min_confidence {
-                            // These would be added to the graph in a full integration
-                            // For now, we return metadata about what was extracted
-                            extracted_spec_ids.push(format!(
-                                "extracted:{}:{}:{}",
-                                spec.source_file,
-                                spec.source_line,
-                                spec.content.chars().take(30).collect::<String>()
-                            ));
+                            // Return the actual InferredSpecification objects
+                            // These will be ingested into the graph
+                            extracted_specs.push(spec);
                         }
                     }
                 }
@@ -510,7 +491,7 @@ impl UDAFModel {
             }
         }
 
-        Ok(extracted_spec_ids)
+        Ok(extracted_specs)
     }
 
     /// Find Rust source files to analyze from config or graph metadata

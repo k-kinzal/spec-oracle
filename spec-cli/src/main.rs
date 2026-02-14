@@ -1525,7 +1525,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             println!("═══════════════════════════════════════════════════════════════");
         }
         Commands::ConstructU0 { execute, verbose } => {
-            let graph = store.load()?;
+            let mut graph = store.load()?;
 
             println!("🏗️  Constructing U0 from Projection Universes\n");
             println!("═══════════════════════════════════════════════════════════════\n");
@@ -1554,20 +1554,48 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                         println!("   Newly extracted specifications: {}", newly_created.len());
 
                         if verbose && !newly_created.is_empty() {
-                            println!("\n   Extracted specs:");
-                            for (i, spec_id) in newly_created.iter().take(10).enumerate() {
-                                println!("   {}. {}", i + 1, spec_id);
+                            println!("\n   Extracted specs (first 10):");
+                            for (i, spec) in newly_created.iter().take(10).enumerate() {
+                                let preview = if spec.content.len() > 50 {
+                                    format!("{}...", &spec.content[..47])
+                                } else {
+                                    spec.content.clone()
+                                };
+                                println!("   {}. {} [confidence: {:.2}]", i + 1, preview, spec.confidence);
                             }
                             if newly_created.len() > 10 {
                                 println!("   ... and {} more", newly_created.len() - 10);
                             }
                         }
 
-                        // Show final U0 size
-                        if let Some(u0) = udaf_model.universes.get("U0") {
-                            println!("\n📊 Final U0 State:");
-                            println!("   Total specifications in U0: {}", u0.specifications.len());
+                        // Ingest the extracted specifications into the graph
+                        if !newly_created.is_empty() {
+                            println!("\n⚙️  Ingesting extracted specifications into graph...\n");
+                            let report = graph.ingest(newly_created);
+
+                            println!("✅ Ingestion complete:");
+                            println!("   Nodes created: {}", report.nodes_created);
+                            println!("   Nodes skipped: {} (duplicates or low quality)", report.nodes_skipped);
+                            println!("   Edges created: {}", report.edges_created);
+                            if !report.suggestions.is_empty() {
+                                println!("   Edge suggestions: {} (require review)", report.suggestions.len());
+                            }
+
+                            // Save the updated graph
+                            store.save(&graph).map_err(|e| format!("Failed to save graph: {}", e))?;
+                            println!("\n💾 Graph saved successfully");
+                        } else {
+                            println!("\n   No new specifications to ingest (all already exist or below confidence threshold)");
                         }
+
+                        // Show final counts
+                        let total_specs = graph.list_nodes(None).len();
+                        let u0_specs = graph.list_nodes(None).iter()
+                            .filter(|n| parse_formality_layer(n.formality_layer) == 0)
+                            .count();
+                        println!("\n📊 Final State:");
+                        println!("   Total specifications: {}", total_specs);
+                        println!("   U0 specifications: {}", u0_specs);
                     }
                     Err(e) => {
                         eprintln!("❌ Error during U0 construction: {}", e);
