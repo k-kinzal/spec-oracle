@@ -16,7 +16,9 @@ This goal has not yet been met. Research it. Search for it. Surpass the failures
 
 ## Desirable
 
-- Record the work performed under the `tasks` directory. There is no specific format required.
+- First, please verify the specifications using the specification writing tool you initially created.
+- Record the work performed under the `tasks` directory. There are no specific format requirements.
+- Finally, ensure that the updated specifications are saved within the specification writing tool you created.
 
 ## Motivation
 

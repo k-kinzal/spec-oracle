@@ -16,6 +16,7 @@ A next-generation specification description tool with strict graph-based specifi
 - Omission detection (isolated nodes, incomplete domains, unsupported scenarios)
 - Inter-universe consistency checking (multi-layered specification validation)
 - Automatic specification extraction from code (Rust)
+- **Continuous synchronization via watch mode** (monitors code changes, maintains spec integrity)
 - Natural language querying via AI integration (claude, codex)
 - Terminology resolution and synonym management
 - Temporal queries and compliance tracking
@@ -75,6 +76,35 @@ cargo run --bin spec -- detect-contradictions
 
 **Practical demonstration**: Successfully manages 345+ specifications with automatic relationship inference generating 354 suggestions for human review.
 
+## Example: Continuous Specification Synchronization
+
+```bash
+# Watch a directory for changes and maintain spec integrity
+cargo run --bin spec -- watch ./src --min-confidence 0.8
+
+# Output:
+# 🔍 Watching ./src for changes...
+#    Confidence threshold: 0.8
+#    Check interval: 2s
+#    Press Ctrl+C to stop
+#
+# 📦 Performing initial extraction...
+# ✓ Extracted 127 specifications
+#
+# 🔬 Running initial verification...
+#    ✓ No contradictions
+#    ⚠️  23 isolated specification(s)
+#
+# 📝 Change detected: "auth.rs"
+#    Re-extracting specifications...
+#    ✓ Updated 127 specifications
+#    🔬 Verifying...
+#    ✓ No contradictions
+#    ⚠️  19 isolated specification(s)
+```
+
+**Breakthrough feature**: Specifications automatically stay synchronized with code evolution - no manual intervention required.
+
 ## Commands
 
 ### Node Operations
@@ -96,6 +126,9 @@ cargo run --bin spec -- detect-contradictions
 - `resolve-term <term>` - Find definitions and synonyms
 - `set-universe <id> <universe>` - Set universe metadata for multi-layer specs
 - `infer-relationships` - Automatically infer relationships for all nodes
+
+### Continuous Synchronization
+- `watch <source> [--language <lang>] [--min-confidence <0.0-1.0>]` - Monitor code changes and maintain specification integrity in real-time
 
 ### AI Integration
 - `ask <question> [--ai-cmd <claude|codex>]` - Natural language Q&A
