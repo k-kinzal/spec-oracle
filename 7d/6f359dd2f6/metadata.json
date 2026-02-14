@@ -3,7 +3,7 @@
   "checkpoint_id": "7d6f359dd2f6",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 2,
+  "checkpoints_count": 3,
   "files_touched": [
     "paper/lean/.lake/build/bin/uadf_u0_paper",
     "paper/lean/.lake/build/bin/uadf_u0_paper.hash",
@@ -127,6 +127,7 @@
     "spec-cli/src/main.rs",
     "spec-core/src/extract.rs",
     "spec-core/src/lib.rs",
+    "tasks/2026-02-14-session-95-isolated-specs-investigation.md",
     "tasks/2026-02-14-session-95-proto-extraction-and-connections.md",
     "tasks/SESSION-95-SUMMARY.md"
   ],
@@ -144,13 +145,20 @@
       "context": "/7d/6f359dd2f6/1/context.md",
       "content_hash": "/7d/6f359dd2f6/1/content_hash.txt",
       "prompt": "/7d/6f359dd2f6/1/prompt.txt"
+    },
+    {
+      "metadata": "/7d/6f359dd2f6/2/metadata.json",
+      "transcript": "/7d/6f359dd2f6/2/full.jsonl",
+      "context": "/7d/6f359dd2f6/2/context.md",
+      "content_hash": "/7d/6f359dd2f6/2/content_hash.txt",
+      "prompt": "/7d/6f359dd2f6/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 436,
-    "cache_creation_tokens": 95074,
-    "cache_read_tokens": 4960671,
-    "output_tokens": 10852,
-    "api_call_count": 54
+    "input_tokens": 726,
+    "cache_creation_tokens": 201074,
+    "cache_read_tokens": 8013181,
+    "output_tokens": 13948,
+    "api_call_count": 90
   }
 }
