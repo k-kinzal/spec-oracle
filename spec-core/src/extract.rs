@@ -431,7 +431,14 @@ impl SpecGraph {
                 ai,
             );
 
-            if similarity < 0.3 {
+            // Layer-aware threshold: cross-layer connections need lower threshold
+            let threshold = if source_node.formality_layer != target_node.formality_layer {
+                0.15  // Cross-layer: proto↔requirement, test↔requirement
+            } else {
+                0.3   // Same-layer: more strict to avoid noise
+            };
+
+            if similarity < threshold {
                 continue; // Too dissimilar
             }
 
@@ -475,7 +482,15 @@ impl SpecGraph {
                 &target_node.content,
             );
 
-            if similarity < 0.3 {
+            // Layer-aware threshold: cross-layer connections need lower threshold
+            // because proto/test specs are concise while requirements are detailed
+            let threshold = if source_node.formality_layer != target_node.formality_layer {
+                0.15  // Cross-layer: proto↔requirement, test↔requirement
+            } else {
+                0.3   // Same-layer: more strict to avoid noise
+            };
+
+            if similarity < threshold {
                 continue; // Too dissimilar
             }
 

@@ -318,7 +318,7 @@
       },
       {
         "id": "fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2",
-        "content": "All high-priority features now have complete U0→U2→U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
+        "content": "All high-priority features now have complete U0\u2192U2\u2192U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771062281,
@@ -426,7 +426,7 @@
       },
       {
         "id": "8772404d-59f0-44da-970c-9347eceaaf42",
-        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)",
+        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f\u2080\u2081\u207b\u00b9(U1) \u222a f\u2080\u2082\u207b\u00b9(U2) \u222a ... \u222a f\u2080\u2099\u207b\u00b9(UN)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771064470,
@@ -579,7 +579,7 @@
       },
       {
         "id": "ac7787f6-2eaf-46a0-bc5b-7017d3282886",
-        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)",
+        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: \u2203x. (x \u2208 A1 \u2227 x \u2208 A2)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -588,7 +588,7 @@
       },
       {
         "id": "0154a181-1962-4aa1-aee2-236d2078caf6",
-        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: ∃x. x ∈ A",
+        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: \u2203x. x \u2208 A",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -624,7 +624,7 @@
       },
       {
         "id": "239316dd-4d2e-4ab2-b172-5fdd015fb5e1",
-        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (∃x. x ∈ A)",
+        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (\u2203x. x \u2208 A)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771066871,
@@ -822,7 +822,7 @@
       },
       {
         "id": "d79603df-d239-4d3f-af09-868ed2935374",
-        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings—transcending the fundamental DSL limitation identified in conversation.md",
+        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings\u2014transcending the fundamental DSL limitation identified in conversation.md",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070409,
@@ -831,7 +831,7 @@
       },
       {
         "id": "ce999406-30cc-424e-8bac-8efe06025a3f",
-        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations—representing the first practical realization of the beyond-DSL specification paradigm",
+        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations\u2014representing the first practical realization of the beyond-DSL specification paradigm",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070419,
@@ -1133,7 +1133,7 @@
       },
       {
         "id": "19d08ce6-8cba-4713-9999-a26d373ce7fa",
-        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f₀₂ transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
+        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f\u2080\u2082 transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771073305,
@@ -2051,7 +2051,7 @@
       },
       {
         "id": "ac78bcec-f784-49aa-a201-30f4641fdc16",
-        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f₀₃⁻¹(U3) = f₀₃⁻¹(f₀₃⁻¹(U3)) for the reverse mapping function.",
+        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f\u2080\u2083\u207b\u00b9(U3) = f\u2080\u2083\u207b\u00b9(f\u2080\u2083\u207b\u00b9(U3)) for the reverse mapping function.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771087179,
@@ -3749,6 +3749,141 @@
             "manual_connection": "true"
           },
           "created_at": 1771084396
+        }
+      ],
+      [
+        144,
+        64,
+        {
+          "id": "82854a84-2625-4bc1-b747-6ff58ed34b5c",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "similarity": "0.16666666666666666",
+            "auto_generated": "true",
+            "reconnection": "true",
+            "date": "2026-02-15"
+          },
+          "created_at": 1771087906
+        }
+      ],
+      [
+        151,
+        2,
+        {
+          "id": "30caeedd-6e95-42ab-84f1-063d55a15e94",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "similarity": "0.15384615384615385",
+            "auto_generated": "true",
+            "reconnection": "true",
+            "date": "2026-02-15"
+          },
+          "created_at": 1771087906
+        }
+      ],
+      [
+        152,
+        3,
+        {
+          "id": "84bc35da-72fb-4018-8ad5-a98b1fc7c8ac",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "similarity": "0.15384615384615385",
+            "auto_generated": "true",
+            "reconnection": "true",
+            "date": "2026-02-15"
+          },
+          "created_at": 1771087906
+        }
+      ],
+      [
+        153,
+        2,
+        {
+          "id": "3ca0b77b-27c1-4117-b2b5-05c326529738",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "similarity": "0.16666666666666666",
+            "auto_generated": "true",
+            "reconnection": "true",
+            "date": "2026-02-15"
+          },
+          "created_at": 1771087906
+        }
+      ],
+      [
+        153,
+        67,
+        {
+          "id": "0f8710a5-027b-4a19-95dc-e8286c257310",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "similarity": "0.16666666666666666",
+            "auto_generated": "true",
+            "reconnection": "true",
+            "date": "2026-02-15"
+          },
+          "created_at": 1771087906
+        }
+      ],
+      [
+        176,
+        102,
+        {
+          "id": "e498c612-69cb-4ca2-8de3-c1e4bbe0ed35",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "similarity": "0.16666666666666666",
+            "auto_generated": "true",
+            "reconnection": "true",
+            "date": "2026-02-15"
+          },
+          "created_at": 1771087906
+        }
+      ],
+      [
+        177,
+        112,
+        {
+          "id": "41e95467-ceb4-41fa-9fc0-ef82973bd6d4",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "similarity": "0.17647058823529413",
+            "auto_generated": "true",
+            "reconnection": "true",
+            "date": "2026-02-15"
+          },
+          "created_at": 1771087906
+        }
+      ],
+      [
+        178,
+        82,
+        {
+          "id": "61ae293b-cdf2-4190-8184-23a984399394",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "similarity": "0.15",
+            "auto_generated": "true",
+            "reconnection": "true",
+            "date": "2026-02-15"
+          },
+          "created_at": 1771087906
+        }
+      ],
+      [
+        180,
+        116,
+        {
+          "id": "028134d0-309e-4cc2-80f9-c921bea81ce5",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "similarity": "0.15789473684210525",
+            "auto_generated": "true",
+            "reconnection": "true",
+            "date": "2026-02-15"
+          },
+          "created_at": 1771087906
         }
       ]
     ]
