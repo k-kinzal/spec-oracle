@@ -1,0 +1,7 @@
+id: c500af61-5706-4bed-9ba5-c80372d78cb5
+content: The spec check command successfully integrates detect-contradictions and detect-omissions into a unified interface with exit codes (0 for clean, 1 for issues)
+kind: Assertion
+metadata: {}
+created_at: 1771071344
+modified_at: 1771071344
+formality_layer: 2

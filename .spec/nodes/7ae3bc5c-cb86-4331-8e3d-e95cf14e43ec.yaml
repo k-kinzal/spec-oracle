@@ -1,0 +1,7 @@
+id: 7ae3bc5c-cb86-4331-8e3d-e95cf14e43ec
+content: AI-extracted U0 specifications must have formality_layer=0, kind=Constraint, confidence=0.95, and metadata indicating reverse_mapping=f_03_inverse
+kind: Assertion
+metadata: {}
+created_at: 1771094272
+modified_at: 1771094272
+formality_layer: 0

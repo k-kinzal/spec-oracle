@@ -3,12 +3,12 @@
 /// This module implements commands related to U0 (root specification) construction
 /// and quality management of extracted specifications.
 
-use spec_core::{FileStore, UDAFModel, NodeKind};
+use spec_core::{Store, UDAFModel, NodeKind};
 use crate::utils::parse_formality_layer;
 
 /// Execute ConstructU0 command in standalone mode
 pub fn execute_construct_u0_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     execute: bool,
     verbose: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -111,7 +111,7 @@ pub fn execute_construct_u0_standalone(
 
 /// Execute CleanupLowQuality command in standalone mode
 pub fn execute_cleanup_low_quality_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     execute: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;

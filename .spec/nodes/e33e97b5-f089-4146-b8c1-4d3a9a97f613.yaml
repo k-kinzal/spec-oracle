@@ -1,0 +1,7 @@
+id: e33e97b5-f089-4146-b8c1-4d3a9a97f613
+content: 'The reverse mapping engine is verified as functional: f₀₁⁻¹(U1) extracts from documentation, f₀₂⁻¹(U2) extracts from proto, f₀₃⁻¹(U3) extracts from code, Z3 formal verification detects contradictions with mathematical proof, and idempotent extraction prevents duplicates'
+kind: Assertion
+metadata: {}
+created_at: 1771093376
+modified_at: 1771093376
+formality_layer: 0

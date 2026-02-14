@@ -1,0 +1,7 @@
+id: a68d401b-be6a-4fb8-ad97-0556ceac2c4e
+content: 'RPC DetectInterUniverseInconsistencies: Detects inconsistencies between different universes (ui, api, database), returns pairs with transformation paths'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

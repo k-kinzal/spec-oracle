@@ -3,12 +3,12 @@
 /// This command implements the reverse mapping engine (f₀ᵢ⁻¹),
 /// extracting specifications from code, proto, and documentation.
 
-use spec_core::{FileStore, RustExtractor, ProtoExtractor, DocExtractor, ArchitectureExtractor, PHPTestExtractor, InferredSpecification};
+use spec_core::{Store, RustExtractor, ProtoExtractor, DocExtractor, ArchitectureExtractor, PHPTestExtractor, InferredSpecification};
 use std::path::Path;
 
 /// Execute the Extract command in standalone mode
 pub fn execute_extract_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     source: String,
     language: String,
     min_confidence: f32,

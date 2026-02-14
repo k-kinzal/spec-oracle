@@ -1,0 +1,7 @@
+id: 072d1cd5-1d4a-40b3-8061-fadabebc6117
+content: parse_formality_layer() converts metadata layer strings to numeric values
+kind: Constraint
+metadata: {}
+created_at: 1771063820
+modified_at: 1771063820
+formality_layer: 3

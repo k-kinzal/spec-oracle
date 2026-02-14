@@ -1,0 +1,13 @@
+id: ee97d8f2-7874-4988-bf9a-6d838368d1be
+content: Edge operations
+kind: Assertion
+metadata:
+  inferred: 'true'
+  source_line: '13'
+  confidence: '0.95'
+  extractor: proto_rpc
+  source_file: proto/spec_oracle.proto
+  rpc_name: AddEdge
+created_at: 1771078430
+modified_at: 1771078430
+formality_layer: 2

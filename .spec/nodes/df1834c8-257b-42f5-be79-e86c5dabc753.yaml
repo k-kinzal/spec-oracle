@@ -1,0 +1,7 @@
+id: df1834c8-257b-42f5-be79-e86c5dabc753
+content: Contradiction detection filters Definition kind nodes to prevent test data and meta-specifications from causing false positives
+kind: Assertion
+metadata: {}
+created_at: 1771094769
+modified_at: 1771094769
+formality_layer: 0

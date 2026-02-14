@@ -1,0 +1,7 @@
+id: 3ae53ced-97e7-4649-af35-325318f4ecc3
+content: 'RPC DetectLayerInconsistencies: Checks for inconsistencies across formality layers (U0-U3), returns source-target pairs with explanations'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

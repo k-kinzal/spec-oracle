@@ -1,0 +1,7 @@
+id: 554cd460-aae3-42c6-b973-439dded5c647
+content: The ingest() method checks for existing specifications using find_node_by_content() before creating nodes, ensuring idempotent extraction behavior.
+kind: Assertion
+metadata: {}
+created_at: 1771087189
+modified_at: 1771087189
+formality_layer: 0

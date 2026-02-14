@@ -6,7 +6,7 @@
 /// - scripts/start-specd.sh, stop-specd.sh (server management)
 /// - .gitignore (ignore PID/log files)
 
-use spec_core::{FileStore, SpecGraph};
+use spec_core::{Store, FileStore, SpecGraph};
 use std::fs;
 use std::path::Path;
 

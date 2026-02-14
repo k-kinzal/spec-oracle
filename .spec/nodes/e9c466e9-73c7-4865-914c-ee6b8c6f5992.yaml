@@ -1,0 +1,7 @@
+id: e9c466e9-73c7-4865-914c-ee6b8c6f5992
+content: The spec add command must automatically infer relationships for newly added specifications and create high-confidence edges without manual intervention
+kind: Constraint
+metadata: {}
+created_at: 1771092622
+modified_at: 1771092622
+formality_layer: 0

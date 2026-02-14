@@ -1,0 +1,9 @@
+id: 194a46a7-fed0-4e65-8b0f-4f60813edd62
+content: The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions
+kind: Constraint
+metadata:
+  source_file: spec-core/src/graph.rs
+  function: detect_omissions
+created_at: 1771061597
+modified_at: 1771061597
+formality_layer: 3

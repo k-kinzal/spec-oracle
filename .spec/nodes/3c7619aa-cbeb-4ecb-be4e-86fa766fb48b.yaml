@@ -1,0 +1,7 @@
+id: 3c7619aa-cbeb-4ecb-be4e-86fa766fb48b
+content: 'RPC GetNode: Retrieves a specific specification node by its ID, returns the complete node data'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

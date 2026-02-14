@@ -3,12 +3,12 @@
 /// Uses Z3 SMT solver to prove/refute consistency between specifications.
 
 use crate::proto;
-use spec_core::{FileStore, Prover, UDAFModel, ProofStatus};
+use spec_core::{Store, Prover, UDAFModel, ProofStatus};
 use tonic::Request;
 
 /// Execute DetectContradictions in standalone mode
 pub fn execute_contradictions_standalone(
-    store: &FileStore,
+    store: &Store,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;
     let mut udaf_model = UDAFModel::new();

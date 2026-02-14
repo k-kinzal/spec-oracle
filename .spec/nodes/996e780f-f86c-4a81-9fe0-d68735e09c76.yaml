@@ -1,0 +1,7 @@
+id: 996e780f-f86c-4a81-9fe0-d68735e09c76
+content: 'RPC AddNode: Creates a new specification node with content, kind, and metadata, returns the created node with generated ID and timestamps'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

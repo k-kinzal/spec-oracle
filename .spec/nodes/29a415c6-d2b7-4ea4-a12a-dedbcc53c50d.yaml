@@ -1,0 +1,7 @@
+id: 29a415c6-d2b7-4ea4-a12a-dedbcc53c50d
+content: 'RPC QueryAtTimestamp: Queries specification state at specific Unix timestamp, returns nodes and edges as they existed then'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

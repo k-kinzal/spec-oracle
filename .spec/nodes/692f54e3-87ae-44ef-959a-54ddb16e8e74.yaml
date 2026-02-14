@@ -1,0 +1,7 @@
+id: 692f54e3-87ae-44ef-959a-54ddb16e8e74
+content: 'specORACLE successfully manages specifications for multiple projects simultaneously: spec-oracle itself (232 specs) and ztd-query-php (59 specs), each with independent .spec/specs.json storage'
+kind: Assertion
+metadata: {}
+created_at: 1771107683
+modified_at: 1771107683
+formality_layer: 0

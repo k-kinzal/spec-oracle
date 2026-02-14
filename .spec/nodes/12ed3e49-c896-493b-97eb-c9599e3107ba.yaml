@@ -1,0 +1,7 @@
+id: 12ed3e49-c896-493b-97eb-c9599e3107ba
+content: 'RPC DetectOmissions: Identifies isolated specifications and missing coverage areas, returns list of omissions with related nodes'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

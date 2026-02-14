@@ -6,12 +6,12 @@
 use crate::proto;
 use crate::utils::{parse_node_kind, proto_to_core_kind};
 use crate::presentation::formatter::format_formality_layer;
-use spec_core::{FileStore, EdgeKind};
+use spec_core::{Store, EdgeKind};
 use std::collections::HashMap;
 
 /// Execute AddNode API command in standalone mode
 pub fn execute_add_node_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     content: String,
     kind: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -31,7 +31,7 @@ pub fn execute_add_node_standalone(
 
 /// Execute GetNode API command in standalone mode
 pub fn execute_get_node_standalone(
-    store: &FileStore,
+    store: &Store,
     id: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;
@@ -47,7 +47,7 @@ pub fn execute_get_node_standalone(
 
 /// Execute ListNodes API command in standalone mode
 pub fn execute_list_nodes_standalone(
-    store: &FileStore,
+    store: &Store,
     kind: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;
@@ -67,7 +67,7 @@ pub fn execute_list_nodes_standalone(
 
 /// Execute RemoveNode API command in standalone mode
 pub fn execute_remove_node_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     id: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut graph = store.load()?;
@@ -79,7 +79,7 @@ pub fn execute_remove_node_standalone(
 
 /// Execute AddEdge API command in standalone mode
 pub fn execute_add_edge_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     source: String,
     target: String,
     kind: String,
@@ -104,7 +104,7 @@ pub fn execute_add_edge_standalone(
 
 /// Execute ListEdges API command in standalone mode
 pub fn execute_list_edges_standalone(
-    store: &FileStore,
+    store: &Store,
     node: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;
@@ -125,7 +125,7 @@ pub fn execute_list_edges_standalone(
 
 /// Execute RemoveEdge API command in standalone mode
 pub fn execute_remove_edge_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     id: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut graph = store.load()?;
@@ -137,7 +137,7 @@ pub fn execute_remove_edge_standalone(
 
 /// Execute SetUniverse API command in standalone mode
 pub fn execute_set_universe_standalone(
-    _store: &mut FileStore,
+    _store: &mut Store,
     _id: String,
     _universe: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -147,7 +147,7 @@ pub fn execute_set_universe_standalone(
 
 /// Execute FilterByLayer API command in standalone mode
 pub fn execute_filter_by_layer_standalone(
-    store: &FileStore,
+    store: &Store,
     min: u32,
     max: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {

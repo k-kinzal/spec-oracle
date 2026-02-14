@@ -515,19 +515,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli = Cli::parse();
 
-    // Auto-detect project-local .spec/specs.json
-    let spec_file_path = find_spec_file();
+    // Auto-detect project-local storage (.spec/nodes/ or .spec/specs.json)
+    let storage_type = persistence::detect_storage_type();
 
     // Standalone mode is the recommended and default mode
-    if let Some(spec_path) = spec_file_path {
-        eprintln!("📁 Using project-local specifications: {}", spec_path.display());
+    if let Some(storage) = storage_type {
+        let (store, display_msg) = match storage {
+            persistence::StorageType::Directory(spec_dir) => {
+                let msg = format!("📁 Using directory-based storage: {}/nodes/", spec_dir.display());
+                (spec_core::Store::from_directory(&spec_dir), msg)
+            }
+            persistence::StorageType::File(spec_file) => {
+                let msg = format!("📁 Using file-based storage: {}", spec_file.display());
+                (spec_core::Store::from_file(&spec_file), msg)
+            }
+        };
+        eprintln!("{}", display_msg);
         eprintln!("🚀 Running in standalone mode (no server required)");
         eprintln!();
-        return commands::dispatch_standalone(cli.command, spec_path).await;
+        return commands::dispatch_standalone(cli.command, store).await;
     }
 
     // No .spec/ directory found - guide user
-    eprintln!("❌ No specification directory found (.spec/specs.json)");
+    eprintln!("❌ No specification directory found (.spec/)");
     eprintln!();
     eprintln!("To get started:");
     eprintln!("  1. Initialize specifications: spec init");

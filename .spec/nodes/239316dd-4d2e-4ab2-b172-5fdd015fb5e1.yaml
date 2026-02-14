@@ -1,0 +1,7 @@
+id: 239316dd-4d2e-4ab2-b172-5fdd015fb5e1
+content: prove-satisfiability CLI command proves that a specification is satisfiable (∃x. x ∈ A)
+kind: Assertion
+metadata: {}
+created_at: 1771066871
+modified_at: 1771066871
+formality_layer: 0

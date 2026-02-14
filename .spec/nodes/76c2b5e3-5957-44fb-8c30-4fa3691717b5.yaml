@@ -1,0 +1,7 @@
+id: 76c2b5e3-5957-44fb-8c30-4fa3691717b5
+content: pub struct Domain in spec-core/src/udaf.rs implements the Domain concept with coverage tracking via covered_by field
+kind: Assertion
+metadata: {}
+created_at: 1771064490
+modified_at: 1771064490
+formality_layer: 3

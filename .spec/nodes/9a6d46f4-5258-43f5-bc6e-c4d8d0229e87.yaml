@@ -1,0 +1,7 @@
+id: 9a6d46f4-5258-43f5-bc6e-c4d8d0229e87
+content: UDAFModel.populate_from_graph() synchronizes the theoretical U/D/A/f model with the practical SpecGraph representation
+kind: Assertion
+metadata: {}
+created_at: 1771065076
+modified_at: 1771065076
+formality_layer: 0

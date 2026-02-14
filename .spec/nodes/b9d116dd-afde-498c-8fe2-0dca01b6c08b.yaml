@@ -1,0 +1,7 @@
+id: b9d116dd-afde-498c-8fe2-0dca01b6c08b
+content: The find command must show helpful suggestions when no results are found
+kind: Constraint
+metadata: {}
+created_at: 1771060503
+modified_at: 1771060503
+formality_layer: 0

@@ -1,0 +1,7 @@
+id: dfaf4bdb-7e7c-45f2-871a-89924255d267
+content: The CLI successfully implements spec api namespace isolation, where low-level graph operations (add-node, get-node, list-nodes, add-edge, list-edges, remove-node, remove-edge, set-universe, filter-by-layer, generate-contract, check-compliance, query-at-timestamp, diff-timestamps, node-history, compliance-trend) are accessible via 'spec api' subcommand, while intent-level commands (add, check, find, trace) remain at top level
+kind: Assertion
+metadata: {}
+created_at: 1771091926
+modified_at: 1771091926
+formality_layer: 0

@@ -1,0 +1,7 @@
+id: 279cc3cc-23bf-483e-aede-1e31809df0ee
+content: 'RPC SetNodeUniverse: Assigns a specification node to a specific universe (e.g., ui, api, database), returns updated node'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

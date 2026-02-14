@@ -1,0 +1,9 @@
+id: 141cf3b5-c73b-4bb8-bfe5-77b21a0df7e3
+content: DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields
+kind: Constraint
+metadata:
+  source_file: proto/spec_oracle.proto
+  line: 171-181
+created_at: 1771061149
+modified_at: 1771061149
+formality_layer: 2

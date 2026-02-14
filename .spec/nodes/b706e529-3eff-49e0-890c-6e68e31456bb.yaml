@@ -1,0 +1,7 @@
+id: b706e529-3eff-49e0-890c-6e68e31456bb
+content: 'The CLI implementation must separate concerns: command parsing, use case implementation, presentation formatting, persistence routing, and AI integration should be in separate modules'
+kind: Assertion
+metadata: {}
+created_at: 1771090883
+modified_at: 1771090883
+formality_layer: 0

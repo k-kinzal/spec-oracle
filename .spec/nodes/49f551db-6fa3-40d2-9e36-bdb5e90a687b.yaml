@@ -1,0 +1,7 @@
+id: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
+content: The check command must exit with code 0 when no issues found and code 1 when issues exist
+kind: Constraint
+metadata: {}
+created_at: 1771060360
+modified_at: 1771060360
+formality_layer: 0

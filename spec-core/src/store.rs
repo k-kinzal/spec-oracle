@@ -11,6 +11,42 @@ pub enum StoreError {
     Yaml(#[from] serde_yaml::Error),
 }
 
+/// Unified storage interface supporting both file-based and directory-based storage
+pub enum Store {
+    /// File-based storage (.spec/specs.json)
+    File(FileStore),
+    /// Directory-based storage (.spec/nodes/*.yaml + .spec/edges.yaml)
+    Directory(DirectoryStore),
+}
+
+impl Store {
+    /// Load specification graph from storage
+    pub fn load(&self) -> Result<SpecGraph, StoreError> {
+        match self {
+            Store::File(store) => store.load(),
+            Store::Directory(store) => store.load(),
+        }
+    }
+
+    /// Save specification graph to storage
+    pub fn save(&self, graph: &SpecGraph) -> Result<(), StoreError> {
+        match self {
+            Store::File(store) => store.save(graph),
+            Store::Directory(store) => store.save(graph),
+        }
+    }
+
+    /// Create a Store from a file path
+    pub fn from_file(path: impl AsRef<Path>) -> Self {
+        Store::File(FileStore::new(path))
+    }
+
+    /// Create a Store from a directory path
+    pub fn from_directory(path: impl AsRef<Path>) -> Self {
+        Store::Directory(DirectoryStore::new(path))
+    }
+}
+
 /// File-based persistence for the specification graph.
 pub struct FileStore {
     path: PathBuf,

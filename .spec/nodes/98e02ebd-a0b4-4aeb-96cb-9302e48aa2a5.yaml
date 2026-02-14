@@ -1,0 +1,7 @@
+id: 98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5
+content: 'Cross-layer edge inference uses layer-aware similarity threshold: 0.15 for cross-layer connections (U0↔U2, U0↔U3), 0.3 for same-layer connections. This enables automatic U0-U2-U3 relationship creation for the reverse mapping engine.'
+kind: Assertion
+metadata: {}
+created_at: 1771088204
+modified_at: 1771088204
+formality_layer: 0

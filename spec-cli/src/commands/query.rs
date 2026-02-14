@@ -1,11 +1,11 @@
 use crate::proto::{self, spec_oracle_client::SpecOracleClient};
 use crate::{handle_ai_query, node_kind_name, format_formality_layer};
 use tonic::Request;
-use spec_core::FileStore;
+use spec_core::Store;
 
 /// Execute Query command in standalone mode
 pub async fn execute_query_standalone(
-    store: &FileStore,
+    store: &Store,
     query: &str,
     ai: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {

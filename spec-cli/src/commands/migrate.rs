@@ -9,7 +9,7 @@
 /// - Human-readable diffs for spec reviews
 /// - File-level granularity for version control
 
-use spec_core::{DirectoryStore, FileStore};
+use spec_core::{DirectoryStore, FileStore, Store};
 use std::path::Path;
 
 pub fn execute_migrate(

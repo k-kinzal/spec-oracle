@@ -1,0 +1,7 @@
+id: c579b564-4c42-4236-a73d-b3c1348c015a
+content: 'RPC RemoveNode: Deletes a specification node by ID, permanently removing it from the graph'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

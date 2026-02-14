@@ -1,0 +1,7 @@
+id: 2ef3f61f-983f-4cf6-80cd-38db7c0cee5d
+content: The init command initializes project-local specification management by creating .spec directory structure
+kind: Assertion
+metadata: {}
+created_at: 1771069614
+modified_at: 1771069614
+formality_layer: 0

@@ -1,12 +1,12 @@
 use crate::proto::{self, spec_oracle_client::SpecOracleClient};
 use crate::{format_node_kind, format_edge_kind};
 use tonic::Request;
-use spec_core::FileStore;
+use spec_core::Store;
 use std::collections::HashMap;
 
 /// Execute Trace command in standalone mode
 pub async fn execute_trace_standalone(
-    store: &FileStore,
+    store: &Store,
     id: &str,
     depth: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {

@@ -1,0 +1,9 @@
+id: f52e0895-4753-4ceb-b59f-cc9dac67a3f8
+content: The add command must infer spec kind from natural language, add node to graph, and save
+kind: Constraint
+metadata:
+  function: Commands::Add
+  source_file: spec-cli/src/main.rs
+created_at: 1771061825
+modified_at: 1771061825
+formality_layer: 3

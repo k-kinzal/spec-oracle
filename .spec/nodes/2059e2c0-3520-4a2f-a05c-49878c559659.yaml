@@ -1,0 +1,7 @@
+id: 2059e2c0-3520-4a2f-a05c-49878c559659
+content: Prover module provides formal verification foundation for specORACLE, implementing the 'proven world' concept from motivation.md
+kind: Assertion
+metadata: {}
+created_at: 1771065622
+modified_at: 1771065622
+formality_layer: 0

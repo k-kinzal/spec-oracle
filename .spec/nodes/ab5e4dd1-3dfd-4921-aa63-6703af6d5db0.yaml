@@ -1,0 +1,7 @@
+id: ab5e4dd1-3dfd-4921-aa63-6703af6d5db0
+content: Search result output (query and list-nodes commands) displays formality layer labels [U0], [U1], [U2], [U3] to help users distinguish specifications at different abstraction levels
+kind: Assertion
+metadata: {}
+created_at: 1771075170
+modified_at: 1771075170
+formality_layer: 0

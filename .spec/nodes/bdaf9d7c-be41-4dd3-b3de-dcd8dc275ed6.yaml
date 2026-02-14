@@ -1,0 +1,7 @@
+id: bdaf9d7c-be41-4dd3-b3de-dcd8dc275ed6
+content: pub struct AdmissibleSet in spec-core/src/udaf.rs implements symbolic admissible sets with Constraint vector
+kind: Assertion
+metadata: {}
+created_at: 1771064491
+modified_at: 1771064491
+formality_layer: 3

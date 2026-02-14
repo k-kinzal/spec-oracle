@@ -4,12 +4,12 @@
 /// providing unified results to the user.
 
 use crate::proto;
-use spec_core::FileStore;
+use spec_core::Store;
 use tonic::Request;
 
 /// Execute the Check command in standalone mode
 pub fn execute_check_standalone(
-    store: &FileStore,
+    store: &Store,
 ) -> Result<i32, Box<dyn std::error::Error>> {
     let graph = store.load()?;
 
@@ -184,7 +184,7 @@ pub async fn execute_check_server(
 /// Unified entry point for the Check command
 pub fn execute_check(
     standalone_mode: bool,
-    store: Option<&FileStore>,
+    store: Option<&Store>,
     client: Option<&mut proto::spec_oracle_client::SpecOracleClient<tonic::transport::Channel>>,
     runtime: Option<&tokio::runtime::Runtime>,
 ) -> Result<i32, Box<dyn std::error::Error>> {

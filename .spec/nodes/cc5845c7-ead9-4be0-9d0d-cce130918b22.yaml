@@ -1,0 +1,7 @@
+id: cc5845c7-ead9-4be0-9d0d-cce130918b22
+content: 'RPC AddEdge: Creates a directed edge between two nodes with specified kind (refines, depends_on, contradicts, derives_from, synonym, composes, formalizes, transform)'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

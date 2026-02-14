@@ -1,0 +1,13 @@
+id: 617996d9-eb49-4abf-9dc7-88ec4e87f188
+content: Automatic relationship inference
+kind: Assertion
+metadata:
+  inferred: 'true'
+  confidence: '0.95'
+  extractor: proto_rpc
+  source_file: proto/spec_oracle.proto
+  rpc_name: InferAllRelationships
+  source_line: '53'
+created_at: 1771078430
+modified_at: 1771078430
+formality_layer: 2

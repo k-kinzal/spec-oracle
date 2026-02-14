@@ -2,11 +2,11 @@
 ///
 /// Provides AI-powered semantic relationship inference between specifications
 
-use spec_core::FileStore;
+use spec_core::Store;
 
 /// Execute InferRelationshipsAi command in standalone mode
 pub fn execute_infer_relationships_ai_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     min_confidence: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut graph = store.load()?;

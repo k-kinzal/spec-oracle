@@ -1,0 +1,7 @@
+id: b31b8504-3dfd-48f5-b0d0-c41acbe0127f
+content: 'RPC CalculateCompliance: Calculates compliance score of code against specification using keyword overlap and structural matching (0.0-1.0)'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

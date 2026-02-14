@@ -3,12 +3,12 @@
 /// Finds specifications that are not connected to other specs through relationships.
 
 use crate::proto;
-use spec_core::FileStore;
+use spec_core::Store;
 use tonic::Request;
 
 /// Execute DetectOmissions in standalone mode
 pub fn execute_omissions_standalone(
-    store: &FileStore,
+    store: &Store,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;
     let omissions = graph.detect_omissions();

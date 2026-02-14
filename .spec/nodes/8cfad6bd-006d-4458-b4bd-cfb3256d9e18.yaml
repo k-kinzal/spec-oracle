@@ -1,0 +1,7 @@
+id: 8cfad6bd-006d-4458-b4bd-cfb3256d9e18
+content: 'RPC FindFormalizations: Finds formal versions of a specification, returns both formalizations and their natural language sources'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

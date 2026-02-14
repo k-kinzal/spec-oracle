@@ -1,0 +1,7 @@
+id: ea3f4e7a-e577-465b-810d-ea4247d5ec48
+content: The CLI must work in standalone mode without requiring a running server for basic operations
+kind: Constraint
+metadata: {}
+created_at: 1771060221
+modified_at: 1771060221
+formality_layer: 0

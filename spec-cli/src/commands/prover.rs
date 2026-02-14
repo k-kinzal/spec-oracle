@@ -3,12 +3,12 @@
 /// This module implements formal proof commands that leverage the Prover
 /// to verify consistency, satisfiability, and inspect the U/D/A/f model structure.
 
-use spec_core::{FileStore, Prover, UDAFModel, NodeKind, EdgeKind, ProofStatus};
+use spec_core::{Store, Prover, UDAFModel, NodeKind, EdgeKind, ProofStatus};
 use crate::utils::parse_formality_layer;
 
 /// Execute ProveConsistency command in standalone mode
 pub fn execute_prove_consistency_standalone(
-    store: &FileStore,
+    store: &Store,
     spec_a: String,
     spec_b: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -115,7 +115,7 @@ pub fn execute_prove_consistency_standalone(
 
 /// Execute ProveSatisfiability command in standalone mode
 pub fn execute_prove_satisfiability_standalone(
-    store: &FileStore,
+    store: &Store,
     spec: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;
@@ -201,7 +201,7 @@ pub fn execute_prove_satisfiability_standalone(
 
 /// Execute InspectModel command in standalone mode
 pub fn execute_inspect_model_standalone(
-    store: &FileStore,
+    store: &Store,
     verbose: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;

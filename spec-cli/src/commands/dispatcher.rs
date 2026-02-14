@@ -9,7 +9,7 @@ use crate::proto::{self, SpecEdgeKind, SpecNodeKind};
 use crate::utils::*;
 use crate::presentation::formatter::*;
 use crate::ApiCommands;
-use spec_core::{FileStore, NodeKind as CoreNodeKind};
+use spec_core::{Store, NodeKind as CoreNodeKind};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tonic::Request;
@@ -17,11 +17,11 @@ use tonic::Request;
 /// Dispatch commands in standalone mode (direct file access, no server)
 pub async fn dispatch_standalone(
     command: crate::Commands,
-    spec_path: PathBuf,
+    store: Store,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use crate::commands;
 
-    let mut store = FileStore::new(&spec_path);
+    let mut store = store;
 
     match command {
         crate::Commands::Init { path: _ } => {
@@ -107,7 +107,7 @@ pub async fn dispatch_standalone(
 
 /// Dispatch API commands in standalone mode
 fn dispatch_api_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     api_cmd: ApiCommands,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use crate::commands::api;
@@ -165,7 +165,7 @@ fn dispatch_api_standalone(
 
 /// Dispatch list-nodes command in standalone mode (deprecated)
 fn dispatch_list_nodes_standalone(
-    store: &FileStore,
+    store: &Store,
     kind: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("⚠️  WARNING: 'spec list-nodes' is deprecated. Use 'spec api list-nodes' instead.");

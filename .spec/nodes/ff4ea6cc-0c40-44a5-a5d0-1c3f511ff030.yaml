@@ -1,0 +1,7 @@
+id: ff4ea6cc-0c40-44a5-a5d0-1c3f511ff030
+content: pub fn construct_u0() in UDAFModel collects specifications from all projection universes and assigns to U0
+kind: Assertion
+metadata: {}
+created_at: 1771064494
+modified_at: 1771064494
+formality_layer: 0

@@ -1,11 +1,11 @@
 use crate::proto::{self, spec_oracle_client::SpecOracleClient};
 use crate::{format_formality_layer};
 use tonic::Request;
-use spec_core::{FileStore, NodeKind as CoreNodeKind};
+use spec_core::{Store, NodeKind as CoreNodeKind};
 
 /// Execute Find command in standalone mode
 pub async fn execute_find_standalone(
-    store: &FileStore,
+    store: &Store,
     query: &str,
     layer: Option<u32>,
     max: u32,

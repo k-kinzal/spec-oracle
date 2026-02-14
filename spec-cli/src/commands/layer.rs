@@ -3,7 +3,7 @@
 /// This module provides operations for verifying multi-layer specification consistency,
 /// including completeness (U0→U3) and soundness (U3→U0) checks.
 
-use spec_core::FileStore;
+use spec_core::Store;
 use crate::utils::parse_formality_layer;
 
 /// Execute VerifyLayers command in standalone mode
@@ -11,7 +11,7 @@ use crate::utils::parse_formality_layer;
 /// Verifies multi-layer specification consistency:
 /// - Checks completeness: every U0 requirement has U3 implementation
 /// - Checks soundness: every U3 implementation traces to U0 requirement
-pub fn execute_verify_layers_standalone(store: &FileStore) -> Result<(), Box<dyn std::error::Error>> {
+pub fn execute_verify_layers_standalone(store: &Store) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;
 
     println!("🔍 Verifying multi-layer specification consistency...\n");

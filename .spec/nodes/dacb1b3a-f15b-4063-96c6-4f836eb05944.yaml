@@ -1,0 +1,7 @@
+id: dacb1b3a-f15b-4063-96c6-4f836eb05944
+content: TransformFunction struct contains actual transformation logic using strategy pattern, not just edge markers
+kind: Assertion
+metadata: {}
+created_at: 1771064473
+modified_at: 1771064473
+formality_layer: 0

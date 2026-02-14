@@ -1,0 +1,7 @@
+id: 7ca251b8-8349-427e-9749-9cffd91a6d85
+content: The UDAF model implementation in spec-core/src/udaf.rs realizes the theoretical framework defined in docs/conversation.md
+kind: Assertion
+metadata: {}
+created_at: 1771067746
+modified_at: 1771067746
+formality_layer: 3

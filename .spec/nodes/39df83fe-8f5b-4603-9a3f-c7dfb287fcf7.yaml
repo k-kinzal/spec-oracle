@@ -1,0 +1,7 @@
+id: 39df83fe-8f5b-4603-9a3f-c7dfb287fcf7
+content: Graph edges are styled by relationship type (Formalizes=blue, Refines=green, DerivesFrom=purple, DependsOn=orange)
+kind: Assertion
+metadata: {}
+created_at: 1771076329
+modified_at: 1771076329
+formality_layer: 0

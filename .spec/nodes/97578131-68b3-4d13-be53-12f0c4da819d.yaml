@@ -1,0 +1,9 @@
+id: 97578131-68b3-4d13-be53-12f0c4da819d
+content: ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty
+kind: Constraint
+metadata:
+  line: 14,148-153
+  source_file: proto/spec_oracle.proto
+created_at: 1771062086
+modified_at: 1771062086
+formality_layer: 2

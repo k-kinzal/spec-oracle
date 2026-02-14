@@ -1,0 +1,13 @@
+id: 9212713c-0da1-42f9-bccf-5be3cb38860c
+content: Layer-aware operations
+kind: Assertion
+metadata:
+  source_file: proto/spec_oracle.proto
+  rpc_name: FilterByLayer
+  confidence: '0.95'
+  source_line: '27'
+  extractor: proto_rpc
+  inferred: 'true'
+created_at: 1771078430
+modified_at: 1771078430
+formality_layer: 2

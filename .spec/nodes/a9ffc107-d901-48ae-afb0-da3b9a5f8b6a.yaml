@@ -1,0 +1,7 @@
+id: a9ffc107-d901-48ae-afb0-da3b9a5f8b6a
+content: Contradiction detection excludes composite requirements that contain both 'must' and 'must not' within the same specification text to avoid false positives.
+kind: Assertion
+metadata: {}
+created_at: 1771088206
+modified_at: 1771088206
+formality_layer: 0

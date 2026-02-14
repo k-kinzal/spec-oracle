@@ -1,0 +1,7 @@
+id: f2d3472b-f1f5-4981-b584-46b9eb5e26a8
+content: 'RPC ListNodes: Lists all specification nodes, optionally filtered by kind (assertion, constraint, scenario, definition, domain)'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

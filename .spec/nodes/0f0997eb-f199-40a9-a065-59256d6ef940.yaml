@@ -1,0 +1,7 @@
+id: 0f0997eb-f199-40a9-a065-59256d6ef940
+content: 'RPC GetNodeHistory: Retrieves modification history of a specific node, returns timeline of events (created, modified, edge_added)'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

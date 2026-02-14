@@ -1,0 +1,7 @@
+id: 6a808993-3ce7-4891-a500-166635a45a2d
+content: 'RPC ListEdges: Lists edges, optionally filtered by node_id to show all edges connected to a specific node'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

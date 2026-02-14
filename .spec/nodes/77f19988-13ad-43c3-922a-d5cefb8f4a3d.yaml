@@ -1,0 +1,7 @@
+id: 77f19988-13ad-43c3-922a-d5cefb8f4a3d
+content: 'RPC RemoveEdge: Deletes an edge by ID, removing the relationship between two nodes'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

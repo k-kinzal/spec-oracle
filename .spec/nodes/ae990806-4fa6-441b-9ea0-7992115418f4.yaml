@@ -1,0 +1,13 @@
+id: ae990806-4fa6-441b-9ea0-7992115418f4
+content: Terminology resolution
+kind: Assertion
+metadata:
+  source_line: '24'
+  extractor: proto_rpc
+  inferred: 'true'
+  confidence: '0.95'
+  source_file: proto/spec_oracle.proto
+  rpc_name: ResolveTerminology
+created_at: 1771078430
+modified_at: 1771078430
+formality_layer: 2

@@ -1,0 +1,7 @@
+id: 250c2181-da8c-40fe-a340-57cd2db18410
+content: Graph nodes are color-coded by kind (Assertion=blue, Constraint=orange, Scenario=green) with borders color-coded by layer (U0=blue, U1=green, U2=orange, U3=pink)
+kind: Assertion
+metadata: {}
+created_at: 1771076328
+modified_at: 1771076328
+formality_layer: 0

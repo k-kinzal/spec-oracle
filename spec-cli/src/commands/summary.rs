@@ -3,12 +3,12 @@
 /// This command provides an overview of the specification graph,
 /// including counts by kind, layer, health metrics, and relationships.
 
-use spec_core::{FileStore, NodeKind as CoreNodeKind};
+use spec_core::{Store, NodeKind as CoreNodeKind};
 use std::collections::HashMap;
 
 /// Execute the Summary command in standalone mode
 pub fn execute_summary_standalone(
-    store: &FileStore,
+    store: &Store,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;
 

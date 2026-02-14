@@ -1,0 +1,7 @@
+id: c6119c42-7493-4de4-8474-967ff94e89c6
+content: The CLI must provide a coherent, layered command structure where intent-level commands (add, check, find, trace) are primary and low-level graph operations (add-node, add-edge) are isolated under 'spec api' namespace
+kind: Assertion
+metadata: {}
+created_at: 1771090881
+modified_at: 1771090881
+formality_layer: 0

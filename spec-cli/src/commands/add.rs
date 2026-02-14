@@ -5,13 +5,13 @@
 
 use crate::proto;
 use crate::utils::*;
-use spec_core::{FileStore, NodeKind as CoreNodeKind};
+use spec_core::{Store, NodeKind as CoreNodeKind};
 use std::collections::HashMap;
 use tonic::Request;
 
 /// Execute the Add command in standalone mode
 pub fn execute_add_standalone(
-    store: &mut FileStore,
+    store: &mut Store,
     content: String,
     no_infer: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -138,7 +138,7 @@ pub fn execute_add(
     content: String,
     no_infer: bool,
     standalone_mode: bool,
-    store: Option<&mut FileStore>,
+    store: Option<&mut Store>,
     client: Option<&mut proto::spec_oracle_client::SpecOracleClient<tonic::transport::Channel>>,
     runtime: Option<&tokio::runtime::Runtime>,
 ) -> Result<(), Box<dyn std::error::Error>> {

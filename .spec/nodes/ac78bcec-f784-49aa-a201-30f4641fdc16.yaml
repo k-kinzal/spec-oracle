@@ -1,0 +1,7 @@
+id: ac78bcec-f784-49aa-a201-30f4641fdc16
+content: 'The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f₀₃⁻¹(U3) = f₀₃⁻¹(f₀₃⁻¹(U3)) for the reverse mapping function.'
+kind: Assertion
+metadata: {}
+created_at: 1771087179
+modified_at: 1771087179
+formality_layer: 0

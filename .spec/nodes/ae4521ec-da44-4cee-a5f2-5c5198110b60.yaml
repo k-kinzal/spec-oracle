@@ -1,0 +1,7 @@
+id: ae4521ec-da44-4cee-a5f2-5c5198110b60
+content: 'RPC GenerateContractTemplate: Generates test/contract template code for a specification in target language (rust, python, etc.)'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

@@ -1,0 +1,7 @@
+id: 561f6b45-a662-4858-8c3e-31ab13748531
+content: pub struct TransformFunction in spec-core/src/udaf.rs implements transformation with TransformStrategy enum for pluggable logic
+kind: Assertion
+metadata: {}
+created_at: 1771064493
+modified_at: 1771064493
+formality_layer: 3

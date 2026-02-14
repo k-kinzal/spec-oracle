@@ -1,0 +1,9 @@
+id: 7c6d4b66-e684-4281-b83c-81c5fc7d07e3
+content: DetectOmissions RPC returns Omission messages containing description and related_nodes fields
+kind: Constraint
+metadata:
+  line: 183-192
+  source_file: proto/spec_oracle.proto
+created_at: 1771061588
+modified_at: 1771061588
+formality_layer: 2
