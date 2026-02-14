@@ -788,22 +788,47 @@
   - **関連コミット**: 3e50c49 "Enhance duplicate and semantic contradiction detection with precision"
   - **解決状況**: ✅ 検出機能は完了、データ修正は未着手
 
-- [ ] **仕様からドキュメントを生成・可視化できない**
+- [ ] **仕様からドキュメントを生成・可視化できない** 🔄 **部分的に解決 (2026-02-14, Session 68)**
   - **発見日**: 2026-02-14
   - **詳細**: 仕様を記述しても、人間が読めるドキュメントや可視化ができない。仕様はグラフデータベースの中に閉じ込められている。
   - **欲しい機能**:
-    - 仕様からMarkdown/HTMLドキュメントを生成
+    - ~~仕様からMarkdown/HTMLドキュメントを生成~~ ✅ **実装済み**
     - 仕様の関係図を可視化（グラフ、ツリー、マインドマップ）
-    - 層ごとに整理されたドキュメント（U0: 要求仕様、U3: 実装仕様）
-    - ドメインごとのサマリー
-    - 仕様のタイムライン（いつ追加されたか）
+    - ~~層ごとに整理されたドキュメント（U0: 要求仕様、U3: 実装仕様）~~ ✅ **実装済み**
+    - ~~ドメインごとのサマリー~~ ✅ **実装済み（kind別）**
+    - ~~仕様のタイムライン（いつ追加されたか）~~ ✅ **実装済み（タイムスタンプ表示）**
   - **影響範囲**: 仕様を記述しても、共有・レビュー・理解が困難。
-  - **どうあって欲しいか**:
-    - `spec docs generate`でドキュメント生成
-    - `spec visualize <id>`で関連仕様を図示
-    - 静的サイト生成（GitHub Pagesで公開）
-    - PDFエクスポート（ステークホルダーと共有）
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ **Markdownエクスポート** (`scripts/export_specs_md.py`):
+      - 層別整理（U0-U3）
+      - kind別グルーピング（Assertion, Constraint, Scenario）
+      - タイムスタンプ、メタデータ表示
+      - 層フィルタリング (`--layer 0`)
+      - kind フィルタリング (`--kind constraint`)
+      - 関係情報オプション (`--with-edges`)
+      - 統計サマリー（総仕様数、層別・kind別集計）
+    - ✅ **ドキュメント生成例**: `docs/specifications.md` (938行)
+    - ✅ **スクリプトREADME**: `scripts/README.md` (使用方法)
+  - **実装詳細**:
+    ```bash
+    # 全仕様をMarkdown出力
+    python3 scripts/export_specs_md.py > docs/specifications.md
+
+    # U0層のみ出力
+    python3 scripts/export_specs_md.py --layer 0 > docs/u0-requirements.md
+
+    # エッジ情報含む
+    python3 scripts/export_specs_md.py --with-edges > docs/specs-with-edges.md
+    ```
+  - **検証結果**:
+    - 123仕様を層別・kind別に整理
+    - 人間が読みやすいフォーマット
+    - GitHub/PRでレビュー可能
+  - ⏳ **残課題（優先度中）**:
+    - グラフ可視化（DOT/Graphviz形式出力）
+    - HTMLエクスポート（静的サイト生成）
+    - PDFエクスポート
+  - **解決状況**: 🔄 **基本機能完了、可視化は未実装**
 
 - [ ] **仕様の検索・探索機能が貧弱**
   - **発見日**: 2026-02-14
