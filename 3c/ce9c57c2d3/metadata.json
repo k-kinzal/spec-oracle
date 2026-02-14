@@ -3,10 +3,11 @@
   "checkpoint_id": "3cce9c57c2d3",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 8,
+  "checkpoints_count": 9,
   "files_touched": [
     ".spec/specs.json",
     "CLAUDE.md",
+    "PROBLEM.md",
     "docs/conversation.md",
     "spec-cli/src/main.rs",
     "tasks/2026-02-14-session-53-continue-for-goal.md",
@@ -14,7 +15,9 @@
     "tasks/2026-02-14-session-55-continue-for-goal.md",
     "tasks/2026-02-14-session-56-beyond-dsl-achievement.md",
     "tasks/2026-02-14-session-56-continue-for-goal.md",
-    "tasks/2026-02-14-session-56-final-summary.md"
+    "tasks/2026-02-14-session-56-final-summary.md",
+    "tasks/2026-02-14-session-57-final-summary.md",
+    "tasks/2026-02-14-session-57-goal-verification.md"
   ],
   "sessions": [
     {
@@ -58,13 +61,20 @@
       "context": "/3c/ce9c57c2d3/5/context.md",
       "content_hash": "/3c/ce9c57c2d3/5/content_hash.txt",
       "prompt": "/3c/ce9c57c2d3/5/prompt.txt"
+    },
+    {
+      "metadata": "/3c/ce9c57c2d3/6/metadata.json",
+      "transcript": "/3c/ce9c57c2d3/6/full.jsonl",
+      "context": "/3c/ce9c57c2d3/6/context.md",
+      "content_hash": "/3c/ce9c57c2d3/6/content_hash.txt",
+      "prompt": "/3c/ce9c57c2d3/6/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 2074,
-    "cache_creation_tokens": 1122460,
-    "cache_read_tokens": 16648930,
-    "output_tokens": 16426,
-    "api_call_count": 229
+    "input_tokens": 2244,
+    "cache_creation_tokens": 1244098,
+    "cache_read_tokens": 18834356,
+    "output_tokens": 25149,
+    "api_call_count": 250
   }
 }
