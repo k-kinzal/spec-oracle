@@ -512,126 +512,51 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
         }
         Commands::Api(api_cmd) => {
             // Low-level graph API operations in standalone mode
+            use commands::api;
             match api_cmd {
                 ApiCommands::AddNode { content, kind } => {
-                    let mut graph = store.load()?;
-                    let proto_kind = parse_node_kind(&kind);
-                    let core_kind = proto_to_core_kind(proto_kind);
-                    let node = graph.add_node(content.clone(), core_kind, HashMap::new());
-                    let node_id = node.id.clone();
-                    let node_content = node.content.clone();
-                    let node_kind = node.kind;
-                    store.save(&graph)?;
-                    println!("Added node: {}", node_id);
-                    println!("  Content: {}", node_content);
-                    println!("  Kind: {:?}", node_kind);
+                    api::execute_add_node_standalone(&mut store, content, kind)?;
                 }
                 ApiCommands::GetNode { id } => {
-                    let graph = store.load()?;
-                    if let Some(node) = graph.get_node(&id) {
-                        println!("Node: {}", node.id);
-                        println!("  Content: {}", node.content);
-                        println!("  Kind: {:?}", node.kind);
-                    } else {
-                        eprintln!("Node not found: {}", id);
-                    }
+                    api::execute_get_node_standalone(&store, id)?;
                 }
                 ApiCommands::ListNodes { kind } => {
-                    let graph = store.load()?;
-                    let kind_filter = kind.as_ref().map(|k| proto_to_core_kind(parse_node_kind(k)));
-                    let nodes = graph.list_nodes(kind_filter);
-                    println!("Found {} node(s):", nodes.len());
-                    for node in nodes {
-                        let layer_label = format_formality_layer(node.formality_layer);
-                        println!("  [{}] [{}] {:?} - {}",
-                            layer_label,
-                            &node.id[..8],
-                            node.kind,
-                            node.content.chars().take(80).collect::<String>());
-                    }
+                    api::execute_list_nodes_standalone(&store, kind)?;
                 }
                 ApiCommands::RemoveNode { id } => {
-                    let mut graph = store.load()?;
-                    graph.remove_node(&id);
-                    store.save(&graph)?;
-                    println!("Removed node: {}", id);
+                    api::execute_remove_node_standalone(&mut store, id)?;
                 }
                 ApiCommands::AddEdge { source, target, kind } => {
-                    let mut graph = store.load()?;
-                    let edge_kind = match kind.to_lowercase().as_str() {
-                        "refines" => spec_core::EdgeKind::Refines,
-                        "depends_on" => spec_core::EdgeKind::DependsOn,
-                        "contradicts" => spec_core::EdgeKind::Contradicts,
-                        "derives_from" => spec_core::EdgeKind::DerivesFrom,
-                        "synonym" => spec_core::EdgeKind::Synonym,
-                        "composes" => spec_core::EdgeKind::Composes,
-                        "formalizes" => spec_core::EdgeKind::Formalizes,
-                        _ => spec_core::EdgeKind::Refines,
-                    };
-                    let edge = graph.add_edge(&source, &target, edge_kind, HashMap::new())?;
-                    let edge_id = edge.id.clone();
-                    store.save(&graph)?;
-                    println!("Added edge: {}", edge_id);
+                    api::execute_add_edge_standalone(&mut store, source, target, kind)?;
                 }
                 ApiCommands::ListEdges { node } => {
-                    let graph = store.load()?;
-                    let edges = if let Some(ref node_id) = node {
-                        graph.list_edges(Some(node_id))
-                    } else {
-                        graph.list_edges(None)
-                    };
-                    println!("Found {} edge(s):", edges.len());
-                    for (edge_data, source_id, target_id) in edges {
-                        println!("  {} --[{:?}]--> {}",
-                            &source_id[..8],
-                            edge_data.kind,
-                            &target_id[..8]);
-                    }
+                    api::execute_list_edges_standalone(&store, node)?;
                 }
                 ApiCommands::RemoveEdge { id } => {
-                    let mut graph = store.load()?;
-                    graph.remove_edge(&id);
-                    store.save(&graph)?;
-                    println!("Removed edge: {}", id);
+                    api::execute_remove_edge_standalone(&mut store, id)?;
                 }
                 ApiCommands::SetUniverse { id, universe } => {
-                    eprintln!("SetUniverse not yet supported in standalone mode");
+                    api::execute_set_universe_standalone(&mut store, id, universe)?;
                 }
                 ApiCommands::FilterByLayer { min, max } => {
-                    let graph = store.load()?;
-                    let nodes = graph.list_nodes(None);
-                    let filtered: Vec<_> = nodes.iter()
-                        .filter(|n| {
-                            let layer = n.formality_layer as u32;
-                            layer >= min && layer <= max
-                        })
-                        .collect();
-                    println!("Found {} node(s) in layers {}-{}:", filtered.len(), min, max);
-                    for node in filtered {
-                        let layer_label = format_formality_layer(node.formality_layer);
-                        println!("  [{}] [{}] {:?} - {}",
-                            layer_label,
-                            &node.id[..8],
-                            node.kind,
-                            node.content.chars().take(80).collect::<String>());
-                    }
+                    api::execute_filter_by_layer_standalone(&store, min, max)?;
                 }
-                ApiCommands::GenerateContract { id, language } => {
+                ApiCommands::GenerateContract { id: _, language: _ } => {
                     eprintln!("Contract generation not yet supported in standalone mode");
                 }
-                ApiCommands::CheckCompliance { id, code } => {
+                ApiCommands::CheckCompliance { id: _, code: _ } => {
                     eprintln!("Compliance checking not yet supported in standalone mode");
                 }
-                ApiCommands::QueryAtTimestamp { timestamp } => {
+                ApiCommands::QueryAtTimestamp { timestamp: _ } => {
                     eprintln!("Temporal queries not yet supported in standalone mode");
                 }
-                ApiCommands::DiffTimestamps { from, to } => {
+                ApiCommands::DiffTimestamps { from: _, to: _ } => {
                     eprintln!("Temporal diff not yet supported in standalone mode");
                 }
-                ApiCommands::NodeHistory { id } => {
+                ApiCommands::NodeHistory { id: _ } => {
                     eprintln!("Node history not yet supported in standalone mode");
                 }
-                ApiCommands::ComplianceTrend { id } => {
+                ApiCommands::ComplianceTrend { id: _ } => {
                     eprintln!("Compliance trend not yet supported in standalone mode");
                 }
             }
@@ -672,81 +597,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             std::process::exit(exit_code);
         }
         Commands::Summary => {
-            let graph = store.load()?;
-
-            // Collect statistics
-            let nodes = graph.list_nodes(None);
-            let total = nodes.len();
-
-            // Count by kind
-            let mut by_kind = HashMap::new();
-            for node in &nodes {
-                *by_kind.entry(node.kind).or_insert(0) += 1;
-            }
-
-            // Count by layer
-            let mut by_layer = HashMap::new();
-            for node in &nodes {
-                let layer = parse_formality_layer(node.formality_layer as u8);
-                *by_layer.entry(layer).or_insert(0) += 1;
-            }
-
-            // Count edges
-            let all_edges = graph.list_edges(None);
-            let total_edges = all_edges.len();
-
-            // Health metrics
-            let contradictions = graph.detect_contradictions();
-            let isolated = graph.detect_omissions();
-
-            // Display summary
-            println!("📊 Specification Summary\n");
-            println!("Total Specifications: {}", total);
-            println!();
-
-            println!("By Kind:");
-            for (kind, count) in &by_kind {
-                let kind_str = match kind {
-                    CoreNodeKind::Assertion => "  Assertions",
-                    CoreNodeKind::Constraint => "  Constraints",
-                    CoreNodeKind::Scenario => "  Scenarios",
-                    CoreNodeKind::Definition => "  Definitions",
-                    CoreNodeKind::Domain => "  Domains",
-                };
-                println!("{}: {}", kind_str, count);
-            }
-            println!();
-
-            println!("By Formality Layer:");
-            let mut sorted_layers: Vec<_> = by_layer.iter().collect();
-            sorted_layers.sort_by_key(|(k, _)| *k);
-            for (layer, count) in sorted_layers {
-                println!("  U{}: {}", layer, count);
-            }
-            println!();
-
-            println!("Relationships: {} edges", total_edges);
-            println!();
-
-            println!("Health:");
-            if contradictions.is_empty() {
-                println!("  ✓ No contradictions");
-            } else {
-                println!("  ⚠️  {} contradiction(s)", contradictions.len());
-            }
-            if isolated.is_empty() {
-                println!("  ✓ No isolated specs");
-            } else {
-                println!("  ⚠️  {} isolated spec(s)", isolated.len());
-            }
-
-            if contradictions.is_empty() && isolated.is_empty() {
-                println!("\n✅ Specifications are healthy!");
-            } else if !contradictions.is_empty() {
-                println!("\n❌ Critical issues found. Run 'spec check' for details.");
-            } else {
-                println!("\n⚠️  Minor issues. Run 'spec check' for details.");
-            }
+            commands::execute_summary_standalone(&store)?;
         }
         Commands::Find { query, layer, max } => {
             commands::execute_find_standalone(&store, &query, layer, max).await?;
@@ -1682,106 +1533,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             }
         }
         Commands::Extract { source, language, min_confidence } => {
-            // Extract specifications from source code and save to graph
-            use spec_core::{RustExtractor, ProtoExtractor, DocExtractor, InferredSpecification};
-            use std::path::Path;
-
-            let path = Path::new(&source);
-            let mut graph = store.load().map_err(|e| format!("Failed to load graph: {}", e))?;
-
-            println!("🔍 Extracting specifications from: {}\n", source);
-
-            // Detect language from file extension if not specified
-            let detected_language = if path.is_file() {
-                match path.extension().and_then(|s| s.to_str()) {
-                    Some("rs") => "rust",
-                    Some("proto") => "proto",
-                    Some("md") => "markdown",
-                    _ => &language,
-                }
-            } else {
-                &language
-            };
-
-            // Extract specifications
-            let specs: Vec<InferredSpecification> = if path.is_file() {
-                match detected_language {
-                    "rust" => RustExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
-                    "proto" => ProtoExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
-                    "markdown" => DocExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
-                    _ => {
-                        eprintln!("Unsupported language: {}. Supported: rust, proto, markdown", language);
-                        return Ok(());
-                    }
-                }
-            } else if path.is_dir() {
-                // Extract from all supported files in directory recursively
-                use std::fs;
-                let mut all_specs = Vec::new();
-                for entry in fs::read_dir(path).map_err(|e| format!("Failed to read directory: {}", e))? {
-                    let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
-                    let entry_path = entry.path();
-                    match entry_path.extension().and_then(|s| s.to_str()) {
-                        Some("rs") if detected_language == "rust" || detected_language == "auto" => {
-                            match RustExtractor::extract(&entry_path) {
-                                Ok(specs) => all_specs.extend(specs),
-                                Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
-                            }
-                        }
-                        Some("proto") if detected_language == "proto" || detected_language == "auto" => {
-                            match ProtoExtractor::extract(&entry_path) {
-                                Ok(specs) => all_specs.extend(specs),
-                                Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
-                            }
-                        }
-                        Some("md") if detected_language == "markdown" || detected_language == "auto" => {
-                            match DocExtractor::extract(&entry_path) {
-                                Ok(specs) => all_specs.extend(specs),
-                                Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                all_specs
-            } else {
-                eprintln!("❌ Source path not found: {}", source);
-                return Ok(());
-            };
-
-            // Filter by confidence and ingest into graph
-            let filtered: Vec<_> = specs.into_iter()
-                .filter(|s| s.confidence >= min_confidence)
-                .collect();
-
-            println!("📊 Extracted {} specifications (confidence >= {})\n", filtered.len(), min_confidence);
-
-            if filtered.is_empty() {
-                println!("✓ No specifications extracted");
-                return Ok(());
-            }
-
-            // Ingest extracted specs into graph
-            let report = graph.ingest(filtered.clone());
-
-            // Save updated graph
-            store.save(&graph).map_err(|e| format!("Failed to save graph: {}", e))?;
-
-            println!("✅ Ingestion complete:");
-            println!("   Nodes created: {}", report.nodes_created);
-            println!("   Nodes skipped: {} (low confidence)", report.nodes_skipped);
-            println!("   Edges created: {}", report.edges_created);
-            println!("   Edge suggestions: {} (require review)", report.suggestions.len());
-
-            if !report.contradictions_found.is_empty() {
-                println!("\n⚠️  Contradictions detected:");
-                for contra in &report.contradictions_found {
-                    println!("   • {}", contra);
-                }
-            }
-
-            println!("\n💡 To verify: spec check");
-            println!("💡 To inspect: spec list-nodes --kind Scenario");
+            commands::execute_extract_standalone(&mut store, source, language, min_confidence)?;
         }
         Commands::InferRelationshipsAi { min_confidence } => {
             let mut graph = store.load()?;
