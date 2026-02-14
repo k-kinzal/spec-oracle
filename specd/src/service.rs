@@ -106,8 +106,6 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
         let req = request.into_inner();
         let mut graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
 
-        // Extract formality_layer from metadata if present
-        let formality_layer = req.metadata.get("formality_layer")
             .and_then(|s| s.parse::<u8>().ok())
             .unwrap_or(0);
 

@@ -623,15 +623,21 @@
       - U1層が必要な場合、将来的に追加可能
   - **解決状況**: 🔄 **部分的に解決** - U2層完成、U1層は本プロジェクトでは該当なし
 
-- [ ] **formality_layerの二重管理**
+- [x] **formality_layerの二重管理** ✅ **解決済み (2026-02-14, Session 65)**
   - **発見日**: 2026-02-14
   - **詳細**: ノード構造の`formality_layer`フィールドと`metadata.formality_layer`が両方存在し、実際の層情報はmetadataに文字列として記録されている。ノード自体のformality_layerは常に0のまま。
   - **影響範囲**: データモデルの一貫性がない。クエリが複雑になる。
-  - **解決策案**:
-    - `formality_layer`フィールドを正しく更新するようにextractorを修正
-    - または、metadataのみを使用し、ノードフィールドを削除
-    - データマイグレーションスクリプトを作成
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ データマイグレーション: 全122仕様のmetadata.formality_layer → formality_layerフィールドに移行
+    - ✅ マッピング: "U0"→0, "U1"→1, "U2"→2, "U3"→3
+    - ✅ コード更新: parse_formality_layer()簡素化、format_formality_layer()追加
+    - ✅ 検証: metadata.formality_layer残存0件、全コマンド動作確認
+  - **実装詳細**:
+    - `scripts/migrate_formality_layer.py` - データ移行スクリプト
+    - `scripts/fix_formality_layer_code.py` - コード更新スクリプト
+    - `spec-cli/src/main.rs` - parse/format関数更新
+    - タスク文書: `tasks/2026-02-14-session-65-formality-layer-migration.md`
+  - **解決状況**: ✅ **完了** - 単一の真実の源（formality_layerフィールド）に統一
 
 - [ ] **list-nodesが大量の結果を一気に表示する**
   - **発見日**: 2026-02-14

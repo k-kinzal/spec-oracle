@@ -286,17 +286,20 @@ fn parse_node_kind(s: &str) -> SpecNodeKind {
     }
 }
 
-fn parse_formality_layer(metadata: &HashMap<String, String>, fallback: u8) -> u32 {
-    metadata.get("formality_layer")
-        .and_then(|s| {
-            // Parse "U0" -> 0, "U1" -> 1, "U2" -> 2, "U3" -> 3
-            if s.starts_with('U') || s.starts_with('u') {
-                s[1..].parse::<u32>().ok()
-            } else {
-                s.parse::<u32>().ok()
-            }
-        })
-        .unwrap_or(fallback as u32)
+fn parse_formality_layer(formality_layer: u8) -> u32 {
+    // After migration, formality_layer field contains the proper value
+    formality_layer as u32
+}
+
+fn format_formality_layer(formality_layer: u8) -> String {
+    // Format numeric layer as "U0", "U1", "U2", "U3"
+    match formality_layer {
+        0 => "U0".to_string(),
+        1 => "U1".to_string(),
+        2 => "U2".to_string(),
+        3 => "U3".to_string(),
+        _ => format!("U{}", formality_layer),
+    }
 }
 
 fn parse_edge_kind(s: &str) -> SpecEdgeKind {
@@ -773,7 +776,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             // Count by layer
             let mut by_layer = HashMap::new();
             for node in &nodes {
-                let layer = parse_formality_layer(&node.metadata, node.formality_layer);
+                let layer = parse_formality_layer(node.formality_layer);
                 *by_layer.entry(layer).or_insert(0) += 1;
             }
 
@@ -991,7 +994,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             let mut u3_nodes = Vec::new();
 
             for node in graph.list_nodes(None) {
-                let layer = parse_formality_layer(&node.metadata, node.formality_layer);
+                let layer = parse_formality_layer(node.formality_layer);
 
                 match layer {
                     0 => u0_nodes.push(node),
@@ -1023,7 +1026,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                     // Check if this is a Formalizes edge pointing forward
                     use spec_core::EdgeKind;
                     if *edge_kind == EdgeKind::Formalizes && direction == "outgoing" {
-                        let related_layer = parse_formality_layer(&related_node.metadata, related_node.formality_layer);
+                        let related_layer = parse_formality_layer(related_node.formality_layer);
 
                         if related_layer == 3 {
                             u3_implementations.push(related_node.id.clone());
@@ -1059,7 +1062,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                     // Check if this is a Formalizes edge pointing backward
                     use spec_core::EdgeKind;
                     if *edge_kind == EdgeKind::Formalizes && direction == "incoming" {
-                        let related_layer = parse_formality_layer(&related_node.metadata, related_node.formality_layer);
+                        let related_layer = parse_formality_layer(related_node.formality_layer);
 
                         if related_layer == 0 {
                             u0_requirements.push(related_node.id.clone());
@@ -1316,7 +1319,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             let mut universe_metadata = std::collections::HashMap::new();
 
             for node in graph.list_nodes(None) {
-                let layer = parse_formality_layer(&node.metadata, node.formality_layer);
+                let layer = parse_formality_layer(node.formality_layer);
                 *layer_stats.entry(layer).or_insert(0) += 1;
 
                 if let Some(universe) = node.metadata.get("universe") {
@@ -1457,7 +1460,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                     };
 
                     let layer_nodes: Vec<_> = graph.list_nodes(None).into_iter()
-                        .filter(|n| parse_formality_layer(&n.metadata, n.formality_layer) == layer)
+                        .filter(|n| parse_formality_layer(n.formality_layer) == layer)
                         .collect();
 
                     if !layer_nodes.is_empty() {
@@ -1925,7 +1928,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Count by layer
             let mut by_layer = HashMap::new();
             for node in &nodes {
-                let layer = parse_formality_layer(&node.metadata, node.formality_layer as u8);
+                let layer = parse_formality_layer(node.formality_layer);
                 *by_layer.entry(layer).or_insert(0) += 1;
             }
 
@@ -2152,7 +2155,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut u3_nodes = Vec::new();
 
             for node in &all_nodes {
-                let layer = parse_formality_layer(&node.metadata, node.formality_layer as u8);
+                let layer = parse_formality_layer(node.formality_layer);
 
                 match layer {
                     0 => u0_nodes.push(node),
@@ -2356,7 +2359,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut universe_metadata = std::collections::HashMap::new();
 
             for node in &all_nodes {
-                let layer = parse_formality_layer(&node.metadata, node.formality_layer as u8);
+                let layer = parse_formality_layer(node.formality_layer);
                 *layer_stats.entry(layer).or_insert(0) += 1;
 
                 if let Some(universe) = node.metadata.get("universe") {
@@ -2498,7 +2501,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     };
 
                     let layer_nodes: Vec<_> = all_nodes.iter()
-                        .filter(|n| parse_formality_layer(&n.metadata, n.formality_layer as u8) == layer)
+                        .filter(|n| parse_formality_layer(n.formality_layer) == layer)
                         .collect();
 
                     if !layer_nodes.is_empty() {
