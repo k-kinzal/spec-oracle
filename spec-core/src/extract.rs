@@ -59,9 +59,33 @@ impl SpecGraph {
         }
 
         // Skip trivial scenario names that provide no information
-        // Examples: "scenario {}", "coverage empty graph" (already connected)
+        // Examples: "scenario {}", "coverage empty graph", "coverage no tests"
         if content == "scenario {}" || content.trim().is_empty() {
             return false;
+        }
+
+        // Skip test function names that are too short or lack semantic keywords
+        // Examples: "coverage empty graph", "empty graph", "no tests"
+        if spec.kind == NodeKind::Scenario || spec.metadata.get("extractor") == Some(&"function_name".to_string()) {
+            // Check minimum length (at least 20 characters for meaningful spec)
+            if content.len() < 20 {
+                return false;
+            }
+
+            // Check for semantic keywords indicating real specification
+            let semantic_keywords = [
+                "must", "should", "shall", "can", "will", "ensure", "verify", "validate",
+                "detect", "identify", "check", "test", "system", "user", "when",
+                "specification", "requirement", "constraint", "correctly", "properly"
+            ];
+
+            let has_semantic = semantic_keywords.iter()
+                .any(|kw| content.to_lowercase().contains(kw));
+
+            if !has_semantic {
+                // Short scenario without semantic keywords - likely just function name
+                return false;
+            }
         }
 
         true

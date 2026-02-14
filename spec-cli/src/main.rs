@@ -273,6 +273,12 @@ enum Commands {
         #[arg(default_value = ".")]
         path: String,
     },
+    /// Remove low-quality extracted specifications (cleanup isolated test artifacts)
+    CleanupLowQuality {
+        /// Actually remove specs (default: dry-run mode)
+        #[arg(long)]
+        execute: bool,
+    },
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -1581,6 +1587,159 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                         }
                     }
                 }
+            }
+
+            println!("\n═══════════════════════════════════════════════════════════════");
+        }
+        Commands::CleanupLowQuality { execute } => {
+            use spec_core::SpecGraph;
+
+            let graph = store.load()?;
+
+            println!("🧹 Cleaning Up Low-Quality Extracted Specifications\n");
+
+            if execute {
+                println!("⚠️  EXECUTE MODE: Specifications will be removed!");
+            } else {
+                println!("📋 DRY-RUN MODE: No changes will be made. Use --execute to actually remove.");
+            }
+
+            println!("\n═══════════════════════════════════════════════════════════════\n");
+
+            // Collect low-quality specs
+            let mut low_quality_specs = Vec::new();
+
+            for node in graph.list_nodes(None) {
+                // Only check extracted specs
+                if node.metadata.get("inferred") != Some(&"true".to_string()) {
+                    continue;
+                }
+
+                // Apply the same quality filter from extract.rs
+                let content = &node.content;
+                let is_low_quality = {
+                    // Check 1: Invariant without semantic keywords
+                    if content.starts_with("Invariant: ") {
+                        let semantic_keywords = [
+                            "must", "should", "shall", "require", "ensure", "verify", "validate",
+                            "detect", "identify", "check", "test verifies", "system", "user",
+                            "specification", "requirement", "constraint"
+                        ];
+                        let has_semantic = semantic_keywords.iter()
+                            .any(|kw| content.to_lowercase().contains(kw));
+                        !has_semantic
+                    }
+                    // Check 2: Trivial scenarios
+                    else if content == "scenario {}" || content.trim().is_empty() {
+                        true
+                    }
+                    // Check 3: Scenarios/function names that are too short or lack semantic keywords
+                    else if node.kind == spec_core::NodeKind::Scenario ||
+                            node.metadata.get("extractor") == Some(&"function_name".to_string()) {
+                        if content.len() < 20 {
+                            true
+                        } else {
+                            let semantic_keywords = [
+                                "must", "should", "shall", "can", "will", "ensure", "verify", "validate",
+                                "detect", "identify", "check", "test", "system", "user", "when",
+                                "specification", "requirement", "constraint", "correctly", "properly"
+                            ];
+                            let has_semantic = semantic_keywords.iter()
+                                .any(|kw| content.to_lowercase().contains(kw));
+                            !has_semantic
+                        }
+                    } else {
+                        false
+                    }
+                };
+
+                if is_low_quality {
+                    low_quality_specs.push(node.clone());
+                }
+            }
+
+            // Display results
+            println!("📊 Found {} low-quality specifications:\n", low_quality_specs.len());
+
+            // Group by category
+            let mut invariants = 0;
+            let mut short_scenarios = 0;
+            let mut trivial = 0;
+
+            for spec in &low_quality_specs {
+                if spec.content.starts_with("Invariant: ") {
+                    invariants += 1;
+                } else if spec.content == "scenario {}" || spec.content.trim().is_empty() {
+                    trivial += 1;
+                } else {
+                    short_scenarios += 1;
+                }
+            }
+
+            println!("  Categories:");
+            println!("    • {} test invariants without semantic keywords", invariants);
+            println!("    • {} short function names (< 20 chars, no semantic keywords)", short_scenarios);
+            println!("    • {} trivial scenarios", trivial);
+
+            if low_quality_specs.is_empty() {
+                println!("\n✅ No low-quality specifications found!");
+                println!("\n═══════════════════════════════════════════════════════════════");
+                return Ok(());
+            }
+
+            // Show examples
+            println!("\n  Examples:");
+            for (i, spec) in low_quality_specs.iter().take(5).enumerate() {
+                println!("    {}. [{}] {}: {}",
+                    i + 1,
+                    &spec.id[..8],
+                    format!("{:?}", spec.kind),
+                    if spec.content.len() > 60 {
+                        format!("{}...", &spec.content[..60])
+                    } else {
+                        spec.content.clone()
+                    }
+                );
+            }
+
+            if low_quality_specs.len() > 5 {
+                println!("    ... and {} more", low_quality_specs.len() - 5);
+            }
+
+            // Execute removal if requested
+            if execute {
+                println!("\n🗑️  Removing low-quality specifications...");
+
+                let mut updated_graph = graph.clone();
+                let mut removed_count = 0;
+
+                for spec in &low_quality_specs {
+                    if updated_graph.remove_node(&spec.id).is_some() {
+                        removed_count += 1;
+                    } else {
+                        eprintln!("  ⚠️  Failed to remove {}: node not found", &spec.id[..8]);
+                    }
+                }
+
+                // Save updated graph
+                store.save(&updated_graph)?;
+
+                println!("\n✅ Successfully removed {} specifications", removed_count);
+
+                // Show new stats
+                let remaining = store.load()?;
+                let remaining_count = remaining.list_nodes(None).len();
+                let remaining_isolated = remaining.detect_omissions().iter()
+                    .filter(|o| o.description.contains("Isolated node"))
+                    .count();
+
+                println!("\n📊 Updated Statistics:");
+                println!("  Total specifications: {}", remaining_count);
+                println!("  Isolated specifications: {}", remaining_isolated);
+
+            } else {
+                println!("\n💡 To remove these specifications, run:");
+                println!("   spec cleanup-low-quality --execute");
             }
 
             println!("\n═══════════════════════════════════════════════════════════════");
@@ -3568,6 +3727,11 @@ echo "✓ specd stopped"
         Commands::ConstructU0 { execute: _, verbose: _ } => {
             println!("ConstructU0 command requires standalone mode (project-local .spec/ directory)");
             println!("Run 'spec init' to initialize project-local specification management.");
+        }
+        Commands::CleanupLowQuality { execute: _ } => {
+            println!("CleanupLowQuality command requires standalone mode (project-local .spec/ directory)");
+            println!("Run 'spec init' to initialize project-local specification management.");
+            println!("\nReason: This command directly modifies the specification database.");
         }
     }
 
