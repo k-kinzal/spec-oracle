@@ -3,7 +3,7 @@
   "checkpoint_id": "88f678b61df5",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 6,
+  "checkpoints_count": 7,
   "files_touched": [
     ".spec/specs.json.backup-session61",
     "PROBLEM.md",
@@ -19,7 +19,8 @@
     "tasks/2026-02-14-session-62-complete-u2-layer.md",
     "tasks/2026-02-14-session-62-summary.md",
     "tasks/2026-02-14-session-63-connect-u2-to-u0.md",
-    "tasks/2026-02-14-session-65-formality-layer-migration.md"
+    "tasks/2026-02-14-session-65-formality-layer-migration.md",
+    "tasks/2026-02-14-session-67-show-layer-labels.md"
   ],
   "sessions": [
     {
@@ -63,13 +64,20 @@
       "context": "/88/f678b61df5/5/context.md",
       "content_hash": "/88/f678b61df5/5/content_hash.txt",
       "prompt": "/88/f678b61df5/5/prompt.txt"
+    },
+    {
+      "metadata": "/88/f678b61df5/6/metadata.json",
+      "transcript": "/88/f678b61df5/6/full.jsonl",
+      "context": "/88/f678b61df5/6/context.md",
+      "content_hash": "/88/f678b61df5/6/content_hash.txt",
+      "prompt": "/88/f678b61df5/6/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 1772,
-    "cache_creation_tokens": 424303,
-    "cache_read_tokens": 15976667,
-    "output_tokens": 26234,
-    "api_call_count": 220
+    "input_tokens": 2134,
+    "cache_creation_tokens": 502448,
+    "cache_read_tokens": 19459775,
+    "output_tokens": 30756,
+    "api_call_count": 265
   }
 }
