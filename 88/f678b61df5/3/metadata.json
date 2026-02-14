@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "88f678b61df5",
+  "session_id": "7efe6c30-59fe-4118-83a2-a811913c7d29",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T12:48:48.338588Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "PROBLEM.md",
+    "tasks/2026-02-14-session-62-complete-u2-layer.md",
+    "tasks/2026-02-14-session-62-summary.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 194,
+    "cache_creation_tokens": 76425,
+    "cache_read_tokens": 1722145,
+    "output_tokens": 5426,
+    "api_call_count": 24
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T12:48:48.233301Z",
+    "agent_lines": 0,
+    "human_added": 7852,
+    "human_modified": 82,
+    "human_removed": 0,
+    "total_committed": 7920,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/7efe6c30-59fe-4118-83a2-a811913c7d29.jsonl"
+}
