@@ -54,8 +54,39 @@ Inferred: 178, Connected: 15, Isolated: 163
    - Manually trigger edge inference
    - `spec connect --auto` for all isolated specs
 
-## Expected Outcome
+## Implementation
 
-- <20 isolated extracted specs (from 163)
-- Meaningful U3→U0 connections
-- Traceable multi-layer specifications
+### Phase 1: Enhance `spec check` (User Feedback) ✅
+
+Fixed the need for jq/python3:
+- Show extracted specs breakdown by extractor type
+- Display: assertion (102), test (106), function_name (14), doc (1)
+- Total specs and percentage calculations
+
+### Phase 2: Connect U0→U3 (Semantic Matching) ✅
+
+Created `scripts/connect_u0_u3.py`:
+- Keyword-based semantic matching
+- Domain-specific boosts (command→function mapping)
+- Threshold: 0.5 confidence
+- Result: +7 Formalizes edges (U0→U3)
+
+**Impact**:
+- Before: 20/74 U0 specs had U3 connections (27%)
+- After:  24/74 U0 specs have U3 connections (32.4%)
+- Improvement: +4 connected U0 specs
+
+## Next Steps
+
+Remaining challenges:
+1. **50 U0 specs still lack U3 connections** (67.6%)
+   - Need AI-enhanced matching or manual review
+   - Or implement U2 extraction to bridge the gap
+
+2. **223 isolated specs** (mostly test assertions)
+   - Many are low-value (test-specific assertions)
+   - Focus on high-value: doc comments, function names
+
+3. **U2 layer extraction** (PROBLEM.md High priority)
+   - Proto/gRPC interface extraction
+   - Would create U0→U2→U3 chains
