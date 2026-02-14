@@ -1,0 +1,38 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "7d6f359dd2f6",
+  "session_id": "9ebfc0dc-656c-4d6a-a27d-7d27d52c0893",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T15:10:15.09943Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".spec/scripts/start-specd.sh",
+    ".spec/scripts/stop-specd.sh",
+    "ACHIEVEMENTS.md",
+    "paper/case-study/real_projects/README.md",
+    "paper/case-study/real_projects/external_validation.py",
+    "scripts/README.md",
+    "scripts/spec_diff.py",
+    "tasks/2026-02-15-cleanup-migration-scripts.md",
+    "tasks/2026-02-15-session-98-human-readable-spec-diff.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 434,
+    "cache_creation_tokens": 84164,
+    "cache_read_tokens": 4430685,
+    "output_tokens": 4678,
+    "api_call_count": 54
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T15:10:14.97056Z",
+    "agent_lines": 0,
+    "human_added": 693,
+    "human_modified": 274,
+    "human_removed": 0,
+    "total_committed": 967,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/9ebfc0dc-656c-4d6a-a27d-7d27d52c0893.jsonl"
+}

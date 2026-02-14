@@ -3,9 +3,14 @@
   "checkpoint_id": "7d6f359dd2f6",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 4,
+  "checkpoints_count": 5,
   "files_touched": [
+    ".spec/scripts/start-specd.sh",
+    ".spec/scripts/stop-specd.sh",
+    "ACHIEVEMENTS.md",
     "PROBLEM.md",
+    "paper/case-study/real_projects/README.md",
+    "paper/case-study/real_projects/external_validation.py",
     "paper/lean/.lake/build/bin/uadf_u0_paper",
     "paper/lean/.lake/build/bin/uadf_u0_paper.hash",
     "paper/lean/.lake/build/bin/uadf_u0_paper.trace",
@@ -140,12 +145,16 @@
     "paper/reviews/reviewer3.md",
     "paper/reviews/reviewer3_strict_round3.md",
     "paper/reviews/revision_after_user_critique.md",
+    "scripts/README.md",
+    "scripts/spec_diff.py",
     "spec-cli/src/main.rs",
     "spec-core/src/extract.rs",
     "spec-core/src/lib.rs",
     "tasks/2026-02-14-session-95-isolated-specs-investigation.md",
     "tasks/2026-02-14-session-95-proto-extraction-and-connections.md",
     "tasks/2026-02-14-session-97-proto-extraction-automation.md",
+    "tasks/2026-02-15-cleanup-migration-scripts.md",
+    "tasks/2026-02-15-session-98-human-readable-spec-diff.md",
     "tasks/SESSION-95-SUMMARY.md",
     "tasks/SESSION-97-SUMMARY.md"
   ],
@@ -177,13 +186,20 @@
       "context": "/7d/6f359dd2f6/3/context.md",
       "content_hash": "/7d/6f359dd2f6/3/content_hash.txt",
       "prompt": "/7d/6f359dd2f6/3/prompt.txt"
+    },
+    {
+      "metadata": "/7d/6f359dd2f6/4/metadata.json",
+      "transcript": "/7d/6f359dd2f6/4/full.jsonl",
+      "context": "/7d/6f359dd2f6/4/context.md",
+      "content_hash": "/7d/6f359dd2f6/4/content_hash.txt",
+      "prompt": "/7d/6f359dd2f6/4/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 984,
-    "cache_creation_tokens": 298220,
-    "cache_read_tokens": 10918834,
-    "output_tokens": 20627,
-    "api_call_count": 122
+    "input_tokens": 1418,
+    "cache_creation_tokens": 382384,
+    "cache_read_tokens": 15349519,
+    "output_tokens": 25305,
+    "api_call_count": 176
   }
 }
