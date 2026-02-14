@@ -801,6 +801,71 @@ impl SpecGraph {
         }
     }
 
+    /// Trace all relationships for a node, returning a hierarchical structure.
+    /// Returns tuples of (node, edge_kind, direction) where direction is "outgoing" or "incoming".
+    pub fn trace_relationships(&self, node_id: &str, max_depth: usize) -> Vec<(SpecNodeData, EdgeKind, String, usize)> {
+        let mut result = Vec::new();
+        let mut visited = std::collections::HashSet::new();
+
+        if let Some(&start_idx) = self.id_to_index.get(node_id) {
+            visited.insert(start_idx);
+            self.trace_recursive(start_idx, max_depth, 0, &mut visited, &mut result);
+        }
+
+        result
+    }
+
+    fn trace_recursive(
+        &self,
+        idx: NodeIndex,
+        max_depth: usize,
+        current_depth: usize,
+        visited: &mut std::collections::HashSet<NodeIndex>,
+        result: &mut Vec<(SpecNodeData, EdgeKind, String, usize)>,
+    ) {
+        if max_depth > 0 && current_depth >= max_depth {
+            return;
+        }
+
+        // Traverse outgoing edges
+        for edge in self.graph.edges_directed(idx, Direction::Outgoing) {
+            let target_idx = edge.target();
+            let edge_data = &self.graph[edge.id()];
+            let target_node = &self.graph[target_idx];
+
+            result.push((
+                target_node.clone(),
+                edge_data.kind,
+                "outgoing".to_string(),
+                current_depth + 1,
+            ));
+
+            if !visited.contains(&target_idx) {
+                visited.insert(target_idx);
+                self.trace_recursive(target_idx, max_depth, current_depth + 1, visited, result);
+            }
+        }
+
+        // Traverse incoming edges
+        for edge in self.graph.edges_directed(idx, Direction::Incoming) {
+            let source_idx = edge.source();
+            let edge_data = &self.graph[edge.id()];
+            let source_node = &self.graph[source_idx];
+
+            result.push((
+                source_node.clone(),
+                edge_data.kind,
+                "incoming".to_string(),
+                current_depth + 1,
+            ));
+
+            if !visited.contains(&source_idx) {
+                visited.insert(source_idx);
+                self.trace_recursive(source_idx, max_depth, current_depth + 1, visited, result);
+            }
+        }
+    }
+
     /// Find potentially related terms based on co-occurrence in metadata or content.
     /// This provides a lightweight semantic clustering without requiring external AI.
     pub fn find_related_terms(&self, term: &str) -> Vec<(&SpecNodeData, f32)> {
