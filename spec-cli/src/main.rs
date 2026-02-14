@@ -183,6 +183,8 @@ enum Commands {
         /// Universe identifier (e.g., "ui", "api", "database")
         universe: String,
     },
+    /// Infer relationships for all nodes in the graph
+    InferRelationships,
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -969,6 +971,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
             } else {
                 println!("Failed to set universe for node '{}'", id);
+            }
+        }
+        Commands::InferRelationships => {
+            println!("Inferring relationships for all nodes...");
+            let resp = client
+                .infer_all_relationships(Request::new(proto::InferAllRelationshipsRequest {}))
+                .await?;
+            let result = resp.into_inner();
+
+            println!("✓ Created {} new edges automatically", result.edges_created);
+
+            if result.suggestions_count > 0 {
+                println!("\nSuggestions for human review ({} total):", result.suggestions_count);
+                for (i, suggestion) in result.suggestions.iter().take(10).enumerate() {
+                    println!("  {}. {}", i + 1, suggestion);
+                }
+                if result.suggestions.len() > 10 {
+                    println!("  ... and {} more", result.suggestions.len() - 10);
+                }
             }
         }
     }

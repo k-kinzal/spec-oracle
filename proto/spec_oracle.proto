@@ -48,6 +48,9 @@ service SpecOracle {
   // Inter-universe consistency (conversation.md U, D, A, f implementation)
   rpc DetectInterUniverseInconsistencies(DetectInterUniverseInconsistenciesRequest) returns (DetectInterUniverseInconsistenciesResponse);
   rpc SetNodeUniverse(SetNodeUniverseRequest) returns (SetNodeUniverseResponse);
+
+  // Automatic relationship inference
+  rpc InferAllRelationships(InferAllRelationshipsRequest) returns (InferAllRelationshipsResponse);
 }
 
 // --- Node types ---
@@ -382,4 +385,12 @@ message SetNodeUniverseRequest {
 
 message SetNodeUniverseResponse {
   SpecNode node = 1;
+}
+
+message InferAllRelationshipsRequest {}
+
+message InferAllRelationshipsResponse {
+  uint32 edges_created = 1;
+  uint32 suggestions_count = 2;
+  repeated string suggestions = 3;  // Human-readable edge suggestions
 }

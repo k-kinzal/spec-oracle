@@ -675,4 +675,28 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
             node: Some(to_proto_node(&node)),
         }))
     }
+
+    async fn infer_all_relationships(
+        &self,
+        _request: Request<proto::InferAllRelationshipsRequest>,
+    ) -> Result<Response<proto::InferAllRelationshipsResponse>, Status> {
+        let mut graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+
+        let report = graph.infer_all_relationships();
+
+        if let Err(e) = self.store.save(&*graph) {
+            eprintln!("Failed to persist after relationship inference: {}", e);
+        }
+
+        let suggestions: Vec<String> = report.suggestions.iter()
+            .map(|s| format!("{} --{:?}-> {} (confidence: {:.2})",
+                s.source_id, s.kind, s.target_id, s.confidence))
+            .collect();
+
+        Ok(Response::new(proto::InferAllRelationshipsResponse {
+            edges_created: report.edges_created as u32,
+            suggestions_count: suggestions.len() as u32,
+            suggestions,
+        }))
+    }
 }

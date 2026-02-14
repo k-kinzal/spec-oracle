@@ -124,6 +124,45 @@ impl SpecGraph {
         self.get_node(&node_id).unwrap().clone()
     }
 
+    /// Infer relationships for all nodes in the graph
+    pub fn infer_all_relationships(&mut self) -> IngestionReport {
+        let mut report = IngestionReport {
+            nodes_created: 0,
+            nodes_skipped: 0,
+            edges_created: 0,
+            suggestions: Vec::new(),
+            contradictions_found: Vec::new(),
+        };
+
+        // Get all node IDs
+        let all_ids: Vec<String> = self.list_nodes(None).iter().map(|n| n.id.clone()).collect();
+
+        // Infer relationships for each node
+        for node_id in &all_ids {
+            let suggestions = self.infer_relationships_for_node(node_id);
+
+            for suggestion in suggestions {
+                if suggestion.confidence >= 0.8 {
+                    // High confidence: auto-create edge
+                    match self.add_edge(
+                        &suggestion.source_id,
+                        &suggestion.target_id,
+                        suggestion.kind,
+                        HashMap::new(),
+                    ) {
+                        Ok(_) => report.edges_created += 1,
+                        Err(_) => {} // Ignore errors (edge might already exist)
+                    }
+                } else if suggestion.confidence >= 0.5 {
+                    // Medium confidence: suggest for human review
+                    report.suggestions.push(suggestion);
+                }
+            }
+        }
+
+        report
+    }
+
     /// Infer relationships for a specific node
     fn infer_relationships_for_node(&self, node_id: &str) -> Vec<EdgeSuggestion> {
         let mut suggestions = Vec::new();
