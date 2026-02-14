@@ -18,6 +18,96 @@
         "created_at": 1771059855,
         "modified_at": 1771059855,
         "formality_layer": 0
+      },
+      {
+        "id": "9e1a2dce-558a-44e3-890f-d4d1f5c0840b",
+        "content": "specORACLE manages multi-layered specifications across formality layers U0 through U3",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060207,
+        "modified_at": 1771060207,
+        "formality_layer": 0
+      },
+      {
+        "id": "81afa3f5-4a41-4b04-b958-224d1037d76f",
+        "content": "The system must detect contradictions between specifications within the same formality layer",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060208,
+        "modified_at": 1771060208,
+        "formality_layer": 0
+      },
+      {
+        "id": "c8f23449-3f4c-40b1-a8f4-6dc2c93444b1",
+        "content": "The system must detect omissions where specifications have no relationships to other specifications",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060209,
+        "modified_at": 1771060209,
+        "formality_layer": 0
+      },
+      {
+        "id": "a1ab944c-470f-4405-8de6-f65979c52095",
+        "content": "Users can add specifications using natural language without specifying node kinds or relationships",
+        "kind": "Scenario",
+        "metadata": {},
+        "created_at": 1771060210,
+        "modified_at": 1771060210,
+        "formality_layer": 0
+      },
+      {
+        "id": "ec5f2497-a3ac-4162-8f75-c5da40436bc5",
+        "content": "Project-local specifications must be stored in .spec/specs.json and auto-detected by the CLI",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060211,
+        "modified_at": 1771060211,
+        "formality_layer": 0
+      },
+      {
+        "id": "e9b11d11-68f5-4b68-ae21-1967f155fd50",
+        "content": "specORACLE serves as the ORACLE providing the single source of truth across conflicting specifications",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060218,
+        "modified_at": 1771060218,
+        "formality_layer": 0
+      },
+      {
+        "id": "f6953636-fe61-4381-9856-940f797a1e9b",
+        "content": "Specifications can be refined across layers using Formalizes and Transform edge relationships",
+        "kind": "Scenario",
+        "metadata": {},
+        "created_at": 1771060219,
+        "modified_at": 1771060219,
+        "formality_layer": 0
+      },
+      {
+        "id": "ea3f4e7a-e577-465b-810d-ea4247d5ec48",
+        "content": "The CLI must work in standalone mode without requiring a running server for basic operations",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060221,
+        "modified_at": 1771060221,
+        "formality_layer": 0
+      },
+      {
+        "id": "dbc5525f-ec05-42fa-8823-dddd359567ed",
+        "content": "The check command must run both contradiction and omission detection and present unified results",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060359,
+        "modified_at": 1771060359,
+        "formality_layer": 0
+      },
+      {
+        "id": "49f551db-6fa3-40d2-9e36-bdb5e90a687b",
+        "content": "The check command must exit with code 0 when no issues found and code 1 when issues exist",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060360,
+        "modified_at": 1771060360,
+        "formality_layer": 0
       }
     ],
     "node_holes": [],

@@ -89,6 +89,8 @@ enum Commands {
     DetectContradictions,
     /// Detect omissions in specifications
     DetectOmissions,
+    /// Check specifications for issues (contradictions and omissions)
+    Check,
     /// Resolve terminology and find synonyms
     ResolveTerm {
         /// Term to resolve
@@ -531,6 +533,68 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                 }
             }
         }
+        Commands::Check => {
+            let graph = store.load()?;
+
+            println!("🔍 Checking specifications...\n");
+
+            // Check contradictions
+            println!("  Checking for contradictions...");
+            let contradictions = graph.detect_contradictions();
+            if contradictions.is_empty() {
+                println!("  ✓ No contradictions found");
+            } else {
+                println!("  ⚠️  {} contradiction(s) found", contradictions.len());
+            }
+
+            // Check omissions
+            println!("  Checking for omissions...");
+            let omissions = graph.detect_omissions();
+            if omissions.is_empty() {
+                println!("  ✓ No isolated specifications");
+            } else {
+                println!("  ⚠️  {} isolated specification(s)", omissions.len());
+            }
+
+            // Summary
+            println!("\n📊 Summary:");
+            println!("  Contradictions: {}", contradictions.len());
+            println!("  Isolated specs: {}", omissions.len());
+
+            let total_issues = contradictions.len() + omissions.len();
+            if total_issues == 0 {
+                println!("\n✅ All checks passed! No issues found.");
+                std::process::exit(0);
+            } else if contradictions.is_empty() {
+                println!("\n⚠️  Minor issues found (isolated specifications may need relationships)");
+
+                // Show first few omissions as examples
+                if !omissions.is_empty() {
+                    println!("\nExamples of isolated specifications:");
+                    for (i, omission) in omissions.iter().take(3).enumerate() {
+                        println!("  {}. {}", i + 1, omission.description);
+                        for node in &omission.related_nodes {
+                            println!("     - [{}] {}", &node.id[..8], node.content);
+                        }
+                    }
+                    if omissions.len() > 3 {
+                        println!("  ... and {} more", omissions.len() - 3);
+                    }
+                }
+                std::process::exit(1);
+            } else {
+                println!("\n❌ Critical issues found!");
+
+                // Show contradictions
+                println!("\nContradictions:");
+                for (i, contradiction) in contradictions.iter().enumerate() {
+                    println!("  {}. {}", i + 1, contradiction.explanation);
+                    println!("     A: [{}] {}", &contradiction.node_a.id[..8], contradiction.node_a.content);
+                    println!("     B: [{}] {}", &contradiction.node_b.id[..8], contradiction.node_b.content);
+                }
+                std::process::exit(1);
+            }
+        }
         _ => {
             eprintln!("Command not yet supported in standalone mode.");
             eprintln!("For advanced features, use server mode (start specd first).");
@@ -769,6 +833,73 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!("      [{}] {}", node.id, node.content);
                         }
                     }
+                }
+            }
+        }
+        Commands::Check => {
+            println!("🔍 Checking specifications...\n");
+
+            // Check contradictions
+            println!("  Checking for contradictions...");
+            let contra_resp = client
+                .detect_contradictions(Request::new(proto::DetectContradictionsRequest {}))
+                .await?;
+            let contradictions = contra_resp.into_inner().contradictions;
+            if contradictions.is_empty() {
+                println!("  ✓ No contradictions found");
+            } else {
+                println!("  ⚠️  {} contradiction(s) found", contradictions.len());
+            }
+
+            // Check omissions
+            println!("  Checking for omissions...");
+            let omit_resp = client
+                .detect_omissions(Request::new(proto::DetectOmissionsRequest {}))
+                .await?;
+            let omissions = omit_resp.into_inner().omissions;
+            if omissions.is_empty() {
+                println!("  ✓ No isolated specifications");
+            } else {
+                println!("  ⚠️  {} isolated specification(s)", omissions.len());
+            }
+
+            // Summary
+            println!("\n📊 Summary:");
+            println!("  Contradictions: {}", contradictions.len());
+            println!("  Isolated specs: {}", omissions.len());
+
+            let total_issues = contradictions.len() + omissions.len();
+            if total_issues == 0 {
+                println!("\n✅ All checks passed! No issues found.");
+            } else if contradictions.is_empty() {
+                println!("\n⚠️  Minor issues found (isolated specifications may need relationships)");
+
+                // Show first few omissions as examples
+                if !omissions.is_empty() {
+                    println!("\nExamples of isolated specifications:");
+                    for (i, o) in omissions.iter().take(3).enumerate() {
+                        println!("  {}. {}", i + 1, o.description);
+                        if !o.related_nodes.is_empty() {
+                            for n in &o.related_nodes {
+                                println!("     - [{}] {}", n.id, n.content);
+                            }
+                        }
+                    }
+                    if omissions.len() > 3 {
+                        println!("  ... and {} more", omissions.len() - 3);
+                    }
+                }
+            } else {
+                println!("\n❌ Critical issues found!");
+
+                // Show contradictions
+                println!("\nContradictions:");
+                for (i, c) in contradictions.iter().enumerate() {
+                    let a = c.node_a.as_ref().unwrap();
+                    let b = c.node_b.as_ref().unwrap();
+                    println!("  {}. {}", i + 1, c.explanation);
+                    println!("     A: [{}] {}", a.id, a.content);
+                    println!("     B: [{}] {}", b.id, b.content);
                 }
             }
         }

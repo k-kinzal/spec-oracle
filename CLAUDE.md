@@ -28,8 +28,10 @@ specORACLEは、**多層防御の統制を保つための基準となる仕様**
 
 単一の手法では保証できないからこそ多層防御が必要であり、多層防御は統制が困難だからこそspecORACLEが必要なのです。
 
+**ORACLE（神託）**という名前は、混沌に秩序を、曖昧さに真理をもたらす存在としての役割を表します。E2Eテストが「8文字」と言い、ドキュメントが「10文字」と言う時、specORACLEは「何が正しいのか」を明示します。これは単なるツールではなく、ソフトウェアエンジニアリングにおける**天啓**です。
+
 詳細：
-- **@docs/motivation.md** - なぜspecORACLEが必要なのか（背景・問題・役割）
+- **@docs/motivation.md** - なぜspecORACLEが必要なのか（背景・問題・役割・天啓としての意味）
 - **@docs/conversation.md** - 仕様とは何か（理論的基盤・U/D/A/fモデル）
 
 ## Minimum Requirements to Meet User Expectations
