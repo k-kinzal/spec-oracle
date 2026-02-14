@@ -2,6 +2,7 @@ pub mod graph;
 pub mod store;
 pub mod extract;
 pub mod ai_semantic;
+pub mod udaf;
 
 pub use graph::{NodeKind, EdgeKind, SpecGraph, SpecNodeData, SpecEdgeData};
 pub use graph::{Contradiction, Omission, LayerInconsistency, InterUniverseInconsistency, TestCoverage, ComplianceScore};
@@ -9,3 +10,4 @@ pub use graph::{TemporalSnapshot, TemporalDiff, NodeHistory, HistoryEvent, Compl
 pub use store::FileStore;
 pub use extract::{RustExtractor, InferredSpecification, IngestionReport, EdgeSuggestion};
 pub use ai_semantic::AISemantic;
+pub use udaf::{UDAFModel, Universe, Domain, AdmissibleSet, TransformFunction, TransformStrategy, Constraint, ConstraintKind, TransformKind};

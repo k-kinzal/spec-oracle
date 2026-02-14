@@ -162,9 +162,9 @@
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U2",
           "line": "171-181",
-          "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -206,9 +206,9 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
-          "line": "183-192",
-          "source_file": "proto/spec_oracle.proto"
+          "line": "183-192"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -219,8 +219,8 @@
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
           "function": "detect_omissions",
+          "source_file": "spec-core/src/graph.rs",
           "formality_layer": "U3"
         },
         "created_at": 1771061597,
@@ -241,9 +241,9 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto",
           "line": "7,105-113",
-          "source_file": "proto/spec_oracle.proto"
+          "formality_layer": "U2"
         },
         "created_at": 1771061822,
         "modified_at": 1771061822,
@@ -255,8 +255,8 @@
         "kind": "Assertion",
         "metadata": {
           "formality_layer": "U3",
-          "function": "Commands::Add",
-          "source_file": "spec-cli/src/main.rs"
+          "source_file": "spec-cli/src/main.rs",
+          "function": "Commands::Add"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -281,8 +281,8 @@
         "kind": "Constraint",
         "metadata": {
           "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Check",
-          "formality_layer": "U3"
+          "formality_layer": "U3",
+          "function": "Commands::Check"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -294,8 +294,8 @@
         "kind": "Assertion",
         "metadata": {
           "formality_layer": "U2",
-          "line": "18,162-169",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "line": "18,162-169"
         },
         "created_at": 1771062014,
         "modified_at": 1771062014,
@@ -306,9 +306,9 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Find",
-          "formality_layer": "U3"
+          "function": "Commands::Find"
         },
         "created_at": 1771062016,
         "modified_at": 1771062016,
@@ -319,9 +319,9 @@
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U2",
           "source_file": "proto/spec_oracle.proto",
-          "line": "14,148-153",
-          "formality_layer": "U2"
+          "line": "14,148-153"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -333,8 +333,8 @@
         "kind": "Assertion",
         "metadata": {
           "function": "Commands::Trace",
-          "formality_layer": "U3",
-          "source_file": "spec-cli/src/main.rs"
+          "source_file": "spec-cli/src/main.rs",
+          "formality_layer": "U3"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -392,6 +392,169 @@
         "metadata": {},
         "created_at": 1771063624,
         "modified_at": 1771063624,
+        "formality_layer": 0
+      },
+      {
+        "id": "0dc100e8-5514-4ab8-9cb5-3a067aac5536",
+        "content": "The verify-layers command provides formal verification of multi-layer specification consistency",
+        "kind": "Assertion",
+        "metadata": {
+          "formality_layer": "U0"
+        },
+        "created_at": 1771063819,
+        "modified_at": 1771063819,
+        "formality_layer": 0
+      },
+      {
+        "id": "f2404db9-79d3-46d9-bc99-6f19b06782c6",
+        "content": "VerifyLayers command enum variant in Commands",
+        "kind": "Assertion",
+        "metadata": {
+          "formality_layer": "U2"
+        },
+        "created_at": 1771063819,
+        "modified_at": 1771063819,
+        "formality_layer": 2
+      },
+      {
+        "id": "072d1cd5-1d4a-40b3-8061-fadabebc6117",
+        "content": "parse_formality_layer() converts metadata layer strings to numeric values",
+        "kind": "Assertion",
+        "metadata": {
+          "formality_layer": "U3"
+        },
+        "created_at": 1771063820,
+        "modified_at": 1771063820,
+        "formality_layer": 3
+      },
+      {
+        "id": "b36f3a5f-d36a-48fd-bc75-b7d110df376f",
+        "content": "Completeness check traverses Formalizes edges from U0 to U3",
+        "kind": "Assertion",
+        "metadata": {
+          "formality_layer": "U3"
+        },
+        "created_at": 1771063821,
+        "modified_at": 1771063821,
+        "formality_layer": 3
+      },
+      {
+        "id": "df2be5a7-c131-4e44-97da-81f2a4995fe6",
+        "content": "Soundness check traverses inverse Formalizes edges from U3 to U0",
+        "kind": "Assertion",
+        "metadata": {
+          "formality_layer": "U3"
+        },
+        "created_at": 1771063822,
+        "modified_at": 1771063822,
+        "formality_layer": 3
+      },
+      {
+        "id": "4200e9ae-0798-4311-a786-415d9b164bf7",
+        "content": "U/D/A/f model provides explicit data structures for Universe, Domain, Admissible set, and Transform function",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064466,
+        "modified_at": 1771064466,
+        "formality_layer": 0
+      },
+      {
+        "id": "070f3b22-e508-4953-b15c-a330fd5f8b22",
+        "content": "Universe struct represents the space in which specifications are defined at a particular formality layer",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064467,
+        "modified_at": 1771064467,
+        "formality_layer": 0
+      },
+      {
+        "id": "8772404d-59f0-44da-970c-9347eceaaf42",
+        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064470,
+        "modified_at": 1771064470,
+        "formality_layer": 0
+      },
+      {
+        "id": "62bc5acc-df17-4095-970a-4dc57ff199d3",
+        "content": "Domain struct represents the region that a specification actually covers, enabling gap detection via D \\ D_S",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064471,
+        "modified_at": 1771064471,
+        "formality_layer": 0
+      },
+      {
+        "id": "784f3567-19fd-45b3-993e-aca0e11b1f40",
+        "content": "AdmissibleSet struct symbolically represents the set of allowed implementations through constraints",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064472,
+        "modified_at": 1771064472,
+        "formality_layer": 0
+      },
+      {
+        "id": "dacb1b3a-f15b-4063-96c6-4f836eb05944",
+        "content": "TransformFunction struct contains actual transformation logic using strategy pattern, not just edge markers",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064473,
+        "modified_at": 1771064473,
+        "formality_layer": 0
+      },
+      {
+        "id": "1e80df99-7c36-49dd-b30a-175bb44c5f54",
+        "content": "UDAFModel.construct_u0() realizes the core theoretical operation of constructing root universe from inverse mappings",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064474,
+        "modified_at": 1771064474,
+        "formality_layer": 0
+      },
+      {
+        "id": "0a82c20d-98e4-48a8-a16f-3c41ada89994",
+        "content": "pub struct Universe in spec-core/src/udaf.rs implements the Universe concept with id, layer, name, description, and specifications fields",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064489,
+        "modified_at": 1771064489,
+        "formality_layer": 0
+      },
+      {
+        "id": "76c2b5e3-5957-44fb-8c30-4fa3691717b5",
+        "content": "pub struct Domain in spec-core/src/udaf.rs implements the Domain concept with coverage tracking via covered_by field",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064490,
+        "modified_at": 1771064490,
+        "formality_layer": 0
+      },
+      {
+        "id": "bdaf9d7c-be41-4dd3-b3de-dcd8dc275ed6",
+        "content": "pub struct AdmissibleSet in spec-core/src/udaf.rs implements symbolic admissible sets with Constraint vector",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064491,
+        "modified_at": 1771064491,
+        "formality_layer": 0
+      },
+      {
+        "id": "561f6b45-a662-4858-8c3e-31ab13748531",
+        "content": "pub struct TransformFunction in spec-core/src/udaf.rs implements transformation with TransformStrategy enum for pluggable logic",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064493,
+        "modified_at": 1771064493,
+        "formality_layer": 0
+      },
+      {
+        "id": "ff4ea6cc-0c40-44a5-a5d0-1c3f511ff030",
+        "content": "pub fn construct_u0() in UDAFModel collects specifications from all projection universes and assigns to U0",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771064494,
+        "modified_at": 1771064494,
         "formality_layer": 0
       }
     ],
@@ -732,6 +895,46 @@
             "reason": "Session 44 continued the isolation elimination work from Session 43"
           },
           "created_at": 1771063036
+        }
+      ],
+      [
+        37,
+        38,
+        {
+          "id": "formalizes-verify-layers-u0-to-u2",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771063900
+        }
+      ],
+      [
+        38,
+        39,
+        {
+          "id": "formalizes-verify-layers-u2-to-u3-parse",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771063901
+        }
+      ],
+      [
+        38,
+        40,
+        {
+          "id": "formalizes-verify-layers-u2-to-u3-completeness",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771063902
+        }
+      ],
+      [
+        38,
+        41,
+        {
+          "id": "formalizes-verify-layers-u2-to-u3-soundness",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771063903
         }
       ]
     ]

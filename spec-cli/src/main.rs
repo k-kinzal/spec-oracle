@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use tonic::Request;
 use tracing_subscriber::EnvFilter;
-use spec_core::{FileStore, NodeKind as CoreNodeKind, SpecGraph};
+use spec_core::{FileStore, NodeKind as CoreNodeKind};
 
 #[derive(Parser)]
 #[command(name = "spec")]
@@ -238,6 +238,12 @@ enum Commands {
     },
     /// Verify multi-layer specification consistency (formal verification)
     VerifyLayers,
+    /// Inspect U/D/A/f model structure (display universes, domains, admissible sets, transforms)
+    InspectModel {
+        /// Show detailed information for each universe
+        #[arg(long)]
+        verbose: bool,
+    },
     /// Initialize project-local specification management
     Init {
         /// Project root directory (defaults to current directory)
@@ -508,7 +514,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
     let store = FileStore::new(&spec_path);
 
     match command {
-        Commands::Init { path } => {
+        Commands::Init { path: _ } => {
             // Init command doesn't need existing spec file
             eprintln!("Error: Init command should not reach standalone mode");
             return Ok(());
@@ -932,6 +938,170 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                 }
             }
         }
+        Commands::InspectModel { verbose } => {
+            let graph = store.load()?;
+
+            println!("🔍 Inspecting U/D/A/f Model Structure\n");
+            println!("═══════════════════════════════════════════════════════════════\n");
+
+            // Analyze Universes (U)
+            println!("📦 Universes (U):");
+            println!("   The specification space is stratified into formality layers:\n");
+
+            let mut layer_stats = std::collections::HashMap::new();
+            let mut universe_metadata = std::collections::HashMap::new();
+
+            for node in graph.list_nodes(None) {
+                let layer = parse_formality_layer(&node.metadata, node.formality_layer);
+                *layer_stats.entry(layer).or_insert(0) += 1;
+
+                if let Some(universe) = node.metadata.get("universe") {
+                    *universe_metadata.entry(universe.clone()).or_insert(0) += 1;
+                }
+            }
+
+            for layer in 0..=3 {
+                let count = layer_stats.get(&layer).unwrap_or(&0);
+                let layer_name = match layer {
+                    0 => "U0 (Root Requirements)",
+                    1 => "U1 (Formal Specifications)",
+                    2 => "U2 (Interface Definitions)",
+                    3 => "U3 (Executable Implementations)",
+                    _ => "U? (Unknown)",
+                };
+                println!("   • {}: {} specifications", layer_name, count);
+            }
+            println!();
+
+            if !universe_metadata.is_empty() {
+                println!("   Distinct universe tags:");
+                for (universe, count) in &universe_metadata {
+                    println!("     - \"{}\": {} nodes", universe, count);
+                }
+                println!();
+            }
+
+            // Analyze Domains (D)
+            println!("🌐 Domains (D):");
+            println!("   The target scope of specifications:\n");
+
+            let domain_nodes: Vec<_> = graph.list_nodes(Some(spec_core::NodeKind::Domain));
+
+            if domain_nodes.is_empty() {
+                println!("   ⚠️  No explicit domain boundaries defined");
+                println!("      (Domain definitions help prevent specification leakage)\n");
+            } else {
+                for node in &domain_nodes {
+                    println!("   • [{}] {}", &node.id[..8], node.content);
+                }
+                println!();
+            }
+
+            // Analyze Admissible Sets (A)
+            println!("✓ Admissible Sets (A):");
+            println!("   The set of permitted implementations for each specification:\n");
+
+            let constraint_count = graph.list_nodes(Some(spec_core::NodeKind::Constraint)).len();
+            let assertion_count = graph.list_nodes(Some(spec_core::NodeKind::Assertion)).len();
+            let scenario_count = graph.list_nodes(Some(spec_core::NodeKind::Scenario)).len();
+
+            println!("   • Constraints (∀): {} universal invariants", constraint_count);
+            println!("   • Assertions:      {} concrete claims", assertion_count);
+            println!("   • Scenarios (∃):   {} existential requirements", scenario_count);
+            println!();
+            println!("   Note: Each specification implicitly defines A = {{impl | impl satisfies spec}}");
+            println!("         Explicit A computation is not yet implemented.\n");
+
+            // Analyze Transform Functions (f)
+            println!("🔗 Transform Functions (f):");
+            println!("   Mappings between universes that preserve specification semantics:\n");
+
+            use spec_core::EdgeKind;
+            let mut transform_counts = std::collections::HashMap::new();
+
+            for (edge, _source, _target) in graph.list_edges(None) {
+                *transform_counts.entry(edge.kind.clone()).or_insert(0) += 1;
+            }
+
+            for (kind, count) in &transform_counts {
+                let description = match kind {
+                    EdgeKind::Formalizes => "f: Ui → Uj (formalization)",
+                    EdgeKind::Transform => "f: Ui → Uj (transformation)",
+                    EdgeKind::Refines => "refinement (within-layer)",
+                    EdgeKind::DerivesFrom => "derivation (provenance)",
+                    EdgeKind::DependsOn => "dependency",
+                    EdgeKind::Contradicts => "contradiction (⊥)",
+                    EdgeKind::Synonym => "equivalence (≡)",
+                    EdgeKind::Composes => "composition",
+                };
+                println!("   • {:20}: {} edges", description, count);
+            }
+            println!();
+
+            // Theory alignment
+            println!("📐 Theoretical Model Status:");
+            println!("   From conversation.md and motivation.md:\n");
+
+            println!("   ✅ U (Universe):       Implemented via formality_layer (0-3)");
+            println!("   ⚠️  D (Domain):         Partially implemented (NodeKind::Domain exists)");
+            println!("   ❌ A (Admissible Set): Not explicitly computed");
+            println!("   ⚠️  f (Transform):      Edges exist, but transform logic not executable");
+            println!();
+
+            println!("   Key insight from motivation.md:");
+            println!("   U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3)");
+            println!("   (Root specs are the union of inverse mappings from all layers)\n");
+
+            // Verification metrics
+            println!("📊 Model Consistency:");
+            let complete_ratio = if let Some(&u0_count) = layer_stats.get(&0) {
+                let complete = layer_stats.get(&3).unwrap_or(&0);
+                (complete * 100) / u0_count.max(1)
+            } else {
+                0
+            };
+
+            println!("   Completeness estimate:  ~{}%", complete_ratio);
+            println!("   (Percentage of U0 requirements with U3 implementations)");
+            println!("   Run 'spec verify-layers' for precise multi-layer verification.\n");
+
+            if verbose {
+                println!("═══════════════════════════════════════════════════════════════");
+                println!("Verbose Mode: Detailed Node Distribution\n");
+
+                for layer in 0..=3 {
+                    let layer_name = match layer {
+                        0 => "U0",
+                        1 => "U1",
+                        2 => "U2",
+                        3 => "U3",
+                        _ => "U?",
+                    };
+
+                    let layer_nodes: Vec<_> = graph.list_nodes(None).into_iter()
+                        .filter(|n| parse_formality_layer(&n.metadata, n.formality_layer) == layer)
+                        .collect();
+
+                    if !layer_nodes.is_empty() {
+                        println!("{} Specifications ({}):", layer_name, layer_nodes.len());
+                        for node in layer_nodes.iter().take(5) {
+                            let preview = if node.content.len() > 60 {
+                                format!("{}...", &node.content[..57])
+                            } else {
+                                node.content.clone()
+                            };
+                            println!("  • [{}] {}", &node.id[..8], preview);
+                        }
+                        if layer_nodes.len() > 5 {
+                            println!("  ... and {} more", layer_nodes.len() - 5);
+                        }
+                        println!();
+                    }
+                }
+            }
+
+            println!("═══════════════════════════════════════════════════════════════");
+        }
         _ => {
             eprintln!("Command not yet supported in standalone mode.");
             eprintln!("For advanced features, use server mode (start specd first).");
@@ -1298,7 +1468,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        Commands::Trace { id, depth } => {
+        Commands::Trace { id, depth: _ } => {
             // Get the root node
             let node_resp = client
                 .get_node(Request::new(proto::GetNodeRequest { id: id.clone() }))
@@ -1567,6 +1737,189 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("   {} unsound implementations (U3 without U0)", unsound_count);
                 }
             }
+        }
+        Commands::InspectModel { verbose } => {
+            println!("🔍 Inspecting U/D/A/f Model Structure\n");
+            println!("═══════════════════════════════════════════════════════════════\n");
+
+            // Get all nodes
+            let list_resp = client
+                .list_nodes(Request::new(proto::ListNodesRequest { kind_filter: 0 }))
+                .await?;
+            let all_nodes = list_resp.into_inner().nodes;
+
+            // Analyze Universes (U)
+            println!("📦 Universes (U):");
+            println!("   The specification space is stratified into formality layers:\n");
+
+            let mut layer_stats = std::collections::HashMap::new();
+            let mut universe_metadata = std::collections::HashMap::new();
+
+            for node in &all_nodes {
+                let layer = parse_formality_layer(&node.metadata, node.formality_layer as u8);
+                *layer_stats.entry(layer).or_insert(0) += 1;
+
+                if let Some(universe) = node.metadata.get("universe") {
+                    *universe_metadata.entry(universe.clone()).or_insert(0) += 1;
+                }
+            }
+
+            for layer in 0..=3 {
+                let count = layer_stats.get(&layer).unwrap_or(&0);
+                let layer_name = match layer {
+                    0 => "U0 (Root Requirements)",
+                    1 => "U1 (Formal Specifications)",
+                    2 => "U2 (Interface Definitions)",
+                    3 => "U3 (Executable Implementations)",
+                    _ => "U? (Unknown)",
+                };
+                println!("   • {}: {} specifications", layer_name, count);
+            }
+            println!();
+
+            if !universe_metadata.is_empty() {
+                println!("   Distinct universe tags:");
+                for (universe, count) in &universe_metadata {
+                    println!("     - \"{}\": {} nodes", universe, count);
+                }
+                println!();
+            }
+
+            // Analyze Domains (D)
+            println!("🌐 Domains (D):");
+            println!("   The target scope of specifications:\n");
+
+            let domain_nodes: Vec<_> = all_nodes.iter()
+                .filter(|n| n.kind == proto::SpecNodeKind::Domain as i32)
+                .collect();
+
+            if domain_nodes.is_empty() {
+                println!("   ⚠️  No explicit domain boundaries defined");
+                println!("      (Domain definitions help prevent specification leakage)\n");
+            } else {
+                for node in &domain_nodes {
+                    println!("   • [{}] {}", &node.id[..8], node.content);
+                }
+                println!();
+            }
+
+            // Analyze Admissible Sets (A)
+            println!("✓ Admissible Sets (A):");
+            println!("   The set of permitted implementations for each specification:\n");
+
+            let constraint_count = all_nodes.iter()
+                .filter(|n| n.kind == proto::SpecNodeKind::Constraint as i32)
+                .count();
+            let assertion_count = all_nodes.iter()
+                .filter(|n| n.kind == proto::SpecNodeKind::Assertion as i32)
+                .count();
+            let scenario_count = all_nodes.iter()
+                .filter(|n| n.kind == proto::SpecNodeKind::Scenario as i32)
+                .count();
+
+            println!("   • Constraints (∀): {} universal invariants", constraint_count);
+            println!("   • Assertions:      {} concrete claims", assertion_count);
+            println!("   • Scenarios (∃):   {} existential requirements", scenario_count);
+            println!();
+            println!("   Note: Each specification implicitly defines A = {{impl | impl satisfies spec}}");
+            println!("         Explicit A computation is not yet implemented.\n");
+
+            // Analyze Transform Functions (f)
+            println!("🔗 Transform Functions (f):");
+            println!("   Mappings between universes that preserve specification semantics:\n");
+
+            let edges_resp = client
+                .list_edges(Request::new(proto::ListEdgesRequest { node_id: String::new() }))
+                .await?;
+            let all_edges = edges_resp.into_inner().edges;
+
+            let mut transform_counts = std::collections::HashMap::new();
+
+            for edge in &all_edges {
+                *transform_counts.entry(edge.kind).or_insert(0) += 1;
+            }
+
+            let edge_descriptions = [
+                (proto::SpecEdgeKind::Formalizes as i32, "f: Ui → Uj (formalization)"),
+                (proto::SpecEdgeKind::Transform as i32, "f: Ui → Uj (transformation)"),
+                (proto::SpecEdgeKind::Refines as i32, "refinement (within-layer)"),
+                (proto::SpecEdgeKind::DerivesFrom as i32, "derivation (provenance)"),
+                (proto::SpecEdgeKind::DependsOn as i32, "dependency"),
+                (proto::SpecEdgeKind::Contradicts as i32, "contradiction (⊥)"),
+                (proto::SpecEdgeKind::Synonym as i32, "equivalence (≡)"),
+                (proto::SpecEdgeKind::Composes as i32, "composition"),
+            ];
+
+            for (kind, description) in &edge_descriptions {
+                if let Some(count) = transform_counts.get(kind) {
+                    println!("   • {:20}: {} edges", description, count);
+                }
+            }
+            println!();
+
+            // Theory alignment
+            println!("📐 Theoretical Model Status:");
+            println!("   From conversation.md and motivation.md:\n");
+
+            println!("   ✅ U (Universe):       Implemented via formality_layer (0-3)");
+            println!("   ⚠️  D (Domain):         Partially implemented (NodeKind::Domain exists)");
+            println!("   ❌ A (Admissible Set): Not explicitly computed");
+            println!("   ⚠️  f (Transform):      Edges exist, but transform logic not executable");
+            println!();
+
+            println!("   Key insight from motivation.md:");
+            println!("   U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3)");
+            println!("   (Root specs are the union of inverse mappings from all layers)\n");
+
+            // Verification metrics
+            println!("📊 Model Consistency:");
+            let complete_ratio = if let Some(&u0_count) = layer_stats.get(&0) {
+                let complete = layer_stats.get(&3).unwrap_or(&0);
+                (complete * 100) / u0_count.max(1)
+            } else {
+                0
+            };
+
+            println!("   Completeness estimate:  ~{}%", complete_ratio);
+            println!("   (Percentage of U0 requirements with U3 implementations)");
+            println!("   Run 'spec verify-layers' for precise multi-layer verification.\n");
+
+            if verbose {
+                println!("═══════════════════════════════════════════════════════════════");
+                println!("Verbose Mode: Detailed Node Distribution\n");
+
+                for layer in 0..=3 {
+                    let layer_name = match layer {
+                        0 => "U0",
+                        1 => "U1",
+                        2 => "U2",
+                        3 => "U3",
+                        _ => "U?",
+                    };
+
+                    let layer_nodes: Vec<_> = all_nodes.iter()
+                        .filter(|n| parse_formality_layer(&n.metadata, n.formality_layer as u8) == layer)
+                        .collect();
+
+                    if !layer_nodes.is_empty() {
+                        println!("{} Specifications ({}):", layer_name, layer_nodes.len());
+                        for node in layer_nodes.iter().take(5) {
+                            let preview = if node.content.len() > 60 {
+                                format!("{}...", &node.content[..57])
+                            } else {
+                                node.content.clone()
+                            };
+                            println!("  • [{}] {}", &node.id[..8], preview);
+                        }
+                        if layer_nodes.len() > 5 {
+                            println!("  ... and {} more", layer_nodes.len() - 5);
+                        }
+                        println!();
+                    }
+                }
+            }
+
+            println!("═══════════════════════════════════════════════════════════════");
         }
         Commands::ResolveTerm { term } => {
             let resp = client
@@ -2159,7 +2512,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             use std::sync::mpsc::channel;
             use std::time::Duration;
             use std::path::Path;
-            use spec_core::RustExtractor;
 
             if language != "rust" {
                 eprintln!("Only Rust watching is currently supported");
@@ -2426,7 +2778,7 @@ fn should_process_event(event: &notify::Event) -> bool {
 async fn extract_and_sync(
     client: &mut proto::spec_oracle_client::SpecOracleClient<tonic::transport::Channel>,
     source: &str,
-    language: String,
+    _language: String,
     min_confidence: f32,
 ) -> Result<usize, Box<dyn std::error::Error>> {
     use spec_core::{RustExtractor, InferredSpecification};
