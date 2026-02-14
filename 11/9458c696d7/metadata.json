@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "119458c696d7",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-cli/src/main.rs",
+    "spec-core/src/udaf.rs",
+    "tasks/2026-02-14-integrate-extractor-with-udaf-complete.md",
+    "tasks/2026-02-14-integrate-extractor-with-udaf.md",
+    "tasks/2026-02-14-session-complete-executable-theory.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/11/9458c696d7/0/metadata.json",
+      "transcript": "/11/9458c696d7/0/full.jsonl",
+      "context": "/11/9458c696d7/0/context.md",
+      "content_hash": "/11/9458c696d7/0/content_hash.txt",
+      "prompt": "/11/9458c696d7/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 322,
+    "cache_creation_tokens": 103099,
+    "cache_read_tokens": 3417308,
+    "output_tokens": 17798,
+    "api_call_count": 40
+  }
+}
