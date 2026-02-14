@@ -3110,20 +3110,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Extract { source, language, min_confidence } => {
             // Extract specifications locally (doesn't need server for extraction)
-            use spec_core::{RustExtractor, InferredSpecification};
+            use spec_core::{RustExtractor, ProtoExtractor, InferredSpecification};
             use std::path::Path;
 
             let path = Path::new(&source);
-            let specs: Vec<InferredSpecification> = if path.is_file() {
-                if language != "rust" {
-                    eprintln!("Only Rust extraction is currently supported");
-                    return Ok(());
+
+            println!("🔍 Extracting specifications from: {}\n", source);
+
+            // Detect language from file extension if not specified
+            let detected_language = if path.is_file() {
+                match path.extension().and_then(|s| s.to_str()) {
+                    Some("rs") => "rust",
+                    Some("proto") => "proto",
+                    _ => &language,
                 }
-                RustExtractor::extract(path).map_err(|e| {
-                    tonic::Status::internal(format!("Extraction failed: {}", e))
-                })?
+            } else {
+                &language
+            };
+
+            let specs: Vec<InferredSpecification> = if path.is_file() {
+                match detected_language {
+                    "rust" => RustExtractor::extract(path).map_err(|e| {
+                        tonic::Status::internal(format!("Extraction failed: {}", e))
+                    })?,
+                    "proto" => ProtoExtractor::extract(path).map_err(|e| {
+                        tonic::Status::internal(format!("Extraction failed: {}", e))
+                    })?,
+                    _ => {
+                        eprintln!("❌ Unsupported language: {}. Supported: rust, proto", language);
+                        return Ok(());
+                    }
+                }
             } else if path.is_dir() {
-                // Extract from all .rs files in directory
+                // Extract from all supported files in directory
                 use std::fs;
                 let mut all_specs = Vec::new();
                 for entry in fs::read_dir(path).map_err(|e| {
@@ -3133,16 +3152,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         tonic::Status::internal(format!("Failed to read entry: {}", e))
                     })?;
                     let entry_path = entry.path();
-                    if entry_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                        match RustExtractor::extract(&entry_path) {
-                            Ok(specs) => all_specs.extend(specs),
-                            Err(e) => eprintln!("Warning: Failed to extract from {:?}: {}", entry_path, e),
+                    match entry_path.extension().and_then(|s| s.to_str()) {
+                        Some("rs") if detected_language == "rust" || detected_language == "auto" => {
+                            match RustExtractor::extract(&entry_path) {
+                                Ok(specs) => all_specs.extend(specs),
+                                Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
+                            }
                         }
+                        Some("proto") if detected_language == "proto" || detected_language == "auto" => {
+                            match ProtoExtractor::extract(&entry_path) {
+                                Ok(specs) => all_specs.extend(specs),
+                                Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
+                            }
+                        }
+                        _ => {}
                     }
                 }
                 all_specs
             } else {
-                eprintln!("Source path not found: {}", source);
+                eprintln!("❌ Source path not found: {}", source);
                 return Ok(());
             };
 

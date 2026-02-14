@@ -31,7 +31,7 @@ We prove: preimage monotonicity and union preservation, domain-respecting liftin
 least-upper-bound characterization of $U0$, monotonic growth under layer-set extension,
 a layer-transfer theorem under relation-preserving assumptions,
 an inter-layer composition law for induced inverse images,
-and contradiction/consistency duality.
+an extraction-adequacy transfer theorem, and contradiction/consistency duality.
 The contribution is a mechanically checked core semantics for U0 construction,
 not full semantic adequacy of the whole UAD/f methodology.
 \end{abstract}
@@ -44,8 +44,11 @@ This paper asks:
 \item[\textbf{RQ1}] Can U0 construction be defined coherently when each layer has its own type?
 \item[\textbf{RQ2}] Can admissible-vs-domain constraints be lifted to the root level?
 \item[\textbf{RQ3}] Is root construction monotone under layer-set extension?
-\item[\textbf{RQ4}] Can a concrete extractor-side decision rule be proved equivalent to the logical consistency predicate?
+\item[\textbf{RQ4}] Can a general extraction relation be connected to induced inverse images, and can that theorem be instantiated to a concrete decision rule?
 \end{enumerate}
+\noindent
+Paper type: this is a mechanization-oriented original article.
+Claims are restricted to formal coherence of the typed UAD/f core and reusable machine-checked lemmas, not external effectiveness on real industrial repositories.
 
 \section{Typed UAD/f Core}
 \begin{definition}[Typed model]
@@ -63,6 +66,9 @@ For $S \subseteq \beta_i$:
 f^{-1}_{0i}(S)
 :=\{x\in\Omega \mid \exists y\in\beta_i,\ \mathrm{proj}_i(x)=\mathrm{some}(y)\land y\in S\}.
 \]
+\noindent
+In Lean, this is encoded as a predicate \texttt{SpecSet $\Omega$ := $\Omega \to Prop$};
+thus the binder ``$x \in \Omega$'' is represented by \texttt{fun x : $\Omega$ => ...}.
 \end{definition}
 
 \begin{definition}[Lifted layer and U0]
@@ -119,6 +125,10 @@ Let $R : \beta_i \to \beta_j \to \mathrm{Prop}$ satisfy:
 (2) $R$ preserves admissibility from $A_j$ to $A_i$.
 Then $lifted(j)\subseteq lifted(i)$.
 \end{theorem}
+\noindent
+Mechanized instances are provided in \texttt{TransferExample.lean}
+(\texttt{false -> true}) and \texttt{TransferChainExample.lean}
+(\texttt{code -> api -> req}).
 
 \begin{theorem}[Consistency/contradiction duality]
 $\mathrm{Contradictory}(i,j)\iff\neg\mathrm{Consistent}(i,j)$.
@@ -129,6 +139,21 @@ If $\mathrm{proj}_j(x)=\mathrm{bind}(\mathrm{proj}_i(x),g)$ for all $x\in\Omega$
 then for every $S\subseteq \beta_j$:
 \[
 f^{-1}_{0j}(S) = f^{-1}_{0i}(g^{-1}(S)).
+\]
+\end{theorem}
+\noindent
+The commutation hypothesis matches extractor pipelines where layer-$j$
+projection is implemented as a post-transform over layer-$i$ projection;
+see \texttt{CompositionExample.lean}.
+
+\begin{theorem}[General extraction adequacy transfer]
+If an extraction relation $E : \Omega \to \beta_i \to Prop$ satisfies
+\[
+\mathrm{proj}_i(x)=\mathrm{some}(y) \iff E(x,y),
+\]
+then for every $S\subseteq \beta_i$:
+\[
+f^{-1}_{0i}(S)=\{x\in\Omega \mid \exists y,\ E(x,y)\land y\in S\}.
 \]
 \end{theorem}
 
@@ -147,12 +172,12 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code).
 \]
 \end{theorem}
 
-\section{Mechanization and Validation}
+\section{Mechanization and Reproducibility}
 Lean artifacts are organized by proof purpose:
 \begin{itemize}
 \item \texttt{Definitions}: typed UAD/f core (\texttt{Layer}, \texttt{Model}, \texttt{preimage})
 \item \texttt{U0Spec}: construction lemmas, LUB theorem, layer-extension monotonicity
-\item \texttt{InterLayer}: contradiction/consistency + transfer + composition theorem
+\item \texttt{InterLayer}: contradiction/consistency + transfer + composition + adequacy theorem
 \item \texttt{CaseStudy}: extractor decision soundness/completeness theorem
 \item \texttt{Examples}: satisfiable and contradictory instances
 \end{itemize}
@@ -171,24 +196,37 @@ Pinned toolchain:
 
 Current footprint:
 \begin{itemize}
-\item 779 LOC across core Lean files
-\item 30 theorem declarations
+\item 914 LOC across core Lean files
+\item 34 theorem declarations
 \end{itemize}
 
-\paragraph{Synthetic empirical run}
-We provide a reproducible benchmark (\texttt{paper/case-study/password\_policy\_benchmark.py})
-with 5 seeds $\times$ 200,000 generated artifact triples.
-Observed averages:
+\paragraph{Non-trivial proof engineering points}
 \begin{itemize}
-\item contradiction ratio: 0.214478
-\item elapsed time: 0.7499 sec / 200,000 cases
-\item throughput: 267,334 cases/sec
+\item The dependent carrier family \texttt{carrier : I -> Type} requires explicit witness transport in existential proofs for \texttt{preimage}.
+\item The composition theorem relies on case-splitting over \texttt{Option.bind} (\texttt{some}/\texttt{none}) and normalization under the commutation hypothesis.
+\item Predicate-as-set encoding (\texttt{SpecSet}) requires explicit membership/subset instances and repeated extensionality reasoning (\texttt{set\_ext}).
+\item Quantitatively, \texttt{preimage\_compose} contains two explicit case splits and four \texttt{calc} chains, while \texttt{lifted\_transfer} uses nested witness reconstruction across relation hypotheses.
 \end{itemize}
+
+\paragraph{Synthetic consistency cross-check}
+We provide a reproducible benchmark (\texttt{paper/case-study/password\_policy\_benchmark.py})
+as a consistency check (not a proof substitute) with 5 seeds $\times$ 200,000 generated artifact triples.
+The key validation is agreement between the closed-form decision rule and brute-force witness search:
+\begin{itemize}
+\item baseline comparison (20,000 cases): mismatches = 0
+\item witness validity check (20,000 cases): witness\_violation\_count = 0
+\item distribution indicator: contradiction ratio = 0.214478
+\end{itemize}
+\noindent
+We do not claim external validity from this synthetic check; real-project artifact evaluation is left as future work.
 
 \section{Related Work and Positioning}
 Our order-theoretic lemmas are compatible with classical abstract interpretation
 viewpoints (Cousot \& Cousot, 1977), while our target is narrower:
 typed partial projections for root-specification reconstruction.
+In particular, our \texttt{preimage} operator is induced by
+$\mathrm{proj}:\Omega\to Option\,\beta_i$; because undefined points are explicit,
+embedding into a standard total-map Galois adjunction requires additional domain/totality assumptions.
 Institution-style semantic transport (Goguen \& Burstall, 1984) addresses
 language-independent satisfaction, whereas we focus on a concrete U0 operator.
 Compared with system-level formal methods (e.g., TLA+, Lamport 2002), this work
@@ -205,14 +243,14 @@ Not proven here:
 \begin{enumerate}[leftmargin=2em]
 \item faithfulness of concrete extractors to $\mathrm{proj}_i$,
 \item global completeness/soundness of end-to-end UAD/f workflows,
-\item scalability/complexity bounds for large repositories.
+\item external validity on real project artifact corpora (current check is synthetic).
 \end{enumerate}
 
 \section{Conclusion}
 We remove ambiguity in U0 construction by giving a typed UAD/f core and
 defining $f^{-1}_{0i}$ via partial projections.
 Lean4 proofs establish domain-respecting lifting, supremum characterization of U0,
-layer-extension monotonicity, and contradiction/consistency duality.
+layer-extension monotonicity, composition preservation, and extraction-adequacy transfer.
 This provides a precise baseline for stronger future results (composition laws,
 extractor correctness, and CI-level artifact guarantees).
 

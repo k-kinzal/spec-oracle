@@ -90,7 +90,7 @@ theorem req_projection_adequacy
   · intro hrel
     have hyx : y = x := by
       simpa [reqExtractRel] using hrel
-    simpa [passwordModel, hyx]
+    simp [passwordModel, hyx]
 
 theorem checkConsistent_true_implies_allThree
     (r : ReqArtifact) (a : ApiArtifact) (c : CodeArtifact)

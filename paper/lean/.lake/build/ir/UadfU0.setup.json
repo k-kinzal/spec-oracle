@@ -20,6 +20,8 @@
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/TwoLayer.olean"],
   "UadfU0.Examples.TransferExample":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/TransferExample.olean"],
+  "UadfU0.Examples.TransferChainExample":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/TransferChainExample.olean"],
   "UadfU0.Examples.ContradictoryLayers":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/ContradictoryLayers.olean"],
   "UadfU0.Examples.CompositionExample":

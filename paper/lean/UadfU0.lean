@@ -9,4 +9,5 @@ import UadfU0.CaseStudy.PasswordPolicy
 import UadfU0.Examples.TwoLayer
 import UadfU0.Examples.ContradictoryLayers
 import UadfU0.Examples.TransferExample
+import UadfU0.Examples.TransferChainExample
 import UadfU0.Examples.CompositionExample

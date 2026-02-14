@@ -12,10 +12,16 @@ Consistency condition:
 
 `max(min_req, min_api) <= min(max_req, max_code)`
 
+## Purpose
+- Validate that the closed-form consistency predicate used in Lean case study
+  matches brute-force witness search on generated artifact triples.
+- This is a reproducibility/sanity check, not a replacement for formal proofs.
+
 ## Files
-- `password_policy_benchmark.py`: benchmark runner
+- `password_policy_benchmark.py`: consistency-check runner
 - `benchmark_results.json`: generated summary from 5 runs x 200,000 cases
-  - includes baseline comparison against brute-force checker (20,000 cases)
+  - includes baseline formula-vs-bruteforce agreement check (20,000 cases)
+  - includes witness validity check (`witness_violation_count`, expected `0`)
 
 ## Reproduce
 ```bash

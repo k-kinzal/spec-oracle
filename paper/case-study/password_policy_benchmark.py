@@ -54,6 +54,18 @@ def brute_force_consistent(req: ReqArtifact, api: ApiArtifact, code: CodeArtifac
     return False
 
 
+def witness_from_formula(req: ReqArtifact, api: ApiArtifact, code: CodeArtifact) -> int | None:
+    lower = max(req.min_len, api.min_len)
+    upper = min(req.max_len, code.max_len)
+    if lower <= upper:
+        return lower
+    return None
+
+
+def witness_satisfies_all(req: ReqArtifact, api: ApiArtifact, code: CodeArtifact, n: int) -> bool:
+    return req.min_len <= n <= req.max_len and api.min_len <= n and n <= code.max_len
+
+
 def sample_artifact(rng: random.Random) -> tuple[ReqArtifact, ApiArtifact, CodeArtifact]:
     req_min = rng.randint(6, 24)
     req_max = rng.randint(req_min, 128)
@@ -68,6 +80,7 @@ def run_once(seed: int, n_cases: int) -> dict:
 
     contradictions = 0
     consistent = 0
+    witness_failures = 0
     lowers = []
     uppers = []
 
@@ -79,6 +92,9 @@ def run_once(seed: int, n_cases: int) -> dict:
         uppers.append(upper)
         if lower <= upper:
             consistent += 1
+            witness = witness_from_formula(req, api, code)
+            if witness is None or not witness_satisfies_all(req, api, code, witness):
+                witness_failures += 1
         else:
             contradictions += 1
 
@@ -92,6 +108,7 @@ def run_once(seed: int, n_cases: int) -> dict:
         "contradictory_ratio": contradictions / n_cases,
         "avg_lower": statistics.mean(lowers),
         "avg_upper": statistics.mean(uppers),
+        "witness_violation_count": witness_failures,
         "elapsed_sec": dt,
         "throughput_cases_per_sec": n_cases / dt if dt > 0 else None,
     }
@@ -117,6 +134,13 @@ def main() -> None:
     t_bruteforce = time.perf_counter() - t_bruteforce0
 
     mismatches = sum(1 for a, b in zip(formula_results, brute_results) if a != b)
+    witness_violations = 0
+    for req, api, code in artifacts:
+        witness = witness_from_formula(req, api, code)
+        if witness is None:
+            continue
+        if not witness_satisfies_all(req, api, code, witness):
+            witness_violations += 1
 
     summary = {
         "n_cases_per_run": n_cases,
@@ -137,6 +161,7 @@ def main() -> None:
             "bruteforce_elapsed_sec": t_bruteforce,
             "speedup_formula_vs_bruteforce": (t_bruteforce / t_formula) if t_formula > 0 else None,
             "result_mismatches": mismatches,
+            "witness_violation_count": witness_violations,
         },
         "runs": runs,
     }

@@ -55,7 +55,7 @@ theorem preimage_compose
         calc
           Option.bind (M.proj i x) g = M.proj j x := (hcomm x).symm
           _ = some yj := hprojJ
-      simpa [hNone] using hEqBind
+      simp [hNone] at hEqBind
   · intro hx
     rcases hx with ⟨yi, hprojI, hpb⟩
     rcases hpb with ⟨yj, hgyi, hyjS⟩
