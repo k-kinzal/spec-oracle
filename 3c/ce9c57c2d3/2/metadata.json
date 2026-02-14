@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "3cce9c57c2d3",
+  "session_id": "18a7b9c5-6c44-4070-834b-6d0d6675b216",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T12:10:36.562952Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "tasks/2026-02-14-session-56-beyond-dsl-achievement.md",
+    "tasks/2026-02-14-session-56-continue-for-goal.md",
+    "tasks/2026-02-14-session-56-final-summary.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 308,
+    "cache_creation_tokens": 81787,
+    "cache_read_tokens": 2549453,
+    "output_tokens": 563,
+    "api_call_count": 38
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T12:10:36.305199Z",
+    "agent_lines": 0,
+    "human_added": 74,
+    "human_modified": 614,
+    "human_removed": 0,
+    "total_committed": 686,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/18a7b9c5-6c44-4070-834b-6d0d6675b216.jsonl"
+}
