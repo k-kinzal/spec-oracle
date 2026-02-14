@@ -122,6 +122,16 @@ enum Commands {
         #[arg(long, default_value = "0.3")]
         min_similarity: f32,
     },
+    /// Generate executable contract template from specification
+    GenerateContract {
+        /// Node ID
+        id: String,
+        /// Target language (rust, python, etc.)
+        #[arg(long, default_value = "rust")]
+        language: String,
+    },
+    /// Get test coverage report
+    TestCoverage,
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -517,6 +527,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("\n  Potential synonyms (similarity: {:.2}):", candidate.similarity);
                     println!("    [{}] {}", a.id, a.content);
                     println!("    [{}] {}", b.id, b.content);
+                }
+            }
+        }
+        Commands::GenerateContract { id, language } => {
+            let resp = client
+                .generate_contract_template(Request::new(proto::GenerateContractTemplateRequest {
+                    node_id: id.clone(),
+                    language: language.clone(),
+                }))
+                .await?;
+            let result = resp.into_inner();
+
+            println!("Generated {} contract template for node '{}':\n", result.node_kind, id);
+            println!("{}", result.template);
+        }
+        Commands::TestCoverage => {
+            let resp = client
+                .get_test_coverage(Request::new(proto::GetTestCoverageRequest {}))
+                .await?;
+            let result = resp.into_inner();
+
+            println!("Test Coverage Report:");
+            println!("  Total testable specs: {}", result.total_testable);
+            println!("  Specs with tests: {}", result.with_tests);
+            println!("  Coverage: {:.1}%", result.coverage_ratio * 100.0);
+
+            if !result.nodes_without_tests.is_empty() {
+                println!("\n  Untested specifications ({}):", result.nodes_without_tests.len());
+                for node in result.nodes_without_tests.iter().take(10) {
+                    println!("    [{}] {} - {}", node.id, node_kind_name(node.kind), node.content);
+                }
+                if result.nodes_without_tests.len() > 10 {
+                    println!("    ... and {} more", result.nodes_without_tests.len() - 10);
+                }
+            }
+
+            if !result.nodes_with_tests.is_empty() {
+                println!("\n  Tested specifications ({}):", result.nodes_with_tests.len());
+                for node in result.nodes_with_tests.iter().take(5) {
+                    let test_file = node.metadata.get("test_file").map(|s| s.as_str()).unwrap_or("N/A");
+                    println!("    [{}] {} - {} (test: {})",
+                        node.id, node_kind_name(node.kind), node.content, test_file);
+                }
+                if result.nodes_with_tests.len() > 5 {
+                    println!("    ... and {} more", result.nodes_with_tests.len() - 5);
                 }
             }
         }

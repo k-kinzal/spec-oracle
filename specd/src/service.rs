@@ -385,4 +385,55 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
             candidates,
         }))
     }
+
+    async fn generate_contract_template(
+        &self,
+        request: Request<proto::GenerateContractTemplateRequest>,
+    ) -> Result<Response<proto::GenerateContractTemplateResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+
+        let template = graph
+            .generate_contract_template(&req.node_id, &req.language)
+            .ok_or_else(|| Status::not_found("Node not found or not testable"))?;
+
+        let node = graph
+            .get_node(&req.node_id)
+            .ok_or_else(|| Status::not_found("Node not found"))?;
+
+        let node_kind = match node.kind {
+            spec_core::NodeKind::Constraint => "constraint",
+            spec_core::NodeKind::Scenario => "scenario",
+            _ => "unknown",
+        };
+
+        Ok(Response::new(proto::GenerateContractTemplateResponse {
+            template,
+            node_kind: node_kind.to_string(),
+        }))
+    }
+
+    async fn get_test_coverage(
+        &self,
+        _request: Request<proto::GetTestCoverageRequest>,
+    ) -> Result<Response<proto::GetTestCoverageResponse>, Status> {
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+        let coverage = graph.get_test_coverage();
+
+        Ok(Response::new(proto::GetTestCoverageResponse {
+            total_testable: coverage.total_testable as u32,
+            with_tests: coverage.with_tests as u32,
+            coverage_ratio: coverage.coverage_ratio,
+            nodes_with_tests: coverage
+                .nodes_with_tests
+                .iter()
+                .map(to_proto_node)
+                .collect(),
+            nodes_without_tests: coverage
+                .nodes_without_tests
+                .iter()
+                .map(to_proto_node)
+                .collect(),
+        }))
+    }
 }

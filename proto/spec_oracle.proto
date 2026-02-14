@@ -30,6 +30,10 @@ service SpecOracle {
   // Semantic normalization
   rpc FindRelatedTerms(FindRelatedTermsRequest) returns (FindRelatedTermsResponse);
   rpc DetectPotentialSynonyms(DetectPotentialSynonymsRequest) returns (DetectPotentialSynonymsResponse);
+
+  // Executable contracts
+  rpc GenerateContractTemplate(GenerateContractTemplateRequest) returns (GenerateContractTemplateResponse);
+  rpc GetTestCoverage(GetTestCoverageRequest) returns (GetTestCoverageResponse);
 }
 
 // --- Node types ---
@@ -231,4 +235,24 @@ message SynonymCandidate {
   SpecNode node_a = 1;
   SpecNode node_b = 2;
   float similarity = 3;
+}
+
+message GenerateContractTemplateRequest {
+  string node_id = 1;
+  string language = 2;  // Target language: "rust", "python", etc.
+}
+
+message GenerateContractTemplateResponse {
+  string template = 1;  // Generated test template code
+  string node_kind = 2;  // "constraint" or "scenario"
+}
+
+message GetTestCoverageRequest {}
+
+message GetTestCoverageResponse {
+  uint32 total_testable = 1;       // Total constraints + scenarios
+  uint32 with_tests = 2;            // Nodes with test_file metadata
+  float coverage_ratio = 3;         // Ratio 0.0-1.0
+  repeated SpecNode nodes_with_tests = 4;
+  repeated SpecNode nodes_without_tests = 5;
 }

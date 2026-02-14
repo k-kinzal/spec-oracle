@@ -603,6 +603,141 @@ impl SpecGraph {
         candidates.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
         candidates
     }
+
+    /// Generate contract template from a specification node.
+    /// For constraints: generates property-based test template
+    /// For scenarios: generates unit test template
+    pub fn generate_contract_template(&self, node_id: &str, language: &str) -> Option<String> {
+        let node = self.get_node(node_id)?;
+
+        match node.kind {
+            NodeKind::Constraint => Some(self.generate_property_test(node, language)),
+            NodeKind::Scenario => Some(self.generate_unit_test(node, language)),
+            _ => None,
+        }
+    }
+
+    fn generate_property_test(&self, node: &SpecNodeData, language: &str) -> String {
+        match language {
+            "rust" => format!(
+                r#"#[quickcheck]
+fn property_{}(input: /* TODO: define input type */) -> bool {{
+    // Specification: {}
+    // TODO: Implement property check
+    todo!("Verify: {}")
+}}
+"#,
+                node.id.replace('-', "_"),
+                node.content,
+                node.content
+            ),
+            "python" => format!(
+                r#"@given(st./* TODO: define strategy */)
+def test_property_{}(input):
+    """Specification: {}"""
+    # TODO: Implement property check
+    assert False, "TODO: Verify {}"
+"#,
+                node.id.replace('-', "_"),
+                node.content,
+                node.content
+            ),
+            _ => format!(
+                "// Property test for: {}\n// TODO: Implement in {}\n",
+                node.content, language
+            ),
+        }
+    }
+
+    fn generate_unit_test(&self, node: &SpecNodeData, language: &str) -> String {
+        match language {
+            "rust" => format!(
+                r#"#[test]
+fn test_scenario_{}() {{
+    // Scenario: {}
+    // TODO: Implement test steps
+    todo!("Test: {}")
+}}
+"#,
+                node.id.replace('-', "_"),
+                node.content,
+                node.content
+            ),
+            "python" => format!(
+                r#"def test_scenario_{}():
+    """Scenario: {}"""
+    # TODO: Implement test steps
+    assert False, "TODO: Test {}"
+"#,
+                node.id.replace('-', "_"),
+                node.content,
+                node.content
+            ),
+            _ => format!(
+                "// Unit test for: {}\n// TODO: Implement in {}\n",
+                node.content, language
+            ),
+        }
+    }
+
+    /// Get test coverage report: which specifications have test links.
+    pub fn get_test_coverage(&self) -> TestCoverage {
+        let total_testable = self
+            .graph
+            .node_weights()
+            .filter(|n| matches!(n.kind, NodeKind::Constraint | NodeKind::Scenario))
+            .count();
+
+        let with_tests = self
+            .graph
+            .node_weights()
+            .filter(|n| {
+                matches!(n.kind, NodeKind::Constraint | NodeKind::Scenario)
+                    && n.metadata.contains_key("test_file")
+            })
+            .count();
+
+        let nodes_with_tests: Vec<SpecNodeData> = self
+            .graph
+            .node_weights()
+            .filter(|n| {
+                matches!(n.kind, NodeKind::Constraint | NodeKind::Scenario)
+                    && n.metadata.contains_key("test_file")
+            })
+            .cloned()
+            .collect();
+
+        let nodes_without_tests: Vec<SpecNodeData> = self
+            .graph
+            .node_weights()
+            .filter(|n| {
+                matches!(n.kind, NodeKind::Constraint | NodeKind::Scenario)
+                    && !n.metadata.contains_key("test_file")
+            })
+            .cloned()
+            .collect();
+
+        TestCoverage {
+            total_testable,
+            with_tests,
+            coverage_ratio: if total_testable > 0 {
+                with_tests as f32 / total_testable as f32
+            } else {
+                0.0
+            },
+            nodes_with_tests,
+            nodes_without_tests,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TestCoverage {
+    pub total_testable: usize,
+    pub with_tests: usize,
+    pub coverage_ratio: f32,
+    pub nodes_with_tests: Vec<SpecNodeData>,
+    pub nodes_without_tests: Vec<SpecNodeData>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -893,5 +1028,125 @@ mod tests {
         assert!(!synonyms.iter().any(|(n1, n2, _)|
             (n1.id == a && n2.id == b) || (n1.id == b && n2.id == a)
         ));
+    }
+
+    #[test]
+    fn generate_contract_template_for_constraint() {
+        let mut g = SpecGraph::new();
+        let constraint_id = g
+            .add_node("X must be > 0".into(), NodeKind::Constraint, HashMap::new())
+            .id
+            .clone();
+
+        let template = g.generate_contract_template(&constraint_id, "rust");
+        assert!(template.is_some());
+        let template = template.unwrap();
+        assert!(template.contains("#[quickcheck]"));
+        assert!(template.contains("X must be > 0"));
+    }
+
+    #[test]
+    fn generate_contract_template_for_scenario() {
+        let mut g = SpecGraph::new();
+        let scenario_id = g
+            .add_node("User logs in successfully".into(), NodeKind::Scenario, HashMap::new())
+            .id
+            .clone();
+
+        let template = g.generate_contract_template(&scenario_id, "rust");
+        assert!(template.is_some());
+        let template = template.unwrap();
+        assert!(template.contains("#[test]"));
+        assert!(template.contains("User logs in successfully"));
+    }
+
+    #[test]
+    fn generate_contract_template_python() {
+        let mut g = SpecGraph::new();
+        let constraint_id = g
+            .add_node("List must not be empty".into(), NodeKind::Constraint, HashMap::new())
+            .id
+            .clone();
+
+        let template = g.generate_contract_template(&constraint_id, "python");
+        assert!(template.is_some());
+        let template = template.unwrap();
+        assert!(template.contains("@given"));
+        assert!(template.contains("List must not be empty"));
+    }
+
+    #[test]
+    fn generate_contract_template_returns_none_for_non_testable() {
+        let mut g = SpecGraph::new();
+        let def_id = g
+            .add_node("Authentication".into(), NodeKind::Definition, HashMap::new())
+            .id
+            .clone();
+
+        let template = g.generate_contract_template(&def_id, "rust");
+        assert!(template.is_none());
+    }
+
+    #[test]
+    fn test_coverage_empty_graph() {
+        let g = SpecGraph::new();
+        let coverage = g.get_test_coverage();
+
+        assert_eq!(coverage.total_testable, 0);
+        assert_eq!(coverage.with_tests, 0);
+        assert_eq!(coverage.coverage_ratio, 0.0);
+    }
+
+    #[test]
+    fn test_coverage_no_tests() {
+        let mut g = SpecGraph::new();
+        g.add_node("X > 0".into(), NodeKind::Constraint, HashMap::new());
+        g.add_node("User logs in".into(), NodeKind::Scenario, HashMap::new());
+
+        let coverage = g.get_test_coverage();
+
+        assert_eq!(coverage.total_testable, 2);
+        assert_eq!(coverage.with_tests, 0);
+        assert_eq!(coverage.coverage_ratio, 0.0);
+        assert_eq!(coverage.nodes_without_tests.len(), 2);
+    }
+
+    #[test]
+    fn test_coverage_with_tests() {
+        let mut g = SpecGraph::new();
+        let mut metadata = HashMap::new();
+        metadata.insert("test_file".to_string(), "tests/auth_test.rs".to_string());
+
+        g.add_node("X > 0".into(), NodeKind::Constraint, metadata.clone());
+        g.add_node("User logs in".into(), NodeKind::Scenario, HashMap::new());
+
+        let coverage = g.get_test_coverage();
+
+        assert_eq!(coverage.total_testable, 2);
+        assert_eq!(coverage.with_tests, 1);
+        assert_eq!(coverage.coverage_ratio, 0.5);
+        assert_eq!(coverage.nodes_with_tests.len(), 1);
+        assert_eq!(coverage.nodes_without_tests.len(), 1);
+    }
+
+    #[test]
+    fn test_coverage_ignores_non_testable_nodes() {
+        let mut g = SpecGraph::new();
+        let mut metadata = HashMap::new();
+        metadata.insert("test_file".to_string(), "tests/test.rs".to_string());
+
+        // Add testable nodes
+        g.add_node("X > 0".into(), NodeKind::Constraint, metadata.clone());
+        // Add non-testable nodes (should be ignored)
+        g.add_node("Auth".into(), NodeKind::Definition, HashMap::new());
+        g.add_node("Security".into(), NodeKind::Domain, HashMap::new());
+        g.add_node("Must verify".into(), NodeKind::Assertion, HashMap::new());
+
+        let coverage = g.get_test_coverage();
+
+        // Only constraint counts as testable
+        assert_eq!(coverage.total_testable, 1);
+        assert_eq!(coverage.with_tests, 1);
+        assert_eq!(coverage.coverage_ratio, 1.0);
     }
 }
