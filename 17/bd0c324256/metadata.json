@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "17bd0c324256",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-cli/src/main.rs",
+    "spec-core/src/udaf.rs",
+    "tasks/2026-02-14-session-49-prove-satisfiability.md",
+    "tasks/2026-02-14-session-50-constraint-extraction.md",
+    "tasks/2026-02-14-session-51-formal-contradiction-detection.md",
+    "tasks/2026-02-14-session-continue-goal-complete.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/17/bd0c324256/0/metadata.json",
+      "transcript": "/17/bd0c324256/0/full.jsonl",
+      "context": "/17/bd0c324256/0/context.md",
+      "content_hash": "/17/bd0c324256/0/content_hash.txt",
+      "prompt": "/17/bd0c324256/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 626,
+    "cache_creation_tokens": 90227,
+    "cache_read_tokens": 5834298,
+    "output_tokens": 8480,
+    "api_call_count": 78
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "17bd0c324256",
+  "session_id": "86ea3310-3b1d-4129-b2d8-41f95be94aea",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T11:11:54.233223Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-cli/src/main.rs",
+    "spec-core/src/udaf.rs",
+    "tasks/2026-02-14-session-49-prove-satisfiability.md",
+    "tasks/2026-02-14-session-50-constraint-extraction.md",
+    "tasks/2026-02-14-session-51-formal-contradiction-detection.md",
+    "tasks/2026-02-14-session-continue-goal-complete.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 626,
+    "cache_creation_tokens": 90227,
+    "cache_read_tokens": 5834298,
+    "output_tokens": 8480,
+    "api_call_count": 78
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T11:11:53.715876Z",
+    "agent_lines": 0,
+    "human_added": 4086,
+    "human_modified": 21,
+    "human_removed": 0,
+    "total_committed": 4096,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/86ea3310-3b1d-4129-b2d8-41f95be94aea.jsonl"
+}
