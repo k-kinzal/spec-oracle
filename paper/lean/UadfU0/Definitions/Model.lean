@@ -1,6 +1,6 @@
 namespace UadfU0
 
-universe u v
+universe u v w
 
 abbrev SpecSet (α : Type v) : Type v := α → Prop
 
@@ -39,37 +39,60 @@ theorem set_ext {α : Type v} {A B : SpecSet α} :
   exact propext (h x)
 
 /--
-Minimal UAD/f model.
+Layer in UAD/f:
+- `D`: domain predicate
+- `A`: admissible predicate
+- `A ⊆ D`: admissible values stay inside the domain.
+-/
+structure Layer (β : Type w) where
+  D : SpecSet β
+  A : SpecSet β
+  admissible_subset_domain : A ⊆ D
 
-- `Ui`: layer-specific specification predicates.
-- `proj`: forward projections from root space `α` to each layer (`none` means undefined).
-Inverse images `f₀ᵢ⁻¹` are derived from `proj`, not postulated.
+/--
+Typed UAD/f model:
+- root space `α`
+- per-layer carrier type `carrier i = βᵢ`
+- partial forward map `proj i : α → Option βᵢ`
+
+`f₀ᵢ⁻¹` is represented by `preimage i`.
 -/
 structure Model (ι : Type u) (α : Type v) where
-  Ui : ι → SpecSet α
-  proj : ι → α → Option α
+  carrier : ι → Type w
+  layer : (i : ι) → Layer (carrier i)
+  proj : (i : ι) → α → Option (carrier i)
 
 namespace Model
 
 variable {ι : Type u} {α : Type v}
 
-/-- Set-level inverse image induced by `proj`. -/
-def preimage (M : Model ι α) (i : ι) (S : SpecSet α) : SpecSet α :=
-  fun x => ∃ y : α, M.proj i x = some y ∧ y ∈ S
+def D (M : Model ι α) (i : ι) : SpecSet (M.carrier i) :=
+  (M.layer i).D
 
-/-- Lift one projection universe into the U0 candidate space. -/
+def A (M : Model ι α) (i : ι) : SpecSet (M.carrier i) :=
+  (M.layer i).A
+
+/-- Compatibility alias. -/
+def Ui (M : Model ι α) (i : ι) : SpecSet (M.carrier i) :=
+  M.A i
+
+/-- Set-level inverse image induced by typed partial projection. -/
+def preimage (M : Model ι α) (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+
+/-- Lift one layer admissible set into root space. -/
 def lifted (M : Model ι α) (i : ι) : SpecSet α :=
   M.preimage i (M.Ui i)
 
-/-- U0 is the union of all lifted layers. -/
+/-- U0 is the union of all lifted sets in root space. -/
 def U0 (M : Model ι α) : SpecSet α :=
   fun x : α => ∃ i : ι, x ∈ M.lifted i
 
-/-- Contradiction criterion: no shared witness between two lifted layers. -/
+/-- Contradiction: no shared root witness across two lifted layers. -/
 def Contradictory (M : Model ι α) (i j : ι) : Prop :=
   ∀ x : α, x ∈ M.lifted i → x ∈ M.lifted j → False
 
-/-- Consistency criterion: at least one shared witness between two layers. -/
+/-- Consistency: at least one shared root witness exists. -/
 def Consistent (M : Model ι α) (i j : ι) : Prop :=
   ∃ x : α, x ∈ M.lifted i ∧ x ∈ M.lifted j
 

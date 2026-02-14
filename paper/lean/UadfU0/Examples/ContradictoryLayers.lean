@@ -5,10 +5,25 @@ namespace Examples
 
 open Model
 
-def contradictoryModel : Model Bool Nat where
-  Ui
-  | true => fun n => n = 0
-  | false => fun n => n = 1
+abbrev contradictoryModel : Model Bool Nat where
+  carrier := fun _ => Nat
+  layer
+  | true =>
+      {
+        D := fun _ : Nat => True
+        A := fun n : Nat => n = 0
+        admissible_subset_domain := by
+          intro x hx
+          trivial
+      }
+  | false =>
+      {
+        D := fun _ : Nat => True
+        A := fun n : Nat => n = 1
+        admissible_subset_domain := by
+          intro x hx
+          trivial
+      }
   proj _ x := some x
 
 theorem contradictoryModel_is_contradictory :
@@ -16,14 +31,18 @@ theorem contradictoryModel_is_contradictory :
   intro x hx0 hx1
   rcases hx0 with ⟨y0, hy0, hyEq0⟩
   rcases hx1 with ⟨y1, hy1, hyEq1⟩
-  have hy0x : y0 = x := by
-    exact Option.some.inj hy0
-  have hy1x : y1 = x := by
-    exact Option.some.inj hy1
+  have hx_y0 : x = y0 := by
+    simpa [contradictoryModel] using hy0
+  have hx_y1 : x = y1 := by
+    simpa [contradictoryModel] using hy1
   have hxEq0 : x = 0 := by
-    simpa [hy0x] using hyEq0
+    calc
+      x = y0 := hx_y0
+      _ = 0 := hyEq0
   have hxEq1 : x = 1 := by
-    simpa [hy1x] using hyEq1
+    calc
+      x = y1 := hx_y1
+      _ = 1 := hyEq1
   have h01 : (0 : Nat) = 1 := by
     calc
       0 = x := hxEq0.symm

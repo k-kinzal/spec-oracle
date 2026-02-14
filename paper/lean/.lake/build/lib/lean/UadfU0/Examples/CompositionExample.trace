@@ -1,0 +1,31 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["d0fc9b367d80c544.olean"],
+  "i": "2f03a3494f831236.ilean",
+  "c": "3ca24a088f9aa671.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/CompositionExample.lean -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/CompositionExample.olean -i /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/CompositionExample.ilean -c /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/CompositionExample.c --setup /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/CompositionExample.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["UadfU0.Examples.CompositionExample:deps",
+   [["deps",
+     [["UadfU0Paper/UadfU0:extraDep",
+       [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["UadfU0.InterLayer.Composition transitive imports (legacy)",
+         "8eacf4170447dd9b"],
+        ["UadfU0.InterLayer.Composition:importAllArts", "9c3d4d83696d7dda"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/CompositionExample.lean",
+   "55c459b88306a6c8"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "a7ed3eba0696fb2c"}

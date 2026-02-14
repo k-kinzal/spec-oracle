@@ -1,0 +1,215 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
+
+\title{Typed U0 Construction in the UAD/f Model:\\A Lean4 Mechanization}
+\author{spec-oracle project}
+\date{February 14, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We formalize the U0-construction core of the UAD/f model in Lean4.
+The key issue is definitional ambiguity: many descriptions write
+$U0=\bigcup_i f^{-1}_{0i}(A_i)$ without typing the layer spaces or defining
+what $f^{-1}_{0i}$ means for partial mappings.
+We introduce a typed setting with root space $\Omega$, per-layer carriers $\beta_i$,
+domain predicates $D_i\subseteq \beta_i$, admissible predicates
+$A_i\subseteq D_i$, and partial projections
+$\mathrm{proj}_i:\Omega\to\mathrm{Option}\,\beta_i$.
+Inverse images are induced from \texttt{proj}, not postulated.
+We prove: preimage monotonicity and union preservation, domain-respecting lifting
+($A_i\subseteq D_i \Rightarrow lifted(i)\subseteq f^{-1}_{0i}(D_i)$),
+least-upper-bound characterization of $U0$, monotonic growth under layer-set extension,
+a layer-transfer theorem under relation-preserving assumptions,
+and contradiction/consistency duality.
+The contribution is a mechanically checked core semantics for U0 construction,
+not full semantic adequacy of the whole UAD/f methodology.
+\end{abstract}
+
+\section{Problem Statement and Research Questions}
+Layered assurance artifacts are heterogeneous. If a root specification is reconstructed
+from layer views, the reconstruction operator must be typed and explicit.
+This paper asks:
+\begin{enumerate}[leftmargin=2em]
+\item[\textbf{RQ1}] Can U0 construction be defined coherently when each layer has its own type?
+\item[\textbf{RQ2}] Can admissible-vs-domain constraints be lifted to the root level?
+\item[\textbf{RQ3}] Is root construction monotone under layer-set extension?
+\item[\textbf{RQ4}] Can a concrete extractor-side decision rule be proved equivalent to the logical consistency predicate?
+\end{enumerate}
+
+\section{Typed UAD/f Core}
+\begin{definition}[Typed model]
+Fix a root space $\Omega$, index set $I$, and layer carriers $\beta_i$.
+For each layer $i$:
+\[
+D_i \subseteq \beta_i,\qquad A_i \subseteq D_i,\qquad
+\mathrm{proj}_i : \Omega \to \mathrm{Option}\,\beta_i.
+\]
+\end{definition}
+
+\begin{definition}[Induced inverse image]
+For $S \subseteq \beta_i$:
+\[
+f^{-1}_{0i}(S)
+:=\{x\in\Omega \mid \exists y\in\beta_i,\ \mathrm{proj}_i(x)=\mathrm{some}(y)\land y\in S\}.
+\]
+\end{definition}
+
+\begin{definition}[Lifted layer and U0]
+\[
+lifted(i):=f^{-1}_{0i}(A_i),\qquad
+U0:=\bigcup_{i\in I} lifted(i).
+\]
+\end{definition}
+
+\begin{definition}[Inter-layer predicates]
+\[
+\mathrm{Contradictory}(i,j):\equiv
+\forall x,\ x\in lifted(i)\to x\in lifted(j)\to\bot,
+\]
+\[
+\mathrm{Consistent}(i,j):\equiv
+\exists x,\ x\in lifted(i)\land x\in lifted(j).
+\]
+\end{definition}
+
+\section{Main Results}
+\begin{theorem}[Preimage monotonicity]
+$S\subseteq T \Rightarrow f^{-1}_{0i}(S)\subseteq f^{-1}_{0i}(T)$.
+\end{theorem}
+
+\begin{theorem}[Preimage union preservation]
+$f^{-1}_{0i}(S\cup T)=f^{-1}_{0i}(S)\cup f^{-1}_{0i}(T)$.
+\end{theorem}
+
+\begin{theorem}[Domain-respecting lifting]
+$A_i\subseteq D_i \Rightarrow lifted(i)\subseteq f^{-1}_{0i}(D_i)$.
+\end{theorem}
+
+\begin{proposition}[Root witness validity]
+If $x\in U0$, then $\exists i,\exists y,\ \mathrm{proj}_i(x)=\mathrm{some}(y)\land y\in D_i$.
+\end{proposition}
+
+\begin{theorem}[Least-upper-bound characterization]
+For any $B\subseteq\Omega$:
+\[
+(\forall i,\ lifted(i)\subseteq B)\iff U0\subseteq B.
+\]
+Hence $U0=\bigsqcup_{i\in I} lifted(i)$ in the powerset order.
+\end{theorem}
+
+\begin{theorem}[Layer-extension monotonicity]
+For active-layer predicates $J,K:I\to\mathrm{Prop}$, if
+$\forall i,\ J(i)\to K(i)$ then $U0_J\subseteq U0_K$.
+\end{theorem}
+
+\begin{theorem}[Layer-transfer under admissibility-preserving relation]
+Let $R : \beta_i \to \beta_j \to \mathrm{Prop}$ satisfy:
+(1) each projected $y_j$ has a related projected $y_i$ witness,
+(2) $R$ preserves admissibility from $A_j$ to $A_i$.
+Then $lifted(j)\subseteq lifted(i)$.
+\end{theorem}
+
+\begin{theorem}[Consistency/contradiction duality]
+$\mathrm{Contradictory}(i,j)\iff\neg\mathrm{Consistent}(i,j)$.
+\end{theorem}
+
+\begin{theorem}[Extractor decision equivalence (password policy case)]
+For artifacts:
+requirement $(min_{req}, max_{req})$, API $(min_{api})$, code $(max_{code})$,
+define:
+\[
+check := \mathbf{decide}\left(
+\max(min_{req},min_{api}) \le \min(max_{req},max_{code})
+\right).
+\]
+Then:
+\[
+check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code).
+\]
+\end{theorem}
+
+\section{Mechanization and Validation}
+Lean artifacts are organized by proof purpose:
+\begin{itemize}
+\item \texttt{Definitions}: typed UAD/f core (\texttt{Layer}, \texttt{Model}, \texttt{preimage})
+\item \texttt{U0Spec}: construction lemmas, LUB theorem, layer-extension monotonicity
+\item \texttt{InterLayer}: contradiction/consistency + transfer theorem
+\item \texttt{CaseStudy}: extractor decision soundness/completeness theorem
+\item \texttt{Examples}: satisfiable and contradictory instances
+\end{itemize}
+
+Reproduction:
+\begin{verbatim}
+cd paper/lean
+~/.elan/bin/lake build
+\end{verbatim}
+
+Pinned toolchain:
+\begin{itemize}
+\item Lean4: \texttt{leanprover/lean4:v4.27.0}
+\item Lake: \texttt{5.0.0-src+db93fe1}
+\end{itemize}
+
+Current footprint:
+\begin{itemize}
+\item 649 LOC across core Lean files
+\item 27 theorem declarations
+\end{itemize}
+
+\paragraph{Synthetic empirical run}
+We provide a reproducible benchmark (\texttt{paper/case-study/password\_policy\_benchmark.py})
+with 5 seeds $\times$ 200,000 generated artifact triples.
+Observed averages:
+\begin{itemize}
+\item contradiction ratio: 0.214478
+\item elapsed time: 0.7499 sec / 200,000 cases
+\item throughput: 267,334 cases/sec
+\end{itemize}
+
+\section{Related Work and Positioning}
+Our order-theoretic lemmas are compatible with classical abstract interpretation
+viewpoints (Cousot \& Cousot, 1977), while our target is narrower:
+typed partial projections for root-specification reconstruction.
+Institution-style semantic transport (Goguen \& Burstall, 1984) addresses
+language-independent satisfaction, whereas we focus on a concrete U0 operator.
+Compared with system-level formal methods (e.g., TLA+, Lamport 2002), this work
+does not model full system behavior; it isolates and mechanizes the U0 integration kernel,
+and connects it to an executable decision rule in a concrete case study.
+
+\section{Scope and Limitations}
+\begin{remark}
+This paper proves internal coherence of typed U0 construction.
+It does \emph{not} prove full adequacy of UAD/f in practical engineering pipelines.
+\end{remark}
+
+Not proven here:
+\begin{enumerate}[leftmargin=2em]
+\item faithfulness of concrete extractors to $\mathrm{proj}_i$,
+\item global completeness/soundness of end-to-end UAD/f workflows,
+\item scalability/complexity bounds for large repositories.
+\end{enumerate}
+
+\section{Conclusion}
+We remove ambiguity in U0 construction by giving a typed UAD/f core and
+defining $f^{-1}_{0i}$ via partial projections.
+Lean4 proofs establish domain-respecting lifting, supremum characterization of U0,
+layer-extension monotonicity, and contradiction/consistency duality.
+This provides a precise baseline for stronger future results (composition laws,
+extractor correctness, and CI-level artifact guarantees).
+
+\paragraph{References (informal)}
+[1] P. Cousot and R. Cousot, ``Abstract Interpretation,'' POPL 1977.\\
+[2] J. A. Goguen and R. M. Burstall, ``Introducing Institutions,'' 1984.\\
+[3] L. Lamport, \emph{Specifying Systems}, 2002.
+
+\end{document}

@@ -1,0 +1,15 @@
+{"plugins": [],
+ "package": "UadfU0Paper",
+ "options": {},
+ "name": "UadfU0.InterLayer.Transfer",
+ "isModule": false,
+ "importArts":
+ {"UadfU0.U0Spec.Minimality":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/Minimality.olean"],
+  "UadfU0.U0Spec.Construction":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/Construction.olean"],
+  "UadfU0.InterLayer.Consistency":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Consistency.olean"],
+  "UadfU0.Definitions.Model":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Definitions/Model.olean"]},
+ "dynlibs": []}

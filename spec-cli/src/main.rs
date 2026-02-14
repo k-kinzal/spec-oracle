@@ -1637,7 +1637,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
         }
         Commands::Extract { source, language, min_confidence } => {
             // Extract specifications from source code and save to graph
-            use spec_core::{RustExtractor, InferredSpecification};
+            use spec_core::{RustExtractor, ProtoExtractor, InferredSpecification};
             use std::path::Path;
 
             let path = Path::new(&source);
@@ -1645,25 +1645,48 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
 
             println!("🔍 Extracting specifications from: {}\n", source);
 
+            // Detect language from file extension if not specified
+            let detected_language = if path.is_file() {
+                match path.extension().and_then(|s| s.to_str()) {
+                    Some("rs") => "rust",
+                    Some("proto") => "proto",
+                    _ => &language,
+                }
+            } else {
+                &language
+            };
+
             // Extract specifications
             let specs: Vec<InferredSpecification> = if path.is_file() {
-                if language != "rust" {
-                    eprintln!("Only Rust extraction is currently supported");
-                    return Ok(());
+                match detected_language {
+                    "rust" => RustExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
+                    "proto" => ProtoExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
+                    _ => {
+                        eprintln!("Unsupported language: {}. Supported: rust, proto", language);
+                        return Ok(());
+                    }
                 }
-                RustExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?
             } else if path.is_dir() {
-                // Extract from all .rs files in directory recursively
+                // Extract from all supported files in directory recursively
                 use std::fs;
                 let mut all_specs = Vec::new();
                 for entry in fs::read_dir(path).map_err(|e| format!("Failed to read directory: {}", e))? {
                     let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
                     let entry_path = entry.path();
-                    if entry_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                        match RustExtractor::extract(&entry_path) {
-                            Ok(specs) => all_specs.extend(specs),
-                            Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
+                    match entry_path.extension().and_then(|s| s.to_str()) {
+                        Some("rs") if detected_language == "rust" || detected_language == "auto" => {
+                            match RustExtractor::extract(&entry_path) {
+                                Ok(specs) => all_specs.extend(specs),
+                                Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
+                            }
                         }
+                        Some("proto") if detected_language == "proto" || detected_language == "auto" => {
+                            match ProtoExtractor::extract(&entry_path) {
+                                Ok(specs) => all_specs.extend(specs),
+                                Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
+                            }
+                        }
+                        _ => {}
                     }
                 }
                 all_specs
@@ -1705,6 +1728,41 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
 
             println!("\n💡 To verify: spec check");
             println!("💡 To inspect: spec list-nodes --kind Scenario");
+        }
+        Commands::InferRelationshipsAi { min_confidence } => {
+            let mut graph = store.load()?;
+
+            println!("🤖 Inferring relationships with AI-powered semantic matching...");
+            println!("   Minimum confidence: {:.2}", min_confidence);
+            println!("   This may take a while for large specification sets.\n");
+
+            // Call the AI-enhanced cross-layer inference
+            let report = graph.infer_cross_layer_relationships_with_ai(min_confidence);
+
+            // Save updated graph
+            store.save(&graph)?;
+
+            println!("\n✅ AI-enhanced relationship inference complete:");
+            println!("   Edges created: {}", report.edges_created);
+            println!("   Suggestions: {} (require review)", report.suggestions.len());
+
+            if !report.suggestions.is_empty() {
+                println!("\n📋 Top suggestions for human review:");
+                for (i, suggestion) in report.suggestions.iter().take(10).enumerate() {
+                    println!("   {}. [{} → {}] {} (confidence: {:.2})",
+                        i + 1,
+                        &suggestion.source_id[..8],
+                        &suggestion.target_id[..8],
+                        suggestion.explanation,
+                        suggestion.confidence
+                    );
+                }
+                if report.suggestions.len() > 10 {
+                    println!("   ... and {} more", report.suggestions.len() - 10);
+                }
+            }
+
+            println!("\n💡 To verify: spec check");
         }
         _ => {
             eprintln!("Command not yet supported in standalone mode.");

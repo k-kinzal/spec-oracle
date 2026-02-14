@@ -3,7 +3,7 @@ import UadfU0.U0Spec.Construction
 namespace UadfU0
 namespace Model
 
-universe u v
+universe u v w
 
 variable {ι : Type u} {α : Type v}
 variable (M : Model ι α)

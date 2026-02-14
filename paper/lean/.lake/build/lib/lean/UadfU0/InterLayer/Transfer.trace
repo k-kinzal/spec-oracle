@@ -1,0 +1,31 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["b25c3f52013ed05b.olean"],
+  "i": "b1d4acd3dcb85e03.ilean",
+  "c": "97cec4af437ebd7b.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/ab/Projects/spec-oracle/paper/lean/UadfU0/InterLayer/Transfer.lean -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Transfer.olean -i /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Transfer.ilean -c /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Transfer.c --setup /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Transfer.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["UadfU0.InterLayer.Transfer:deps",
+   [["deps",
+     [["UadfU0Paper/UadfU0:extraDep",
+       [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["UadfU0.InterLayer.Consistency transitive imports (legacy)",
+         "02fae88d91a39540"],
+        ["UadfU0.InterLayer.Consistency:importAllArts", "c2c1b00874a50033"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/InterLayer/Transfer.lean",
+   "de9904d41fe1ae36"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "fec7fa00897eb9e5"}

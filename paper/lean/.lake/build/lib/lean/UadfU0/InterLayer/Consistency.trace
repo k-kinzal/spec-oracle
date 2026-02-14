@@ -1,0 +1,31 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["f2cbf2ad33ba0f67.olean"],
+  "i": "7a85ab9a6e6cb5a4.ilean",
+  "c": "20fd5c8bbcc8fede.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/ab/Projects/spec-oracle/paper/lean/UadfU0/InterLayer/Consistency.lean -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Consistency.olean -i /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Consistency.ilean -c /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Consistency.c --setup /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Consistency.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["UadfU0.InterLayer.Consistency:deps",
+   [["deps",
+     [["UadfU0Paper/UadfU0:extraDep",
+       [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["UadfU0.U0Spec.Minimality transitive imports (legacy)",
+         "8eacf4170447dd9b"],
+        ["UadfU0.U0Spec.Minimality:importAllArts", "fdd9c45c6f42a6c9"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/InterLayer/Consistency.lean",
+   "517fb02399460f01"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "bc686a2dd38e26a1"}

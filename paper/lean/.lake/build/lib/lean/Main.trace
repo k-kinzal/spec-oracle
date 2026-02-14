@@ -1,0 +1,29 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["383432cd5f5c6e6d.olean"],
+  "i": "e31724bfa29d4ca1.ilean",
+  "c": "1aa8f5f0001c3724.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/ab/Projects/spec-oracle/paper/lean/Main.lean -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/Main.olean -i /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/Main.ilean -c /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/Main.c --setup /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/Main.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["Main:deps",
+   [["deps",
+     [["UadfU0Paper/uadf_u0_paper:extraDep",
+       [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["UadfU0 transitive imports (legacy)", "7e287b394e51cb36"],
+        ["UadfU0:importAllArts", "447af9b803be3877"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/ab/Projects/spec-oracle/paper/lean/Main.lean", "17713b1c49a6155b"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "8598220658513b2e"}

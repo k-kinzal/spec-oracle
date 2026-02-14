@@ -1,0 +1,34 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["a803b564a8e6b0f8.olean"],
+  "i": "09ad3d5361f4e052.ilean",
+  "c": "ce2643dd9a06f58c.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/ab/Projects/spec-oracle/paper/lean/UadfU0/InterLayer/Composition.lean -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Composition.olean -i /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Composition.ilean -c /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Composition.c --setup /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Composition.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "UadfU0/InterLayer/Composition.lean:58:6: Try `simp at hEqBind` instead of `simpa using hEqBind`\n\nNote: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+   "level": "warning"}],
+ "inputs":
+ [["UadfU0.InterLayer.Composition:deps",
+   [["deps",
+     [["UadfU0Paper/UadfU0:extraDep",
+       [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["UadfU0.U0Spec.Construction transitive imports (legacy)",
+         "f42258e499a8b77a"],
+        ["UadfU0.U0Spec.Construction:importAllArts", "5cc541d5be2173f6"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/InterLayer/Composition.lean",
+   "0bcf98794525a584"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "241e58806cf4ecaf"}

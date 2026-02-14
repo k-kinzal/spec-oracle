@@ -926,3 +926,140 @@ fn process_payment(amount: u64) {
         assert_eq!(auth_node.metadata.get("inferred").unwrap(), "true");
     }
 }
+
+/// Extract U2 specifications from Protocol Buffer (.proto) files
+pub struct ProtoExtractor;
+
+impl ProtoExtractor {
+    /// Extract RPC interface specifications from proto file
+    pub fn extract(file_path: &Path) -> Result<Vec<InferredSpecification>, String> {
+        let content = std::fs::read_to_string(file_path)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+
+        let mut specs = Vec::new();
+        let file_name = file_path.to_string_lossy().to_string();
+
+        // Extract RPC definitions
+        let mut current_comment = String::new();
+        for (line_num, line) in content.lines().enumerate() {
+            let trimmed = line.trim();
+
+            // Capture comment lines
+            if trimmed.starts_with("//") {
+                let comment = trimmed.trim_start_matches("//").trim();
+                if !comment.is_empty() {
+                    current_comment = comment.to_string();
+                }
+                continue;
+            }
+
+            // Match RPC definitions: "rpc MethodName(RequestType) returns (ResponseType);"
+            if trimmed.starts_with("rpc ") {
+                if let Some(rpc_name) = Self::extract_rpc_name(trimmed) {
+                    let description = if !current_comment.is_empty() {
+                        current_comment.clone()
+                    } else {
+                        // Generate description from RPC name
+                        Self::rpc_name_to_description(&rpc_name)
+                    };
+
+                    specs.push(InferredSpecification {
+                        content: description,
+                        kind: NodeKind::Assertion, // RPC interface is an assertion about behavior
+                        confidence: 0.95, // High confidence - explicitly defined interface
+                        source_file: file_name.clone(),
+                        source_line: line_num + 1,
+                        formality_layer: 2, // U2: Interface/API specification
+                        metadata: HashMap::from([
+                            ("rpc_name".to_string(), rpc_name.clone()),
+                            ("extractor".to_string(), "proto_rpc".to_string()),
+                        ]),
+                    });
+
+                    current_comment.clear();
+                }
+            }
+        }
+
+        Ok(specs)
+    }
+
+    fn extract_rpc_name(line: &str) -> Option<String> {
+        // Parse "rpc MethodName(Request) returns (Response);"
+        let after_rpc = line.strip_prefix("rpc ")?.trim();
+        let name = after_rpc.split('(').next()?.trim();
+        Some(name.to_string())
+    }
+
+    fn rpc_name_to_description(rpc_name: &str) -> String {
+        // Convert camelCase/PascalCase to sentence
+        // AddNode -> "RPC: Add node"
+        // DetectContradictions -> "RPC: Detect contradictions"
+        let mut result = String::new();
+        let mut prev_was_lower = false;
+
+        for (i, ch) in rpc_name.chars().enumerate() {
+            if ch.is_uppercase() && prev_was_lower {
+                result.push(' ');
+                result.push(ch.to_lowercase().next().unwrap());
+            } else if i == 0 {
+                // First character stays as-is
+                result.push(ch);
+            } else {
+                result.push(ch.to_lowercase().next().unwrap());
+            }
+            prev_was_lower = ch.is_lowercase();
+        }
+
+        format!("RPC: {}", result)
+    }
+}
+
+#[cfg(test)]
+mod proto_extractor_tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_extract_rpc_definitions() {
+        let proto_content = r#"
+syntax = "proto3";
+
+service TestService {
+  // Add a new node to the graph
+  rpc AddNode(AddNodeRequest) returns (AddNodeResponse);
+
+  rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
+
+  // Detect contradictions between specifications
+  rpc DetectContradictions(DetectContradictionsRequest) returns (DetectContradictionsResponse);
+}
+"#;
+
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(proto_content.as_bytes()).unwrap();
+
+        let specs = ProtoExtractor::extract(temp_file.path()).unwrap();
+
+        assert_eq!(specs.len(), 3, "Should extract 3 RPC definitions");
+
+        // Check first RPC with comment
+        let add_node = &specs[0];
+        assert_eq!(add_node.content, "Add a new node to the graph");
+        assert_eq!(add_node.kind, NodeKind::Assertion);
+        assert_eq!(add_node.formality_layer, 2);
+        assert_eq!(add_node.metadata.get("rpc_name").unwrap(), "AddNode");
+        assert_eq!(add_node.confidence, 0.95);
+
+        // Check RPC without comment (generated description)
+        let get_node = &specs[1];
+        assert_eq!(get_node.content, "RPC: Get node");
+        assert_eq!(get_node.metadata.get("rpc_name").unwrap(), "GetNode");
+
+        // Check camelCase conversion
+        let detect = &specs[2];
+        assert_eq!(detect.content, "Detect contradictions between specifications");
+        assert_eq!(detect.metadata.get("rpc_name").unwrap(), "DetectContradictions");
+    }
+}

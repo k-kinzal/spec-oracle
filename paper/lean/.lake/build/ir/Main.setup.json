@@ -1,0 +1,31 @@
+{"plugins": [],
+ "package": "UadfU0Paper",
+ "options": {},
+ "name": "Main",
+ "isModule": false,
+ "importArts":
+ {"UadfU0.U0Spec.Minimality":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/Minimality.olean"],
+  "UadfU0.U0Spec.Construction":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/Construction.olean"],
+  "UadfU0.InterLayer.Transfer":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Transfer.olean"],
+  "UadfU0.InterLayer.Consistency":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Consistency.olean"],
+  "UadfU0.InterLayer.Composition":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Composition.olean"],
+  "UadfU0.Examples.TwoLayer":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/TwoLayer.olean"],
+  "UadfU0.Examples.TransferExample":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/TransferExample.olean"],
+  "UadfU0.Examples.ContradictoryLayers":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/ContradictoryLayers.olean"],
+  "UadfU0.Examples.CompositionExample":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/CompositionExample.olean"],
+  "UadfU0.Definitions.Model":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Definitions/Model.olean"],
+  "UadfU0.CaseStudy.PasswordPolicy":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/CaseStudy/PasswordPolicy.olean"],
+  "UadfU0":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0.olean"]},
+ "dynlibs": []}

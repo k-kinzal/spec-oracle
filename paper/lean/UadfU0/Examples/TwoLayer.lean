@@ -5,34 +5,60 @@ namespace Examples
 
 open Model
 
-def twoLayerModel : Model Bool Nat where
-  Ui
-  | true => fun n => n ≥ 1
-  | false => fun n => n % 2 = 0
-  proj _ x := some x
+abbrev twoLayerTypedModel : Model Bool Nat where
+  carrier
+  | true => Nat
+  | false => Bool
+  layer
+  | true =>
+      {
+        D := fun _ : Nat => True
+        A := fun n : Nat => n ≥ 1
+        admissible_subset_domain := by
+          intro x hx
+          trivial
+      }
+  | false =>
+      {
+        D := fun _ : Bool => True
+        A := fun b : Bool => b = true
+        admissible_subset_domain := by
+          intro x hx
+          trivial
+      }
+  proj
+  | true, x => some x
+  | false, x => if x % 2 = 0 then some true else some false
 
-example : 2 ∈ twoLayerModel.U0 := by
+example : 2 ∈ twoLayerTypedModel.U0 := by
   refine ⟨true, ?_⟩
   refine ⟨2, rfl, ?_⟩
+  change 2 ≥ 1
   decide
 
-example : 0 ∈ twoLayerModel.U0 := by
+example : 0 ∈ twoLayerTypedModel.U0 := by
   refine ⟨false, ?_⟩
-  refine ⟨0, rfl, ?_⟩
-  decide
+  refine ⟨true, ?_, rfl⟩
+  simp [twoLayerTypedModel]
 
-example : twoLayerModel.Consistent true false := by
+example : twoLayerTypedModel.Consistent true false := by
   refine ⟨2, ?_, ?_⟩
-  · exact ⟨2, rfl, by decide⟩
-  · exact ⟨2, rfl, by decide⟩
+  · refine ⟨2, rfl, ?_⟩
+    change 2 ≥ 1
+    decide
+  · refine ⟨true, ?_, rfl⟩
+    simp [twoLayerTypedModel]
 
-example : ¬ twoLayerModel.Contradictory true false := by
+example : ¬ twoLayerTypedModel.Contradictory true false := by
   intro hContra
-  have hCons : twoLayerModel.Consistent true false := by
+  have hCons : twoLayerTypedModel.Consistent true false := by
     refine ⟨2, ?_, ?_⟩
-    · exact ⟨2, rfl, by decide⟩
-    · exact ⟨2, rfl, by decide⟩
-  exact (Model.contradictory_iff_not_consistent (M := twoLayerModel) true false).1 hContra hCons
+    · refine ⟨2, rfl, ?_⟩
+      change 2 ≥ 1
+      decide
+    · refine ⟨true, ?_, rfl⟩
+      simp [twoLayerTypedModel]
+  exact (Model.contradictory_iff_not_consistent (M := twoLayerTypedModel) true false).1 hContra hCons
 
 end Examples
 end UadfU0
