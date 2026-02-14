@@ -22,17 +22,10 @@ struct Cli {
     command: Commands,
 }
 
+/// Low-level graph API commands (advanced users)
 #[derive(Subcommand)]
-enum Commands {
-    /// Add a specification (high-level, auto-infers kind and relationships)
-    Add {
-        /// Specification content in natural language
-        content: String,
-        /// Skip automatic relationship inference
-        #[arg(long)]
-        no_infer: bool,
-    },
-    /// Add a new specification node (low-level graph operation)
+enum ApiCommands {
+    /// Add a new specification node (direct graph operation)
     AddNode {
         /// Content of the specification
         content: String,
@@ -73,6 +66,126 @@ enum Commands {
         node: Option<String>,
     },
     /// Remove an edge
+    RemoveEdge {
+        /// Edge ID
+        id: String,
+    },
+    /// Set universe metadata for a node
+    SetUniverse {
+        /// Node ID
+        id: String,
+        /// Universe identifier (e.g., "ui", "api", "database")
+        universe: String,
+    },
+    /// Filter nodes by formality layer
+    FilterByLayer {
+        /// Minimum formality layer (0=natural, 1=structured, 2=formal, 3=executable)
+        #[arg(short, long, default_value = "0")]
+        min: u32,
+        /// Maximum formality layer
+        #[arg(short = 'M', long, default_value = "3")]
+        max: u32,
+    },
+    /// Generate executable contract template from specification
+    GenerateContract {
+        /// Node ID
+        id: String,
+        /// Target language (rust, python, etc.)
+        #[arg(long, default_value = "rust")]
+        language: String,
+    },
+    /// Calculate compliance score between specification and code
+    CheckCompliance {
+        /// Node ID
+        id: String,
+        /// Code snippet or file path (prefix with @ for file)
+        code: String,
+    },
+    /// Query graph state at a specific timestamp
+    QueryAtTimestamp {
+        /// Unix timestamp (seconds since epoch)
+        timestamp: i64,
+    },
+    /// Show changes between two timestamps
+    DiffTimestamps {
+        /// Start timestamp (unix seconds)
+        from: i64,
+        /// End timestamp (unix seconds)
+        to: i64,
+    },
+    /// Show history of changes for a node
+    NodeHistory {
+        /// Node ID
+        id: String,
+    },
+    /// Show compliance trend over time for a node
+    ComplianceTrend {
+        /// Node ID
+        id: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Add a specification (high-level, auto-infers kind and relationships)
+    Add {
+        /// Specification content in natural language
+        content: String,
+        /// Skip automatic relationship inference
+        #[arg(long)]
+        no_infer: bool,
+    },
+    /// Low-level graph API operations (for advanced users)
+    #[command(subcommand)]
+    Api(ApiCommands),
+    /// [DEPRECATED] Use 'spec api add-node' instead
+    #[command(hide = true)]
+    AddNode {
+        /// Content of the specification
+        content: String,
+        /// Kind of node: assertion, constraint, scenario, definition, domain
+        #[arg(short, long, default_value = "assertion")]
+        kind: String,
+    },
+    /// [DEPRECATED] Use 'spec api get-node' instead
+    #[command(hide = true)]
+    GetNode {
+        /// Node ID
+        id: String,
+    },
+    /// [DEPRECATED] Use 'spec api list-nodes' instead
+    #[command(hide = true)]
+    ListNodes {
+        /// Filter by kind: assertion, constraint, scenario, definition, domain
+        #[arg(short, long)]
+        kind: Option<String>,
+    },
+    /// [DEPRECATED] Use 'spec api remove-node' instead
+    #[command(hide = true)]
+    RemoveNode {
+        /// Node ID
+        id: String,
+    },
+    /// [DEPRECATED] Use 'spec api add-edge' instead
+    #[command(hide = true)]
+    AddEdge {
+        /// Source node ID
+        source: String,
+        /// Target node ID
+        target: String,
+        /// Edge kind: refines, depends_on, contradicts, derives_from, synonym, composes
+        #[arg(short, long, default_value = "refines")]
+        kind: String,
+    },
+    /// [DEPRECATED] Use 'spec api list-edges' instead
+    #[command(hide = true)]
+    ListEdges {
+        /// Node ID to filter edges
+        #[arg(short, long)]
+        node: Option<String>,
+    },
+    /// [DEPRECATED] Use 'spec api remove-edge' instead
+    #[command(hide = true)]
     RemoveEdge {
         /// Edge ID
         id: String,
@@ -119,7 +232,8 @@ enum Commands {
     },
     /// Detect cross-layer inconsistencies in specifications
     DetectLayerInconsistencies,
-    /// Filter nodes by formality layer
+    /// [DEPRECATED] Use 'spec api filter-by-layer' instead
+    #[command(hide = true)]
     FilterByLayer {
         /// Minimum formality layer (0=natural, 1=structured, 2=formal, 3=executable)
         #[arg(short, long, default_value = "0")]
@@ -147,7 +261,8 @@ enum Commands {
         #[arg(long, default_value = "0.3")]
         min_similarity: f32,
     },
-    /// Generate executable contract template from specification
+    /// [DEPRECATED] Use 'spec api generate-contract' instead
+    #[command(hide = true)]
     GenerateContract {
         /// Node ID
         id: String,
@@ -157,7 +272,8 @@ enum Commands {
     },
     /// Get test coverage report
     TestCoverage,
-    /// Calculate compliance score between specification and code
+    /// [DEPRECATED] Use 'spec api check-compliance' instead
+    #[command(hide = true)]
     CheckCompliance {
         /// Node ID
         id: String,
@@ -166,24 +282,28 @@ enum Commands {
     },
     /// Get compliance report for all specifications
     ComplianceReport,
-    /// Query graph state at a specific timestamp
+    /// [DEPRECATED] Use 'spec api query-at-timestamp' instead
+    #[command(hide = true)]
     QueryAtTimestamp {
         /// Unix timestamp (seconds since epoch)
         timestamp: i64,
     },
-    /// Show changes between two timestamps
+    /// [DEPRECATED] Use 'spec api diff-timestamps' instead
+    #[command(hide = true)]
     DiffTimestamps {
         /// Start timestamp (unix seconds)
         from: i64,
         /// End timestamp (unix seconds)
         to: i64,
     },
-    /// Show history of changes for a node
+    /// [DEPRECATED] Use 'spec api node-history' instead
+    #[command(hide = true)]
     NodeHistory {
         /// Node ID
         id: String,
     },
-    /// Show compliance trend over time for a node
+    /// [DEPRECATED] Use 'spec api compliance-trend' instead
+    #[command(hide = true)]
     ComplianceTrend {
         /// Node ID
         id: String,
@@ -201,7 +321,8 @@ enum Commands {
     },
     /// Detect inter-universe inconsistencies in multi-layered specifications
     DetectInterUniverseInconsistencies,
-    /// Set universe metadata for a node
+    /// [DEPRECATED] Use 'spec api set-universe' instead
+    #[command(hide = true)]
     SetUniverse {
         /// Node ID
         id: String,
@@ -579,7 +700,135 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             println!("\n✓ Specification added successfully");
             println!("  To view all: spec list-nodes");
         }
+        Commands::Api(api_cmd) => {
+            // Low-level graph API operations in standalone mode
+            match api_cmd {
+                ApiCommands::AddNode { content, kind } => {
+                    let mut graph = store.load()?;
+                    let proto_kind = parse_node_kind(&kind);
+                    let core_kind = proto_to_core_kind(proto_kind);
+                    let node = graph.add_node(content.clone(), core_kind, HashMap::new());
+                    let node_id = node.id.clone();
+                    let node_content = node.content.clone();
+                    let node_kind = node.kind;
+                    store.save(&graph)?;
+                    println!("Added node: {}", node_id);
+                    println!("  Content: {}", node_content);
+                    println!("  Kind: {:?}", node_kind);
+                }
+                ApiCommands::GetNode { id } => {
+                    let graph = store.load()?;
+                    if let Some(node) = graph.get_node(&id) {
+                        println!("Node: {}", node.id);
+                        println!("  Content: {}", node.content);
+                        println!("  Kind: {:?}", node.kind);
+                    } else {
+                        eprintln!("Node not found: {}", id);
+                    }
+                }
+                ApiCommands::ListNodes { kind } => {
+                    let graph = store.load()?;
+                    let kind_filter = kind.as_ref().map(|k| proto_to_core_kind(parse_node_kind(k)));
+                    let nodes = graph.list_nodes(kind_filter);
+                    println!("Found {} node(s):", nodes.len());
+                    for node in nodes {
+                        let layer_label = format_formality_layer(node.formality_layer);
+                        println!("  [{}] [{}] {:?} - {}",
+                            layer_label,
+                            &node.id[..8],
+                            node.kind,
+                            node.content.chars().take(80).collect::<String>());
+                    }
+                }
+                ApiCommands::RemoveNode { id } => {
+                    let mut graph = store.load()?;
+                    graph.remove_node(&id);
+                    store.save(&graph)?;
+                    println!("Removed node: {}", id);
+                }
+                ApiCommands::AddEdge { source, target, kind } => {
+                    let mut graph = store.load()?;
+                    let edge_kind = match kind.to_lowercase().as_str() {
+                        "refines" => spec_core::EdgeKind::Refines,
+                        "depends_on" => spec_core::EdgeKind::DependsOn,
+                        "contradicts" => spec_core::EdgeKind::Contradicts,
+                        "derives_from" => spec_core::EdgeKind::DerivesFrom,
+                        "synonym" => spec_core::EdgeKind::Synonym,
+                        "composes" => spec_core::EdgeKind::Composes,
+                        "formalizes" => spec_core::EdgeKind::Formalizes,
+                        _ => spec_core::EdgeKind::Refines,
+                    };
+                    let edge = graph.add_edge(&source, &target, edge_kind, HashMap::new())?;
+                    let edge_id = edge.id.clone();
+                    store.save(&graph)?;
+                    println!("Added edge: {}", edge_id);
+                }
+                ApiCommands::ListEdges { node } => {
+                    let graph = store.load()?;
+                    let edges = if let Some(ref node_id) = node {
+                        graph.list_edges(Some(node_id))
+                    } else {
+                        graph.list_edges(None)
+                    };
+                    println!("Found {} edge(s):", edges.len());
+                    for (edge_data, source_id, target_id) in edges {
+                        println!("  {} --[{:?}]--> {}",
+                            &source_id[..8],
+                            edge_data.kind,
+                            &target_id[..8]);
+                    }
+                }
+                ApiCommands::RemoveEdge { id } => {
+                    let mut graph = store.load()?;
+                    graph.remove_edge(&id);
+                    store.save(&graph)?;
+                    println!("Removed edge: {}", id);
+                }
+                ApiCommands::SetUniverse { id, universe } => {
+                    eprintln!("SetUniverse not yet supported in standalone mode");
+                }
+                ApiCommands::FilterByLayer { min, max } => {
+                    let graph = store.load()?;
+                    let nodes = graph.list_nodes(None);
+                    let filtered: Vec<_> = nodes.iter()
+                        .filter(|n| {
+                            let layer = n.formality_layer as u32;
+                            layer >= min && layer <= max
+                        })
+                        .collect();
+                    println!("Found {} node(s) in layers {}-{}:", filtered.len(), min, max);
+                    for node in filtered {
+                        let layer_label = format_formality_layer(node.formality_layer);
+                        println!("  [{}] [{}] {:?} - {}",
+                            layer_label,
+                            &node.id[..8],
+                            node.kind,
+                            node.content.chars().take(80).collect::<String>());
+                    }
+                }
+                ApiCommands::GenerateContract { id, language } => {
+                    eprintln!("Contract generation not yet supported in standalone mode");
+                }
+                ApiCommands::CheckCompliance { id, code } => {
+                    eprintln!("Compliance checking not yet supported in standalone mode");
+                }
+                ApiCommands::QueryAtTimestamp { timestamp } => {
+                    eprintln!("Temporal queries not yet supported in standalone mode");
+                }
+                ApiCommands::DiffTimestamps { from, to } => {
+                    eprintln!("Temporal diff not yet supported in standalone mode");
+                }
+                ApiCommands::NodeHistory { id } => {
+                    eprintln!("Node history not yet supported in standalone mode");
+                }
+                ApiCommands::ComplianceTrend { id } => {
+                    eprintln!("Compliance trend not yet supported in standalone mode");
+                }
+            }
+        }
         Commands::ListNodes { kind } => {
+            eprintln!("⚠️  WARNING: 'spec list-nodes' is deprecated. Use 'spec api list-nodes' instead.");
+            eprintln!("   The command will still work but may be removed in a future version.\n");
             let graph = store.load()?;
 
             let kind_filter = kind.as_ref().map(|k| proto_to_core_kind(parse_node_kind(k)));
@@ -2193,7 +2442,165 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  To view: spec get-node {}", node_id);
             println!("  To check for issues: spec detect-contradictions");
         }
+        Commands::Api(api_cmd) => {
+            // Low-level graph API operations
+            match api_cmd {
+                ApiCommands::AddNode { content, kind } => {
+                    let resp = client
+                        .add_node(Request::new(proto::AddNodeRequest {
+                            content,
+                            kind: parse_node_kind(&kind).into(),
+                            metadata: HashMap::new(),
+                        }))
+                        .await?;
+                    let node = resp.into_inner().node.unwrap();
+                    println!("Added node: {}", node.id);
+                    println!("  Content: {}", node.content);
+                    println!("  Kind: {}", node_kind_name(node.kind));
+                }
+                ApiCommands::GetNode { id } => {
+                    let resp = client
+                        .get_node(Request::new(proto::GetNodeRequest { id }))
+                        .await?;
+                    let node = resp.into_inner().node.unwrap();
+                    println!("Node: {}", node.id);
+                    println!("  Content: {}", node.content);
+                    println!("  Kind: {}", node_kind_name(node.kind));
+                    if !node.metadata.is_empty() {
+                        println!("  Metadata:");
+                        for (k, v) in &node.metadata {
+                            println!("    {k}: {v}");
+                        }
+                    }
+                }
+                ApiCommands::ListNodes { kind } => {
+                    let kind_filter = kind.as_ref().map(|k| parse_node_kind(k).into()).unwrap_or(0);
+                    let resp = client
+                        .list_nodes(Request::new(proto::ListNodesRequest { kind_filter }))
+                        .await?;
+                    let nodes = resp.into_inner().nodes;
+                    println!("Found {} node(s):", nodes.len());
+                    for node in nodes {
+                        println!("  [{}] {} - {}",
+                            &node.id[..8],
+                            node_kind_name(node.kind),
+                            node.content.chars().take(80).collect::<String>()
+                        );
+                    }
+                }
+                ApiCommands::RemoveNode { id } => {
+                    client
+                        .remove_node(Request::new(proto::RemoveNodeRequest { id: id.clone() }))
+                        .await?;
+                    println!("Removed node: {}", id);
+                }
+                ApiCommands::AddEdge { source, target, kind } => {
+                    let edge_kind = match kind.to_lowercase().as_str() {
+                        "refines" => SpecEdgeKind::Refines,
+                        "depends_on" => SpecEdgeKind::DependsOn,
+                        "contradicts" => SpecEdgeKind::Contradicts,
+                        "derives_from" => SpecEdgeKind::DerivesFrom,
+                        "synonym" => SpecEdgeKind::Synonym,
+                        "composes" => SpecEdgeKind::Composes,
+                        "formalizes" => SpecEdgeKind::Formalizes,
+                        _ => SpecEdgeKind::Refines,
+                    };
+                    let resp = client
+                        .add_edge(Request::new(proto::AddEdgeRequest {
+                            source_id: source,
+                            target_id: target,
+                            kind: edge_kind.into(),
+                            metadata: HashMap::new(),
+                        }))
+                        .await?;
+                    let edge = resp.into_inner().edge.unwrap();
+                    println!("Added edge: {}", edge.id);
+                }
+                ApiCommands::ListEdges { node } => {
+                    let resp = client
+                        .list_edges(Request::new(proto::ListEdgesRequest {
+                            node_id: node.unwrap_or_default(),
+                        }))
+                        .await?;
+                    let edges = resp.into_inner().edges;
+                    println!("Found {} edge(s):", edges.len());
+                    for edge in edges {
+                        println!("  {} --[{}]--> {}",
+                            &edge.source_id[..8],
+                            edge_kind_name(edge.kind),
+                            &edge.target_id[..8]
+                        );
+                    }
+                }
+                ApiCommands::RemoveEdge { id } => {
+                    client
+                        .remove_edge(Request::new(proto::RemoveEdgeRequest { id: id.clone() }))
+                        .await?;
+                    println!("Removed edge: {}", id);
+                }
+                ApiCommands::SetUniverse { id, universe } => {
+                    let mut metadata = HashMap::new();
+                    metadata.insert("universe".to_string(), universe.clone());
+                    client
+                        .add_node(Request::new(proto::AddNodeRequest {
+                            content: String::new(),
+                            kind: SpecNodeKind::Assertion.into(),
+                            metadata,
+                        }))
+                        .await?;
+                    println!("Set universe for node {}: {}", id, universe);
+                }
+                ApiCommands::FilterByLayer { min, max } => {
+                    println!("Filtering nodes by formality layer {} to {}", min, max);
+                    // This requires server support - for now, just list all and filter client-side
+                    let resp = client
+                        .list_nodes(Request::new(proto::ListNodesRequest { kind_filter: 0 }))
+                        .await?;
+                    let nodes = resp.into_inner().nodes;
+                    let filtered: Vec<_> = nodes.iter()
+                        .filter(|n| {
+                            let layer = parse_formality_layer(n.formality_layer as u8);
+                            layer >= min && layer <= max
+                        })
+                        .collect();
+                    println!("Found {} node(s) in layers {}-{}:", filtered.len(), min, max);
+                    for node in filtered {
+                        println!("  [L{}] [{}] {}",
+                            parse_formality_layer(node.formality_layer as u8),
+                            &node.id[..8],
+                            node.content.chars().take(80).collect::<String>()
+                        );
+                    }
+                }
+                ApiCommands::GenerateContract { id, language } => {
+                    println!("Generating {} contract for specification {}", language, id);
+                    println!("Contract generation not yet implemented");
+                }
+                ApiCommands::CheckCompliance { id, code } => {
+                    println!("Checking compliance for specification {}", id);
+                    println!("Compliance checking not yet implemented");
+                }
+                ApiCommands::QueryAtTimestamp { timestamp } => {
+                    println!("Querying graph at timestamp {}", timestamp);
+                    println!("Temporal queries not yet implemented");
+                }
+                ApiCommands::DiffTimestamps { from, to } => {
+                    println!("Diffing graph from {} to {}", from, to);
+                    println!("Temporal diff not yet implemented");
+                }
+                ApiCommands::NodeHistory { id } => {
+                    println!("History for node {}", id);
+                    println!("Node history not yet implemented");
+                }
+                ApiCommands::ComplianceTrend { id } => {
+                    println!("Compliance trend for node {}", id);
+                    println!("Compliance trend not yet implemented");
+                }
+            }
+        }
         Commands::AddNode { content, kind } => {
+            eprintln!("⚠️  WARNING: 'spec add-node' is deprecated. Use 'spec api add-node' instead.");
+            eprintln!("   The command will still work but may be removed in a future version.\n");
             let resp = client
                 .add_node(Request::new(proto::AddNodeRequest {
                     content,
@@ -2207,6 +2614,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Kind: {}", node_kind_name(node.kind));
         }
         Commands::GetNode { id } => {
+            eprintln!("⚠️  WARNING: 'spec get-node' is deprecated. Use 'spec api get-node' instead.");
+            eprintln!("   The command will still work but may be removed in a future version.\n");
             let resp = client
                 .get_node(Request::new(proto::GetNodeRequest { id }))
                 .await?;
@@ -2222,6 +2631,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Commands::ListNodes { kind } => {
+            eprintln!("⚠️  WARNING: 'spec list-nodes' is deprecated. Use 'spec api list-nodes' instead.");
+            eprintln!("   The command will still work but may be removed in a future version.\n");
             let kind_filter = kind.as_ref().map(|k| parse_node_kind(k).into()).unwrap_or(0);
             let resp = client
                 .list_nodes(Request::new(proto::ListNodesRequest { kind_filter }))
