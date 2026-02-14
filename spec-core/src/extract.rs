@@ -412,7 +412,7 @@ impl SpecGraph {
             if source.kind == target.kind {
                 return Some((
                     crate::EdgeKind::Refines,
-                    similarity * 0.75,
+                    similarity * 0.9,
                     "Similar specifications (potential refinement)".to_string(),
                 ));
             }
