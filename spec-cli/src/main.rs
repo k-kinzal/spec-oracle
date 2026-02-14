@@ -776,7 +776,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             // Count by layer
             let mut by_layer = HashMap::new();
             for node in &nodes {
-                let layer = parse_formality_layer(node.formality_layer);
+                let layer = parse_formality_layer(node.formality_layer as u8);
                 *by_layer.entry(layer).or_insert(0) += 1;
             }
 
@@ -879,10 +879,8 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                     };
                     let layer_str = if let Some(l) = node.metadata.get("formality_layer") {
                         format!(" [U{}]", l)
-                    } else if node.formality_layer > 0 {
-                        format!(" [U{}]", node.formality_layer)
                     } else {
-                        String::new()
+                        format!(" [U{}]", node.formality_layer)
                     };
                     println!("  {}. [{}]{} {} - {}",
                         i + 1,
@@ -994,7 +992,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             let mut u3_nodes = Vec::new();
 
             for node in graph.list_nodes(None) {
-                let layer = parse_formality_layer(node.formality_layer);
+                let layer = parse_formality_layer(node.formality_layer as u8);
 
                 match layer {
                     0 => u0_nodes.push(node),
@@ -1319,7 +1317,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             let mut universe_metadata = std::collections::HashMap::new();
 
             for node in graph.list_nodes(None) {
-                let layer = parse_formality_layer(node.formality_layer);
+                let layer = parse_formality_layer(node.formality_layer as u8);
                 *layer_stats.entry(layer).or_insert(0) += 1;
 
                 if let Some(universe) = node.metadata.get("universe") {
@@ -1928,7 +1926,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Count by layer
             let mut by_layer = HashMap::new();
             for node in &nodes {
-                let layer = parse_formality_layer(node.formality_layer);
+                let layer = parse_formality_layer(node.formality_layer as u8);
                 *by_layer.entry(layer).or_insert(0) += 1;
             }
 
@@ -2040,10 +2038,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let kind_str = node_kind_name(node.kind);
                     let layer_str = if let Some(l) = node.metadata.get("formality_layer") {
                         format!(" [U{}]", l)
-                    } else if node.formality_layer > 0 {
-                        format!(" [U{}]", node.formality_layer)
                     } else {
-                        String::new()
+                        format!(" [U{}]", node.formality_layer)
                     };
                     println!("  {}. [{}]{} {} - {}",
                         i + 1,
@@ -2155,7 +2151,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut u3_nodes = Vec::new();
 
             for node in &all_nodes {
-                let layer = parse_formality_layer(node.formality_layer);
+                let layer = parse_formality_layer(node.formality_layer as u8);
 
                 match layer {
                     0 => u0_nodes.push(node),
@@ -2359,7 +2355,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut universe_metadata = std::collections::HashMap::new();
 
             for node in &all_nodes {
-                let layer = parse_formality_layer(node.formality_layer);
+                let layer = parse_formality_layer(node.formality_layer as u8);
                 *layer_stats.entry(layer).or_insert(0) += 1;
 
                 if let Some(universe) = node.metadata.get("universe") {
@@ -2501,7 +2497,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     };
 
                     let layer_nodes: Vec<_> = all_nodes.iter()
-                        .filter(|n| parse_formality_layer(n.formality_layer) == layer)
+                        .filter(|n| parse_formality_layer(n.formality_layer as u8) == layer)
                         .collect();
 
                     if !layer_nodes.is_empty() {
