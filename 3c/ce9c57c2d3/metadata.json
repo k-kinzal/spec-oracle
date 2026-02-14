@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "3cce9c57c2d3",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-cli/src/main.rs",
+    "tasks/2026-02-14-session-53-continue-for-goal.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/3c/ce9c57c2d3/0/metadata.json",
+      "transcript": "/3c/ce9c57c2d3/0/full.jsonl",
+      "context": "/3c/ce9c57c2d3/0/context.md",
+      "content_hash": "/3c/ce9c57c2d3/0/content_hash.txt",
+      "prompt": "/3c/ce9c57c2d3/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 504,
+    "cache_creation_tokens": 69505,
+    "cache_read_tokens": 2761313,
+    "output_tokens": 4198,
+    "api_call_count": 42
+  }
+}
