@@ -3,11 +3,14 @@
   "checkpoint_id": "88f678b61df5",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 2,
+  "checkpoints_count": 3,
   "files_touched": [
+    ".spec/specs.json.backup-session61",
     "spec-cli/src/main.rs",
     "tasks/2026-02-14-session-59-zero-contradictions.md",
-    "tasks/2026-02-14-session-60-summary-command.md"
+    "tasks/2026-02-14-session-60-summary-command.md",
+    "tasks/2026-02-14-session-61-data-cleanup.md",
+    "tasks/2026-02-14-session-61-summary.md"
   ],
   "sessions": [
     {
@@ -23,13 +26,20 @@
       "context": "/88/f678b61df5/1/context.md",
       "content_hash": "/88/f678b61df5/1/content_hash.txt",
       "prompt": "/88/f678b61df5/1/prompt.txt"
+    },
+    {
+      "metadata": "/88/f678b61df5/2/metadata.json",
+      "transcript": "/88/f678b61df5/2/full.jsonl",
+      "context": "/88/f678b61df5/2/context.md",
+      "content_hash": "/88/f678b61df5/2/content_hash.txt",
+      "prompt": "/88/f678b61df5/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 740,
-    "cache_creation_tokens": 128244,
-    "cache_read_tokens": 6407272,
-    "output_tokens": 8047,
-    "api_call_count": 92
+    "input_tokens": 974,
+    "cache_creation_tokens": 195013,
+    "cache_read_tokens": 8334940,
+    "output_tokens": 11352,
+    "api_call_count": 121
   }
 }
