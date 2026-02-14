@@ -162,9 +162,9 @@
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "proto/spec_oracle.proto",
           "line": "171-181",
-          "formality_layer": "U2",
-          "source_file": "proto/spec_oracle.proto"
+          "formality_layer": "U2"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -175,9 +175,9 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
+          "function": "detect_contradictions",
           "formality_layer": "U3",
-          "function": "detect_contradictions"
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -206,9 +206,9 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2",
           "line": "183-192",
-          "formality_layer": "U2"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -219,9 +219,9 @@
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
         "kind": "Assertion",
         "metadata": {
-          "function": "detect_omissions",
           "source_file": "spec-core/src/graph.rs",
-          "formality_layer": "U3"
+          "formality_layer": "U3",
+          "function": "detect_omissions"
         },
         "created_at": 1771061597,
         "modified_at": 1771061597,
@@ -254,8 +254,8 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
+          "formality_layer": "U3",
           "function": "Commands::Add"
         },
         "created_at": 1771061825,
@@ -267,8 +267,8 @@
         "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
           "line": "19-20",
+          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2"
         },
         "created_at": 1771061935,
@@ -280,9 +280,9 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
+          "source_file": "spec-cli/src/main.rs",
           "formality_layer": "U3",
-          "function": "Commands::Check",
-          "source_file": "spec-cli/src/main.rs"
+          "function": "Commands::Check"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -306,9 +306,9 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U3",
           "function": "Commands::Find",
-          "source_file": "spec-cli/src/main.rs",
-          "formality_layer": "U3"
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771062016,
         "modified_at": 1771062016,
@@ -319,8 +319,8 @@
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
         "kind": "Assertion",
         "metadata": {
-          "line": "14,148-153",
           "formality_layer": "U2",
+          "line": "14,148-153",
           "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771062086,
@@ -332,8 +332,8 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
           "function": "Commands::Trace",
+          "source_file": "spec-cli/src/main.rs",
           "formality_layer": "U3"
         },
         "created_at": 1771062087,
@@ -645,6 +645,33 @@
         "metadata": {},
         "created_at": 1771065633,
         "modified_at": 1771065633,
+        "formality_layer": 0
+      },
+      {
+        "id": "939eb4fa-3442-4918-9c40-26eb27003db0",
+        "content": "Password must be at least 8 characters",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065949,
+        "modified_at": 1771065949,
+        "formality_layer": 0
+      },
+      {
+        "id": "76008567-cb45-47c4-8681-8e6bff86dd2b",
+        "content": "Password must be at most 20 characters",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065955,
+        "modified_at": 1771065955,
+        "formality_layer": 0
+      },
+      {
+        "id": "84566112-4473-48ae-a286-2aba1b2a2bd7",
+        "content": "Password must be at least 12 characters",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771066001,
+        "modified_at": 1771066001,
         "formality_layer": 0
       }
     ],

@@ -238,6 +238,13 @@ enum Commands {
     },
     /// Verify multi-layer specification consistency (formal verification)
     VerifyLayers,
+    /// Prove consistency between two specifications (formal proof generation)
+    ProveConsistency {
+        /// First specification ID
+        spec_a: String,
+        /// Second specification ID
+        spec_b: String,
+    },
     /// Inspect U/D/A/f model structure (display universes, domains, admissible sets, transforms)
     InspectModel {
         /// Show detailed information for each universe
@@ -944,6 +951,107 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                 }
                 if unsound_count > 0 {
                     println!("   {} unsound implementations (U3 without U0)", unsound_count);
+                }
+            }
+        }
+        Commands::ProveConsistency { spec_a, spec_b } => {
+            use spec_core::{Prover, UDAFModel};
+
+            let graph = store.load()?;
+            let mut udaf_model = UDAFModel::new();
+            udaf_model.populate_from_graph(&graph);
+
+            println!("🔬 Proving Consistency Between Specifications\n");
+            println!("═══════════════════════════════════════════════════════════════\n");
+
+            // Get the specifications
+            let node_a = graph.get_node(&spec_a);
+            let node_b = graph.get_node(&spec_b);
+
+            if node_a.is_none() {
+                eprintln!("❌ Specification A '{}' not found", spec_a);
+                std::process::exit(1);
+            }
+            if node_b.is_none() {
+                eprintln!("❌ Specification B '{}' not found", spec_b);
+                std::process::exit(1);
+            }
+
+            let node_a = node_a.unwrap();
+            let node_b = node_b.unwrap();
+
+            println!("📋 Specification A:");
+            println!("   ID:      [{}]", &spec_a[..8]);
+            println!("   Content: {}", node_a.content);
+            println!("   Kind:    {:?}", node_a.kind);
+            println!();
+
+            println!("📋 Specification B:");
+            println!("   ID:      [{}]", &spec_b[..8]);
+            println!("   Content: {}", node_b.content);
+            println!("   Kind:    {:?}", node_b.kind);
+            println!();
+
+            // Get admissible sets
+            let admissible_a = udaf_model.admissible_sets.get(&spec_a);
+            let admissible_b = udaf_model.admissible_sets.get(&spec_b);
+
+            if admissible_a.is_none() || admissible_b.is_none() {
+                println!("⚠️  Admissible sets not found in U/D/A/f model");
+                println!("   Run 'spec inspect-model' to verify model state");
+                std::process::exit(1);
+            }
+
+            let admissible_a = admissible_a.unwrap();
+            let admissible_b = admissible_b.unwrap();
+
+            println!("🔍 Admissible Set A: {} constraints", admissible_a.constraints.len());
+            for (i, constraint) in admissible_a.constraints.iter().enumerate() {
+                println!("   {}: {} ({:?})", i+1, constraint.description, constraint.kind);
+            }
+            println!();
+
+            println!("🔍 Admissible Set B: {} constraints", admissible_b.constraints.len());
+            for (i, constraint) in admissible_b.constraints.iter().enumerate() {
+                println!("   {}: {} ({:?})", i+1, constraint.description, constraint.kind);
+            }
+            println!();
+
+            // Prove consistency
+            let mut prover = Prover::new();
+            let proof = prover.prove_consistency(admissible_a, admissible_b);
+
+            println!("═══════════════════════════════════════════════════════════════\n");
+            println!("📜 Formal Proof Generated\n");
+            println!("Property: {:?}", proof.property);
+            println!("Method:   {:?}", proof.method);
+            println!("Status:   {:?}", proof.status);
+            println!();
+
+            println!("Proof Steps:");
+            for (i, step) in proof.steps.iter().enumerate() {
+                println!("  {}. {}", i+1, step.description);
+                println!("     Justification: {}", step.justification);
+                println!();
+            }
+
+            match proof.status {
+                spec_core::ProofStatus::Proven => {
+                    println!("✅ PROVEN: Specifications are consistent");
+                    println!("   ∃x. (x ∈ A₁ ∧ x ∈ A₂) - There exists an implementation satisfying both");
+                }
+                spec_core::ProofStatus::Refuted => {
+                    println!("❌ REFUTED: Specifications contradict each other");
+                    println!("   A₁ ∩ A₂ = ∅ - Admissible sets are disjoint");
+                    println!("   No implementation can satisfy both specifications simultaneously");
+                }
+                spec_core::ProofStatus::Unknown => {
+                    println!("❓ UNKNOWN: Could not prove or refute");
+                    println!("   Current solver is incomplete (heuristic-based)");
+                    println!("   SMT solver integration needed for complete verification");
+                }
+                spec_core::ProofStatus::Pending => {
+                    println!("⏳ PENDING: Proof in progress");
                 }
             }
         }
@@ -1833,6 +1941,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("   {} unsound implementations (U3 without U0)", unsound_count);
                 }
             }
+        }
+        Commands::ProveConsistency { spec_a: _, spec_b: _ } => {
+            println!("🔬 Proving Consistency\n");
+            println!("ProveConsistency command requires standalone mode (project-local .spec/ directory)");
+            println!("Run 'spec init' to initialize project-local specification management.");
+            println!("\nReason: Prover integration with U/D/A/f model requires direct file access.");
         }
         Commands::InspectModel { verbose } => {
             println!("🔍 Inspecting U/D/A/f Model Structure\n");
