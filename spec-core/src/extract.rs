@@ -366,7 +366,17 @@ impl SpecGraph {
         target: &crate::SpecNodeData,
         similarity: f32,
     ) -> Option<(crate::EdgeKind, f32, String)> {
-        // Rule 1: Formalizes - same concept, different formality levels
+        // Rule 1: Synonym - very high similarity, same kind
+        // Check this FIRST because it's most specific (highest threshold)
+        if similarity > 0.8 && source.kind == target.kind {
+            return Some((
+                crate::EdgeKind::Synonym,
+                similarity * 0.95,
+                "Nearly identical content".to_string(),
+            ));
+        }
+
+        // Rule 2: Formalizes - same concept, different formality levels
         if similarity > 0.5 && source.formality_layer < target.formality_layer {
             return Some((
                 crate::EdgeKind::Formalizes,
@@ -378,7 +388,19 @@ impl SpecGraph {
             ));
         }
 
-        // Rule 2: Refines - scenario refines constraint, or same kind with high similarity
+        // Rule 3: DerivesFrom - assertion derives from constraint
+        if similarity > 0.5
+            && source.kind == NodeKind::Assertion
+            && target.kind == NodeKind::Constraint
+        {
+            return Some((
+                crate::EdgeKind::DerivesFrom,
+                similarity * 0.8,
+                "Assertion derives from constraint".to_string(),
+            ));
+        }
+
+        // Rule 4: Refines - scenario refines constraint, or same kind with high similarity
         if similarity > 0.6 {
             if source.kind == NodeKind::Scenario && target.kind == NodeKind::Constraint {
                 return Some((
@@ -394,27 +416,6 @@ impl SpecGraph {
                     "Similar specifications (potential refinement)".to_string(),
                 ));
             }
-        }
-
-        // Rule 3: DerivesFrom - assertion derives from constraint
-        if similarity > 0.5
-            && source.kind == NodeKind::Assertion
-            && target.kind == NodeKind::Constraint
-        {
-            return Some((
-                crate::EdgeKind::DerivesFrom,
-                similarity * 0.8,
-                "Assertion derives from constraint".to_string(),
-            ));
-        }
-
-        // Rule 4: Synonym - very high similarity, same kind
-        if similarity > 0.8 && source.kind == target.kind {
-            return Some((
-                crate::EdgeKind::Synonym,
-                similarity * 0.95,
-                "Nearly identical content".to_string(),
-            ));
         }
 
         // Rule 5: Same source file suggests relationship
