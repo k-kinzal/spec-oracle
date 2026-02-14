@@ -175,9 +175,9 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Assertion",
         "metadata": {
-          "function": "detect_contradictions",
           "source_file": "spec-core/src/graph.rs",
-          "formality_layer": "U3"
+          "formality_layer": "U3",
+          "function": "detect_contradictions"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -206,8 +206,8 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Assertion",
         "metadata": {
-          "line": "183-192",
           "source_file": "proto/spec_oracle.proto",
+          "line": "183-192",
           "formality_layer": "U2"
         },
         "created_at": 1771061588,
@@ -219,8 +219,8 @@
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
           "function": "detect_omissions",
+          "source_file": "spec-core/src/graph.rs",
           "formality_layer": "U3"
         },
         "created_at": 1771061597,
@@ -241,8 +241,8 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
           "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2",
           "line": "7,105-113"
         },
         "created_at": 1771061822,
@@ -267,9 +267,9 @@
         "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto",
           "line": "19-20",
-          "source_file": "proto/spec_oracle.proto"
+          "formality_layer": "U2"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -280,9 +280,9 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
           "formality_layer": "U3",
-          "function": "Commands::Check"
+          "function": "Commands::Check",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -293,9 +293,9 @@
         "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
-          "line": "18,162-169",
-          "source_file": "proto/spec_oracle.proto"
+          "line": "18,162-169"
         },
         "created_at": 1771062014,
         "modified_at": 1771062014,
@@ -306,9 +306,9 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Assertion",
         "metadata": {
+          "function": "Commands::Find",
           "source_file": "spec-cli/src/main.rs",
-          "formality_layer": "U3",
-          "function": "Commands::Find"
+          "formality_layer": "U3"
         },
         "created_at": 1771062016,
         "modified_at": 1771062016,
@@ -320,8 +320,8 @@
         "kind": "Assertion",
         "metadata": {
           "line": "14,148-153",
-          "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2"
+          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -332,9 +332,9 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "spec-cli/src/main.rs",
           "function": "Commands::Trace",
-          "formality_layer": "U3",
-          "source_file": "spec-cli/src/main.rs"
+          "formality_layer": "U3"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -591,6 +591,60 @@
         "metadata": {},
         "created_at": 1771065284,
         "modified_at": 1771065284,
+        "formality_layer": 0
+      },
+      {
+        "id": "2059e2c0-3520-4a2f-a05c-49878c559659",
+        "content": "Prover module provides formal verification foundation for specORACLE, implementing the 'proven world' concept from motivation.md",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065622,
+        "modified_at": 1771065622,
+        "formality_layer": 0
+      },
+      {
+        "id": "ed13a14c-da83-405c-82a4-473bf07d8c83",
+        "content": "Proof struct represents a formal mathematical proof that a specification property holds",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065633,
+        "modified_at": 1771065633,
+        "formality_layer": 0
+      },
+      {
+        "id": "bba0b27f-0735-4cec-96d3-45613cc0feb2",
+        "content": "Property enum defines provable statements: Consistency, Satisfiability, Implication, Completeness, TransformSoundness",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065633,
+        "modified_at": 1771065633,
+        "formality_layer": 0
+      },
+      {
+        "id": "ac7787f6-2eaf-46a0-bc5b-7017d3282886",
+        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065633,
+        "modified_at": 1771065633,
+        "formality_layer": 0
+      },
+      {
+        "id": "0154a181-1962-4aa1-aee2-236d2078caf6",
+        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: ∃x. x ∈ A",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065633,
+        "modified_at": 1771065633,
+        "formality_layer": 0
+      },
+      {
+        "id": "c9c97133-5aa5-48c3-b3dc-26f775b6d28f",
+        "content": "ProofMethod enum supports multiple verification strategies: ConstraintSolving, SMTSolver, TheoremProver, PropertyTesting, Manual",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065633,
+        "modified_at": 1771065633,
         "formality_layer": 0
       }
     ],
