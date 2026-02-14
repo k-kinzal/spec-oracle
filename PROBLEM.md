@@ -144,6 +144,87 @@
     - **エッジ生成率**: 39 edges / 35 new nodes = 111%
   - **解決状況**: ✅ **完了** - 逆写像エンジンが意図通りに機能するようになった
 
+- [x] **🚨 抽出機能が重複仕様を大量作成する（べき等性違反）** ✅ **解決済み (2026-02-15)**
+  - **発見日**: 2026-02-15
+  - **詳細**: 逆写像エンジンが重複仕様を作成し、抽出を実行するたびに同じ仕様が追加される。これはべき等性 f₀₃⁻¹(U3) = f₀₃⁻¹(f₀₃⁻¹(U3)) に違反している。
+  - **証拠**:
+    ```bash
+    # 重複調査結果
+    $ python3 scripts/deduplicate_specs.py
+    Duplicate groups: 49
+    Nodes to remove: 119 (40% of total!)
+
+    # タイムスタンプから4回の抽出実行を確認
+    Original: 1771077123
+    Run 2:    1771082309
+    Run 3:    1771085170
+    Run 4:    1771086267
+
+    # 同一仕様が4つ存在
+    "Scenario: detect inter universe inconsistencies empty"
+      - 48b035be (original)
+      - ea92391a (duplicate)
+      - 096523d8 (duplicate)
+      - 08231690 (duplicate)
+    ```
+  - **根本原因**:
+    - `spec-core/src/extract.rs:133` - `ingest()` が `add_node_with_layer()` を呼び出し
+    - `spec-core/src/graph.rs:125` - `add_node()` が重複チェックなしで新UUID生成
+    - 結果: 抽出実行ごとに新ノード作成 → べき等性違反
+  - **影響範囲**:
+    - データ品質: 119個の重複ノード（40%）、230個の重複エッジ
+    - 孤立仕様: 168個の抽出仕様がエッジなし（重複は接続不可能）
+    - ディスク浪費: 重複データが累積
+    - **理論違反**: f₀₃⁻¹(U3) ≠ f₀₃⁻¹(f₀₃⁻¹(U3)) （べき等性が成立しない）
+  - **解決内容** (2026-02-15):
+    1. **`find_node_by_content()` 実装** (`spec-core/src/graph.rs`):
+       - content + kind による重複検出
+       - O(n) 探索（将来的にインデックス化可能）
+    2. **`ingest()` 修正** (`spec-core/src/extract.rs`):
+       - ノード作成前に既存チェック
+       - 重複時は既存IDを使用（新規作成しない）
+       - エッジ推論は既存ノードに対しても実行
+    3. **クリーンアップスクリプト** (`scripts/deduplicate_specs.py`):
+       - 既存重複の一括削除（最古のインスタンスを保持）
+       - インデックス再マッピング機能
+  - **検証結果** (2026-02-15):
+    ```bash
+    # クリーンアップ実行
+    $ python3 scripts/deduplicate_specs.py --execute
+    Nodes removed: 119
+    Edges removed: 230
+    Final node count: 176
+
+    # べき等性テスト
+    $ spec check
+    Total specs: 176
+
+    $ spec extract spec-core/src/graph.rs
+    Nodes created: 5
+    Nodes skipped: 173 (duplicates!)
+
+    $ spec check
+    Total specs: 181  # 5個増加
+
+    $ spec extract spec-core/src/graph.rs
+    Nodes created: 0  # 重複スキップ！
+    Nodes skipped: 178
+
+    $ spec check
+    Total specs: 181  # 変化なし！✅
+    ```
+  - **べき等性証明**:
+    - 1回目: 176 → 181 (5個の新規仕様)
+    - 2回目: 181 → 181 (0個の新規仕様、全て重複として検出)
+    - **f₀₃⁻¹(U3) = f₀₃⁻¹(f₀₃⁻¹(U3)) ✅** （べき等性達成）
+  - **実装詳細**:
+    - `spec-core/src/graph.rs:147-152`: `find_node_by_content()` メソッド
+    - `spec-core/src/extract.rs:122-145`: 重複チェック付き `ingest()`
+    - `scripts/deduplicate_specs.py`: 既存重複のクリーンアップツール
+  - **関連コミット**: b00be58 "Fix extraction deduplication to achieve idempotency"
+  - **タスク**: `tasks/2026-02-15-fix-extraction-deduplication.md`
+  - **解決状況**: ✅ **完了** - 逆写像エンジンのべき等性を実現
+
 - [ ] **🚨 虚偽の達成報告文書が作成されていた（ACHIEVEMENTS.md）**
   - **発見日**: 2026-02-15
   - **詳細**: ACHIEVEMENTS.mdという文書が作成され、実装されていない機能を「✅ Complete」と虚偽報告していた。
