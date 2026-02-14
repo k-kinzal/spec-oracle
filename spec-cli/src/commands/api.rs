@@ -8,6 +8,7 @@ use crate::utils::{parse_node_kind, proto_to_core_kind};
 use crate::presentation::formatter::format_formality_layer;
 use spec_core::{Store, EdgeKind};
 use std::collections::HashMap;
+use chrono;
 
 /// Execute AddNode API command in standalone mode
 pub fn execute_add_node_standalone(
@@ -36,11 +37,72 @@ pub fn execute_get_node_standalone(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let graph = store.load()?;
     if let Some(node) = graph.get_node(&id) {
-        println!("Node: {}", node.id);
+        let layer_label = format_formality_layer(node.formality_layer);
+
+        println!("📋 Node: {}", node.id);
+        println!();
         println!("  Content: {}", node.content);
         println!("  Kind: {:?}", node.kind);
+        println!("  Layer: {}", layer_label);
+        println!();
+
+        // Timestamps
+        if node.created_at > 0 {
+            let created = chrono::DateTime::from_timestamp(node.created_at, 0)
+                .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                .unwrap_or_else(|| format!("timestamp: {}", node.created_at));
+            println!("  Created: {}", created);
+        }
+        if node.modified_at > 0 && node.modified_at != node.created_at {
+            let modified = chrono::DateTime::from_timestamp(node.modified_at, 0)
+                .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                .unwrap_or_else(|| format!("timestamp: {}", node.modified_at));
+            println!("  Modified: {}", modified);
+        }
+
+        // Metadata
+        if !node.metadata.is_empty() {
+            println!();
+            println!("  Metadata:");
+            for (key, value) in &node.metadata {
+                println!("    {}: {}", key, value);
+            }
+        }
+
+        // Related nodes
+        let edges = graph.list_edges(Some(&id));
+        if !edges.is_empty() {
+            println!();
+            println!("  Relationships: {} edge(s)", edges.len());
+            for (edge_data, source_id, target_id) in edges.iter().take(10) {
+                let (related_id, direction) = if source_id == &id {
+                    (target_id, "→")
+                } else {
+                    (source_id, "←")
+                };
+
+                if let Some(related_node) = graph.get_node(related_id) {
+                    let related_layer = format_formality_layer(related_node.formality_layer);
+                    let preview = related_node.content.chars().take(60).collect::<String>();
+                    println!("    {} {:?} [{}] [{}] {}",
+                        direction,
+                        edge_data.kind,
+                        related_layer,
+                        &related_id[..8],
+                        if related_node.content.len() > 60 {
+                            format!("{}...", preview)
+                        } else {
+                            preview
+                        }
+                    );
+                }
+            }
+            if edges.len() > 10 {
+                println!("    ... and {} more", edges.len() - 10);
+            }
+        }
     } else {
-        eprintln!("Node not found: {}", id);
+        eprintln!("❌ Node not found: {}", id);
     }
     Ok(())
 }
