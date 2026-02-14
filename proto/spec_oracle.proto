@@ -34,6 +34,10 @@ service SpecOracle {
   // Executable contracts
   rpc GenerateContractTemplate(GenerateContractTemplateRequest) returns (GenerateContractTemplateResponse);
   rpc GetTestCoverage(GetTestCoverageRequest) returns (GetTestCoverageResponse);
+
+  // Graded compliance
+  rpc CalculateCompliance(CalculateComplianceRequest) returns (CalculateComplianceResponse);
+  rpc GetComplianceReport(GetComplianceReportRequest) returns (GetComplianceReportResponse);
 }
 
 // --- Node types ---
@@ -255,4 +259,30 @@ message GetTestCoverageResponse {
   float coverage_ratio = 3;         // Ratio 0.0-1.0
   repeated SpecNode nodes_with_tests = 4;
   repeated SpecNode nodes_without_tests = 5;
+}
+
+message CalculateComplianceRequest {
+  string node_id = 1;   // Specification node ID
+  string code = 2;      // Code snippet to check compliance against
+}
+
+message CalculateComplianceResponse {
+  float score = 1;              // Overall compliance score 0.0-1.0
+  float keyword_overlap = 2;    // Semantic keyword similarity
+  float structural_match = 3;   // Structural pattern matching
+  string explanation = 4;       // Human-readable explanation
+}
+
+message GetComplianceReportRequest {}
+
+message GetComplianceReportResponse {
+  repeated ComplianceEntry entries = 1;
+}
+
+message ComplianceEntry {
+  SpecNode node = 1;
+  float score = 2;
+  float keyword_overlap = 3;
+  float structural_match = 4;
+  string explanation = 5;
 }

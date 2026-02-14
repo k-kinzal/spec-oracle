@@ -132,6 +132,15 @@ enum Commands {
     },
     /// Get test coverage report
     TestCoverage,
+    /// Calculate compliance score between specification and code
+    CheckCompliance {
+        /// Node ID
+        id: String,
+        /// Code snippet or file path (prefix with @ for file)
+        code: String,
+    },
+    /// Get compliance report for all specifications
+    ComplianceReport,
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -572,6 +581,68 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 if result.nodes_with_tests.len() > 5 {
                     println!("    ... and {} more", result.nodes_with_tests.len() - 5);
+                }
+            }
+        }
+        Commands::CheckCompliance { id, code } => {
+            let code_content = if code.starts_with('@') {
+                let file_path = &code[1..];
+                std::fs::read_to_string(file_path)
+                    .map_err(|e| format!("Failed to read file {}: {}", file_path, e))?
+            } else {
+                code
+            };
+
+            let resp = client
+                .calculate_compliance(Request::new(proto::CalculateComplianceRequest {
+                    node_id: id.clone(),
+                    code: code_content,
+                }))
+                .await?;
+            let result = resp.into_inner();
+
+            println!("Compliance Analysis for node '{}':", id);
+            println!("  Overall Score: {:.1}% ({}/100)", result.score * 100.0,
+                (result.score * 100.0) as u32);
+            println!("  Keyword Overlap: {:.1}%", result.keyword_overlap * 100.0);
+            println!("  Structural Match: {:.1}%", result.structural_match * 100.0);
+            println!("  Assessment: {}", result.explanation);
+
+            // Visual indicator
+            let bar_length = (result.score * 40.0) as usize;
+            let bar = "█".repeat(bar_length) + &"░".repeat(40 - bar_length);
+            println!("\n  [{}]", bar);
+        }
+        Commands::ComplianceReport => {
+            let resp = client
+                .get_compliance_report(Request::new(proto::GetComplianceReportRequest {}))
+                .await?;
+            let result = resp.into_inner();
+
+            if result.entries.is_empty() {
+                println!("No specifications with linked code found.");
+                println!("Link code using metadata: 'impl_code' or 'test_code'");
+            } else {
+                println!("Compliance Report ({} specifications):\n", result.entries.len());
+
+                // Calculate statistics
+                let total_score: f32 = result.entries.iter().map(|e| e.score).sum();
+                let avg_score = total_score / result.entries.len() as f32;
+                let high_compliance = result.entries.iter().filter(|e| e.score > 0.8).count();
+                let low_compliance = result.entries.iter().filter(|e| e.score < 0.5).count();
+
+                println!("  Average Compliance: {:.1}%", avg_score * 100.0);
+                println!("  High Compliance (>80%): {}", high_compliance);
+                println!("  Low Compliance (<50%): {}", low_compliance);
+
+                println!("\n  Individual Scores:");
+                for entry in result.entries {
+                    let node = entry.node.unwrap();
+                    let score_pct = (entry.score * 100.0) as u32;
+                    let indicator = if entry.score > 0.8 { "✓" } else if entry.score < 0.5 { "✗" } else { "~" };
+                    println!("    {} {:3}% [{}] {} - {}",
+                        indicator, score_pct, node.id, node_kind_name(node.kind),
+                        node.content.chars().take(60).collect::<String>());
                 }
             }
         }

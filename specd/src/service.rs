@@ -436,4 +436,46 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
                 .collect(),
         }))
     }
+
+    async fn calculate_compliance(
+        &self,
+        request: Request<proto::CalculateComplianceRequest>,
+    ) -> Result<Response<proto::CalculateComplianceResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+
+        let compliance = graph
+            .calculate_compliance(&req.node_id, &req.code)
+            .ok_or_else(|| Status::not_found("Node not found"))?;
+
+        Ok(Response::new(proto::CalculateComplianceResponse {
+            score: compliance.score,
+            keyword_overlap: compliance.keyword_overlap,
+            structural_match: compliance.structural_match,
+            explanation: compliance.explanation,
+        }))
+    }
+
+    async fn get_compliance_report(
+        &self,
+        _request: Request<proto::GetComplianceReportRequest>,
+    ) -> Result<Response<proto::GetComplianceReportResponse>, Status> {
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+        let report = graph.get_compliance_report();
+
+        let entries: Vec<proto::ComplianceEntry> = report
+            .into_iter()
+            .map(|(node, score)| proto::ComplianceEntry {
+                node: Some(to_proto_node(&node)),
+                score: score.score,
+                keyword_overlap: score.keyword_overlap,
+                structural_match: score.structural_match,
+                explanation: score.explanation,
+            })
+            .collect();
+
+        Ok(Response::new(proto::GetComplianceReportResponse {
+            entries,
+        }))
+    }
 }

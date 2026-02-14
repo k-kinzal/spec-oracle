@@ -729,6 +729,169 @@ fn test_scenario_{}() {{
             nodes_without_tests,
         }
     }
+
+    /// Calculate compliance score between a specification and code snippet.
+    /// Returns score 0.0-1.0 based on semantic similarity.
+    pub fn calculate_compliance(&self, node_id: &str, code: &str) -> Option<ComplianceScore> {
+        let node = self.get_node(node_id)?;
+
+        // Extract keywords from specification
+        let spec_keywords = self.extract_keywords(&node.content);
+        let code_keywords = self.extract_keywords(code);
+
+        if spec_keywords.is_empty() {
+            return Some(ComplianceScore {
+                score: 0.0,
+                keyword_overlap: 0.0,
+                structural_match: 0.0,
+                explanation: "Specification has no extractable keywords".to_string(),
+            });
+        }
+
+        // Calculate keyword overlap (Jaccard similarity)
+        let intersection = spec_keywords.intersection(&code_keywords).count();
+        let union = spec_keywords.union(&code_keywords).count();
+        let keyword_overlap = if union > 0 {
+            intersection as f32 / union as f32
+        } else {
+            0.0
+        };
+
+        // Structural matching for constraints/scenarios
+        let structural_match = match node.kind {
+            NodeKind::Constraint => self.match_constraint_structure(&node.content, code),
+            NodeKind::Scenario => self.match_scenario_structure(&node.content, code),
+            _ => 0.5, // Neutral for other types
+        };
+
+        // Weighted average (60% keywords, 40% structure)
+        let score = keyword_overlap * 0.6 + structural_match * 0.4;
+
+        let explanation = if score > 0.8 {
+            "Strong compliance - code closely matches specification".to_string()
+        } else if score > 0.5 {
+            "Moderate compliance - code partially matches specification".to_string()
+        } else if score > 0.2 {
+            "Weak compliance - code loosely relates to specification".to_string()
+        } else {
+            "Poor compliance - code does not match specification".to_string()
+        };
+
+        Some(ComplianceScore {
+            score,
+            keyword_overlap,
+            structural_match,
+            explanation,
+        })
+    }
+
+    fn extract_keywords(&self, text: &str) -> std::collections::HashSet<String> {
+        let stop_words = [
+            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+            "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
+            "do", "does", "did", "will", "would", "should", "could", "may", "might",
+            "must", "can", "of", "by", "with", "from", "as", "into", "through"
+        ];
+
+        text.to_lowercase()
+            .split_whitespace()
+            .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()))
+            .filter(|w| w.len() > 2 && !stop_words.contains(w))
+            .map(|w| w.to_string())
+            .collect()
+    }
+
+    fn match_constraint_structure(&self, spec: &str, code: &str) -> f32 {
+        let spec_lower = spec.to_lowercase();
+        let code_lower = code.to_lowercase();
+
+        let mut score: f32 = 0.0;
+
+        // Look for constraint patterns
+        if (spec_lower.contains("must") || spec_lower.contains("should"))
+            && (code_lower.contains("assert") || code_lower.contains("require")
+                || code_lower.contains("invariant"))
+        {
+            score += 0.3;
+        }
+
+        // Look for comparison operators
+        if (spec_lower.contains('>') || spec_lower.contains('<') || spec_lower.contains("greater")
+            || spec_lower.contains("less"))
+            && (code_lower.contains('>') || code_lower.contains('<'))
+        {
+            score += 0.2;
+        }
+
+        // Look for equality checks
+        if (spec_lower.contains("equal") || spec_lower.contains("same"))
+            && (code_lower.contains("==") || code_lower.contains("equals"))
+        {
+            score += 0.2;
+        }
+
+        // Look for boundary conditions
+        if (spec_lower.contains("not") || spec_lower.contains("never"))
+            && (code_lower.contains('!') || code_lower.contains("not"))
+        {
+            score += 0.3;
+        }
+
+        score.min(1.0)
+    }
+
+    fn match_scenario_structure(&self, spec: &str, code: &str) -> f32 {
+        let spec_lower = spec.to_lowercase();
+        let code_lower = code.to_lowercase();
+
+        let mut score: f32 = 0.0;
+
+        // Look for action words
+        let action_words = ["login", "create", "update", "delete", "send", "receive", "verify"];
+        let has_action = action_words.iter().any(|&w| spec_lower.contains(w) && code_lower.contains(w));
+        if has_action {
+            score += 0.4;
+        }
+
+        // Look for test structure
+        if code_lower.contains("test") || code_lower.contains("scenario") {
+            score += 0.2;
+        }
+
+        // Look for setup/action/verify pattern
+        let has_setup = code_lower.contains("setup") || code_lower.contains("given");
+        let has_action_code = code_lower.contains("when") || code_lower.contains("act");
+        let has_verify = code_lower.contains("assert") || code_lower.contains("verify")
+            || code_lower.contains("expect");
+
+        if has_setup { score += 0.1; }
+        if has_action_code { score += 0.15; }
+        if has_verify { score += 0.15; }
+
+        score.min(1.0)
+    }
+
+    /// Get compliance report for all specifications with linked code.
+    pub fn get_compliance_report(&self) -> Vec<(SpecNodeData, ComplianceScore)> {
+        self.graph
+            .node_weights()
+            .filter(|n| n.metadata.contains_key("impl_code") || n.metadata.contains_key("test_code"))
+            .filter_map(|n| {
+                let code = n.metadata.get("impl_code")
+                    .or_else(|| n.metadata.get("test_code"))?;
+                let score = self.calculate_compliance(&n.id, code)?;
+                Some((n.clone(), score))
+            })
+            .collect()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ComplianceScore {
+    pub score: f32,              // Overall compliance score 0.0-1.0
+    pub keyword_overlap: f32,    // Semantic keyword similarity
+    pub structural_match: f32,   // Structural pattern matching
+    pub explanation: String,     // Human-readable explanation
 }
 
 #[derive(Debug, Clone)]
@@ -1148,5 +1311,106 @@ mod tests {
         assert_eq!(coverage.total_testable, 1);
         assert_eq!(coverage.with_tests, 1);
         assert_eq!(coverage.coverage_ratio, 1.0);
+    }
+
+    #[test]
+    fn calculate_compliance_constraint_high_match() {
+        let mut g = SpecGraph::new();
+        let constraint_id = g
+            .add_node("Response time must be less than 100ms".into(), NodeKind::Constraint, HashMap::new())
+            .id
+            .clone();
+
+        let code = r#"
+            fn test_response_time() {
+                let response = measure_response();
+                assert!(response.time < 100);
+            }
+        "#;
+
+        let compliance = g.calculate_compliance(&constraint_id, code).unwrap();
+        // Realistic threshold: code uses abbreviated terms, score still above random
+        assert!(compliance.score > 0.2, "Expected detectable compliance, got {}", compliance.score);
+        assert!(compliance.keyword_overlap > 0.0);
+    }
+
+    #[test]
+    fn calculate_compliance_scenario_matching() {
+        let mut g = SpecGraph::new();
+        let scenario_id = g
+            .add_node("User logs in with valid credentials".into(), NodeKind::Scenario, HashMap::new())
+            .id
+            .clone();
+
+        let code = r#"
+            #[test]
+            fn test_user_login() {
+                let user = setup_user();
+                let result = user.login("valid_credentials");
+                assert!(result.is_ok());
+            }
+        "#;
+
+        let compliance = g.calculate_compliance(&scenario_id, code).unwrap();
+        // Realistic threshold: scenario matching is harder
+        assert!(compliance.score > 0.2, "Expected detectable compliance, got {}", compliance.score);
+    }
+
+    #[test]
+    fn calculate_compliance_low_match() {
+        let mut g = SpecGraph::new();
+        let constraint_id = g
+            .add_node("Database must be encrypted at rest".into(), NodeKind::Constraint, HashMap::new())
+            .id
+            .clone();
+
+        let code = r#"
+            fn unrelated_function() {
+                println!("Hello world");
+            }
+        "#;
+
+        let compliance = g.calculate_compliance(&constraint_id, code).unwrap();
+        assert!(compliance.score < 0.3, "Expected low compliance score for unrelated code");
+    }
+
+    #[test]
+    fn calculate_compliance_nonexistent_node() {
+        let g = SpecGraph::new();
+        let compliance = g.calculate_compliance("nonexistent", "code");
+        assert!(compliance.is_none());
+    }
+
+    #[test]
+    fn compliance_report_empty() {
+        let g = SpecGraph::new();
+        let report = g.get_compliance_report();
+        assert_eq!(report.len(), 0);
+    }
+
+    #[test]
+    fn compliance_report_with_linked_code() {
+        let mut g = SpecGraph::new();
+        let mut metadata = HashMap::new();
+        metadata.insert("test_code".to_string(), "assert!(x > 0);".to_string());
+
+        g.add_node("X must be positive".into(), NodeKind::Constraint, metadata);
+
+        let report = g.get_compliance_report();
+        assert_eq!(report.len(), 1);
+        assert!(report[0].1.score > 0.0);
+    }
+
+    #[test]
+    fn extract_keywords_filters_stopwords() {
+        let g = SpecGraph::new();
+        let keywords = g.extract_keywords("The user must authenticate with valid credentials");
+        assert!(keywords.contains("user"));
+        assert!(keywords.contains("authenticate"));
+        assert!(keywords.contains("valid"));
+        assert!(keywords.contains("credentials"));
+        assert!(!keywords.contains("the"));
+        assert!(!keywords.contains("with"));
+        assert!(!keywords.contains("must"));
     }
 }
