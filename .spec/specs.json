@@ -2279,6 +2279,30 @@
           "metadata": {},
           "created_at": 1771073356
         }
+      ],
+      [
+        17,
+        29,
+        {
+          "id": "connect-trace-scenario-001",
+          "kind": "Formalizes",
+          "metadata": {
+            "reason": "U0 scenario formalized by U3 implementation constraint"
+          },
+          "created_at": 1771074374
+        }
+      ],
+      [
+        17,
+        18,
+        {
+          "id": "scenario-derives-from-assertion-001",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "reason": "Trace scenario depends on formality layer connectivity assertion"
+          },
+          "created_at": 1771074400
+        }
       ]
     ]
   }
