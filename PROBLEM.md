@@ -390,49 +390,56 @@
   - **関連タスク**: `tasks/2026-02-14-native-project-local-support.md` (Session 36)
   - **解決状況**: ✅ **完了** - CLI操作が快適になり、JSON操作不要
 
-- [x] **U0層とU3層の間にformalizes/transformエッジが作成されていない** ✅ **解決済み (2026-02-14, Session 63)**
+- [ ] **逆写像（f₀ᵢ⁻¹）による自動仕様抽出が統合されていない（specORACLEの本質的欠如）**
   - **発見日**: 2026-02-14
-  - **詳細**: 自然言語仕様（U0）と実行可能コード仕様（U3）は意味的に同じ要求を表現しているが、グラフ上で`formalizes`や`transform`エッジによって接続されていない。これにより、多層仕様の追跡と整合性検証ができない。
-  - **具体例**:
-    - U0: "Server must detect specification omissions" (id: b18aad55-5290-4327-8686-8b520987e204)
-    - U3: "Invariant: omissions.iter().any(...)" (id: cd8cd613-be8b-4c83-a265-f441a113b3cb)
-    - これらの間に関係性なし
-  - **影響範囲**: 多層仕様管理の核心機能が機能していない。conversation.mdで議論されたU/D/A/fモデルのf（変換関数）が実装されていない。
-  - **解決内容**:
-    - ✅ **U0-U2層の完全接続** (Session 63):
-      - 28個の全U2 RPC仕様をU0自然言語要求と接続
-      - Formalizes edges作成: U0 --Formalizes--> U2
-      - `connect_layers.py`自動化スクリプト作成
-      - 27/28自動マッピング、1/28手動接続
-    - ✅ **ゼロ孤立達成**:
-      - Session 62後: 28個の孤立仕様（全U2 RPC）
-      - Session 63後: **0個の孤立仕様** (100%削減)
-      - `spec check`: "✅ All checks passed! No issues found."
-    - ✅ **U/D/A/fモデルのf実装**:
-      - f₀₂変換関数: U0 → U2形式化を実現
-      - 多層宇宙の合成: U0 ∪ U2が正しくリンク
-      - トレーサビリティ: 自然言語からインターフェース定義まで追跡可能
-  - **実装詳細**:
-    - **RPC名とU0仕様のマッピング**:
-      - AddNode → "Users can add specifications using natural language..."
-      - DetectContradictions → "The system must detect contradictions..."
-      - Query → "The find command provides semantic search..."
-      - 計28個のRPC全てマッピング完了
-    - **Formalizes edge意味論**:
-      - U0（自然言語要求）がU2（gRPCインターフェース定義）によって形式化される
-      - conversation.mdのf₀₂変換関数を実装
-      - motivation.mdの多層防御統制を実現
-  - **検証結果** (Session 63):
-    - 仕様総数: 121個
-    - Formalizes edges作成: 28個
-    - 孤立仕様: 0個（100%接続）
-    - 矛盾: 0件
-  - **理論的意義**:
-    - **conversation.md**: U/D/A/fモデルのf（変換関数）を実装
-    - **motivation.md**: 多層防御の統制を実現
-    - **CLAUDE.md**: U0-U2-U3の多層仕様追跡が動作
-  - **タスク文書**: `tasks/2026-02-14-session-63-connect-u2-to-u0.md`
-  - **解決状況**: ✅ **完了** - 全U2層がU0層と接続、多層仕様管理が実装された
+  - **詳細**: specORACLEの核心は「人間が書くのではなく、システムが逆写像により抽出する」ことだが、現状は人間による手動仕様記述（`spec add "..."`）が主体となっている。
+  - **現状の問題**:
+    - ✅ RustExtractor実装済み（`spec-core/src/extract.rs`）
+    - ✅ `construct_u0`実装済み（U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3)）
+    - ✅ `spec extract`コマンド存在
+    - ✅ `spec construct-u0 --execute`動作確認済み（178仕様抽出成功）
+    - ❌ **抽出した仕様がグラフに保存されない**
+    - ❌ **抽出が主体ワークフローになっていない**
+    - ❌ **手動でPythonスクリプトを書いて層を接続している（本質に反する）**
+  - **検証結果** (2026-02-14):
+    ```bash
+    $ ./target/release/spec construct-u0 --execute --verbose
+    ✅ U0 Construction Complete
+    Newly extracted specifications: 178
+    Final U0 State: Total specifications in U0: 231
+
+    $ jq '.graph.nodes | map(select(.metadata.inferred == "true")) | length' .spec/specs.json
+    0  # 抽出した仕様が保存されていない！
+    ```
+  - **影響範囲**: specORACLEの存在意義そのもの。「人間が書く仕様管理ツール」になっており、「逆写像により構築する」という本質を実現していない。
+  - **どうあって欲しいか**:
+    - **抽出を主体に**:
+      - `spec extract <source>` → 抽出した仕様を自動的にグラフに保存
+      - `spec extract spec-core/` → 全コードから仕様抽出、U3層に追加
+      - `spec construct-u0` → U1/U2/U3から逆写像でU0を構築
+      - 抽出した仕様が自動的に層間エッジで接続される
+    - **継続的抽出**:
+      - ファイル変更を監視し、自動的に再抽出
+      - CIで`spec extract`を実行し、抽出結果をコミット
+      - 手動記述（`spec add`）は補助的な位置づけ
+    - **形式的検証の統合**:
+      - 抽出した仕様をZ3 proverで検証
+      - 層間の矛盾を自動検出
+      - 証明失敗時にcounterexample提示
+    - **Pythonスクリプト不要**:
+      - 人間がマッピングスクリプトを書くのではなく
+      - システムが自動的に層間の対応を推論
+      - RustExtractorが抽出時にU0との対応も推論
+  - **実装の方向性**:
+    - `spec extract`のstandaloneモード対応（現在はserver modeのみ）
+    - 抽出した`InferredSpecification`を`graph.ingest()`で保存
+    - `formality_layer`を自動設定（code → U3, proto → U2, docs → U0）
+    - 層間エッジを自動推論（RustExtractorが抽出時にU0仕様を参照）
+  - **理論的背景**:
+    - **CLAUDE.md**: "specORACLE is a reverse mapping engine. It does not manage specifications written by humans."
+    - **conversation.md**: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3)
+    - **motivation.md**: 多層防御の統制は、各層からの逆写像により実現される
+  - **解決状況**: ❌ **未着手** - コードは存在するが統合されていない。本質的機能が欠如している。
 
 - [x] **矛盾検出が重複仕様を検出しない** ✅ **解決済み (2026-02-14)**
   - **発見日**: 2026-02-14
