@@ -36,11 +36,13 @@ Refactor CLI to satisfy specification [b706e529]:
 - [x] Extract Summary command to commands/summary.rs
 - [x] Extract Extract command to commands/extract.rs
 - [x] Extract Prover commands to commands/prover.rs (ProveConsistency, ProveSatisfiability, InspectModel)
-- [x] **Current**: main.rs reduced from 3736 to 3131 lines (-605 lines, -16.2%)
-- [ ] Extract U0 operations (ConstructU0, CleanupLowQuality)
+- [x] Extract U0 operations to commands/u0.rs (ConstructU0, CleanupLowQuality)
+- [x] **Current**: main.rs reduced from 3736 to 2865 lines (-871 lines, -23.3%)
+- [x] **Commit**: 0b49195 "Extract Prover and U0 commands"
 - [ ] Extract Layer operations (VerifyLayers, FilterByLayer, DetectLayerInconsistencies)
-- [ ] Extract remaining commands
-- [ ] Each command handler: input validation → use case → presentation
+- [ ] Extract relationship commands (InferRelationships, InferRelationshipsAi)
+- [ ] Extract remaining server-mode handlers
+- [ ] Goal: Reduce main.rs to <500 lines
 
 ### Phase 2: Create Use Cases Module
 - [ ] Identify shared business logic across commands
@@ -58,11 +60,46 @@ Refactor CLI to satisfy specification [b706e529]:
 - [ ] Verify contradiction [d26341fb] is resolved
 - [ ] Achieve self-consistency: specORACLE satisfies its own specifications
 
+## Progress Summary
+
+### Extracted So Far
+- **commands/api.rs** (5448 bytes): 9 low-level graph API operations
+- **commands/summary.rs** (2732 bytes): Summary command
+- **commands/extract.rs** (4604 bytes): Extract command
+- **commands/prover.rs** (390 lines): ProveConsistency, ProveSatisfiability, InspectModel
+- **commands/u0.rs** (292 lines): ConstructU0, CleanupLowQuality
+- **commands/add.rs, check.rs, contradictions.rs, find.rs, omissions.rs, query.rs, trace.rs** (already extracted)
+
+### Metrics
+- **Before**: 3736 lines (main.rs)
+- **After**: 2865 lines (main.rs)
+- **Reduction**: -871 lines (-23.3%)
+- **Remaining**: ~2365 lines to remove to reach <500 line target
+
+### Remaining Work
+
+**Large blocks still in main.rs:**
+- run_standalone() function: ~460 lines (mostly thin dispatch, but some inline handlers remain)
+- Server mode handlers in main(): likely contains duplicate logic
+- Utility functions: is_semantically_related, handle_ai_query, extract_and_sync, etc.
+- Remaining commands with inline implementations:
+  - Layer operations: VerifyLayers, FilterByLayer, DetectLayerInconsistencies
+  - Relationship operations: InferRelationships, InferRelationshipsAi
+  - Watch command
+  - Various smaller commands
+
+**Next Steps:**
+1. Extract layer operations to commands/layer.rs
+2. Extract relationship operations to commands/relationships.rs
+3. Extract utility functions to utils/ or helpers/ module
+4. Remove duplicate server-mode handlers (consolidate with standalone)
+5. Thin down run_standalone to pure dispatch
+
 ## Success Criteria
 
 - main.rs < 500 lines
 - All command handlers in commands/ module
-- Business logic in use_cases/ module
-- AI logic in ai/ module
+- Business logic in use_cases/ module (if needed)
+- AI logic in ai/ module (if needed)
 - `spec check` shows 0 contradictions
 - **Self-governance achieved**: specORACLE satisfies its own architecture requirements
