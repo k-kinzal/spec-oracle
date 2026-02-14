@@ -162,9 +162,9 @@
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
         "kind": "Assertion",
         "metadata": {
-          "line": "171-181",
           "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2"
+          "formality_layer": "U2",
+          "line": "171-181"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -175,9 +175,9 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "spec-core/src/graph.rs",
           "formality_layer": "U3",
-          "function": "detect_contradictions",
-          "source_file": "spec-core/src/graph.rs"
+          "function": "detect_contradictions"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -206,9 +206,9 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto",
           "line": "183-192",
-          "source_file": "proto/spec_oracle.proto"
+          "formality_layer": "U2"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -219,9 +219,9 @@
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U3",
           "source_file": "spec-core/src/graph.rs",
-          "function": "detect_omissions",
-          "formality_layer": "U3"
+          "function": "detect_omissions"
         },
         "created_at": 1771061597,
         "modified_at": 1771061597,
@@ -241,9 +241,9 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
-          "line": "7,105-113",
-          "source_file": "proto/spec_oracle.proto"
+          "line": "7,105-113"
         },
         "created_at": 1771061822,
         "modified_at": 1771061822,
@@ -254,9 +254,9 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "spec-cli/src/main.rs",
           "formality_layer": "U3",
-          "function": "Commands::Add",
-          "source_file": "spec-cli/src/main.rs"
+          "function": "Commands::Add"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -267,8 +267,8 @@
         "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
           "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2",
           "line": "19-20"
         },
         "created_at": 1771061935,
@@ -280,9 +280,9 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
+          "formality_layer": "U3",
           "function": "Commands::Check",
-          "formality_layer": "U3"
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -293,8 +293,8 @@
         "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
           "line": "18,162-169",
+          "formality_layer": "U2",
           "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771062014,
@@ -306,8 +306,8 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
           "function": "Commands::Find",
+          "source_file": "spec-cli/src/main.rs",
           "formality_layer": "U3"
         },
         "created_at": 1771062016,
@@ -319,9 +319,9 @@
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2",
           "line": "14,148-153",
-          "formality_layer": "U2"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -332,9 +332,9 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Assertion",
         "metadata": {
-          "function": "Commands::Trace",
           "formality_layer": "U3",
-          "source_file": "spec-cli/src/main.rs"
+          "source_file": "spec-cli/src/main.rs",
+          "function": "Commands::Trace"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -356,42 +356,6 @@
         "metadata": {},
         "created_at": 1771062281,
         "modified_at": 1771062281,
-        "formality_layer": 0
-      },
-      {
-        "id": "27ac314f-d58a-4843-9be8-0660e674b519",
-        "content": "Session 43 connected supporting specifications to parent features using Refines edges, reducing isolated specs from 17 to 14 and demonstrating hierarchical specification structure",
-        "kind": "Assertion",
-        "metadata": {},
-        "created_at": 1771062696,
-        "modified_at": 1771062696,
-        "formality_layer": 0
-      },
-      {
-        "id": "c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d",
-        "content": "Refines edges represent within-concern elaboration where supporting details refine main requirements, complementing Formalizes edges that represent cross-layer transformation",
-        "kind": "Assertion",
-        "metadata": {},
-        "created_at": 1771062698,
-        "modified_at": 1771062698,
-        "formality_layer": 0
-      },
-      {
-        "id": "4363a37f-814f-4f00-b566-99c03c3ad106",
-        "content": "Session 44 achieved 100% isolation elimination by adding 14 edges (Refines and DerivesFrom), reducing isolated specs from 16 to 0",
-        "kind": "Assertion",
-        "metadata": {},
-        "created_at": 1771063036,
-        "modified_at": 1771063036,
-        "formality_layer": 0
-      },
-      {
-        "id": "717b4b00-779b-4d39-9c7f-3ebcb82dd0ec",
-        "content": "The verify-layers command checks multi-layer specification consistency by verifying completeness and soundness",
-        "kind": "Assertion",
-        "metadata": {},
-        "created_at": 1771063624,
-        "modified_at": 1771063624,
         "formality_layer": 0
       }
     ],
@@ -516,222 +480,6 @@
           "kind": "Formalizes",
           "metadata": {},
           "created_at": 1771062201
-        }
-      ],
-      [
-        11,
-        10,
-        {
-          "id": "refines-check-exit-001",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Exit code requirement refines check command behavior"
-          },
-          "created_at": 1771070000
-        }
-      ],
-      [
-        13,
-        12,
-        {
-          "id": "refines-find-suggest-001",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Helpful suggestions refine find command UX"
-          },
-          "created_at": 1771070001
-        }
-      ],
-      [
-        15,
-        14,
-        {
-          "id": "refines-trace-depth-001",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Depth limiting refines trace command functionality"
-          },
-          "created_at": 1771070002
-        }
-      ],
-      [
-        0,
-        9,
-        {
-          "id": "refines-refines-session44-001",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Test specification refines standalone mode requirement"
-          },
-          "created_at": 1771062892
-        }
-      ],
-      [
-        11,
-        10,
-        {
-          "id": "refines-refines-session44-002",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Exit code behavior refines check command specification"
-          },
-          "created_at": 1771062893
-        }
-      ],
-      [
-        13,
-        12,
-        {
-          "id": "refines-refines-session44-003",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Helpful suggestions refine find command user experience"
-          },
-          "created_at": 1771062894
-        }
-      ],
-      [
-        15,
-        14,
-        {
-          "id": "refines-refines-session44-004",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Depth limiting refines trace command functionality"
-          },
-          "created_at": 1771062895
-        }
-      ],
-      [
-        18,
-        14,
-        {
-          "id": "refines-refines-session44-005",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Multi-layer chain visualization is a key capability of trace command"
-          },
-          "created_at": 1771062896
-        }
-      ],
-      [
-        19,
-        8,
-        {
-          "id": "refines-refines-session44-006",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Formalizes edges are the mechanism for cross-layer refinement"
-          },
-          "created_at": 1771062897
-        }
-      ],
-      [
-        6,
-        9,
-        {
-          "id": "refines-refines-session44-007",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Project-local .spec/ storage enables standalone mode operation"
-          },
-          "created_at": 1771062898
-        }
-      ],
-      [
-        2,
-        7,
-        {
-          "id": "refines-refines-session44-008",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Multi-layer management is the mechanism for ORACLE's single source of truth"
-          },
-          "created_at": 1771062899
-        }
-      ],
-      [
-        22,
-        2,
-        {
-          "id": "refines-supports-session44-009",
-          "kind": "DerivesFrom",
-          "metadata": {
-            "reason": "Demonstrated multi-layer tracking provides evidence for multi-layer capability"
-          },
-          "created_at": 1771062900
-        }
-      ],
-      [
-        31,
-        22,
-        {
-          "id": "refines-supports-session44-010",
-          "kind": "DerivesFrom",
-          "metadata": {
-            "reason": "Session 40-42 work produced the demonstration of multi-layer tracking"
-          },
-          "created_at": 1771062901
-        }
-      ],
-      [
-        32,
-        31,
-        {
-          "id": "refines-refines-session44-011",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Complete traceability detail refines session summary"
-          },
-          "created_at": 1771062902
-        }
-      ],
-      [
-        33,
-        31,
-        {
-          "id": "refines-supports-session44-012",
-          "kind": "DerivesFrom",
-          "metadata": {
-            "reason": "Session 43 continued the expansion started in sessions 40-42"
-          },
-          "created_at": 1771062903
-        }
-      ],
-      [
-        34,
-        8,
-        {
-          "id": "refines-final-session44-001",
-          "kind": "Refines",
-          "metadata": {
-            "reason": "Refines edge semantics refine the general concept of cross-layer refinement"
-          },
-          "created_at": 1771062939
-        }
-      ],
-      [
-        1,
-        0,
-        {
-          "id": "refines-final-session44-002",
-          "kind": "DerivesFrom",
-          "metadata": {
-            "reason": "Password constraint is an example used in standalone mode testing"
-          },
-          "created_at": 1771062940
-        }
-      ],
-      [
-        35,
-        33,
-        {
-          "id": "session44-to-session43",
-          "kind": "DerivesFrom",
-          "metadata": {
-            "reason": "Session 44 continued the isolation elimination work from Session 43"
-          },
-          "created_at": 1771063036
         }
       ]
     ]
