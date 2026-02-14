@@ -31,6 +31,7 @@ This goal has not yet been met. Research it. Search for it. Surpass the failures
 - The server must be able to manage graph data using either text files or an arbitrary database.
 - The command must be able to process natural language.
     - It must be able to utilize any AI command, such as `claude -p ""` or `codex exec ""`.
+- The command must be user-friendly. It should be able to generate correct specifications simply by inputting specification-related terms without requiring deep thought. It must also prevent the creation of contradictory specifications.
 - The command must be able to resolve and normalize variations in terminology.
 - The command must be able to accurately retrieve specifications and handle Q&A.
 - Communication between the server and command must be handled via gRPC.

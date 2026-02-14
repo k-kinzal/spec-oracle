@@ -51,6 +51,9 @@ service SpecOracle {
 
   // Automatic relationship inference
   rpc InferAllRelationships(InferAllRelationshipsRequest) returns (InferAllRelationshipsResponse);
+
+  // AI-powered relationship inference (cross-layer semantic matching)
+  rpc InferAllRelationshipsWithAi(InferAllRelationshipsWithAiRequest) returns (InferAllRelationshipsResponse);
 }
 
 // --- Node types ---
@@ -388,6 +391,10 @@ message SetNodeUniverseResponse {
 }
 
 message InferAllRelationshipsRequest {}
+
+message InferAllRelationshipsWithAiRequest {
+  float min_confidence = 1;  // Minimum confidence threshold (0.0-1.0)
+}
 
 message InferAllRelationshipsResponse {
   uint32 edges_created = 1;

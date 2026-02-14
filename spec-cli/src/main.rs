@@ -185,6 +185,12 @@ enum Commands {
     },
     /// Infer relationships for all nodes in the graph
     InferRelationships,
+    /// Infer relationships using AI-powered semantic matching (requires claude CLI)
+    InferRelationshipsAi {
+        /// Minimum confidence threshold (0.0-1.0)
+        #[arg(long, default_value = "0.7")]
+        min_confidence: f32,
+    },
     /// Watch source files and maintain specification synchronization
     Watch {
         /// Source directory to watch
@@ -995,6 +1001,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let result = resp.into_inner();
 
             println!("✓ Created {} new edges automatically", result.edges_created);
+
+            if result.suggestions_count > 0 {
+                println!("\nSuggestions for human review ({} total):", result.suggestions_count);
+                for (i, suggestion) in result.suggestions.iter().take(10).enumerate() {
+                    println!("  {}. {}", i + 1, suggestion);
+                }
+                if result.suggestions.len() > 10 {
+                    println!("  ... and {} more", result.suggestions.len() - 10);
+                }
+            }
+        }
+        Commands::InferRelationshipsAi { min_confidence } => {
+            println!("🤖 Inferring relationships with AI-powered semantic matching...");
+            println!("   Minimum confidence: {:.2}", min_confidence);
+            println!("   This may take a while for large specification sets.\n");
+
+            let resp = client
+                .infer_all_relationships_with_ai(Request::new(proto::InferAllRelationshipsWithAiRequest {
+                    min_confidence,
+                }))
+                .await?;
+            let result = resp.into_inner();
+
+            println!("\n✓ Created {} new edges automatically", result.edges_created);
 
             if result.suggestions_count > 0 {
                 println!("\nSuggestions for human review ({} total):", result.suggestions_count);

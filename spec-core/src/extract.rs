@@ -163,6 +163,108 @@ impl SpecGraph {
         report
     }
 
+    /// Infer relationships with AI enhancement for cross-layer semantic matching
+    pub fn infer_all_relationships_with_ai(&mut self, min_confidence: f32) -> IngestionReport {
+        let mut report = IngestionReport {
+            nodes_created: 0,
+            nodes_skipped: 0,
+            edges_created: 0,
+            suggestions: Vec::new(),
+            contradictions_found: Vec::new(),
+        };
+
+        // Get all node IDs
+        let all_ids: Vec<String> = self.list_nodes(None).iter().map(|n| n.id.clone()).collect();
+
+        // Initialize AI engine
+        let ai = crate::AISemantic::default();
+        if !ai.is_available() {
+            eprintln!("Warning: AI command not available, falling back to simple inference");
+            return self.infer_all_relationships();
+        }
+
+        println!("Using AI-enhanced semantic matching for cross-layer relationships...");
+
+        // Infer relationships for each node
+        for (i, node_id) in all_ids.iter().enumerate() {
+            if i % 50 == 0 {
+                println!("  Progress: {}/{} nodes processed", i, all_ids.len());
+            }
+
+            let suggestions = self.infer_relationships_for_node_with_ai(node_id, &ai);
+
+            for suggestion in suggestions {
+                if suggestion.confidence >= min_confidence {
+                    // High confidence: auto-create edge
+                    match self.add_edge(
+                        &suggestion.source_id,
+                        &suggestion.target_id,
+                        suggestion.kind,
+                        HashMap::new(),
+                    ) {
+                        Ok(_) => report.edges_created += 1,
+                        Err(_) => {} // Ignore errors (edge might already exist)
+                    }
+                } else if suggestion.confidence >= 0.5 {
+                    // Medium confidence: suggest for human review
+                    report.suggestions.push(suggestion);
+                }
+            }
+        }
+
+        let (cache_size, _) = ai.cache_stats();
+        println!("  AI cache size: {} entries", cache_size);
+
+        report
+    }
+
+    /// Infer relationships for a specific node with AI enhancement
+    fn infer_relationships_for_node_with_ai(&self, node_id: &str, ai: &crate::AISemantic) -> Vec<EdgeSuggestion> {
+        let mut suggestions = Vec::new();
+
+        let source_node = match self.get_node(node_id) {
+            Some(n) => n,
+            None => return suggestions,
+        };
+
+        // Get all other nodes
+        let all_nodes = self.list_nodes(None);
+
+        for target_node in all_nodes {
+            if target_node.id == node_id {
+                continue; // Skip self
+            }
+
+            // Calculate AI-enhanced semantic similarity
+            let similarity = self.calculate_semantic_similarity_with_ai(
+                &source_node.content,
+                source_node.formality_layer,
+                &target_node.content,
+                target_node.formality_layer,
+                ai,
+            );
+
+            if similarity < 0.3 {
+                continue; // Too dissimilar
+            }
+
+            // Infer edge kind and confidence based on multiple factors
+            if let Some((edge_kind, confidence, explanation)) =
+                self.infer_edge_kind(source_node, target_node, similarity)
+            {
+                suggestions.push(EdgeSuggestion {
+                    source_id: node_id.to_string(),
+                    target_id: target_node.id.clone(),
+                    kind: edge_kind,
+                    confidence,
+                    explanation,
+                });
+            }
+        }
+
+        suggestions
+    }
+
     /// Infer relationships for a specific node
     fn infer_relationships_for_node(&self, node_id: &str) -> Vec<EdgeSuggestion> {
         let mut suggestions = Vec::new();
@@ -207,9 +309,9 @@ impl SpecGraph {
         suggestions
     }
 
-    /// Calculate semantic similarity between two texts
+    /// Calculate semantic similarity between two texts (optionally AI-enhanced)
     fn calculate_semantic_similarity(&self, text1: &str, text2: &str) -> f32 {
-        // Simple keyword-based similarity (can be enhanced with AI embeddings later)
+        // Start with simple keyword-based similarity
         let lower1 = text1.to_lowercase();
         let lower2 = text2.to_lowercase();
 
@@ -226,6 +328,35 @@ impl SpecGraph {
         let union = words1.union(&words2).count();
 
         intersection as f32 / union as f32
+    }
+
+    /// Calculate semantic similarity with AI enhancement for cross-layer comparisons
+    fn calculate_semantic_similarity_with_ai(
+        &self,
+        text1: &str,
+        layer1: u8,
+        text2: &str,
+        layer2: u8,
+        ai: &crate::AISemantic,
+    ) -> f32 {
+        // First try simple similarity
+        let simple_sim = self.calculate_semantic_similarity(text1, text2);
+
+        // If similarity is already high, no need for AI
+        if simple_sim > 0.5 {
+            return simple_sim;
+        }
+
+        // If different formality layers and low simple similarity, try AI
+        if layer1 != layer2 {
+            if let Some(ai_sim) = ai.semantic_similarity(text1, text2, layer1, layer2) {
+                // Blend simple and AI similarity (weighted average)
+                // Give more weight to AI for cross-layer comparisons
+                return simple_sim * 0.3 + ai_sim * 0.7;
+            }
+        }
+
+        simple_sim
     }
 
     /// Infer edge kind between two nodes
