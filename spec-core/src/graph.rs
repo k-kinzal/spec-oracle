@@ -62,6 +62,13 @@ pub struct Omission {
     pub related_nodes: Vec<SpecNodeData>,
 }
 
+#[derive(Debug, Clone)]
+pub struct LayerInconsistency {
+    pub source: SpecNodeData,
+    pub target: SpecNodeData,
+    pub explanation: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecGraph {
     graph: DiGraph<SpecNodeData, SpecEdgeData>,
@@ -415,6 +422,70 @@ impl SpecGraph {
 
         (definitions, synonyms)
     }
+
+    /// Filter nodes by formality layer.
+    pub fn filter_by_layer(&self, min_layer: u8, max_layer: u8) -> Vec<&SpecNodeData> {
+        self.graph
+            .node_weights()
+            .filter(|n| n.formality_layer >= min_layer && n.formality_layer <= max_layer)
+            .collect()
+    }
+
+    /// Detect cross-layer inconsistencies: nodes connected by Formalizes edges
+    /// where the source has higher formality than target (should be reversed).
+    pub fn detect_layer_inconsistencies(&self) -> Vec<LayerInconsistency> {
+        let mut result = Vec::new();
+
+        for eidx in self.graph.edge_indices() {
+            let edge = &self.graph[eidx];
+            if edge.kind == EdgeKind::Formalizes {
+                if let Some((src_idx, tgt_idx)) = self.graph.edge_endpoints(eidx) {
+                    let src = &self.graph[src_idx];
+                    let tgt = &self.graph[tgt_idx];
+
+                    // Formalizes should go from lower to higher formality
+                    if src.formality_layer >= tgt.formality_layer {
+                        result.push(LayerInconsistency {
+                            source: src.clone(),
+                            target: tgt.clone(),
+                            explanation: format!(
+                                "Formalizes edge goes from layer {} to layer {} (should increase)",
+                                src.formality_layer, tgt.formality_layer
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Find all formalizations of a given node (nodes it formalizes to).
+    pub fn find_formalizations(&self, node_id: &str) -> Vec<&SpecNodeData> {
+        if let Some(&idx) = self.id_to_index.get(node_id) {
+            self.graph
+                .edges_directed(idx, Direction::Outgoing)
+                .filter(|e| self.graph[e.id()].kind == EdgeKind::Formalizes)
+                .map(|e| &self.graph[e.target()])
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Find the natural language source for a formalized node (reverse of formalizations).
+    pub fn find_natural_source(&self, node_id: &str) -> Vec<&SpecNodeData> {
+        if let Some(&idx) = self.id_to_index.get(node_id) {
+            self.graph
+                .edges_directed(idx, Direction::Incoming)
+                .filter(|e| self.graph[e.id()].kind == EdgeKind::Formalizes)
+                .map(|e| &self.graph[e.source()])
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -567,5 +638,96 @@ mod tests {
         assert_eq!(g2.edge_count(), 1);
         assert!(g2.get_node(&a).is_some());
         assert!(g2.get_node(&b).is_some());
+    }
+
+    #[test]
+    fn filter_by_formality_layer() {
+        let mut g = SpecGraph::new();
+        let n0 = g.add_node("Natural lang".into(), NodeKind::Assertion, HashMap::new());
+        let id0 = n0.id.clone();
+        let n1 = g.add_node("Structured".into(), NodeKind::Constraint, HashMap::new());
+        let id1 = n1.id.clone();
+
+        // Manually update formality layers
+        if let Some(idx) = g.id_to_index.get(&id0) {
+            let node = &mut g.graph[*idx];
+            node.formality_layer = 0;
+        }
+        if let Some(idx) = g.id_to_index.get(&id1) {
+            let node = &mut g.graph[*idx];
+            node.formality_layer = 2;
+        }
+
+        let layer0 = g.filter_by_layer(0, 0);
+        assert_eq!(layer0.len(), 1);
+        assert_eq!(layer0[0].formality_layer, 0);
+
+        let layer2 = g.filter_by_layer(2, 2);
+        assert_eq!(layer2.len(), 1);
+        assert_eq!(layer2[0].formality_layer, 2);
+
+        let all = g.filter_by_layer(0, 3);
+        assert_eq!(all.len(), 2);
+    }
+
+    #[test]
+    fn detect_layer_inconsistency_wrong_direction() {
+        let mut g = SpecGraph::new();
+        let formal_id = g.add_node("X > 0".into(), NodeKind::Constraint, HashMap::new()).id.clone();
+        let natural_id = g.add_node("X must be positive".into(), NodeKind::Assertion, HashMap::new()).id.clone();
+
+        // Set layers
+        if let Some(idx) = g.id_to_index.get(&formal_id) {
+            g.graph[*idx].formality_layer = 2;
+        }
+        if let Some(idx) = g.id_to_index.get(&natural_id) {
+            g.graph[*idx].formality_layer = 0;
+        }
+
+        // Add edge in wrong direction (high formality -> low formality)
+        g.add_edge(&formal_id, &natural_id, EdgeKind::Formalizes, HashMap::new()).unwrap();
+
+        let inconsistencies = g.detect_layer_inconsistencies();
+        assert_eq!(inconsistencies.len(), 1);
+        assert!(inconsistencies[0].explanation.contains("should increase"));
+    }
+
+    #[test]
+    fn detect_no_layer_inconsistency_correct_direction() {
+        let mut g = SpecGraph::new();
+        let natural_id = g.add_node("X must be positive".into(), NodeKind::Assertion, HashMap::new()).id.clone();
+        let formal_id = g.add_node("X > 0".into(), NodeKind::Constraint, HashMap::new()).id.clone();
+
+        // Set layers
+        if let Some(idx) = g.id_to_index.get(&natural_id) {
+            g.graph[*idx].formality_layer = 0;
+        }
+        if let Some(idx) = g.id_to_index.get(&formal_id) {
+            g.graph[*idx].formality_layer = 2;
+        }
+
+        // Add edge in correct direction (low formality -> high formality)
+        g.add_edge(&natural_id, &formal_id, EdgeKind::Formalizes, HashMap::new()).unwrap();
+
+        let inconsistencies = g.detect_layer_inconsistencies();
+        assert_eq!(inconsistencies.len(), 0);
+    }
+
+    #[test]
+    fn find_formalizations_of_node() {
+        let mut g = SpecGraph::new();
+        let natural_id = g.add_node("User must login".into(), NodeKind::Scenario, HashMap::new()).id.clone();
+        let formal_id = g.add_node("authenticated(user) = true".into(), NodeKind::Constraint, HashMap::new()).id.clone();
+        let executable_id = g.add_node("assert!(user.is_authenticated())".into(), NodeKind::Assertion, HashMap::new()).id.clone();
+
+        g.add_edge(&natural_id, &formal_id, EdgeKind::Formalizes, HashMap::new()).unwrap();
+        g.add_edge(&natural_id, &executable_id, EdgeKind::Formalizes, HashMap::new()).unwrap();
+
+        let formalizations = g.find_formalizations(&natural_id);
+        assert_eq!(formalizations.len(), 2);
+
+        let natural_sources = g.find_natural_source(&formal_id);
+        assert_eq!(natural_sources.len(), 1);
+        assert_eq!(natural_sources[0].id, natural_id);
     }
 }

@@ -92,6 +92,22 @@ enum Commands {
         #[arg(long, default_value = "claude")]
         ai_cmd: String,
     },
+    /// Detect cross-layer inconsistencies in specifications
+    DetectLayerInconsistencies,
+    /// Filter nodes by formality layer
+    FilterByLayer {
+        /// Minimum formality layer (0=natural, 1=structured, 2=formal, 3=executable)
+        #[arg(short, long, default_value = "0")]
+        min: u32,
+        /// Maximum formality layer
+        #[arg(short = 'M', long, default_value = "3")]
+        max: u32,
+    },
+    /// Find formalizations of a specification node
+    FindFormalizations {
+        /// Node ID
+        id: String,
+    },
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -385,6 +401,68 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Asking AI...\n");
             let answer = handle_ai_query(&full_prompt, &ai_cmd).await?;
             println!("{answer}");
+        }
+        Commands::DetectLayerInconsistencies => {
+            let resp = client
+                .detect_layer_inconsistencies(Request::new(proto::DetectLayerInconsistenciesRequest {}))
+                .await?;
+            let inconsistencies = resp.into_inner().inconsistencies;
+            if inconsistencies.is_empty() {
+                println!("No layer inconsistencies detected.");
+            } else {
+                println!("Found {} layer inconsistenc(ies):", inconsistencies.len());
+                for i in inconsistencies {
+                    let src = i.source.unwrap();
+                    let tgt = i.target.unwrap();
+                    println!("\n  Layer Inconsistency:");
+                    println!("    Source [{}] (layer {}): {}", src.id, src.formality_layer, src.content);
+                    println!("    Target [{}] (layer {}): {}", tgt.id, tgt.formality_layer, tgt.content);
+                    println!("    Reason: {}", i.explanation);
+                }
+            }
+        }
+        Commands::FilterByLayer { min, max } => {
+            let resp = client
+                .filter_by_layer(Request::new(proto::FilterByLayerRequest {
+                    min_layer: min,
+                    max_layer: max,
+                }))
+                .await?;
+            let nodes = resp.into_inner().nodes;
+            if nodes.is_empty() {
+                println!("No nodes found in layer range {}-{}.", min, max);
+            } else {
+                println!("Found {} node(s) in layer range {}-{}:", nodes.len(), min, max);
+                for node in nodes {
+                    println!("  [{}] {} (layer {}) - {}",
+                        node.id, node_kind_name(node.kind), node.formality_layer, node.content);
+                }
+            }
+        }
+        Commands::FindFormalizations { id } => {
+            let resp = client
+                .find_formalizations(Request::new(proto::FindFormalizationsRequest { node_id: id.clone() }))
+                .await?;
+            let result = resp.into_inner();
+
+            println!("Formalizations for node '{id}':");
+            if !result.formalizations.is_empty() {
+                println!("\n  More formal versions:");
+                for node in &result.formalizations {
+                    println!("    [{}] {} (layer {}) - {}",
+                        node.id, node_kind_name(node.kind), node.formality_layer, node.content);
+                }
+            }
+            if !result.natural_sources.is_empty() {
+                println!("\n  Natural language sources:");
+                for node in &result.natural_sources {
+                    println!("    [{}] {} (layer {}) - {}",
+                        node.id, node_kind_name(node.kind), node.formality_layer, node.content);
+                }
+            }
+            if result.formalizations.is_empty() && result.natural_sources.is_empty() {
+                println!("  No formalizations or sources found.");
+            }
         }
     }
 

@@ -279,4 +279,59 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
             synonyms,
         }))
     }
+
+    async fn detect_layer_inconsistencies(
+        &self,
+        _request: Request<proto::DetectLayerInconsistenciesRequest>,
+    ) -> Result<Response<proto::DetectLayerInconsistenciesResponse>, Status> {
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+        let inconsistencies: Vec<proto::LayerInconsistency> = graph
+            .detect_layer_inconsistencies()
+            .into_iter()
+            .map(|i| proto::LayerInconsistency {
+                source: Some(to_proto_node(&i.source)),
+                target: Some(to_proto_node(&i.target)),
+                explanation: i.explanation,
+            })
+            .collect();
+        Ok(Response::new(proto::DetectLayerInconsistenciesResponse {
+            inconsistencies,
+        }))
+    }
+
+    async fn filter_by_layer(
+        &self,
+        request: Request<proto::FilterByLayerRequest>,
+    ) -> Result<Response<proto::FilterByLayerResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+        let nodes: Vec<proto::SpecNode> = graph
+            .filter_by_layer(req.min_layer as u8, req.max_layer as u8)
+            .into_iter()
+            .map(to_proto_node)
+            .collect();
+        Ok(Response::new(proto::FilterByLayerResponse { nodes }))
+    }
+
+    async fn find_formalizations(
+        &self,
+        request: Request<proto::FindFormalizationsRequest>,
+    ) -> Result<Response<proto::FindFormalizationsResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+        let formalizations: Vec<proto::SpecNode> = graph
+            .find_formalizations(&req.node_id)
+            .into_iter()
+            .map(to_proto_node)
+            .collect();
+        let natural_sources: Vec<proto::SpecNode> = graph
+            .find_natural_source(&req.node_id)
+            .into_iter()
+            .map(to_proto_node)
+            .collect();
+        Ok(Response::new(proto::FindFormalizationsResponse {
+            formalizations,
+            natural_sources,
+        }))
+    }
 }

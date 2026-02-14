@@ -18,9 +18,14 @@ service SpecOracle {
   rpc Query(QueryRequest) returns (QueryResponse);
   rpc DetectContradictions(DetectContradictionsRequest) returns (DetectContradictionsResponse);
   rpc DetectOmissions(DetectOmissionsRequest) returns (DetectOmissionsResponse);
+  rpc DetectLayerInconsistencies(DetectLayerInconsistenciesRequest) returns (DetectLayerInconsistenciesResponse);
 
   // Terminology resolution
   rpc ResolveTerminology(ResolveTerminologyRequest) returns (ResolveTerminologyResponse);
+
+  // Layer-aware operations
+  rpc FilterByLayer(FilterByLayerRequest) returns (FilterByLayerResponse);
+  rpc FindFormalizations(FindFormalizationsRequest) returns (FindFormalizationsResponse);
 }
 
 // --- Node types ---
@@ -164,4 +169,34 @@ message ResolveTerminologyRequest {
 message ResolveTerminologyResponse {
   repeated SpecNode definitions = 1;
   repeated string synonyms = 2;
+}
+
+message DetectLayerInconsistenciesRequest {}
+
+message DetectLayerInconsistenciesResponse {
+  repeated LayerInconsistency inconsistencies = 1;
+}
+
+message LayerInconsistency {
+  SpecNode source = 1;
+  SpecNode target = 2;
+  string explanation = 3;
+}
+
+message FilterByLayerRequest {
+  uint32 min_layer = 1;
+  uint32 max_layer = 2;
+}
+
+message FilterByLayerResponse {
+  repeated SpecNode nodes = 1;
+}
+
+message FindFormalizationsRequest {
+  string node_id = 1;
+}
+
+message FindFormalizationsResponse {
+  repeated SpecNode formalizations = 1;
+  repeated SpecNode natural_sources = 2;
 }
