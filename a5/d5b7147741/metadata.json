@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "a5d5b7147741",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-core/src/graph.rs",
+    "tasks/2026-02-14-continue-goal-duplicate-detection.md",
+    "tasks/2026-02-14-duplicate-contradiction-detection.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/a5/d5b7147741/0/metadata.json",
+      "transcript": "/a5/d5b7147741/0/full.jsonl",
+      "context": "/a5/d5b7147741/0/context.md",
+      "content_hash": "/a5/d5b7147741/0/content_hash.txt",
+      "prompt": "/a5/d5b7147741/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 170,
+    "cache_creation_tokens": 56114,
+    "cache_read_tokens": 1216262,
+    "output_tokens": 2875,
+    "api_call_count": 21
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "a5d5b7147741",
+  "session_id": "4602fcbd-2e06-4fe7-a55d-398191056b9c",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T08:36:31.449088Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-core/src/graph.rs",
+    "tasks/2026-02-14-continue-goal-duplicate-detection.md",
+    "tasks/2026-02-14-duplicate-contradiction-detection.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 170,
+    "cache_creation_tokens": 56114,
+    "cache_read_tokens": 1216262,
+    "output_tokens": 2875,
+    "api_call_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T08:36:31.23525Z",
+    "agent_lines": 604,
+    "human_added": 239,
+    "human_modified": 16,
+    "human_removed": 0,
+    "total_committed": 859,
+    "agent_percentage": 70.31431897555296
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/4602fcbd-2e06-4fe7-a55d-398191056b9c.jsonl"
+}
