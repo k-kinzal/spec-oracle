@@ -162,9 +162,9 @@
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
           "line": "171-181",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -175,9 +175,9 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "spec-core/src/graph.rs",
           "formality_layer": "U3",
-          "function": "detect_contradictions",
-          "source_file": "spec-core/src/graph.rs"
+          "function": "detect_contradictions"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -254,9 +254,9 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Add"
+          "function": "Commands::Add",
+          "formality_layer": "U3"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -267,8 +267,8 @@
         "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
           "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2",
           "line": "19-20"
         },
         "created_at": 1771061935,
@@ -280,9 +280,9 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
           "formality_layer": "U3",
-          "function": "Commands::Check"
+          "function": "Commands::Check",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -293,9 +293,9 @@
         "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
+          "line": "18,162-169",
           "source_file": "proto/spec_oracle.proto",
-          "line": "18,162-169"
+          "formality_layer": "U2"
         },
         "created_at": 1771062014,
         "modified_at": 1771062014,
@@ -306,9 +306,9 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Find"
+          "function": "Commands::Find",
+          "formality_layer": "U3"
         },
         "created_at": 1771062016,
         "modified_at": 1771062016,
@@ -320,8 +320,8 @@
         "kind": "Assertion",
         "metadata": {
           "formality_layer": "U2",
-          "source_file": "proto/spec_oracle.proto",
-          "line": "14,148-153"
+          "line": "14,148-153",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -332,9 +332,9 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Assertion",
         "metadata": {
-          "function": "Commands::Trace",
+          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
-          "formality_layer": "U3"
+          "function": "Commands::Trace"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -555,6 +555,33 @@
         "metadata": {},
         "created_at": 1771064494,
         "modified_at": 1771064494,
+        "formality_layer": 0
+      },
+      {
+        "id": "9a6d46f4-5258-43f5-bc6e-c4d8d0229e87",
+        "content": "UDAFModel.populate_from_graph() synchronizes the theoretical U/D/A/f model with the practical SpecGraph representation",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065076,
+        "modified_at": 1771065076,
+        "formality_layer": 0
+      },
+      {
+        "id": "436c0a62-9235-4213-98d1-b45fe75118cb",
+        "content": "TransformStrategy::ASTAnalysis executes RustExtractor to extract specifications from Rust source code",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065078,
+        "modified_at": 1771065078,
+        "formality_layer": 0
+      },
+      {
+        "id": "1e955f81-63d7-4ecd-b861-d41548852010",
+        "content": "UDAFModel.construct_u0() executes transform strategies to construct U0 from inverse mappings of projection universes",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065079,
+        "modified_at": 1771065079,
         "formality_layer": 0
       }
     ],

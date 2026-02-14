@@ -401,14 +401,12 @@ impl UDAFModel {
     /// U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)
     ///
     /// This is the core operation that realizes the theoretical model.
-    pub fn construct_u0(&mut self) {
-        // TODO: Implement actual transformation execution
-        // For now, this is a placeholder that will be expanded
-
-        // Collect all specifications from projection universes first
+    pub fn construct_u0(&mut self, graph: &crate::SpecGraph) -> Result<Vec<String>, String> {
+        // Collect all specifications from projection universes by executing transforms
         let mut u0_specs = HashSet::new();
+        let mut newly_created_specs = Vec::new();
 
-        // For each projection universe (U1, U2, ...)
+        // For each projection universe (U1, U2, U3...)
         for (universe_id, universe) in &self.universes {
             if universe.layer == 0 {
                 continue;  // Skip U0 itself
@@ -417,20 +415,130 @@ impl UDAFModel {
             // Find the inverse transform for this universe
             let inverse_transform_id = format!("f_{}_to_U0", universe_id);
 
-            if let Some(_transform) = self.transforms.get(&inverse_transform_id) {
-                // TODO: Execute the transform strategy to map specifications
-                // For now, we just union all specifications
-                // In the future, this will actually run the transformation logic
+            if let Some(transform) = self.transforms.get(&inverse_transform_id) {
+                // Execute the transform strategy to extract/map specifications
+                let extracted_specs = self.execute_transform(transform, graph)?;
 
-                for spec_id in &universe.specifications {
-                    u0_specs.insert(spec_id.clone());
+                for spec_id in extracted_specs {
+                    if u0_specs.insert(spec_id.clone()) {
+                        newly_created_specs.push(spec_id);
+                    }
+                }
+            }
+
+            // Also include existing specifications from this universe
+            for spec_id in &universe.specifications {
+                u0_specs.insert(spec_id.clone());
+            }
+        }
+
+        // Update U0 with the collected specifications
+        let u0 = self.universes.get_mut("U0").expect("U0 must exist");
+        u0.specifications = u0_specs;
+
+        Ok(newly_created_specs)
+    }
+
+    /// Execute a transform strategy to extract specifications
+    fn execute_transform(
+        &self,
+        transform: &TransformFunction,
+        graph: &crate::SpecGraph,
+    ) -> Result<Vec<String>, String> {
+        match &transform.strategy {
+            TransformStrategy::ASTAnalysis { language, extractor_config } => {
+                // Execute AST analysis for the specified language
+                if language == "rust" {
+                    self.execute_rust_ast_analysis(extractor_config, graph)
+                } else {
+                    Err(format!("Unsupported language: {}", language))
+                }
+            }
+            TransformStrategy::Manual { description: _ } => {
+                // Manual transforms don't auto-execute
+                Ok(Vec::new())
+            }
+            _ => {
+                // Other strategies not yet implemented
+                Ok(Vec::new())
+            }
+        }
+    }
+
+    /// Execute Rust AST analysis to extract specifications from code
+    fn execute_rust_ast_analysis(
+        &self,
+        config: &HashMap<String, String>,
+        graph: &crate::SpecGraph,
+    ) -> Result<Vec<String>, String> {
+        use crate::RustExtractor;
+        use std::path::Path;
+
+        // Get source files from config or find them in graph metadata
+        let source_files = self.find_rust_source_files(config, graph)?;
+
+        let mut extracted_spec_ids = Vec::new();
+
+        for file_path in source_files {
+            let path = Path::new(&file_path);
+
+            // Extract specifications using RustExtractor
+            match RustExtractor::extract(path) {
+                Ok(inferred_specs) => {
+                    // Filter by confidence threshold from config
+                    let min_confidence = config
+                        .get("min_confidence")
+                        .and_then(|s| s.parse::<f32>().ok())
+                        .unwrap_or(0.7);
+
+                    for spec in inferred_specs {
+                        if spec.confidence >= min_confidence {
+                            // These would be added to the graph in a full integration
+                            // For now, we return metadata about what was extracted
+                            extracted_spec_ids.push(format!(
+                                "extracted:{}:{}:{}",
+                                spec.source_file,
+                                spec.source_line,
+                                spec.content.chars().take(30).collect::<String>()
+                            ));
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Warning: Failed to extract from {}: {}", file_path, e);
                 }
             }
         }
 
-        // Now update U0 with the collected specifications
-        let u0 = self.universes.get_mut("U0").expect("U0 must exist");
-        u0.specifications = u0_specs;
+        Ok(extracted_spec_ids)
+    }
+
+    /// Find Rust source files to analyze from config or graph metadata
+    fn find_rust_source_files(
+        &self,
+        config: &HashMap<String, String>,
+        graph: &crate::SpecGraph,
+    ) -> Result<Vec<String>, String> {
+        // If source_files specified in config, use those
+        if let Some(files_str) = config.get("source_files") {
+            return Ok(files_str.split(',').map(|s| s.trim().to_string()).collect());
+        }
+
+        // Otherwise, find source files from graph nodes with source_file metadata
+        let mut source_files = HashSet::new();
+        for node in graph.list_nodes(None) {
+            if let Some(source_file) = node.metadata.get("source_file") {
+                if source_file.ends_with(".rs") {
+                    source_files.insert(source_file.clone());
+                }
+            }
+        }
+
+        if source_files.is_empty() {
+            Err("No source files found in config or graph metadata".to_string())
+        } else {
+            Ok(source_files.into_iter().collect())
+        }
     }
 
     /// Detect contradictions: A1 ∩ A2 = ∅
@@ -477,6 +585,131 @@ impl UDAFModel {
             .filter(|domain| domain.has_gaps())
             .map(|domain| domain.id.clone())
             .collect()
+    }
+
+    /// Populate UDAFModel from a SpecGraph
+    ///
+    /// This synchronizes the theoretical model with the practical graph representation.
+    pub fn populate_from_graph(&mut self, graph: &crate::SpecGraph) {
+        // Clear existing data
+        self.universes.clear();
+        self.domains.clear();
+        self.admissible_sets.clear();
+        self.transforms.clear();
+
+        // Always create U0
+        self.universes.insert("U0".to_string(), Universe::root());
+
+        // Analyze nodes and populate universes
+        for node in graph.list_nodes(None) {
+            let layer = node.formality_layer;
+            let universe_id = format!("U{}", layer);
+
+            // Create universe if it doesn't exist
+            if !self.universes.contains_key(&universe_id) && layer > 0 {
+                let (name, description) = match layer {
+                    1 => ("Formal Specifications".to_string(), "Structured formal specifications".to_string()),
+                    2 => ("Interface Definitions".to_string(), "Interface contracts and protocols".to_string()),
+                    3 => ("Executable Implementations".to_string(), "Actual code implementations".to_string()),
+                    _ => (format!("Layer {}", layer), format!("Layer {} specifications", layer)),
+                };
+                self.add_universe(layer, name, description);
+            }
+
+            // Add spec to universe
+            if let Some(universe) = self.universes.get_mut(&universe_id) {
+                universe.specifications.insert(node.id.clone());
+            }
+
+            // Create admissible set for this specification
+            let mut admissible_set = AdmissibleSet::new(node.id.clone(), universe_id.clone());
+
+            // Extract constraints from content
+            if node.kind == crate::NodeKind::Constraint {
+                admissible_set.add_constraint(Constraint {
+                    description: node.content.clone(),
+                    formal: None,
+                    kind: ConstraintKind::Universal,
+                    metadata: node.metadata.clone(),
+                });
+            }
+
+            self.admissible_sets.insert(node.id.clone(), admissible_set);
+
+            // Create domain if this is a Domain node
+            if node.kind == crate::NodeKind::Domain {
+                let domain = Domain::new(
+                    node.id.clone(),
+                    node.content.clone(),
+                    "Domain boundary definition".to_string(),
+                    universe_id,
+                );
+                self.domains.insert(node.id.clone(), domain);
+            }
+        }
+
+        // Analyze edges to create transform functions
+        for (edge, source_id, target_id) in graph.list_edges(None) {
+            if edge.kind == crate::EdgeKind::Formalizes {
+                // Create a transform function for this formalization
+                let source_node = graph.get_node(source_id);
+                let target_node = graph.get_node(target_id);
+
+                if let (Some(source), Some(target)) = (source_node, target_node) {
+                    let source_universe = format!("U{}", source.formality_layer);
+                    let target_universe = format!("U{}", target.formality_layer);
+
+                    // Create forward transform
+                    let transform = TransformFunction::forward(
+                        source_universe.clone(),
+                        target_universe.clone(),
+                        format!("Formalizes: {} -> {}", source.content.chars().take(30).collect::<String>(), target.content.chars().take(30).collect::<String>()),
+                        TransformStrategy::Manual {
+                            description: "Manual formalization via Formalizes edge".to_string(),
+                        },
+                    );
+                    self.transforms.insert(transform.id.clone(), transform);
+                }
+            }
+        }
+
+        // Create inverse transforms for each projection universe to U0
+        for (universe_id, _universe) in &self.universes {
+            if universe_id == "U0" {
+                continue;
+            }
+
+            let layer_num = universe_id.strip_prefix('U')
+                .and_then(|s| s.parse::<u8>().ok())
+                .unwrap_or(0);
+
+            // Create inverse transform based on layer
+            let strategy = match layer_num {
+                3 => TransformStrategy::ASTAnalysis {
+                    language: "rust".to_string(),
+                    extractor_config: HashMap::from([
+                        ("min_confidence".to_string(), "0.7".to_string()),
+                    ]),
+                },
+                2 => TransformStrategy::TypeAnalysis {
+                    type_system: "rust".to_string(),
+                },
+                1 => TransformStrategy::FormalVerification {
+                    tool: "manual".to_string(),
+                    verification_config: HashMap::new(),
+                },
+                _ => TransformStrategy::Manual {
+                    description: format!("Inverse mapping from {}", universe_id),
+                },
+            };
+
+            let transform = TransformFunction::inverse(
+                universe_id.clone(),
+                format!("Inverse mapping from {} to U0", universe_id),
+                strategy,
+            );
+            self.transforms.insert(transform.id.clone(), transform);
+        }
     }
 }
 
