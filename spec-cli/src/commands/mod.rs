@@ -18,6 +18,7 @@ pub mod relationships;
 pub mod summary;
 pub mod trace;
 pub mod u0;
+pub mod watch;
 
 pub use add::{execute_add, execute_add_standalone, execute_add_server};
 pub use check::{execute_check, execute_check_standalone, execute_check_server};
@@ -33,3 +34,4 @@ pub use relationships::execute_infer_relationships_ai_standalone;
 pub use summary::execute_summary_standalone;
 pub use trace::{execute_trace_standalone, execute_trace_server};
 pub use u0::{execute_construct_u0_standalone, execute_cleanup_low_quality_standalone};
+pub use watch::execute_watch_server;
