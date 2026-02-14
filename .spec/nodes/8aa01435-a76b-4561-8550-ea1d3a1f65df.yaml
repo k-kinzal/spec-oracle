@@ -2,12 +2,12 @@ id: 8aa01435-a76b-4561-8550-ea1d3a1f65df
 content: Temporal queries
 kind: Assertion
 metadata:
-  extractor: proto_rpc
-  source_file: proto/spec_oracle.proto
-  rpc_name: QueryAtTimestamp
-  inferred: 'true'
   confidence: '0.95'
   source_line: '43'
+  source_file: proto/spec_oracle.proto
+  extractor: proto_rpc
+  inferred: 'true'
+  rpc_name: QueryAtTimestamp
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

@@ -2,11 +2,11 @@ id: 9886c3bc-da3f-48db-b5e0-9d922db3fef8
 content: 'RPC: Remove edge'
 kind: Assertion
 metadata:
-  source_line: '15'
-  source_file: proto/spec_oracle.proto
-  extractor: proto_rpc
   rpc_name: RemoveEdge
   confidence: '0.95'
+  source_file: proto/spec_oracle.proto
+  extractor: proto_rpc
+  source_line: '15'
   inferred: 'true'
 created_at: 1771078430
 modified_at: 1771078430

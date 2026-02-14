@@ -2,12 +2,12 @@ id: bd57b941-758b-43da-ae75-ec1026c5e514
 content: 'Invariant: report.nodes_skipped, 1, "Should skip 1 low-confidence node"'
 kind: Constraint
 metadata:
-  source_line: '1065'
   inferred: 'true'
-  source_file: spec-core/src/extract.rs
-  extractor: assertion
-  confidence: '0.95'
   assertion: report.nodes_skipped, 1, "Should skip 1 low-confidence node"
+  confidence: '0.95'
+  extractor: assertion
+  source_line: '1065'
+  source_file: spec-core/src/extract.rs
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

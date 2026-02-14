@@ -2,14 +2,14 @@ id: 6fd5d103-36fc-4f92-aa21-e2bf355916fe
 content: 'Invariant: login(user, "wrong_password").is_err()'
 kind: Definition
 metadata:
-  confidence: '0.95'
-  source_file: /tmp/test_extract.rs
-  assertion: login(user, "wrong_password").is_err()
-  is_example: 'true'
-  source_line: '14'
-  example_purpose: test_data
   extractor: assertion
+  assertion: login(user, "wrong_password").is_err()
   inferred: 'true'
+  is_example: 'true'
+  source_file: /tmp/test_extract.rs
+  confidence: '0.95'
+  example_purpose: test_data
+  source_line: '14'
 created_at: 1771094226
 modified_at: 1771094226
 formality_layer: 3

@@ -2,12 +2,12 @@ id: 7807965f-40b8-4412-8848-7d09658f0965
 content: Graded compliance
 kind: Assertion
 metadata:
-  confidence: '0.95'
   source_line: '39'
-  rpc_name: CalculateCompliance
   inferred: 'true'
-  extractor: proto_rpc
   source_file: proto/spec_oracle.proto
+  extractor: proto_rpc
+  rpc_name: CalculateCompliance
+  confidence: '0.95'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

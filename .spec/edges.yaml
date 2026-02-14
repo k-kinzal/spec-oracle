@@ -1,969 +1,968 @@
-- created_at: 1771061227
+- source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
+  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
   id: 2d031e80-e348-4518-9b2b-f2959a8cfcfe
   kind: Formalizes
   metadata: {}
-  source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
-  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
-- created_at: 1771061232
+  created_at: 1771061227
+- source: 386b1821-73e9-4b1c-90e4-618204cbad0e
+  target: 88a7937e-a505-4870-b144-6c8af04cd140
   id: 274829d4-c05f-47f5-b8e2-68723de14d8e
   kind: Formalizes
   metadata: {}
-  source: 386b1821-73e9-4b1c-90e4-618204cbad0e
-  target: 88a7937e-a505-4870-b144-6c8af04cd140
-- created_at: 1771061650
+  created_at: 1771061232
+- source: a1ab944c-470f-4405-8de6-f65979c52095
+  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
   id: a9b8c7d6-e5f4-4321-8765-abcdef012345
   kind: Formalizes
   metadata: {}
-  source: a1ab944c-470f-4405-8de6-f65979c52095
-  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
-- created_at: 1771061651
+  created_at: 1771061650
+- source: 194a46a7-fed0-4e65-8b0f-4f60813edd62
+  target: 54585621-ab87-4654-a392-5517a9bb5376
   id: b1c2d3e4-f5a6-4567-8901-fedcba987654
   kind: Formalizes
   metadata: {}
-  source: 194a46a7-fed0-4e65-8b0f-4f60813edd62
-  target: 54585621-ab87-4654-a392-5517a9bb5376
-- created_at: 1771061900
+  created_at: 1771061651
+- source: ec5f2497-a3ac-4162-8f75-c5da40436bc5
+  target: f52e0895-4753-4ceb-b59f-cc9dac67a3f8
   id: c1d2e3f4-a5b6-4567-8901-add0001add01
   kind: Formalizes
   metadata: {}
-  source: ec5f2497-a3ac-4162-8f75-c5da40436bc5
-  target: f52e0895-4753-4ceb-b59f-cc9dac67a3f8
-- created_at: 1771061901
+  created_at: 1771061900
+- source: f52e0895-4753-4ceb-b59f-cc9dac67a3f8
+  target: c8f0f89e-be5e-4ea9-b24d-a9a1eb4d4f03
   id: d2e3f4a5-b6c7-4567-8901-add0002add02
   kind: Formalizes
   metadata: {}
-  source: f52e0895-4753-4ceb-b59f-cc9dac67a3f8
-  target: c8f0f89e-be5e-4ea9-b24d-a9a1eb4d4f03
-- created_at: 1771062000
+  created_at: 1771061901
+- source: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
+  target: ae111e6b-256c-47dc-9862-f4165150f62e
   id: e3f4a5b6-c7d8-4567-8901-check01check01
   kind: Formalizes
   metadata: {}
-  source: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
-  target: ae111e6b-256c-47dc-9862-f4165150f62e
-- created_at: 1771062001
+  created_at: 1771062000
+- source: ae111e6b-256c-47dc-9862-f4165150f62e
+  target: a565f8bd-53f8-485d-9141-da7fb5686fe9
   id: f4a5b6c7-d8e9-4567-8901-check02check02
   kind: Formalizes
   metadata: {}
-  source: ae111e6b-256c-47dc-9862-f4165150f62e
-  target: a565f8bd-53f8-485d-9141-da7fb5686fe9
-- created_at: 1771062100
+  created_at: 1771062001
+- source: b9d116dd-afde-498c-8fe2-0dca01b6c08b
+  target: 8a79071d-6eac-42c5-97ff-539bade167e5
   id: a5b6c7d8-e9f0-4567-8901-find001find001
   kind: Formalizes
   metadata: {}
-  source: b9d116dd-afde-498c-8fe2-0dca01b6c08b
-  target: 8a79071d-6eac-42c5-97ff-539bade167e5
-- created_at: 1771062101
+  created_at: 1771062100
+- source: 8a79071d-6eac-42c5-97ff-539bade167e5
+  target: 97578131-68b3-4d13-be53-12f0c4da819d
   id: b6c7d8e9-f0a1-4567-8901-find002find002
   kind: Formalizes
   metadata: {}
-  source: 8a79071d-6eac-42c5-97ff-539bade167e5
-  target: 97578131-68b3-4d13-be53-12f0c4da819d
-- created_at: 1771062200
+  created_at: 1771062101
+- source: 93651986-ff74-43f7-9600-980616db6649
+  target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
   id: c7d8e9f0-a1b2-4567-8901-trace01trace01
   kind: Formalizes
   metadata: {}
-  source: 93651986-ff74-43f7-9600-980616db6649
-  target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
-- created_at: 1771062201
+  created_at: 1771062200
+- source: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
+  target: 7d91abca-5b0e-431b-ad01-8cf8b38e2010
   id: d8e9f0a1-b2c3-4567-8901-trace02trace02
   kind: Formalizes
   metadata: {}
-  source: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
-  target: 7d91abca-5b0e-431b-ad01-8cf8b38e2010
-- created_at: 1771070000
+  created_at: 1771062201
+- source: ee493f23-22d4-483c-8afe-2926a0ec1f73
+  target: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
   id: refines-check-exit-001
   kind: Refines
   metadata:
     reason: Exit code requirement refines check command behavior
-  source: ee493f23-22d4-483c-8afe-2926a0ec1f73
-  target: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
-- created_at: 1771070001
+  created_at: 1771070000
+- source: b176641e-ab94-414b-a777-0a69ab47e035
+  target: b9d116dd-afde-498c-8fe2-0dca01b6c08b
   id: refines-find-suggest-001
   kind: Refines
   metadata:
     reason: Helpful suggestions refine find command UX
-  source: b176641e-ab94-414b-a777-0a69ab47e035
-  target: b9d116dd-afde-498c-8fe2-0dca01b6c08b
-- created_at: 1771070002
+  created_at: 1771070001
+- source: 141cf3b5-c73b-4bb8-bfe5-77b21a0df7e3
+  target: 93651986-ff74-43f7-9600-980616db6649
   id: refines-trace-depth-001
   kind: Refines
   metadata:
     reason: Depth limiting refines trace command functionality
-  source: 141cf3b5-c73b-4bb8-bfe5-77b21a0df7e3
-  target: 93651986-ff74-43f7-9600-980616db6649
-- created_at: 1771062892
+  created_at: 1771070002
+- source: 257745aa-0960-4d04-b34b-69d1b3739c3b
+  target: dbc5525f-ec05-42fa-8823-dddd359567ed
   id: refines-refines-session44-001
   kind: Refines
   metadata:
     reason: Test specification refines standalone mode requirement
-  source: 257745aa-0960-4d04-b34b-69d1b3739c3b
-  target: dbc5525f-ec05-42fa-8823-dddd359567ed
-- created_at: 1771062893
+  created_at: 1771062892
+- source: ee493f23-22d4-483c-8afe-2926a0ec1f73
+  target: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
   id: refines-refines-session44-002
   kind: Refines
   metadata:
     reason: Exit code behavior refines check command specification
-  source: ee493f23-22d4-483c-8afe-2926a0ec1f73
-  target: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
-- created_at: 1771062894
+  created_at: 1771062893
+- source: b176641e-ab94-414b-a777-0a69ab47e035
+  target: b9d116dd-afde-498c-8fe2-0dca01b6c08b
   id: refines-refines-session44-003
   kind: Refines
   metadata:
     reason: Helpful suggestions refine find command user experience
-  source: b176641e-ab94-414b-a777-0a69ab47e035
-  target: b9d116dd-afde-498c-8fe2-0dca01b6c08b
-- created_at: 1771062895
+  created_at: 1771062894
+- source: 141cf3b5-c73b-4bb8-bfe5-77b21a0df7e3
+  target: 93651986-ff74-43f7-9600-980616db6649
   id: refines-refines-session44-004
   kind: Refines
   metadata:
     reason: Depth limiting refines trace command functionality
-  source: 141cf3b5-c73b-4bb8-bfe5-77b21a0df7e3
+  created_at: 1771062895
+- source: e009137a-645b-4c3b-96c4-af884b4359d6
   target: 93651986-ff74-43f7-9600-980616db6649
-- created_at: 1771062896
   id: refines-refines-session44-005
   kind: Refines
   metadata:
     reason: Multi-layer chain visualization is a key capability of trace command
-  source: e009137a-645b-4c3b-96c4-af884b4359d6
-  target: 93651986-ff74-43f7-9600-980616db6649
-- created_at: 1771062897
+  created_at: 1771062896
+- source: 7c6d4b66-e684-4281-b83c-81c5fc7d07e3
+  target: ea3f4e7a-e577-465b-810d-ea4247d5ec48
   id: refines-refines-session44-006
   kind: Refines
   metadata:
     reason: Formalizes edges are the mechanism for cross-layer refinement
-  source: 7c6d4b66-e684-4281-b83c-81c5fc7d07e3
-  target: ea3f4e7a-e577-465b-810d-ea4247d5ec48
-- created_at: 1771062898
+  created_at: 1771062897
+- source: e9b11d11-68f5-4b68-ae21-1967f155fd50
+  target: dbc5525f-ec05-42fa-8823-dddd359567ed
   id: refines-refines-session44-007
   kind: Refines
   metadata:
     reason: Project-local .spec/ storage enables standalone mode operation
-  source: e9b11d11-68f5-4b68-ae21-1967f155fd50
-  target: dbc5525f-ec05-42fa-8823-dddd359567ed
-- created_at: 1771062899
+  created_at: 1771062898
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: f6953636-fe61-4381-9856-940f797a1e9b
   id: refines-refines-session44-008
   kind: Refines
   metadata:
-    reason: Multi-layer management is the mechanism for ORACLE's single source of
-      truth
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: f6953636-fe61-4381-9856-940f797a1e9b
-- created_at: 1771062900
+    reason: Multi-layer management is the mechanism for ORACLE's single source of truth
+  created_at: 1771062899
+- source: 41052fda-aef8-4443-991f-80e5165991c7
+  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
   id: refines-supports-session44-009
   kind: DerivesFrom
   metadata:
     reason: Demonstrated multi-layer tracking provides evidence for multi-layer capability
-  source: 41052fda-aef8-4443-991f-80e5165991c7
-  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
-- created_at: 1771062901
+  created_at: 1771062900
+- source: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
+  target: 41052fda-aef8-4443-991f-80e5165991c7
   id: refines-supports-session44-010
   kind: DerivesFrom
   metadata:
     reason: Session 40-42 work produced the demonstration of multi-layer tracking
-  source: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
-  target: 41052fda-aef8-4443-991f-80e5165991c7
-- created_at: 1771062902
+  created_at: 1771062901
+- source: 27ac314f-d58a-4843-9be8-0660e674b519
+  target: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
   id: refines-refines-session44-011
   kind: Refines
   metadata:
     reason: Complete traceability detail refines session summary
-  source: 27ac314f-d58a-4843-9be8-0660e674b519
+  created_at: 1771062902
+- source: c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d
   target: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
-- created_at: 1771062903
   id: refines-supports-session44-012
   kind: DerivesFrom
   metadata:
     reason: Session 43 continued the expansion started in sessions 40-42
-  source: c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d
-  target: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
-- created_at: 1771062939
+  created_at: 1771062903
+- source: 4363a37f-814f-4f00-b566-99c03c3ad106
+  target: ea3f4e7a-e577-465b-810d-ea4247d5ec48
   id: refines-final-session44-001
   kind: Refines
   metadata:
     reason: Refines edge semantics refine the general concept of cross-layer refinement
-  source: 4363a37f-814f-4f00-b566-99c03c3ad106
-  target: ea3f4e7a-e577-465b-810d-ea4247d5ec48
-- created_at: 1771062940
+  created_at: 1771062939
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 257745aa-0960-4d04-b34b-69d1b3739c3b
   id: refines-final-session44-002
   kind: DerivesFrom
   metadata:
     reason: Password constraint is an example used in standalone mode testing
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 257745aa-0960-4d04-b34b-69d1b3739c3b
-- created_at: 1771063036
+  created_at: 1771062940
+- source: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
+  target: c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d
   id: session44-to-session43
   kind: DerivesFrom
   metadata:
     reason: Session 44 continued the isolation elimination work from Session 43
-  source: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
-  target: c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d
-- created_at: 1771063900
+  created_at: 1771063036
+- source: f2404db9-79d3-46d9-bc99-6f19b06782c6
+  target: 072d1cd5-1d4a-40b3-8061-fadabebc6117
   id: formalizes-verify-layers-u0-to-u2
   kind: Formalizes
   metadata: {}
-  source: f2404db9-79d3-46d9-bc99-6f19b06782c6
-  target: 072d1cd5-1d4a-40b3-8061-fadabebc6117
-- created_at: 1771063901
+  created_at: 1771063900
+- source: 072d1cd5-1d4a-40b3-8061-fadabebc6117
+  target: b36f3a5f-d36a-48fd-bc75-b7d110df376f
   id: formalizes-verify-layers-u2-to-u3-parse
   kind: Formalizes
   metadata: {}
-  source: 072d1cd5-1d4a-40b3-8061-fadabebc6117
-  target: b36f3a5f-d36a-48fd-bc75-b7d110df376f
-- created_at: 1771063902
+  created_at: 1771063901
+- source: 072d1cd5-1d4a-40b3-8061-fadabebc6117
+  target: df2be5a7-c131-4e44-97da-81f2a4995fe6
   id: formalizes-verify-layers-u2-to-u3-completeness
   kind: Formalizes
   metadata: {}
-  source: 072d1cd5-1d4a-40b3-8061-fadabebc6117
-  target: df2be5a7-c131-4e44-97da-81f2a4995fe6
-- created_at: 1771063903
+  created_at: 1771063902
+- source: 072d1cd5-1d4a-40b3-8061-fadabebc6117
+  target: 4200e9ae-0798-4311-a786-415d9b164bf7
   id: formalizes-verify-layers-u2-to-u3-soundness
   kind: Formalizes
   metadata: {}
-  source: 072d1cd5-1d4a-40b3-8061-fadabebc6117
-  target: 4200e9ae-0798-4311-a786-415d9b164bf7
-- created_at: 1771067906
+  created_at: 1771063903
+- source: 070f3b22-e508-4953-b15c-a330fd5f8b22
+  target: 76c2b5e3-5957-44fb-8c30-4fa3691717b5
   id: 26e612a4-6578-44a3-8aef-4daab76d3f9c
   kind: Formalizes
   metadata: {}
-  source: 070f3b22-e508-4953-b15c-a330fd5f8b22
-  target: 76c2b5e3-5957-44fb-8c30-4fa3691717b5
-- created_at: 1771067912
+  created_at: 1771067906
+- source: 070f3b22-e508-4953-b15c-a330fd5f8b22
+  target: bdaf9d7c-be41-4dd3-b3de-dcd8dc275ed6
   id: e0dd8e04-f762-422e-9875-409a2d735d37
   kind: Formalizes
   metadata: {}
-  source: 070f3b22-e508-4953-b15c-a330fd5f8b22
-  target: bdaf9d7c-be41-4dd3-b3de-dcd8dc275ed6
-- created_at: 1771067913
+  created_at: 1771067912
+- source: 070f3b22-e508-4953-b15c-a330fd5f8b22
+  target: 561f6b45-a662-4858-8c3e-31ab13748531
   id: a33391d8-f6ff-4e70-b052-6a97d60c9171
   kind: Formalizes
   metadata: {}
-  source: 070f3b22-e508-4953-b15c-a330fd5f8b22
-  target: 561f6b45-a662-4858-8c3e-31ab13748531
-- created_at: 1771067914
+  created_at: 1771067913
+- source: 8772404d-59f0-44da-970c-9347eceaaf42
+  target: 76c2b5e3-5957-44fb-8c30-4fa3691717b5
   id: bb0826b7-d361-48cc-922e-47b4fe4a1204
   kind: Formalizes
   metadata: {}
-  source: 8772404d-59f0-44da-970c-9347eceaaf42
-  target: 76c2b5e3-5957-44fb-8c30-4fa3691717b5
-- created_at: 1771067916
+  created_at: 1771067914
+- source: 784f3567-19fd-45b3-993e-aca0e11b1f40
+  target: bdaf9d7c-be41-4dd3-b3de-dcd8dc275ed6
   id: 7b6b305d-387a-48f6-9bc7-6b6bd53a045d
   kind: Formalizes
   metadata: {}
-  source: 784f3567-19fd-45b3-993e-aca0e11b1f40
-  target: bdaf9d7c-be41-4dd3-b3de-dcd8dc275ed6
-- created_at: 1771067917
+  created_at: 1771067916
+- source: dacb1b3a-f15b-4063-96c6-4f836eb05944
+  target: 561f6b45-a662-4858-8c3e-31ab13748531
   id: 43b8bccc-ec9f-4c6b-a1e8-42ff39f5b6f6
   kind: Formalizes
   metadata: {}
-  source: dacb1b3a-f15b-4063-96c6-4f836eb05944
-  target: 561f6b45-a662-4858-8c3e-31ab13748531
-- created_at: 1771067933
+  created_at: 1771067917
+- source: ed13a14c-da83-405c-82a4-473bf07d8c83
+  target: 0154a181-1962-4aa1-aee2-236d2078caf6
   id: 69858b77-d696-4851-8986-a5403945720d
   kind: Refines
   metadata: {}
-  source: ed13a14c-da83-405c-82a4-473bf07d8c83
-  target: 0154a181-1962-4aa1-aee2-236d2078caf6
-- created_at: 1771067936
+  created_at: 1771067933
+- source: ed13a14c-da83-405c-82a4-473bf07d8c83
+  target: c9c97133-5aa5-48c3-b3dc-26f775b6d28f
   id: f2af523c-a072-40b1-a9b5-9f4b3bf14171
   kind: Refines
   metadata: {}
-  source: ed13a14c-da83-405c-82a4-473bf07d8c83
-  target: c9c97133-5aa5-48c3-b3dc-26f775b6d28f
-- created_at: 1771067942
+  created_at: 1771067936
+- source: ed13a14c-da83-405c-82a4-473bf07d8c83
+  target: 29a169bd-20d5-4df7-b582-6469c3e1f6f2
   id: de5d41b2-dc05-4e90-a93b-e7cb91ee8ec4
   kind: Refines
   metadata: {}
-  source: ed13a14c-da83-405c-82a4-473bf07d8c83
-  target: 29a169bd-20d5-4df7-b582-6469c3e1f6f2
-- created_at: 1771067944
+  created_at: 1771067942
+- source: ed13a14c-da83-405c-82a4-473bf07d8c83
+  target: bba0b27f-0735-4cec-96d3-45613cc0feb2
   id: bb08efea-593f-41ff-bb59-aeb63b3ee8f8
   kind: Refines
   metadata: {}
-  source: ed13a14c-da83-405c-82a4-473bf07d8c83
-  target: bba0b27f-0735-4cec-96d3-45613cc0feb2
-- created_at: 1771068303
+  created_at: 1771067944
+- source: 62bc5acc-df17-4095-970a-4dc57ff199d3
+  target: 0a82c20d-98e4-48a8-a16f-3c41ada89994
   id: 674ee3b9-643e-488c-a4a9-8abbd9e278b4
   kind: Formalizes
   metadata: {}
-  source: 62bc5acc-df17-4095-970a-4dc57ff199d3
-  target: 0a82c20d-98e4-48a8-a16f-3c41ada89994
-- created_at: 1771068304
+  created_at: 1771068303
+- source: 0a82c20d-98e4-48a8-a16f-3c41ada89994
+  target: 9a6d46f4-5258-43f5-bc6e-c4d8d0229e87
   id: 22b92f0c-d969-4d54-8aa2-346235f864d6
   kind: Formalizes
   metadata: {}
-  source: 0a82c20d-98e4-48a8-a16f-3c41ada89994
-  target: 9a6d46f4-5258-43f5-bc6e-c4d8d0229e87
-- created_at: 1771068319
+  created_at: 1771068304
+- source: 1e80df99-7c36-49dd-b30a-175bb44c5f54
+  target: ff4ea6cc-0c40-44a5-a5d0-1c3f511ff030
   id: e4699821-dcec-4020-91c5-a108cbd2a986
   kind: Formalizes
   metadata: {}
-  source: 1e80df99-7c36-49dd-b30a-175bb44c5f54
-  target: ff4ea6cc-0c40-44a5-a5d0-1c3f511ff030
-- created_at: 1771068321
+  created_at: 1771068319
+- source: 0a82c20d-98e4-48a8-a16f-3c41ada89994
+  target: 8aff5987-e979-435b-b08d-9b4705c6aef4
   id: adeca760-7ad7-446b-aa35-462cf9ae12db
   kind: Refines
   metadata: {}
-  source: 0a82c20d-98e4-48a8-a16f-3c41ada89994
+  created_at: 1771068321
+- source: 2059e2c0-3520-4a2f-a05c-49878c559659
   target: 8aff5987-e979-435b-b08d-9b4705c6aef4
-- created_at: 1771068323
   id: 4d946ef6-107e-4aab-a7d7-8dfc5a920de1
   kind: DerivesFrom
   metadata: {}
-  source: 2059e2c0-3520-4a2f-a05c-49878c559659
-  target: 8aff5987-e979-435b-b08d-9b4705c6aef4
-- created_at: 1771068324
+  created_at: 1771068323
+- source: 436c0a62-9235-4213-98d1-b45fe75118cb
+  target: 1e955f81-63d7-4ecd-b861-d41548852010
   id: 02bfeb1b-be9c-4dcf-a744-49fb94708a80
   kind: Refines
   metadata: {}
-  source: 436c0a62-9235-4213-98d1-b45fe75118cb
-  target: 1e955f81-63d7-4ecd-b861-d41548852010
-- created_at: 1771068339
+  created_at: 1771068324
+- source: ac7787f6-2eaf-46a0-bc5b-7017d3282886
+  target: ed13a14c-da83-405c-82a4-473bf07d8c83
   id: a90e47d8-182e-4e56-84ff-39c60be707b9
   kind: Refines
   metadata: {}
-  source: ac7787f6-2eaf-46a0-bc5b-7017d3282886
-  target: ed13a14c-da83-405c-82a4-473bf07d8c83
-- created_at: 1771068341
+  created_at: 1771068339
+- source: 0dc100e8-5514-4ab8-9cb5-3a067aac5536
+  target: f2404db9-79d3-46d9-bc99-6f19b06782c6
   id: 3649dbbc-536e-4835-b84d-c9ff0250681e
   kind: Refines
   metadata: {}
-  source: 0dc100e8-5514-4ab8-9cb5-3a067aac5536
-  target: f2404db9-79d3-46d9-bc99-6f19b06782c6
-- created_at: 1771068381
+  created_at: 1771068341
+- source: c061ab90-43ec-4e9d-be37-8d73f5122e19
+  target: 070f3b22-e508-4953-b15c-a330fd5f8b22
   id: c5f95269-46b6-4131-a4bb-2fbe403187a2
   kind: DerivesFrom
   metadata: {}
-  source: c061ab90-43ec-4e9d-be37-8d73f5122e19
-  target: 070f3b22-e508-4953-b15c-a330fd5f8b22
-- created_at: 1771068384
+  created_at: 1771068381
+- source: dee04328-2e98-4ab4-8011-c0ec85715a15
+  target: ed13a14c-da83-405c-82a4-473bf07d8c83
   id: e61a842c-5dba-409c-8a19-e17d7332b274
   kind: DerivesFrom
   metadata: {}
-  source: dee04328-2e98-4ab4-8011-c0ec85715a15
+  created_at: 1771068384
+- source: 4856caf8-b947-43da-a8c0-bbd5d8a5229e
   target: ed13a14c-da83-405c-82a4-473bf07d8c83
-- created_at: 1771068385
   id: 88a27104-46ca-443c-8f60-58c13a97a847
   kind: DerivesFrom
   metadata: {}
-  source: 4856caf8-b947-43da-a8c0-bbd5d8a5229e
-  target: ed13a14c-da83-405c-82a4-473bf07d8c83
-- created_at: 1771068391
+  created_at: 1771068385
+- source: d8105beb-3b3c-4940-95ac-a0f0b7f5c136
+  target: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
   id: a0afda72-c0f1-4475-8f59-42e1c047e82d
   kind: DerivesFrom
   metadata: {}
-  source: d8105beb-3b3c-4940-95ac-a0f0b7f5c136
-  target: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
-- created_at: 1771068394
+  created_at: 1771068391
+- source: 75191e26-4cde-4a97-a184-3648ec05f13b
+  target: c9c97133-5aa5-48c3-b3dc-26f775b6d28f
   id: 23c92fff-5cd9-47a5-846d-dd6db048ff4c
   kind: DerivesFrom
   metadata: {}
-  source: 75191e26-4cde-4a97-a184-3648ec05f13b
-  target: c9c97133-5aa5-48c3-b3dc-26f775b6d28f
-- created_at: 1771068397
+  created_at: 1771068394
+- source: fbd60111-c7e7-4c5e-8dbc-65c2dbb6b419
+  target: 75191e26-4cde-4a97-a184-3648ec05f13b
   id: 471a55b6-8851-40e2-b064-f2c1de7164ac
   kind: Refines
   metadata: {}
-  source: fbd60111-c7e7-4c5e-8dbc-65c2dbb6b419
+  created_at: 1771068397
+- source: 2bfb7e05-e689-4ecc-b1a1-c1e3a8ffc0d5
   target: 75191e26-4cde-4a97-a184-3648ec05f13b
-- created_at: 1771068423
   id: 122b4736-ee3e-44a7-9ee3-74f6cbad7dcf
   kind: DerivesFrom
   metadata: {}
-  source: 2bfb7e05-e689-4ecc-b1a1-c1e3a8ffc0d5
+  created_at: 1771068423
+- source: 239316dd-4d2e-4ab2-b172-5fdd015fb5e1
   target: 75191e26-4cde-4a97-a184-3648ec05f13b
-- created_at: 1771068424
   id: e9495a6f-b61d-4c53-8dc4-0eaa3d610998
   kind: DerivesFrom
   metadata: {}
-  source: 239316dd-4d2e-4ab2-b172-5fdd015fb5e1
+  created_at: 1771068424
+- source: cd1e32c2-b33d-46e1-af99-b56bb2b2b55d
   target: 75191e26-4cde-4a97-a184-3648ec05f13b
-- created_at: 1771068426
   id: f167382f-27da-4713-90a4-77fa09f3b0c9
   kind: DerivesFrom
   metadata: {}
-  source: cd1e32c2-b33d-46e1-af99-b56bb2b2b55d
+  created_at: 1771068426
+- source: 9f8de6af-d9d3-4ce5-8351-445bc1c12f34
   target: 75191e26-4cde-4a97-a184-3648ec05f13b
-- created_at: 1771068427
   id: c443637a-eba8-40bc-94a5-b361b3fb6c39
   kind: DerivesFrom
   metadata: {}
-  source: 9f8de6af-d9d3-4ce5-8351-445bc1c12f34
+  created_at: 1771068427
+- source: 73e33064-9b24-4e28-acbf-53ebf6b8182b
   target: 75191e26-4cde-4a97-a184-3648ec05f13b
-- created_at: 1771068429
   id: b443439d-96fc-4ee6-8790-f926faa9968d
   kind: DerivesFrom
   metadata: {}
-  source: 73e33064-9b24-4e28-acbf-53ebf6b8182b
+  created_at: 1771068429
+- source: 448066d8-f6a2-41bb-9ad3-c98a8194a262
   target: 75191e26-4cde-4a97-a184-3648ec05f13b
-- created_at: 1771068430
   id: f541d2fd-70b7-402d-86c8-90eb8279e87d
   kind: DerivesFrom
   metadata: {}
-  source: 448066d8-f6a2-41bb-9ad3-c98a8194a262
+  created_at: 1771068430
+- source: 7ca251b8-8349-427e-9749-9cffd91a6d85
   target: 75191e26-4cde-4a97-a184-3648ec05f13b
-- created_at: 1771068432
   id: d7039e98-08b7-476b-90fd-a13434f55c3f
   kind: DerivesFrom
   metadata: {}
-  source: 7ca251b8-8349-427e-9749-9cffd91a6d85
-  target: 75191e26-4cde-4a97-a184-3648ec05f13b
-- created_at: 1771068451
+  created_at: 1771068432
+- source: 254cb58e-a050-4402-ba62-2ae3274ba619
+  target: 4856caf8-b947-43da-a8c0-bbd5d8a5229e
   id: 51d5ea03-59c1-41fa-9207-6898ccdb16e5
   kind: DerivesFrom
   metadata: {}
-  source: 254cb58e-a050-4402-ba62-2ae3274ba619
-  target: 4856caf8-b947-43da-a8c0-bbd5d8a5229e
-- created_at: 1771068534
+  created_at: 1771068451
+- source: 724bc4c0-aa15-4ce4-969a-b153079559b6
+  target: 254cb58e-a050-4402-ba62-2ae3274ba619
   id: a29ff18a-6d46-4501-8821-6dfd0cd5d84d
   kind: DerivesFrom
   metadata: {}
-  source: 724bc4c0-aa15-4ce4-969a-b153079559b6
-  target: 254cb58e-a050-4402-ba62-2ae3274ba619
-- created_at: 1771069060
+  created_at: 1771068534
+- source: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
+  target: 724bc4c0-aa15-4ce4-969a-b153079559b6
   id: 0d44960a-669d-4488-b092-ab91383d860b
   kind: DerivesFrom
   metadata: {}
-  source: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-  target: 724bc4c0-aa15-4ce4-969a-b153079559b6
-- created_at: 1771069067
+  created_at: 1771069060
+- source: 0f52c277-d0f5-4133-97fb-f729de9462f1
+  target: 254cb58e-a050-4402-ba62-2ae3274ba619
   id: b7eb086c-a013-4656-b255-6e60dbf88d9a
   kind: DerivesFrom
   metadata: {}
-  source: 0f52c277-d0f5-4133-97fb-f729de9462f1
-  target: 254cb58e-a050-4402-ba62-2ae3274ba619
-- created_at: 1771069200
+  created_at: 1771069067
+- source: dfc54a77-23c3-4531-a9e9-a8038809036b
+  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
   id: session56-continues-session55
   kind: DerivesFrom
   metadata: {}
-  source: dfc54a77-23c3-4531-a9e9-a8038809036b
-  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-- created_at: 1771069201
+  created_at: 1771069200
+- source: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
+  target: dfc54a77-23c3-4531-a9e9-a8038809036b
   id: watch-cmd-session56
   kind: DerivesFrom
   metadata: {}
-  source: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
+  created_at: 1771069201
+- source: 60f8242f-1fc7-4b4c-8f63-afc106cb4a3d
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069202
   id: prove-consist-session56
   kind: DerivesFrom
   metadata: {}
-  source: 60f8242f-1fc7-4b4c-8f63-afc106cb4a3d
+  created_at: 1771069202
+- source: d1c6549f-be1c-4ef9-95c7-01425bc01d81
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069203
   id: inspect-model-session56
   kind: DerivesFrom
   metadata: {}
-  source: d1c6549f-be1c-4ef9-95c7-01425bc01d81
+  created_at: 1771069203
+- source: 2ef3f61f-983f-4cf6-80cd-38db7c0cee5d
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069204
   id: gen-contract-session56
   kind: DerivesFrom
   metadata: {}
-  source: 2ef3f61f-983f-4cf6-80cd-38db7c0cee5d
+  created_at: 1771069204
+- source: 2b68b299-73ba-46e4-b910-1c5287379bc5
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069205
   id: infer-ai-session56
   kind: DerivesFrom
   metadata: {}
-  source: 2b68b299-73ba-46e4-b910-1c5287379bc5
+  created_at: 1771069205
+- source: bf92116c-2f21-42ef-a07d-73df0df3f59c
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069206
   id: compliance-session56
   kind: DerivesFrom
   metadata: {}
-  source: bf92116c-2f21-42ef-a07d-73df0df3f59c
+  created_at: 1771069206
+- source: d79603df-d239-4d3f-af09-868ed2935374
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069207
   id: query-time-session56
   kind: DerivesFrom
   metadata: {}
-  source: d79603df-d239-4d3f-af09-868ed2935374
+  created_at: 1771069207
+- source: ce999406-30cc-424e-8bac-8efe06025a3f
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069208
   id: diff-time-session56
   kind: DerivesFrom
   metadata: {}
-  source: ce999406-30cc-424e-8bac-8efe06025a3f
+  created_at: 1771069208
+- source: a7f8e9d0-c1b2-4a3c-9d8e-7f6a5b4c3d2e
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069209
   id: node-hist-session56
   kind: DerivesFrom
   metadata: {}
-  source: a7f8e9d0-c1b2-4a3c-9d8e-7f6a5b4c3d2e
+  created_at: 1771069209
+- source: 4c26a83d-01d5-4aff-acb6-154cf3729d6f
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069210
   id: init-cmd-session56
   kind: DerivesFrom
   metadata: {}
-  source: 4c26a83d-01d5-4aff-acb6-154cf3729d6f
+  created_at: 1771069210
+- source: c500af61-5706-4bed-9ba5-c80372d78cb5
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771069211
   id: resolve-term-session56
   kind: DerivesFrom
   metadata: {}
-  source: c500af61-5706-4bed-9ba5-c80372d78cb5
-  target: dfc54a77-23c3-4531-a9e9-a8038809036b
-- created_at: 1771073204
+  created_at: 1771069211
+- source: a1ab944c-470f-4405-8de6-f65979c52095
+  target: 996e780f-f86c-4a81-9fe0-d68735e09c76
   id: 9382cdc8-ef9b-4861-ad06-52d34b793882
   kind: Formalizes
   metadata: {}
-  source: a1ab944c-470f-4405-8de6-f65979c52095
-  target: 996e780f-f86c-4a81-9fe0-d68735e09c76
-- created_at: 1771073204
+  created_at: 1771073204
+- source: f6953636-fe61-4381-9856-940f797a1e9b
+  target: cc5845c7-ead9-4be0-9d0d-cce130918b22
   id: 358c4931-db35-4d25-b9ed-acb334e5a024
   kind: Formalizes
   metadata: {}
-  source: f6953636-fe61-4381-9856-940f797a1e9b
-  target: cc5845c7-ead9-4be0-9d0d-cce130918b22
-- created_at: 1771073204
+  created_at: 1771073204
+- source: f6953636-fe61-4381-9856-940f797a1e9b
+  target: 6a808993-3ce7-4891-a500-166635a45a2d
   id: 81351055-026d-40f1-83ef-4db6b7e89bcc
   kind: Formalizes
   metadata: {}
-  source: f6953636-fe61-4381-9856-940f797a1e9b
-  target: 6a808993-3ce7-4891-a500-166635a45a2d
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: 454f4748-e338-4a39-a620-74d8da7768cd
   id: 4b4c66b2-fec3-4c77-bdcb-b82c1f234d27
   kind: Formalizes
   metadata: {}
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: 454f4748-e338-4a39-a620-74d8da7768cd
-- created_at: 1771073204
+  created_at: 1771073204
+- source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
+  target: 12ed3e49-c896-493b-97eb-c9599e3107ba
   id: f3269993-fa52-4393-9133-4f4683d11ab4
   kind: Formalizes
   metadata: {}
-  source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
-  target: 12ed3e49-c896-493b-97eb-c9599e3107ba
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 2b68b299-73ba-46e4-b910-1c5287379bc5
+  target: 9f2314ee-d6fb-42cc-bbc9-0cc44a68eb55
   id: 9ba1c25f-ebe9-493f-a5e8-2c0e5b4d6051
   kind: Formalizes
   metadata: {}
-  source: 2b68b299-73ba-46e4-b910-1c5287379bc5
-  target: 9f2314ee-d6fb-42cc-bbc9-0cc44a68eb55
-- created_at: 1771073204
+  created_at: 1771073204
+- source: ee493f23-22d4-483c-8afe-2926a0ec1f73
+  target: c39c154f-77a1-4ba6-89c9-f7c9190cd524
   id: f7015017-2656-4fc3-9beb-dee770079bfa
   kind: Formalizes
   metadata: {}
-  source: ee493f23-22d4-483c-8afe-2926a0ec1f73
-  target: c39c154f-77a1-4ba6-89c9-f7c9190cd524
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 2b68b299-73ba-46e4-b910-1c5287379bc5
+  target: 4ec2b719-3069-4859-a9fb-db75a371425e
   id: 6abd6ee4-3d28-4e31-bf88-ae01d0717c22
   kind: Formalizes
   metadata: {}
-  source: 2b68b299-73ba-46e4-b910-1c5287379bc5
-  target: 4ec2b719-3069-4859-a9fb-db75a371425e
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 724bc4c0-aa15-4ce4-969a-b153079559b6
+  target: ae4521ec-da44-4cee-a5f2-5c5198110b60
   id: 2b117116-1aa7-4c37-8bc5-4da2cf006d6c
   kind: Formalizes
   metadata: {}
-  source: 724bc4c0-aa15-4ce4-969a-b153079559b6
-  target: ae4521ec-da44-4cee-a5f2-5c5198110b60
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 0f52c277-d0f5-4133-97fb-f729de9462f1
+  target: b31b8504-3dfd-48f5-b0d0-c41acbe0127f
   id: 95c13889-7a59-4d51-84b9-62b7cfe0cbca
   kind: Formalizes
   metadata: {}
-  source: 0f52c277-d0f5-4133-97fb-f729de9462f1
-  target: b31b8504-3dfd-48f5-b0d0-c41acbe0127f
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 0f52c277-d0f5-4133-97fb-f729de9462f1
+  target: 3e602132-2f60-4c9f-bced-f40e0482679e
   id: eed76d2a-8df1-4ee5-9917-0760336ece09
   kind: Formalizes
   metadata: {}
-  source: 0f52c277-d0f5-4133-97fb-f729de9462f1
-  target: 3e602132-2f60-4c9f-bced-f40e0482679e
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
+  target: 29a415c6-d2b7-4ea4-a12a-dedbcc53c50d
   id: 3fd724ce-333b-4496-84a0-8b26ce3b518a
   kind: Formalizes
   metadata: {}
-  source: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
-  target: 29a415c6-d2b7-4ea4-a12a-dedbcc53c50d
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 60f8242f-1fc7-4b4c-8f63-afc106cb4a3d
+  target: 046617e2-46ad-4239-9e69-3f633acde239
   id: 63ad4db0-61c4-4abc-85bf-e87ca3cd1107
   kind: Formalizes
   metadata: {}
-  source: 60f8242f-1fc7-4b4c-8f63-afc106cb4a3d
-  target: 046617e2-46ad-4239-9e69-3f633acde239
-- created_at: 1771073204
+  created_at: 1771073204
+- source: d1c6549f-be1c-4ef9-95c7-01425bc01d81
+  target: 0f0997eb-f199-40a9-a065-59256d6ef940
   id: e32d7c07-a485-46fa-b11f-36310dec63d6
   kind: Formalizes
   metadata: {}
-  source: d1c6549f-be1c-4ef9-95c7-01425bc01d81
-  target: 0f0997eb-f199-40a9-a065-59256d6ef940
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
+  target: c1089f41-b71a-4d98-8e4f-87e3bff4d316
   id: 0013f6b9-c473-41fe-a010-1dff7786b35f
   kind: Formalizes
   metadata: {}
-  source: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-  target: c1089f41-b71a-4d98-8e4f-87e3bff4d316
-- created_at: 1771073204
+  created_at: 1771073204
+- source: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
+  target: c8c9dd92-8fc2-4d49-bd10-ebe0e556e2e9
   id: e7520409-5a4f-4322-81d1-563f397c9278
   kind: Formalizes
   metadata: {}
-  source: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-  target: c8c9dd92-8fc2-4d49-bd10-ebe0e556e2e9
-- created_at: 1771073228
+  created_at: 1771073204
+- source: ee493f23-22d4-483c-8afe-2926a0ec1f73
+  target: 387c9c08-d9b3-4f05-9095-7ed4793b476c
   id: 3f5f8935-a184-4faa-8ae3-443719db8243
   kind: Formalizes
   metadata: {}
-  source: ee493f23-22d4-483c-8afe-2926a0ec1f73
-  target: 387c9c08-d9b3-4f05-9095-7ed4793b476c
-- created_at: 1771073356
+  created_at: 1771073228
+- source: 19d08ce6-8cba-4713-9999-a26d373ce7fa
+  target: 4c26a83d-01d5-4aff-acb6-154cf3729d6f
   id: 57b22f18-b650-459a-a286-1277ec8e0fec
   kind: Refines
   metadata: {}
-  source: 19d08ce6-8cba-4713-9999-a26d373ce7fa
-  target: 4c26a83d-01d5-4aff-acb6-154cf3729d6f
-- created_at: 1771074374
+  created_at: 1771073356
+- source: 88a7937e-a505-4870-b144-6c8af04cd140
+  target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
   id: connect-trace-scenario-001
   kind: Formalizes
   metadata:
     reason: U0 scenario formalized by U3 implementation constraint
-  source: 88a7937e-a505-4870-b144-6c8af04cd140
-  target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
-- created_at: 1771074400
+  created_at: 1771074374
+- source: 88a7937e-a505-4870-b144-6c8af04cd140
+  target: e009137a-645b-4c3b-96c4-af884b4359d6
   id: scenario-derives-from-assertion-001
   kind: DerivesFrom
   metadata:
     reason: Trace scenario depends on formality layer connectivity assertion
-  source: 88a7937e-a505-4870-b144-6c8af04cd140
-  target: e009137a-645b-4c3b-96c4-af884b4359d6
-- created_at: 1771075492
+  created_at: 1771074400
+- source: ab5e4dd1-3dfd-4921-aa63-6703af6d5db0
+  target: 8a79071d-6eac-42c5-97ff-539bade167e5
   id: edge-122-27-formalizes
   kind: Formalizes
   metadata:
-    note: Layer label display requirement (U0) formalized by find command implementation
-      (U3)
-  source: ab5e4dd1-3dfd-4921-aa63-6703af6d5db0
-  target: 8a79071d-6eac-42c5-97ff-539bade167e5
-- created_at: 1771076416
+    note: Layer label display requirement (U0) formalized by find command implementation (U3)
+  created_at: 1771075492
+- source: 6b8373d8-0f4e-46aa-87be-09a6e6249c57
+  target: ea15885e-98ff-45f6-a8b7-3e130accc425
   id: feb37a83-06bc-4de1-9ff7-6d4f118fb892
   kind: Refines
   metadata: {}
-  source: 6b8373d8-0f4e-46aa-87be-09a6e6249c57
+  created_at: 1771076416
+- source: 250c2181-da8c-40fe-a340-57cd2db18410
   target: ea15885e-98ff-45f6-a8b7-3e130accc425
-- created_at: 1771076416
   id: 11cdd1d2-1abf-45e7-a37f-387f27011814
   kind: Refines
   metadata: {}
-  source: 250c2181-da8c-40fe-a340-57cd2db18410
+  created_at: 1771076416
+- source: 39df83fe-8f5b-4603-9a3f-c7dfb287fcf7
   target: ea15885e-98ff-45f6-a8b7-3e130accc425
-- created_at: 1771076416
   id: 3fc75d7d-1771-4424-9d5c-9a4096902a59
   kind: Refines
   metadata: {}
-  source: 39df83fe-8f5b-4603-9a3f-c7dfb287fcf7
+  created_at: 1771076416
+- source: 6b8373d8-0f4e-46aa-87be-09a6e6249c57
   target: ea15885e-98ff-45f6-a8b7-3e130accc425
-- created_at: 1771076400
   id: 600c5373-8df3-4c0b-988c-845d9223c73c
   kind: Refines
   metadata: {}
-  source: 6b8373d8-0f4e-46aa-87be-09a6e6249c57
+  created_at: 1771076400
+- source: 250c2181-da8c-40fe-a340-57cd2db18410
   target: ea15885e-98ff-45f6-a8b7-3e130accc425
-- created_at: 1771076400
   id: 3b2346d8-3fee-42aa-8ac0-d72b13d5b83c
   kind: Refines
   metadata: {}
-  source: 250c2181-da8c-40fe-a340-57cd2db18410
+  created_at: 1771076400
+- source: 39df83fe-8f5b-4603-9a3f-c7dfb287fcf7
   target: ea15885e-98ff-45f6-a8b7-3e130accc425
-- created_at: 1771076400
   id: 2620baf0-d6ac-4b2f-a851-eb815a9d59e9
   kind: Refines
   metadata: {}
-  source: 39df83fe-8f5b-4603-9a3f-c7dfb287fcf7
-  target: ea15885e-98ff-45f6-a8b7-3e130accc425
-- created_at: 1771077954
+  created_at: 1771076400
+- source: b176641e-ab94-414b-a777-0a69ab47e035
+  target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
   id: f0a1e3a4-9dcc-404d-bdf1-f5a426dbefd2
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '0.6636363636363636'
+    auto_inferred: 'true'
     method: semantic_keyword_match
-  source: b176641e-ab94-414b-a777-0a69ab47e035
-  target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
-- created_at: 1771077954
+  created_at: 1771077954
+- source: ee493f23-22d4-483c-8afe-2926a0ec1f73
+  target: 8a79071d-6eac-42c5-97ff-539bade167e5
   id: 9a267acc-43c4-4481-827b-028d12e194e8
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
-    confidence: '0.62'
     method: semantic_keyword_match
-  source: ee493f23-22d4-483c-8afe-2926a0ec1f73
-  target: 8a79071d-6eac-42c5-97ff-539bade167e5
-- created_at: 1771077970
+    confidence: '0.62'
+  created_at: 1771077954
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
   id: 5fa64f56-f9d4-4299-a658-900d53eaae9d
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '0.5904761904761905'
+    auto_inferred: 'true'
     method: semantic_keyword_match
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
-- created_at: 1771077970
+  created_at: 1771077970
+- source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
+  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
   id: 99ad9264-1927-4ef9-8a4f-027d2f1b252f
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.5818181818181818'
     method: semantic_keyword_match
-  source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
-  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
-- created_at: 1771077970
+  created_at: 1771077970
+- source: dbc5525f-ec05-42fa-8823-dddd359567ed
+  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
   id: 980c9534-96b0-40e5-8f5f-a30d949b4d85
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
-    confidence: '0.5739130434782609'
     method: semantic_keyword_match
-  source: dbc5525f-ec05-42fa-8823-dddd359567ed
+    confidence: '0.5739130434782609'
+    auto_inferred: 'true'
+  created_at: 1771077970
+- source: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
   target: 386b1821-73e9-4b1c-90e4-618204cbad0e
-- created_at: 1771077970
   id: 545419c5-00f0-488e-9d99-438f7a1d075f
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '0.5599999999999999'
+    auto_inferred: 'true'
     method: semantic_keyword_match
-  source: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
-  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
-- created_at: 1771077970
+  created_at: 1771077970
+- source: dfc54a77-23c3-4531-a9e9-a8038809036b
+  target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
   id: 3c49520d-bae0-4476-a6c8-5cf8891367e1
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
-    confidence: '0.5173913043478261'
     method: semantic_keyword_match
-  source: dfc54a77-23c3-4531-a9e9-a8038809036b
-  target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
-- created_at: 1771079949
+    confidence: '0.5173913043478261'
+    auto_inferred: 'true'
+  created_at: 1771077970
+- source: e901ead6-a9af-4d96-bf6c-6bdd8e31e021
+  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
   id: 2bffc506-574e-4f08-b658-114053856745
   kind: Refines
   metadata:
-    auto_connected: 'true'
     session: '96'
-  source: e901ead6-a9af-4d96-bf6c-6bdd8e31e021
+    auto_connected: 'true'
+  created_at: 1771079949
+- source: b6face50-4f4f-4c5e-9380-e839f42b24cc
   target: 386b1821-73e9-4b1c-90e4-618204cbad0e
-- created_at: 1771079949
   id: 33e3d61e-ddf6-491d-bbd1-fda9be86dcfb
   kind: Refines
   metadata:
-    auto_connected: 'true'
     session: '96'
-  source: b6face50-4f4f-4c5e-9380-e839f42b24cc
-  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
-- created_at: 1771079949
+    auto_connected: 'true'
+  created_at: 1771079949
+- source: 0d5c15ec-fb7e-41c5-8e1a-2f284b9e226e
+  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
   id: caa78b87-bf75-45db-b870-2058908e69d3
   kind: Refines
   metadata:
-    auto_connected: 'true'
     session: '96'
-  source: 0d5c15ec-fb7e-41c5-8e1a-2f284b9e226e
+    auto_connected: 'true'
+  created_at: 1771079949
+- source: ca5d9013-4c58-4f08-87a5-59414ee50601
   target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
-- created_at: 1771079949
   id: 8ffdb4dd-9acb-400a-a5a1-ebc77c1dbcda
   kind: Refines
   metadata:
-    auto_connected: 'true'
     session: '96'
-  source: ca5d9013-4c58-4f08-87a5-59414ee50601
+    auto_connected: 'true'
+  created_at: 1771079949
+- source: c54e4333-50f8-4226-9fc4-80aec5894832
   target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
-- created_at: 1771079949
   id: acbff1a3-43fd-4db9-a06a-f32a122ae472
   kind: Refines
   metadata:
     auto_connected: 'true'
     session: '96'
-  source: c54e4333-50f8-4226-9fc4-80aec5894832
-  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
-- created_at: 1771080017
+  created_at: 1771079949
+- source: 835ce953-5c40-4c7d-a778-c904dd88ab4d
+  target: 41052fda-aef8-4443-991f-80e5165991c7
   id: ec9cb364-b7ee-4273-9f0b-9a8da8d466bf
   kind: Refines
   metadata:
     auto_connected: 'true'
     session: '96'
-  source: 835ce953-5c40-4c7d-a778-c904dd88ab4d
-  target: 41052fda-aef8-4443-991f-80e5165991c7
-- created_at: 1771084159
+  created_at: 1771080017
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: e901ead6-a9af-4d96-bf6c-6bdd8e31e021
   id: 81afa3f5-e901ead6-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.75'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: e901ead6-a9af-4d96-bf6c-6bdd8e31e021
-- created_at: 1771084159
+  created_at: 1771084159
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: e29eda14-0925-4ff4-a139-51d5937c0593
   id: 81afa3f5-e29eda14-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.50'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: e29eda14-0925-4ff4-a139-51d5937c0593
-- created_at: 1771084159
+  created_at: 1771084159
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: b6face50-4f4f-4c5e-9380-e839f42b24cc
   id: 81afa3f5-b6face50-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.75'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: b6face50-4f4f-4c5e-9380-e839f42b24cc
-- created_at: 1771084159
+  created_at: 1771084159
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: 0eb92ed0-0e0d-4309-8b6b-b5b9754c48e5
   id: 81afa3f5-0eb92ed0-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.50'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: 0eb92ed0-0e0d-4309-8b6b-b5b9754c48e5
-- created_at: 1771084159
+  created_at: 1771084159
+- source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
+  target: 0d5c15ec-fb7e-41c5-8e1a-2f284b9e226e
   id: c8f23449-0d5c15ec-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.75'
-  source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
-  target: 0d5c15ec-fb7e-41c5-8e1a-2f284b9e226e
-- created_at: 1771084159
+  created_at: 1771084159
+- source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
+  target: ca5d9013-4c58-4f08-87a5-59414ee50601
   id: c8f23449-ca5d9013-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.75'
-  source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
-  target: ca5d9013-4c58-4f08-87a5-59414ee50601
-- created_at: 1771084159
+  created_at: 1771084159
+- source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
+  target: c54e4333-50f8-4226-9fc4-80aec5894832
   id: c8f23449-c54e4333-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.75'
-  source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
-  target: c54e4333-50f8-4226-9fc4-80aec5894832
-- created_at: 1771084159
+  created_at: 1771084159
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: e784e25b-f0fd-4459-b94a-f6be1fc0f09b
   id: 81afa3f5-e784e25b-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.50'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: e784e25b-f0fd-4459-b94a-f6be1fc0f09b
-- created_at: 1771084159
+  created_at: 1771084159
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: b1e1d371-3974-468a-b0a8-0bf3108e6165
   id: 81afa3f5-b1e1d371-formalizes
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '0.50'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: b1e1d371-3974-468a-b0a8-0bf3108e6165
-- created_at: 1771084159
+    auto_inferred: 'true'
+  created_at: 1771084159
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: 4d8465c2-e1cb-48d9-8be6-aa000da4369d
   id: 81afa3f5-4d8465c2-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.50'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: 4d8465c2-e1cb-48d9-8be6-aa000da4369d
-- created_at: 1771084159
+  created_at: 1771084159
+- source: 724bc4c0-aa15-4ce4-969a-b153079559b6
+  target: df41c4f6-25c3-4ac0-95ae-9655a738c527
   id: 724bc4c0-df41c4f6-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '1.00'
-  source: 724bc4c0-aa15-4ce4-969a-b153079559b6
-  target: df41c4f6-25c3-4ac0-95ae-9655a738c527
-- created_at: 1771084159
+  created_at: 1771084159
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: ba2882a1-a8d2-4018-b67c-81330c111736
   id: 9e1a2dce-ba2882a1-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '1.00'
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: ba2882a1-a8d2-4018-b67c-81330c111736
-- created_at: 1771084159
+  created_at: 1771084159
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 7bcc1eca-271a-4276-bb95-87ce375a8379
   id: 9e1a2dce-7bcc1eca-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '1.00'
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 7bcc1eca-271a-4276-bb95-87ce375a8379
-- created_at: 1771084159
+  created_at: 1771084159
+- source: 724bc4c0-aa15-4ce4-969a-b153079559b6
+  target: 83d7d395-6223-46e8-90e8-e2b189cbd3db
   id: 724bc4c0-83d7d395-formalizes
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '1.00'
-  source: 724bc4c0-aa15-4ce4-969a-b153079559b6
-  target: 83d7d395-6223-46e8-90e8-e2b189cbd3db
-- created_at: 1771084159
+    auto_inferred: 'true'
+  created_at: 1771084159
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 48b035be-35d3-4103-b7bf-53f5f2e680d3
   id: 9e1a2dce-48b035be-formalizes
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '1.00'
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 48b035be-35d3-4103-b7bf-53f5f2e680d3
-- created_at: 1771084159
+    auto_inferred: 'true'
+  created_at: 1771084159
+- source: 257745aa-0960-4d04-b34b-69d1b3739c3b
+  target: f432d0e9-8076-4df8-a02c-a365a916aadf
   id: 257745aa-f432d0e9-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.50'
-  source: 257745aa-0960-4d04-b34b-69d1b3739c3b
-  target: f432d0e9-8076-4df8-a02c-a365a916aadf
-- created_at: 1771084159
+  created_at: 1771084159
+- source: e009137a-645b-4c3b-96c4-af884b4359d6
+  target: 835ce953-5c40-4c7d-a778-c904dd88ab4d
   id: e009137a-835ce953-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.75'
-  source: e009137a-645b-4c3b-96c4-af884b4359d6
-  target: 835ce953-5c40-4c7d-a778-c904dd88ab4d
-- created_at: 1771084396
+  created_at: 1771084159
+- source: 2b68b299-73ba-46e4-b910-1c5287379bc5
+  target: 0eb92ed0-0e0d-4309-8b6b-b5b9754c48e5
   id: 2b68b299-0eb92ed0-formalizes
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
     confidence: '0.80'
     manual_connection: 'true'
-  source: 2b68b299-73ba-46e4-b910-1c5287379bc5
-  target: 0eb92ed0-0e0d-4309-8b6b-b5b9754c48e5
-- created_at: 1771084396
+  created_at: 1771084396
+- source: 2b68b299-73ba-46e4-b910-1c5287379bc5
+  target: 4d8465c2-e1cb-48d9-8be6-aa000da4369d
   id: 2b68b299-4d8465c2-formalizes
   kind: Formalizes
   metadata:
+    manual_connection: 'true'
     auto_inferred: 'true'
     confidence: '0.80'
-    manual_connection: 'true'
-  source: 2b68b299-73ba-46e4-b910-1c5287379bc5
-  target: 4d8465c2-e1cb-48d9-8be6-aa000da4369d
-- created_at: 1771084396
+  created_at: 1771084396
+- source: 2b68b299-73ba-46e4-b910-1c5287379bc5
+  target: cdd049cc-cbfd-42e4-af54-80241118fdde
   id: 2b68b299-cdd049cc-formalizes
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '0.80'
     manual_connection: 'true'
-  source: 2b68b299-73ba-46e4-b910-1c5287379bc5
-  target: cdd049cc-cbfd-42e4-af54-80241118fdde
-- created_at: 1771087906
+    auto_inferred: 'true'
+  created_at: 1771084396
+- source: bc00dd37-b590-4e0c-93e0-25747da4beca
+  target: 2bfb7e05-e689-4ecc-b1a1-c1e3a8ffc0d5
   id: 82854a84-2625-4bc1-b747-6ff58ed34b5c
   kind: DerivesFrom
   metadata:
-    auto_generated: 'true'
-    date: 2026-02-15
     reconnection: 'true'
+    auto_generated: 'true'
     similarity: '0.16666666666666666'
-  source: bc00dd37-b590-4e0c-93e0-25747da4beca
-  target: 2bfb7e05-e689-4ecc-b1a1-c1e3a8ffc0d5
-- created_at: 1771087906
+    date: 2026-02-15
+  created_at: 1771087906
+- source: 4633bc90-2622-4a7b-baa3-bcd1055627f8
+  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
   id: 30caeedd-6e95-42ab-84f1-063d55a15e94
   kind: DerivesFrom
   metadata:
     auto_generated: 'true'
-    date: 2026-02-15
     reconnection: 'true'
     similarity: '0.15384615384615385'
-  source: 4633bc90-2622-4a7b-baa3-bcd1055627f8
-  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
-- created_at: 1771087906
+    date: 2026-02-15
+  created_at: 1771087906
+- source: d1440e64-1492-4b38-8730-93c9c87f7cc2
+  target: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
   id: 84bc35da-72fb-4018-8ad5-a98b1fc7c8ac
   kind: DerivesFrom
   metadata:
@@ -971,971 +970,965 @@
     date: 2026-02-15
     reconnection: 'true'
     similarity: '0.15384615384615385'
-  source: d1440e64-1492-4b38-8730-93c9c87f7cc2
-  target: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
-- created_at: 1771087906
+  created_at: 1771087906
+- source: 92c11261-07fd-4d87-b246-2db9897e0dee
+  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
   id: 3ca0b77b-27c1-4117-b2b5-05c326529738
   kind: DerivesFrom
   metadata:
-    auto_generated: 'true'
     date: 2026-02-15
-    reconnection: 'true'
     similarity: '0.16666666666666666'
-  source: 92c11261-07fd-4d87-b246-2db9897e0dee
-  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
-- created_at: 1771087906
+    auto_generated: 'true'
+    reconnection: 'true'
+  created_at: 1771087906
+- source: 92c11261-07fd-4d87-b246-2db9897e0dee
+  target: 448066d8-f6a2-41bb-9ad3-c98a8194a262
   id: 0f8710a5-027b-4a19-95dc-e8286c257310
   kind: DerivesFrom
   metadata:
-    auto_generated: 'true'
-    date: 2026-02-15
-    reconnection: 'true'
     similarity: '0.16666666666666666'
-  source: 92c11261-07fd-4d87-b246-2db9897e0dee
-  target: 448066d8-f6a2-41bb-9ad3-c98a8194a262
-- created_at: 1771087906
+    reconnection: 'true'
+    date: 2026-02-15
+    auto_generated: 'true'
+  created_at: 1771087906
+- source: ccc0d2d0-877a-4af8-b30d-a8e46e7987df
+  target: 12ed3e49-c896-493b-97eb-c9599e3107ba
   id: e498c612-69cb-4ca2-8de3-c1e4bbe0ed35
   kind: DerivesFrom
   metadata:
-    auto_generated: 'true'
     date: 2026-02-15
-    reconnection: 'true'
+    auto_generated: 'true'
     similarity: '0.16666666666666666'
-  source: ccc0d2d0-877a-4af8-b30d-a8e46e7987df
-  target: 12ed3e49-c896-493b-97eb-c9599e3107ba
-- created_at: 1771087906
+    reconnection: 'true'
+  created_at: 1771087906
+- source: 394bac8d-966a-4861-a1b2-0856785d5e16
+  target: 3e602132-2f60-4c9f-bced-f40e0482679e
   id: 41e95467-ceb4-41fa-9fc0-ef82973bd6d4
   kind: DerivesFrom
   metadata:
-    auto_generated: 'true'
     date: 2026-02-15
-    reconnection: 'true'
     similarity: '0.17647058823529413'
-  source: 394bac8d-966a-4861-a1b2-0856785d5e16
-  target: 3e602132-2f60-4c9f-bced-f40e0482679e
-- created_at: 1771087906
+    auto_generated: 'true'
+    reconnection: 'true'
+  created_at: 1771087906
+- source: a9ed83fe-5c0c-405b-aa92-ebdc89c80e96
+  target: 60f8242f-1fc7-4b4c-8f63-afc106cb4a3d
   id: 61ae293b-cdf2-4190-8184-23a984399394
   kind: DerivesFrom
   metadata:
     auto_generated: 'true'
-    date: 2026-02-15
     reconnection: 'true'
+    date: 2026-02-15
     similarity: '0.15'
-  source: a9ed83fe-5c0c-405b-aa92-ebdc89c80e96
-  target: 60f8242f-1fc7-4b4c-8f63-afc106cb4a3d
-- created_at: 1771087906
+  created_at: 1771087906
+- source: bd0b8011-478c-4258-8326-b027364722b9
+  target: 948d4e48-d0c2-4464-8d9c-60a0d438867b
   id: 028134d0-309e-4cc2-80f9-c921bea81ce5
   kind: DerivesFrom
   metadata:
-    auto_generated: 'true'
     date: 2026-02-15
     reconnection: 'true'
+    auto_generated: 'true'
     similarity: '0.15789473684210525'
-  source: bd0b8011-478c-4258-8326-b027364722b9
-  target: 948d4e48-d0c2-4464-8d9c-60a0d438867b
-- created_at: 1771090244
+  created_at: 1771087906
+- source: 69e3e6cc-4507-4744-8a50-b93b30a3adc8
+  target: 98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5
   id: 84145819-9ea4-4bcc-b142-6dc88dc8e315
   kind: DerivesFrom
   metadata:
+    reason: Connect proto_rpc 'AI-powered relationship inference' to U0 'Cross-layer edge inference'
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'AI-powered relationship inference' to U0 'Cross-layer
-      edge inference'
-  source: 69e3e6cc-4507-4744-8a50-b93b30a3adc8
+  created_at: 1771090244
+- source: 617996d9-eb49-4abf-9dc7-88ec4e87f188
   target: 98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5
-- created_at: 1771090244
   id: 4fdd8f08-3d23-4e2b-9566-28ab6ddbdabf
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Automatic relationship inference' to U0 'Cross-layer
-      edge inference'
-  source: 617996d9-eb49-4abf-9dc7-88ec4e87f188
-  target: 98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5
-- created_at: 1771090244
+    reason: Connect proto_rpc 'Automatic relationship inference' to U0 'Cross-layer edge inference'
+  created_at: 1771090244
+- source: ff0a505f-1d9d-418b-9a0b-af8bd28760eb
+  target: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
   id: 8ace1861-d1bb-4335-804d-ce0a4187c918
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'
-  source: ff0a505f-1d9d-418b-9a0b-af8bd28760eb
+  created_at: 1771090244
+- source: dfbd8aef-7dfd-4272-b97a-c22733dac4b7
   target: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
-- created_at: 1771090244
   id: 15bff7fd-59c3-493e-b821-69ca56a728f1
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'
-  source: dfbd8aef-7dfd-4272-b97a-c22733dac4b7
+  created_at: 1771090244
+- source: 7807965f-40b8-4412-8848-7d09658f0965
   target: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
-- created_at: 1771090244
   id: 2e8e2a25-ef99-4a74-93ad-7a45192aa85e
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'
-  source: 7807965f-40b8-4412-8848-7d09658f0965
-  target: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
-- created_at: 1771090244
+  created_at: 1771090244
+- source: ff0a505f-1d9d-418b-9a0b-af8bd28760eb
+  target: 0dc100e8-5514-4ab8-9cb5-3a067aac5536
   id: 39bfd576-cec1-4149-9aac-13020e9ca716
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal
-      verification'
-  source: ff0a505f-1d9d-418b-9a0b-af8bd28760eb
+    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'
+  created_at: 1771090244
+- source: dfbd8aef-7dfd-4272-b97a-c22733dac4b7
   target: 0dc100e8-5514-4ab8-9cb5-3a067aac5536
-- created_at: 1771090244
   id: cf1abf10-0c4b-4b60-a2b1-dcef8de580b5
   kind: DerivesFrom
   metadata:
+    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal
-      verification'
-  source: dfbd8aef-7dfd-4272-b97a-c22733dac4b7
+  created_at: 1771090244
+- source: 7807965f-40b8-4412-8848-7d09658f0965
   target: 0dc100e8-5514-4ab8-9cb5-3a067aac5536
-- created_at: 1771090244
   id: a0dea57b-0004-44bf-bd49-313bafa8a7f4
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal
-      verification'
-  source: 7807965f-40b8-4412-8848-7d09658f0965
-  target: 0dc100e8-5514-4ab8-9cb5-3a067aac5536
-- created_at: 1771090244
+    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'
+  created_at: 1771090244
+- source: 9212713c-0da1-42f9-bccf-5be3cb38860c
+  target: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
   id: b1f768e6-8e8f-49aa-9992-b2217948293e
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Layer-aware operations' to U0 'specORACLE manages multi-layered
-      specifications'
-  source: 9212713c-0da1-42f9-bccf-5be3cb38860c
-  target: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-- created_at: 1771090244
+    reason: Connect proto_rpc 'Layer-aware operations' to U0 'specORACLE manages multi-layered specifications'
+  created_at: 1771090244
+- source: 9212713c-0da1-42f9-bccf-5be3cb38860c
+  target: e009137a-645b-4c3b-96c4-af884b4359d6
   id: bc693850-7ea4-43ab-ac66-6a7d5c7a8e20
   kind: DerivesFrom
   metadata:
+    reason: Connect proto_rpc 'Layer-aware operations' to U0 'Specifications at different formality layers'
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Layer-aware operations' to U0 'Specifications at different
-      formality layers'
-  source: 9212713c-0da1-42f9-bccf-5be3cb38860c
-  target: e009137a-645b-4c3b-96c4-af884b4359d6
-- created_at: 1771090244
+  created_at: 1771090244
+- source: a6c844d5-8c7e-4199-8e70-07c9804c0d7f
+  target: 070f3b22-e508-4953-b15c-a330fd5f8b22
   id: 1829bed3-77a6-4816-9027-94b250a08e90
   kind: DerivesFrom
   metadata:
+    reason: Connect proto_rpc 'Set node universe' to U0 'Universe struct represents the space'
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Set node universe' to U0 'Universe struct represents
-      the space'
-  source: a6c844d5-8c7e-4199-8e70-07c9804c0d7f
-  target: 070f3b22-e508-4953-b15c-a330fd5f8b22
-- created_at: 1771090244
+  created_at: 1771090244
+- source: f3b07262-2e70-4e13-a492-252c48632372
+  target: 1e80df99-7c36-49dd-b30a-175bb44c5f54
   id: 41a5953c-c154-4c5f-9eb1-99d8de0542d8
   kind: DerivesFrom
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'
-  source: f3b07262-2e70-4e13-a492-252c48632372
-  target: 1e80df99-7c36-49dd-b30a-175bb44c5f54
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: f3b07262-2e70-4e13-a492-252c48632372
+  target: 1e955f81-63d7-4ecd-b861-d41548852010
   id: c2a2e8cc-f15b-4f2e-81bf-dad60ef927cc
   kind: DerivesFrom
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'
-  source: f3b07262-2e70-4e13-a492-252c48632372
-  target: 1e955f81-63d7-4ecd-b861-d41548852010
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
+  target: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
   id: 5499ae8e-e8cd-42a4-848b-1ceaf8f411a8
   kind: Refines
   metadata:
     created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Temporal queries' to U0 'Query'
-  source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
-  target: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
-- created_at: 1771090244
+  created_at: 1771090244
+- source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
+  target: bf92116c-2f21-42ef-a07d-73df0df3f59c
   id: f72ff793-e101-4597-8d06-5c5e1113e314
   kind: Refines
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Temporal queries' to U0 'Query'
-  source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
-  target: bf92116c-2f21-42ef-a07d-73df0df3f59c
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
+  target: ab5e4dd1-3dfd-4921-aa63-6703af6d5db0
   id: 54164333-d79b-47c1-95c6-fdf698888325
   kind: Refines
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Temporal queries' to U0 'Query'
-  source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
-  target: ab5e4dd1-3dfd-4921-aa63-6703af6d5db0
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: 800bb928-1d54-4f37-b062-fd962b6687df
+  target: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
   id: 8c9f1c3a-c3cb-48b7-81d0-5b5304d15a9a
   kind: Refines
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'node history' to U0 'Query'
-  source: 800bb928-1d54-4f37-b062-fd962b6687df
-  target: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: 800bb928-1d54-4f37-b062-fd962b6687df
+  target: bf92116c-2f21-42ef-a07d-73df0df3f59c
   id: f31edbf8-3b70-4946-92c8-97c327a6d6e0
   kind: Refines
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'node history' to U0 'Query'
-  source: 800bb928-1d54-4f37-b062-fd962b6687df
-  target: bf92116c-2f21-42ef-a07d-73df0df3f59c
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: 800bb928-1d54-4f37-b062-fd962b6687df
+  target: ab5e4dd1-3dfd-4921-aa63-6703af6d5db0
   id: 28070883-e2ac-42f2-a53d-1c5656aae45e
   kind: Refines
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'node history' to U0 'Query'
-  source: 800bb928-1d54-4f37-b062-fd962b6687df
-  target: ab5e4dd1-3dfd-4921-aa63-6703af6d5db0
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: 8ec5b8c5-ab85-4113-af10-ff1cb5288400
+  target: 784f3567-19fd-45b3-993e-aca0e11b1f40
   id: 3504af01-4377-47cc-aab5-f4bae6991451
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Executable contracts' to U0 'AdmissibleSet struct symbolically
-      represents'
-  source: 8ec5b8c5-ab85-4113-af10-ff1cb5288400
-  target: 784f3567-19fd-45b3-993e-aca0e11b1f40
-- created_at: 1771090244
+    reason: Connect proto_rpc 'Executable contracts' to U0 'AdmissibleSet struct symbolically represents'
+  created_at: 1771090244
+- source: a52e97be-acd3-487a-8bea-b72af975f799
+  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
   id: f74d7ca8-95ce-4080-bd42-78462eedb2af
   kind: DerivesFrom
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'synonym' to U0 'AI-powered'
-  source: a52e97be-acd3-487a-8bea-b72af975f799
-  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: 2aa02359-7f35-413f-9a1c-91666c776b9b
+  target: 88a7937e-a505-4870-b144-6c8af04cd140
   id: f7dc1c01-ba3d-4ab9-ae02-0a4e454bbe1e
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'
-  source: 2aa02359-7f35-413f-9a1c-91666c776b9b
-  target: 88a7937e-a505-4870-b144-6c8af04cd140
-- created_at: 1771090244
+  created_at: 1771090244
+- source: 2aa02359-7f35-413f-9a1c-91666c776b9b
+  target: e009137a-645b-4c3b-96c4-af884b4359d6
   id: e0acbf6a-725d-47d3-80d4-4a7d5572ae6d
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'
-  source: 2aa02359-7f35-413f-9a1c-91666c776b9b
-  target: e009137a-645b-4c3b-96c4-af884b4359d6
-- created_at: 1771090244
+  created_at: 1771090244
+- source: 2aa02359-7f35-413f-9a1c-91666c776b9b
+  target: 7d91abca-5b0e-431b-ad01-8cf8b38e2010
   id: 12b3f5c5-2bf9-43cd-8b42-e23f5317c0b5
   kind: DerivesFrom
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'
-  source: 2aa02359-7f35-413f-9a1c-91666c776b9b
-  target: 7d91abca-5b0e-431b-ad01-8cf8b38e2010
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: 2aa02359-7f35-413f-9a1c-91666c776b9b
+  target: c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d
   id: 527a541b-6591-4921-88a6-be1b6cb13513
   kind: DerivesFrom
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'
-  source: 2aa02359-7f35-413f-9a1c-91666c776b9b
-  target: c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d
-- created_at: 1771090244
+    created_by: connect_isolated_proto_rpc.py
+  created_at: 1771090244
+- source: 2aa02359-7f35-413f-9a1c-91666c776b9b
+  target: 54585621-ab87-4654-a392-5517a9bb5376
   id: f642578f-317a-4628-9a8f-7c1757216150
   kind: DerivesFrom
   metadata:
+    reason: Connect proto_rpc 'Find formalizations' to U0 'Multi-layer specification tracking'
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Find formalizations' to U0 'Multi-layer specification
-      tracking'
-  source: 2aa02359-7f35-413f-9a1c-91666c776b9b
-  target: 54585621-ab87-4654-a392-5517a9bb5376
-- created_at: 1771090327
+  created_at: 1771090244
+- source: 922d3d6c-de1b-4fdf-8dfc-1e5f67fe083d
+  target: ee493f23-22d4-483c-8afe-2926a0ec1f73
   id: 05948ac4-f894-4d7d-ba5e-2aca70094ae6
   kind: DerivesFrom
   metadata:
     created_by: connect_remaining_proto_rpc.py
-    reason: Connect proto_rpc 'Query and analysis' to U0 'find command provides semantic
-      search'
-  source: 922d3d6c-de1b-4fdf-8dfc-1e5f67fe083d
-  target: ee493f23-22d4-483c-8afe-2926a0ec1f73
-- created_at: 1771090327
+    reason: Connect proto_rpc 'Query and analysis' to U0 'find command provides semantic search'
+  created_at: 1771090327
+- source: b3949bb3-1013-40a0-9c6e-18a723e25133
+  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
   id: a8c3e77b-f813-4c72-89db-d37c36085009
   kind: DerivesFrom
   metadata:
-    created_by: connect_remaining_proto_rpc.py
     reason: Connect proto_rpc 'Semantic normalization' to U0 'AI-powered'
-  source: b3949bb3-1013-40a0-9c6e-18a723e25133
-  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-- created_at: 1771090327
+    created_by: connect_remaining_proto_rpc.py
+  created_at: 1771090327
+- source: ae990806-4fa6-441b-9ea0-7992115418f4
+  target: ee493f23-22d4-483c-8afe-2926a0ec1f73
   id: 15cdba5c-bbb9-4d0e-823e-ecbdacc39c5c
   kind: DerivesFrom
   metadata:
-    created_by: connect_remaining_proto_rpc.py
     reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
-  source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: ee493f23-22d4-483c-8afe-2926a0ec1f73
-- created_at: 1771090327
+    created_by: connect_remaining_proto_rpc.py
+  created_at: 1771090327
+- source: ae990806-4fa6-441b-9ea0-7992115418f4
+  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
   id: 29a837cf-cecf-4e26-915e-36101641af35
   kind: DerivesFrom
   metadata:
     created_by: connect_remaining_proto_rpc.py
     reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
-  source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-- created_at: 1771090327
+  created_at: 1771090327
+- source: ae990806-4fa6-441b-9ea0-7992115418f4
+  target: 2b68b299-73ba-46e4-b910-1c5287379bc5
   id: de3ed124-4c22-4746-a879-00d80943a043
   kind: DerivesFrom
   metadata:
-    created_by: connect_remaining_proto_rpc.py
     reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
-  source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: 2b68b299-73ba-46e4-b910-1c5287379bc5
-- created_at: 1771090327
+    created_by: connect_remaining_proto_rpc.py
+  created_at: 1771090327
+- source: ae990806-4fa6-441b-9ea0-7992115418f4
+  target: d79603df-d239-4d3f-af09-868ed2935374
   id: 5685b8e5-9053-4081-a5c5-b47fad73f6c5
   kind: DerivesFrom
   metadata:
     created_by: connect_remaining_proto_rpc.py
     reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
-  source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: d79603df-d239-4d3f-af09-868ed2935374
-- created_at: 1771090327
+  created_at: 1771090327
+- source: ae990806-4fa6-441b-9ea0-7992115418f4
+  target: ce999406-30cc-424e-8bac-8efe06025a3f
   id: c434be91-ca15-431f-b23c-02906fcec765
   kind: DerivesFrom
   metadata:
-    created_by: connect_remaining_proto_rpc.py
     reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
-  source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: ce999406-30cc-424e-8bac-8efe06025a3f
-- created_at: 1771086000
+    created_by: connect_remaining_proto_rpc.py
+  created_at: 1771090327
+- source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
+  target: dc19e858-b074-44bc-b125-ae3e8dc1d30e
   id: b8efdf1f-63a3-4e46-b45e-60efd14abd8f
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_isolated_proto_rpcs.py
-  source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
-  target: dc19e858-b074-44bc-b125-ae3e8dc1d30e
-- created_at: 1771086000
+    auto_connected: 'true'
+  created_at: 1771086000
+- source: ee97d8f2-7874-4988-bf9a-6d838368d1be
+  target: 9886c3bc-da3f-48db-b5e0-9d922db3fef8
   id: c1931393-8435-4868-8b3b-9ff4c744f9ed
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_isolated_proto_rpcs.py
-  source: ee97d8f2-7874-4988-bf9a-6d838368d1be
-  target: 9886c3bc-da3f-48db-b5e0-9d922db3fef8
-- created_at: 1771086000
+    auto_connected: 'true'
+  created_at: 1771086000
+- source: ee97d8f2-7874-4988-bf9a-6d838368d1be
+  target: e70a5ebe-9770-437e-8a45-2df485ff0a0b
   id: 13edaf28-7df7-46e5-b82b-2ac30e36153b
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_isolated_proto_rpcs.py
-  source: ee97d8f2-7874-4988-bf9a-6d838368d1be
-  target: e70a5ebe-9770-437e-8a45-2df485ff0a0b
-- created_at: 1771086000
+    auto_connected: 'true'
+  created_at: 1771086000
+- source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
+  target: 564b6e40-b052-440d-8654-3ab97c7dfae9
   id: c449418b-548a-448c-9225-7bb91f987a0c
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_isolated_proto_rpcs.py
-  source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
-  target: 564b6e40-b052-440d-8654-3ab97c7dfae9
-- created_at: 1771086000
+    auto_connected: 'true'
+  created_at: 1771086000
+- source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
+  target: 51d204c0-d59a-4508-bdad-d32ec99c64f5
   id: 7cfa62a9-093b-4b3e-9ff2-6d0101e6e8ac
   kind: Refines
   metadata:
     auto_connected: 'true'
     script: connect_isolated_proto_rpcs.py
-  source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
-  target: 51d204c0-d59a-4508-bdad-d32ec99c64f5
-- created_at: 1771086000
+  created_at: 1771086000
+- source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
+  target: c3a22518-a340-45b2-9e94-2d00d99e657d
   id: f53add65-e2aa-4a90-bca8-553af1f0d7d3
   kind: Refines
   metadata:
     auto_connected: 'true'
     script: connect_isolated_proto_rpcs.py
-  source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
-  target: c3a22518-a340-45b2-9e94-2d00d99e657d
-- created_at: 1771086100
+  created_at: 1771086000
+- source: 94aca6e6-2d47-4b1d-acab-386f59acbd33
+  target: ee97d8f2-7874-4988-bf9a-6d838368d1be
   id: 5a7f4dba-078c-45d3-98b9-b2be1b940d8b
   kind: Refines
   metadata:
     auto_connected: 'true'
     script: connect_remaining_isolated.py
-  source: 94aca6e6-2d47-4b1d-acab-386f59acbd33
-  target: ee97d8f2-7874-4988-bf9a-6d838368d1be
-- created_at: 1771086100
+  created_at: 1771086100
+- source: 800bb928-1d54-4f37-b062-fd962b6687df
+  target: 531cc76e-8c2d-4e8e-922b-bd47a32e3307
   id: 462eb0fe-2340-4d33-b776-303fcbf5033f
   kind: Formalizes
   metadata:
     auto_connected: 'true'
     script: connect_remaining_isolated.py
-  source: 800bb928-1d54-4f37-b062-fd962b6687df
-  target: 531cc76e-8c2d-4e8e-922b-bd47a32e3307
-- created_at: 1771086100
+  created_at: 1771086100
+- source: ca9f0b06-8a5a-4097-bd47-d787ce7c381c
+  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
   id: 8c8f4a09-43c2-42c3-9cc8-a65d20fe0bb8
   kind: Formalizes
   metadata:
-    auto_connected: 'true'
     script: connect_remaining_isolated.py
-  source: ca9f0b06-8a5a-4097-bd47-d787ce7c381c
+    auto_connected: 'true'
+  created_at: 1771086100
+- source: 554cd460-aae3-42c6-b973-439dded5c647
   target: 386b1821-73e9-4b1c-90e4-618204cbad0e
-- created_at: 1771086100
   id: 6d205638-c59c-497d-9dea-af94576d6c7b
   kind: Formalizes
   metadata:
     auto_connected: 'true'
     script: connect_remaining_isolated.py
-  source: 554cd460-aae3-42c6-b973-439dded5c647
-  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
-- created_at: 1771086100
+  created_at: 1771086100
+- source: a9ffc107-d901-48ae-afb0-da3b9a5f8b6a
+  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
   id: 5cacda2e-4206-4163-8d2a-6d152f823c8b
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_remaining_isolated.py
-  source: a9ffc107-d901-48ae-afb0-da3b9a5f8b6a
-  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
-- created_at: 1771086100
+    auto_connected: 'true'
+  created_at: 1771086100
+- source: ea3f4e7a-e577-465b-810d-ea4247d5ec48
+  target: c6920b06-7459-4481-aa79-698820c48a11
   id: bf0a0517-16f5-4938-b5a4-4aa8060b5c60
   kind: DependsOn
   metadata:
-    auto_connected: 'true'
     script: connect_remaining_isolated.py
-  source: ea3f4e7a-e577-465b-810d-ea4247d5ec48
-  target: c6920b06-7459-4481-aa79-698820c48a11
-- created_at: 1771086200
+    auto_connected: 'true'
+  created_at: 1771086100
+- source: ac78bcec-f784-49aa-a201-30f4641fdc16
+  target: 8aff5987-e979-435b-b08d-9b4705c6aef4
   id: feea76bc-2e9c-476e-9909-3bdaa2644ab6
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_final_four.py
-  source: ac78bcec-f784-49aa-a201-30f4641fdc16
-  target: 8aff5987-e979-435b-b08d-9b4705c6aef4
-- created_at: 1771086200
+    auto_connected: 'true'
+  created_at: 1771086200
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
   id: 95825574-7382-46a9-ad71-4c6f1d22c16f
   kind: Refines
   metadata:
     auto_connected: 'true'
     script: connect_final_four.py
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
+  created_at: 1771086200
+- source: b706e529-3eff-49e0-890c-6e68e31456bb
   target: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
-- created_at: 1771086200
   id: c9612a57-8308-4c5d-9afe-ffa14489a4ba
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_final_four.py
-  source: b706e529-3eff-49e0-890c-6e68e31456bb
+    auto_connected: 'true'
+  created_at: 1771086200
+- source: 04dd5a76-ac6b-41f1-99f6-bfd56dd0ee5f
   target: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
-- created_at: 1771086200
   id: c355bb25-9e58-471b-be88-5f3f01a90cee
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_final_four.py
-  source: 04dd5a76-ac6b-41f1-99f6-bfd56dd0ee5f
-  target: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
-- created_at: 1771091955
+    auto_connected: 'true'
+  created_at: 1771086200
+- source: dfaf4bdb-7e7c-45f2-871a-89924255d267
+  target: c6119c42-7493-4de4-8474-967ff94e89c6
   id: d2fdbc1d-acd6-45bd-8c8d-2c4f8a37f5cd
   kind: Formalizes
   metadata: {}
-  source: dfaf4bdb-7e7c-45f2-871a-89924255d267
-  target: c6119c42-7493-4de4-8474-967ff94e89c6
-- created_at: 1771092955
+  created_at: 1771091955
+- source: e9c466e9-73c7-4865-914c-ee6b8c6f5992
+  target: dc8ca253-2697-4787-b43b-c4d33da13336
   id: 8b243319-2a4a-4a13-8852-ff461c8555e3
   kind: Formalizes
   metadata: {}
-  source: e9c466e9-73c7-4865-914c-ee6b8c6f5992
-  target: dc8ca253-2697-4787-b43b-c4d33da13336
-- created_at: 1771093451
+  created_at: 1771092955
+- source: c2f9b469-f182-4e76-8fef-4168feb10dd6
+  target: 9f8de6af-d9d3-4ce5-8351-445bc1c12f34
   id: 26885045-02c6-44fd-94c5-74c2beb670ef
   kind: Refines
   metadata: {}
-  source: c2f9b469-f182-4e76-8fef-4168feb10dd6
-  target: 9f8de6af-d9d3-4ce5-8351-445bc1c12f34
-- created_at: 1771093451
+  created_at: 1771093451
+- source: e33e97b5-f089-4146-b8c1-4d3a9a97f613
+  target: ac78bcec-f784-49aa-a201-30f4641fdc16
   id: 5745adc6-a080-4dc9-a0f3-191b4b622e8e
   kind: Refines
   metadata: {}
-  source: e33e97b5-f089-4146-b8c1-4d3a9a97f613
-  target: ac78bcec-f784-49aa-a201-30f4641fdc16
-- created_at: 1771093463
+  created_at: 1771093451
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: 5e3afc70-1aa1-4e9c-8eb4-445fe406f75e
   id: ec03d9c7-c535-47ef-84cc-39959e592a4d
   kind: DerivesFrom
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: 5e3afc70-1aa1-4e9c-8eb4-445fe406f75e
-- created_at: 1771094499
+  created_at: 1771093463
+- source: 1e80df99-7c36-49dd-b30a-175bb44c5f54
+  target: 8e85220d-6937-4b87-b47a-76d80c87f99a
   id: auto-47-194
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 1e80df99-7c36-49dd-b30a-175bb44c5f54
-  target: 8e85220d-6937-4b87-b47a-76d80c87f99a
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 436c0a62-9235-4213-98d1-b45fe75118cb
+  target: 0a26c5b6-4ba6-4a62-afe1-40c7020aca27
   id: auto-54-195
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 436c0a62-9235-4213-98d1-b45fe75118cb
-  target: 0a26c5b6-4ba6-4a62-afe1-40c7020aca27
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 1e80df99-7c36-49dd-b30a-175bb44c5f54
+  target: 69af9728-29c3-4294-ba84-78799a10cad6
   id: auto-47-196
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 1e80df99-7c36-49dd-b30a-175bb44c5f54
-  target: 69af9728-29c3-4294-ba84-78799a10cad6
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: e61c0d6d-9c2e-48d7-9d80-d673912d2f5e
   id: auto-1-197
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: e61c0d6d-9c2e-48d7-9d80-d673912d2f5e
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 48efd51f-cda9-45ed-9a76-f46cd45ef2bd
   id: auto-1-198
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 48efd51f-cda9-45ed-9a76-f46cd45ef2bd
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 5fb5017a-8b69-445f-9f3a-c2067460844d
   id: auto-1-199
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 5fb5017a-8b69-445f-9f3a-c2067460844d
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 33912c9c-5a29-4720-b4f6-d1251547ffd9
   id: auto-1-200
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 33912c9c-5a29-4720-b4f6-d1251547ffd9
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 4abf7c4c-1341-4742-986f-55687a8e09de
   id: auto-1-201
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 4abf7c4c-1341-4742-986f-55687a8e09de
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 26f7f710-4e23-4bff-819d-1ed0a46b6e7f
   id: auto-1-202
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 26f7f710-4e23-4bff-819d-1ed0a46b6e7f
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 41d13458-48a5-451d-8503-87ba087f38b9
   id: auto-1-203
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 41d13458-48a5-451d-8503-87ba087f38b9
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: bd57b941-758b-43da-ae75-ec1026c5e514
   id: auto-1-204
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: bd57b941-758b-43da-ae75-ec1026c5e514
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: a28cee0b-5b58-4442-87f1-8bf4545bd075
   id: auto-2-205
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: a28cee0b-5b58-4442-87f1-8bf4545bd075
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 14ba122f-e329-4a37-b900-69b61d61953a
   id: auto-1-206
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 14ba122f-e329-4a37-b900-69b61d61953a
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 50ed58d6-cd77-4df5-8013-01cda9ce083a
   id: auto-1-207
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 50ed58d6-cd77-4df5-8013-01cda9ce083a
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 2e91fd85-2064-4b9e-8c89-9214ec1060a6
   id: auto-1-208
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 2e91fd85-2064-4b9e-8c89-9214ec1060a6
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: e72d7fd3-fcb5-4dfe-893b-68a8b55db2b1
   id: auto-1-209
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: e72d7fd3-fcb5-4dfe-893b-68a8b55db2b1
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 543a0d34-6fda-4953-9ff7-67b2c40dbf3b
   id: auto-1-210
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 543a0d34-6fda-4953-9ff7-67b2c40dbf3b
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 489f4790-94e6-4290-9426-6b231aba44ac
   id: auto-1-211
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 489f4790-94e6-4290-9426-6b231aba44ac
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 417b1306-aa9e-4c21-ab6d-529a5b53bc65
   id: auto-1-212
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 417b1306-aa9e-4c21-ab6d-529a5b53bc65
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
+  target: 6fd5d103-36fc-4f92-aa21-e2bf355916fe
   id: auto-1-213
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 6fd5d103-36fc-4f92-aa21-e2bf355916fe
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 436c0a62-9235-4213-98d1-b45fe75118cb
+  target: b549f3a8-d094-4f57-b67e-6048b3a09704
   id: auto-54-214
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 436c0a62-9235-4213-98d1-b45fe75118cb
-  target: b549f3a8-d094-4f57-b67e-6048b3a09704
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 436c0a62-9235-4213-98d1-b45fe75118cb
+  target: 364af100-c886-4535-820f-b3a42ed7f599
   id: auto-54-215
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 436c0a62-9235-4213-98d1-b45fe75118cb
-  target: 364af100-c886-4535-820f-b3a42ed7f599
-- created_at: 1771094499
+  created_at: 1771094499
+- source: 1e80df99-7c36-49dd-b30a-175bb44c5f54
+  target: 7ae3bc5c-cb86-4331-8e3d-e95cf14e43ec
   id: auto-47-216
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
-  source: 1e80df99-7c36-49dd-b30a-175bb44c5f54
-  target: 7ae3bc5c-cb86-4331-8e3d-e95cf14e43ec
-- created_at: 1771094806
+  created_at: 1771094499
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: 1ba5e47d-0b54-4bd5-965c-65c90b5f0fe4
   id: auto-session105-2-217
   kind: Refines
   metadata:
     session: '105'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: 1ba5e47d-0b54-4bd5-965c-65c90b5f0fe4
-- created_at: 1771094806
+  created_at: 1771094806
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: df1834c8-257b-42f5-be79-e86c5dabc753
   id: auto-session105-2-218
   kind: Refines
   metadata:
     session: '105'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: df1834c8-257b-42f5-be79-e86c5dabc753
-- created_at: 1771094806
+  created_at: 1771094806
+- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
+  target: 6bee5532-9632-4915-9b4b-37491e5ab5e9
   id: auto-session105-2-219
   kind: Refines
   metadata:
     session: '105'
-  source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: 6bee5532-9632-4915-9b4b-37491e5ab5e9
-- created_at: 1771094806
+  created_at: 1771094806
+- source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
+  target: dfbebf0c-ab09-4298-b494-95dc971d86fe
   id: auto-session105-3-220
   kind: Refines
   metadata:
     session: '105'
-  source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
-  target: dfbebf0c-ab09-4298-b494-95dc971d86fe
-- created_at: 1771090100
+  created_at: 1771094806
+- source: 6f0a3ae5-ba36-468e-a7c7-48658856913c
+  target: ca9f0b06-8a5a-4097-bd47-d787ce7c381c
   id: readme-graph-storage
   kind: DerivesFrom
   metadata:
     confidence: '0.90'
     reason: README describes SpecGraph implementation
-  source: 6f0a3ae5-ba36-468e-a7c7-48658856913c
-  target: ca9f0b06-8a5a-4097-bd47-d787ce7c381c
-- created_at: 1771098670
+  created_at: 1771090100
+- source: 9d92e2df-3f34-4c68-9f28-de054a4aaffa
+  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
   id: meta-self-verify-refines-contradiction
   kind: Refines
   metadata:
     reason: Self-verification is a specific application of contradiction detection
-  source: 9d92e2df-3f34-4c68-9f28-de054a4aaffa
+  created_at: 1771098670
+- source: 99d081e1-2c83-4965-b2c2-3fa4cf470714
   target: 81afa3f5-4a41-4b04-b958-224d1037d76f
-- created_at: 1771098670
   id: meta-essence-refines-contradiction
   kind: Refines
   metadata:
     reason: Defines the essence of governance as U3/U0 contradiction detection
-  source: 99d081e1-2c83-4965-b2c2-3fa4cf470714
-  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
-- created_at: 1771104255
+  created_at: 1771098670
+- source: 6e66772d-9021-4ad9-9180-d49d1381f77e
+  target: b706e529-3eff-49e0-890c-6e68e31456bb
   id: f12aeff7-955d-41c4-a72f-f7be34c483d0
   kind: Formalizes
   metadata: {}
-  source: 6e66772d-9021-4ad9-9180-d49d1381f77e
+  created_at: 1771104255
+- source: c0192b90-862e-49ad-83d8-d27f4205a0d9
   target: b706e529-3eff-49e0-890c-6e68e31456bb
-- created_at: 1771104255
   id: b690b704-cd9a-44a3-b92f-520fffca307d
   kind: Formalizes
   metadata: {}
-  source: c0192b90-862e-49ad-83d8-d27f4205a0d9
-  target: b706e529-3eff-49e0-890c-6e68e31456bb
-- created_at: 1771104490
+  created_at: 1771104255
+- source: de2d7a5a-3fc5-40f4-9d2b-0204a45c5d38
+  target: 99d081e1-2c83-4965-b2c2-3fa4cf470714
   id: 7c7d661e-d86e-47a7-848f-231251088e9f
   kind: Refines
   metadata: {}
-  source: de2d7a5a-3fc5-40f4-9d2b-0204a45c5d38
-  target: 99d081e1-2c83-4965-b2c2-3fa4cf470714
-- created_at: 1771105158
+  created_at: 1771104490
+- source: d26341fb-a813-4ea6-a987-97d258de8529
+  target: 5e77e1b4-bce3-4c50-b5c5-8b0098dd81e7
   id: 85ed270f-ed7b-4c66-9e95-5bcd23f521f9
   kind: Refines
   metadata: {}
-  source: d26341fb-a813-4ea6-a987-97d258de8529
-  target: 5e77e1b4-bce3-4c50-b5c5-8b0098dd81e7
-- created_at: 1771106056
+  created_at: 1771105158
+- source: fbf3767e-6241-428d-912c-887b8e1990dd
+  target: e33e97b5-f089-4146-b8c1-4d3a9a97f613
   id: 055c2f37-74dc-4a5c-bc7c-8741a03e7881
   kind: Refines
   metadata: {}
-  source: fbf3767e-6241-428d-912c-887b8e1990dd
-  target: e33e97b5-f089-4146-b8c1-4d3a9a97f613
-- created_at: 1771106061
+  created_at: 1771106056
+- source: fbf3767e-6241-428d-912c-887b8e1990dd
+  target: ec5f2497-a3ac-4162-8f75-c5da40436bc5
   id: f04a3e3a-2694-43fd-a3bc-497f968a80fc
   kind: Refines
   metadata: {}
-  source: fbf3767e-6241-428d-912c-887b8e1990dd
-  target: ec5f2497-a3ac-4162-8f75-c5da40436bc5
-- created_at: 1771106064
+  created_at: 1771106061
+- source: e1d91fb4-16f4-4bdd-9dc8-d8ad5d95d79f
+  target: fbf3767e-6241-428d-912c-887b8e1990dd
   id: d92a109c-53ee-4194-9050-0f924164fd9b
   kind: Refines
   metadata: {}
-  source: e1d91fb4-16f4-4bdd-9dc8-d8ad5d95d79f
-  target: fbf3767e-6241-428d-912c-887b8e1990dd
-- created_at: 1771106065
+  created_at: 1771106064
+- source: e1d91fb4-16f4-4bdd-9dc8-d8ad5d95d79f
+  target: 5e3afc70-1aa1-4e9c-8eb4-445fe406f75e
   id: e5846117-10a0-4409-92cb-0e1781292270
   kind: Refines
   metadata: {}
-  source: e1d91fb4-16f4-4bdd-9dc8-d8ad5d95d79f
-  target: 5e3afc70-1aa1-4e9c-8eb4-445fe406f75e
-- created_at: 1771106634
+  created_at: 1771106065
+- source: eb677d27-3d43-46ce-9bc4-52cc9196d24d
+  target: e33e97b5-f089-4146-b8c1-4d3a9a97f613
   id: b83125f7-10e1-4987-ba80-25459c8e0e06
   kind: Refines
   metadata: {}
-  source: eb677d27-3d43-46ce-9bc4-52cc9196d24d
-  target: e33e97b5-f089-4146-b8c1-4d3a9a97f613
-- created_at: 1771106642
+  created_at: 1771106634
+- source: eb677d27-3d43-46ce-9bc4-52cc9196d24d
+  target: 2059e2c0-3520-4a2f-a05c-49878c559659
   id: 99f75e33-438d-4da5-aad6-b28d30c2e316
   kind: Refines
   metadata: {}
-  source: eb677d27-3d43-46ce-9bc4-52cc9196d24d
-  target: 2059e2c0-3520-4a2f-a05c-49878c559659
-- created_at: 1771106644
+  created_at: 1771106642
+- source: eb677d27-3d43-46ce-9bc4-52cc9196d24d
+  target: 73e33064-9b24-4e28-acbf-53ebf6b8182b
   id: c43d7c2e-5f9e-490c-ab23-db7ffec3b2aa
   kind: Refines
   metadata: {}
-  source: eb677d27-3d43-46ce-9bc4-52cc9196d24d
-  target: 73e33064-9b24-4e28-acbf-53ebf6b8182b
-- created_at: 1739590000
+  created_at: 1771106644
+- source: 6fe50517-3363-41db-aa33-ad98d271b5ca
+  target: 436c0a62-9235-4213-98d1-b45fe75118cb
   id: 6fe50517-refines-436c0a62
   kind: Refines
   metadata:
     description: PHPTestExtractor extends extraction pattern to PHP language
-  source: 6fe50517-3363-41db-aa33-ad98d271b5ca
-  target: 436c0a62-9235-4213-98d1-b45fe75118cb
-- created_at: 1739590000
+  created_at: 1739590000
+- source: 49b943da-7eed-4859-9402-6a3355e4ea55
+  target: d79603df-d239-4d3f-af09-868ed2935374
   id: 49b943da-demonstrates-d79603df
   kind: Refines
   metadata:
     description: f₀₃⁻¹ for PHP demonstrates language-agnostic extraction
-  source: 49b943da-7eed-4859-9402-6a3355e4ea55
-  target: d79603df-d239-4d3f-af09-868ed2935374
-- created_at: 1739590000
+  created_at: 1739590000
+- source: 0d10ca75-a053-467c-bff5-cb7c0a5c94e9
+  target: fbf3767e-6241-428d-912c-887b8e1990dd
   id: 0d10ca75-refines-fbf3767e
   kind: Refines
   metadata:
     description: Session 119 completed multi-layer extraction for ztd-query-php
-  source: 0d10ca75-a053-467c-bff5-cb7c0a5c94e9
-  target: fbf3767e-6241-428d-912c-887b8e1990dd
-- created_at: 1739590000
+  created_at: 1739590000
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: eb677d27-3d43-46ce-9bc4-52cc9196d24d
   id: bc5ad960-refines-eb677d27
   kind: Refines
   metadata:
     description: Core concept realization confirms motivation.md problems are solved
-  source: bc5ad960-81ea-4b8f-b322-8d529a27e018
-  target: eb677d27-3d43-46ce-9bc4-52cc9196d24d
-- created_at: 1739590000
+  created_at: 1739590000
+- source: 692f54e3-87ae-44ef-959a-54ddb16e8e74
+  target: e1d91fb4-16f4-4bdd-9dc8-d8ad5d95d79f
   id: 692f54e3-refines-e1d91fb4
   kind: Refines
   metadata:
     description: Multi-project capability demonstrated with ztd-query-php
-  source: 692f54e3-87ae-44ef-959a-54ddb16e8e74
-  target: e1d91fb4-16f4-4bdd-9dc8-d8ad5d95d79f
-- created_at: 1739591000
+  created_at: 1739590000
+- source: b301e222-12ff-4aec-a373-793b6af6081f
+  target: bc5ad960-81ea-4b8f-b322-8d529a27e018
   id: b301e222-refines-bc5ad960
   kind: Refines
   metadata:
     description: CLAUDE.md update confirms core concept realization
-  source: b301e222-12ff-4aec-a373-793b6af6081f
-  target: bc5ad960-81ea-4b8f-b322-8d529a27e018
-- created_at: 1771110427
+  created_at: 1739591000
+- source: ab1ce8ca-6711-4d2d-942b-8621985acd9a
+  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
   id: 6c2345e3-0690-4614-a8bc-30fdf92886e1
   kind: Refines
   metadata:
-    reason: Session 123 achievement refines contradiction detection requirement
     session: '124'
-  source: ab1ce8ca-6711-4d2d-942b-8621985acd9a
-  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
-- created_at: 1771110427
+    reason: Session 123 achievement refines contradiction detection requirement
+  created_at: 1771110427
+- source: ab1ce8ca-6711-4d2d-942b-8621985acd9a
+  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
   id: dd54f1d7-cb44-4f1d-ba4b-ded3763086a5
   kind: Refines
   metadata:
     reason: Session 123 achievement refines omission detection requirement
     session: '124'
-  source: ab1ce8ca-6711-4d2d-942b-8621985acd9a
-  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
-- created_at: 1771110427
+  created_at: 1771110427
+- source: be6b449e-9b87-4356-9b7a-14148460d120
+  target: 5e3afc70-1aa1-4e9c-8eb4-445fe406f75e
   id: 5122f668-5f64-4bbf-963a-5488e13a0502
   kind: Refines
   metadata:
-    reason: Core concept achievement refines self-governance requirement
     session: '124'
-  source: be6b449e-9b87-4356-9b7a-14148460d120
-  target: 5e3afc70-1aa1-4e9c-8eb4-445fe406f75e
-- created_at: 1771110473
+    reason: Core concept achievement refines self-governance requirement
+  created_at: 1771110427
+- source: 56dea38e-0282-477c-9882-c30268072a92
+  target: 3c7619aa-cbeb-4ecb-be4e-86fa766fb48b
   id: cd1efad4-d557-4715-a9bf-b590acb699e1
   kind: Refines
   metadata:
-    reason: Comprehensive get-node output refines RPC GetNode specification
     session: '124'
-  source: 56dea38e-0282-477c-9882-c30268072a92
+    reason: Comprehensive get-node output refines RPC GetNode specification
+  created_at: 1771110473
+- source: 26645db6-ad71-4559-83cb-f18694bca13b
   target: 3c7619aa-cbeb-4ecb-be4e-86fa766fb48b
-- created_at: 1771110473
   id: a536d26b-30f4-4308-aadf-833613507f5c
   kind: Refines
   metadata:
     reason: Relationship display refines RPC GetNode specification
     session: '124'
-  source: 26645db6-ad71-4559-83cb-f18694bca13b
+  created_at: 1771110473
+- source: c541de86-448a-4fed-9ae7-4132cdc595a4
   target: 3c7619aa-cbeb-4ecb-be4e-86fa766fb48b
-- created_at: 1771110473
   id: c5e94a55-30f0-4899-9c33-6a33e1544764
   kind: Refines
   metadata:
     reason: Metadata display refines RPC GetNode specification
     session: '124'
-  source: c541de86-448a-4fed-9ae7-4132cdc595a4
-  target: 3c7619aa-cbeb-4ecb-be4e-86fa766fb48b
-- created_at: 1771110539
+  created_at: 1771110473
+- source: 1149b1d2-d3b1-473f-a8b6-03aac5a5e960
+  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
   id: cd3b0498-e7be-41f0-9491-dc64f0db93c7
   kind: Refines
   metadata:
-    reason: Session 124 work refines omission detection by connecting isolated specs
     session: '124'
-  source: 1149b1d2-d3b1-473f-a8b6-03aac5a5e960
-  target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
-- created_at: 1771110539
+    reason: Session 124 work refines omission detection by connecting isolated specs
+  created_at: 1771110539
+- source: 1149b1d2-d3b1-473f-a8b6-03aac5a5e960
+  target: ab1ce8ca-6711-4d2d-942b-8621985acd9a
   id: cd22ebcf-0249-4f28-a0bd-85ffed77d74a
   kind: Refines
   metadata:
     reason: Session 124 builds upon Session 123 achievements
     session: '124'
-  source: 1149b1d2-d3b1-473f-a8b6-03aac5a5e960
-  target: ab1ce8ca-6711-4d2d-942b-8621985acd9a
-- created_at: 1771111248
+  created_at: 1771110539
+- source: ffdad8db-04aa-4588-9b98-86020f52cbff
+  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
   id: 60c6f7ae-e36a-43c1-a038-6fe3887367a9
   kind: Refines
   metadata: {}
-  source: ffdad8db-04aa-4588-9b98-86020f52cbff
+  created_at: 1771111248
+- source: dd829647-7a16-4762-b0db-67b7be4f88a8
   target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-- created_at: 1771111248
   id: d0d45f10-ee5d-409a-b128-96b24347d0e1
   kind: Refines
   metadata: {}
-  source: dd829647-7a16-4762-b0db-67b7be4f88a8
+  created_at: 1771111248
+- source: c33cc117-900d-40ee-95ea-97a1bd02ee91
   target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-- created_at: 1771111248
   id: 3ae9780a-0d9b-4ee0-b083-6fbf1fa1113c
   kind: Refines
   metadata: {}
-  source: c33cc117-900d-40ee-95ea-97a1bd02ee91
-  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-- created_at: 1771112768
+  created_at: 1771111248
+- source: 84186640-a59e-4dfa-9e28-9bdb29ee3de8
+  target: c6119c42-7493-4de4-8474-967ff94e89c6
   id: eb583a1d-d443-4348-9365-6a4f2e25db98
   kind: Refines
   metadata: {}
-  source: 84186640-a59e-4dfa-9e28-9bdb29ee3de8
+  created_at: 1771112768
+- source: 863fd5cd-b80f-4f8e-a88e-187ecd9ed73d
   target: c6119c42-7493-4de4-8474-967ff94e89c6
-- created_at: 1771112768
   id: 64506466-a542-433f-992d-457f4e71e772
   kind: Refines
   metadata: {}
-  source: 863fd5cd-b80f-4f8e-a88e-187ecd9ed73d
+  created_at: 1771112768
+- source: 53f60616-c92e-4cb9-bc71-48cde00e5a1a
   target: c6119c42-7493-4de4-8474-967ff94e89c6
-- created_at: 1771112768
   id: 9486d12a-0060-4eb4-91be-88cab183f665
   kind: Refines
   metadata: {}
-  source: 53f60616-c92e-4cb9-bc71-48cde00e5a1a
-  target: c6119c42-7493-4de4-8474-967ff94e89c6
-- created_at: 1771112768
+  created_at: 1771112768
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: 8cfad6bd-006d-4458-b4bd-cfb3256d9e18
   id: a7de410f-a179-4462-8ed0-282ac507a0ee
   kind: Formalizes
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: 8cfad6bd-006d-4458-b4bd-cfb3256d9e18
-- created_at: 1771112768
+  created_at: 1771112768
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: 279cc3cc-23bf-483e-aede-1e31809df0ee
   id: 4ae70030-b5e5-4690-9287-4ad03f82e9b2
   kind: Formalizes
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: 279cc3cc-23bf-483e-aede-1e31809df0ee
-- created_at: 1771112768
+  created_at: 1771112768
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: 4e295d71-c8e6-4ca5-9d28-dacda62d6a22
   id: 3d439eb3-b745-4171-9b4f-ec33d48893aa
   kind: Formalizes
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: 4e295d71-c8e6-4ca5-9d28-dacda62d6a22
-- created_at: 1771112768
+  created_at: 1771112768
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: 77f19988-13ad-43c3-922a-d5cefb8f4a3d
   id: 2a73a0af-d2e7-4d72-8e02-621d2d1846e3
   kind: Formalizes
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: 77f19988-13ad-43c3-922a-d5cefb8f4a3d
-- created_at: 1771112768
+  created_at: 1771112768
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: 3ae53ced-97e7-4649-af35-325318f4ecc3
   id: a27e5ab4-37c5-4d7f-8fd7-b2bdb632c120
   kind: Formalizes
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: 3ae53ced-97e7-4649-af35-325318f4ecc3
-- created_at: 1771112768
+  created_at: 1771112768
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: a68d401b-be6a-4fb8-ad97-0556ceac2c4e
   id: 5094c99e-68f6-414f-a855-be3abedc98a5
   kind: Formalizes
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: a68d401b-be6a-4fb8-ad97-0556ceac2c4e
-- created_at: 1771112768
+  created_at: 1771112768
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: 9bdc5e64-ef88-46e6-9ef1-bc81c5d9fe43
   id: 33ba8a20-eb87-4589-bb6b-d4eb3592b615
   kind: Formalizes
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: 9bdc5e64-ef88-46e6-9ef1-bc81c5d9fe43
-- created_at: 1771112768
+  created_at: 1771112768
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: c579b564-4c42-4236-a73d-b3c1348c015a
   id: a2c844db-5552-436b-92f3-d10acbdefc8b
   kind: Formalizes
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: c579b564-4c42-4236-a73d-b3c1348c015a
-- created_at: 1771112768
+  created_at: 1771112768
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: f2d3472b-f1f5-4981-b584-46b9eb5e26a8
   id: f1e09a9d-f6c9-46a7-bc25-5b3b731f581f
   kind: Formalizes
   metadata: {}
-  source: c6119c42-7493-4de4-8474-967ff94e89c6
-  target: f2d3472b-f1f5-4981-b584-46b9eb5e26a8
+  created_at: 1771112768
+- source: cd0a0e97-9584-49b7-bf30-27ac2680940d
+  target: dfaf4bdb-7e7c-45f2-871a-89924255d267
+  id: 1c3eb07f-5dbc-4a8d-83fa-913bdf6fe228
+  kind: Refines
+  metadata: {}
+  created_at: 1771113505

@@ -2,11 +2,11 @@ id: 2e91fd85-2064-4b9e-8c89-9214ec1060a6
 content: User must be authenticated
 kind: Constraint
 metadata:
-  doc_comment: 'true'
   extractor: doc
   confidence: '0.8'
-  source_file: spec-core/src/extract.rs
   inferred: 'true'
+  source_file: spec-core/src/extract.rs
+  doc_comment: 'true'
   source_line: '971'
 created_at: 1771093752
 modified_at: 1771093752

@@ -1130,18 +1130,29 @@
   - **タスク**: `tasks/2026-02-15-session-123-understand-current-state.md`
   - **解決状況**: ✅ **完了** - 包括的な情報表示を実現
 
-- [ ] **list-edgesがUUIDしか表示せず、内容が分からない**
+- [x] **list-edgesがUUIDしか表示せず、内容が分からない** ✅ **解決済み (2026-02-15, Session 128)**
   - **発見日**: 2026-02-14
   - **詳細**: `spec list-edges --node <id>`でエッジが表示されるが、UUIDのみで、ノードの内容が分からない。
-  - **再現手順**:
-    1. `spec list-edges --node b18aad55-5290-4327-8686-8b520987e204`
-    2. `bf71989b... --[refines]--> b18aad55...`と表示される
-    3. UUIDだけでは何のノードか分からない
-  - **影響範囲**: エッジを理解するために、各UUIDで`get-node`を実行する必要がある。
-  - **解決策案**:
-    - ノードの内容も一緒に表示
-    - `[scenario] System identifies isolated nodes --[refines]--> [constraint] Server must detect omissions`
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ execute_list_edges_standalone関数を拡張
+    - ✅ 層情報表示 ([U0], [U1], [U2], [U3])
+    - ✅ ノード種類表示 (Constraint, Assertion, Scenario, etc.)
+    - ✅ 内容プレビュー表示 (50文字、切り捨て時は"..."付与)
+    - ✅ 明確なエッジ方向表示 (source → edge → target)
+  - **検証結果**:
+    ```bash
+    # Before:
+    81afa3f5 --[Refines]--> f6953636
+
+    # After:
+    [U0] [81afa3f5] Constraint - The system must detect contradictions...
+      --[Refines]-->
+    [U0] [f6953636] Scenario - Specifications can be refined...
+    ```
+  - **影響**: エッジの意味を一目で理解可能。UUID手動検索不要。
+  - **関連コミット**: d63ec2e "Session 128: Enhance list-edges to show node content"
+  - **タスク**: `tasks/2026-02-15-session-128-enhance-list-edges.md`
+  - **解決状況**: ✅ **完了** - 実用的なエッジ表示を実現
 
 - [x] **関連仕様を階層的に表示するコマンドがない** ✅ **解決済み (2026-02-14)**
   - **発見日**: 2026-02-14

@@ -2,12 +2,12 @@ id: a52e97be-acd3-487a-8bea-b72af975f799
 content: 'RPC: Detect potential synonyms'
 kind: Assertion
 metadata:
+  source_line: '32'
+  confidence: '0.95'
   inferred: 'true'
   rpc_name: DetectPotentialSynonyms
-  source_file: proto/spec_oracle.proto
   extractor: proto_rpc
-  confidence: '0.95'
-  source_line: '32'
+  source_file: proto/spec_oracle.proto
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

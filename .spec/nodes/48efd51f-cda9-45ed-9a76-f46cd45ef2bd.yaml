@@ -2,14 +2,14 @@ id: 48efd51f-cda9-45ed-9a76-f46cd45ef2bd
 content: 'Invariant: user.is_authenticated())".into(), NodeKind::Assertion, HashMap::new()).id.clone('
 kind: Definition
 metadata:
-  inferred: 'true'
-  confidence: '0.95'
-  example_purpose: test_data
   extractor: assertion
-  assertion: user.is_authenticated())".into(), NodeKind::Assertion, HashMap::new()).id.clone(
-  is_example: 'true'
+  confidence: '0.95'
   source_line: '2034'
   source_file: spec-core/src/graph.rs
+  is_example: 'true'
+  example_purpose: test_data
+  inferred: 'true'
+  assertion: user.is_authenticated())".into(), NodeKind::Assertion, HashMap::new()).id.clone(
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

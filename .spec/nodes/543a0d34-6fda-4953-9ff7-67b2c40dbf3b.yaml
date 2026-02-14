@@ -3,13 +3,13 @@ content: 'Invariant: validate_password(short_password).is_err()'
 kind: Definition
 metadata:
   inferred: 'true'
-  confidence: '0.95'
-  example_purpose: test_data
+  source_line: '4'
   is_example: 'true'
   assertion: validate_password(short_password).is_err()
   extractor: assertion
-  source_line: '4'
+  example_purpose: test_data
   source_file: /tmp/test_extract.rs
+  confidence: '0.95'
 created_at: 1771094226
 modified_at: 1771094226
 formality_layer: 3

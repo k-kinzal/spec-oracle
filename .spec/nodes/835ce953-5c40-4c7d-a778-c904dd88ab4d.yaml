@@ -2,11 +2,11 @@ id: 835ce953-5c40-4c7d-a778-c904dd88ab4d
 content: 'Scenario: diff timestamps detects added nodes'
 kind: Scenario
 metadata:
-  inferred: 'true'
   confidence: '0.9'
-  test_function: diff_timestamps_detects_added_nodes
   source_line: '2128'
   extractor: test
+  test_function: diff_timestamps_detects_added_nodes
+  inferred: 'true'
   source_file: spec-core/src/graph.rs
 created_at: 1771077123
 modified_at: 1771077123

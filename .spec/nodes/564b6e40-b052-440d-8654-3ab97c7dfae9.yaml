@@ -3,11 +3,11 @@ content: 'RPC: Remove node'
 kind: Assertion
 metadata:
   source_file: proto/spec_oracle.proto
-  source_line: '10'
-  inferred: 'true'
-  confidence: '0.95'
   extractor: proto_rpc
+  confidence: '0.95'
+  inferred: 'true'
   rpc_name: RemoveNode
+  source_line: '10'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

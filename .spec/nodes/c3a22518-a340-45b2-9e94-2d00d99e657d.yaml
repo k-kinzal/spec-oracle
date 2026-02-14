@@ -2,12 +2,12 @@ id: c3a22518-a340-45b2-9e94-2d00d99e657d
 content: 'RPC: Get node'
 kind: Assertion
 metadata:
-  source_line: '8'
-  confidence: '0.95'
-  rpc_name: GetNode
   source_file: proto/spec_oracle.proto
-  inferred: 'true'
+  confidence: '0.95'
   extractor: proto_rpc
+  inferred: 'true'
+  rpc_name: GetNode
+  source_line: '8'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

@@ -2,11 +2,11 @@ id: ae990806-4fa6-441b-9ea0-7992115418f4
 content: Terminology resolution
 kind: Assertion
 metadata:
-  extractor: proto_rpc
-  confidence: '0.95'
   source_file: proto/spec_oracle.proto
-  rpc_name: ResolveTerminology
+  extractor: proto_rpc
   inferred: 'true'
+  confidence: '0.95'
+  rpc_name: ResolveTerminology
   source_line: '24'
 created_at: 1771078430
 modified_at: 1771078430

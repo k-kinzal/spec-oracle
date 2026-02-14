@@ -2,12 +2,12 @@ id: a9ed83fe-5c0c-405b-aa92-ebdc89c80e96
 content: 'Scenario: diff timestamps shows no changes for stable graph'
 kind: Scenario
 metadata:
-  source_file: spec-core/src/graph.rs
-  confidence: '0.9'
-  extractor: test
   source_line: '2368'
   test_function: diff_timestamps_shows_no_changes_for_stable_graph
+  confidence: '0.9'
   inferred: 'true'
+  source_file: spec-core/src/graph.rs
+  extractor: test
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3
