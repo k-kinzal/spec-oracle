@@ -1,0 +1,162 @@
+syntax = "proto3";
+
+package spec_oracle;
+
+service SpecOracle {
+  // Node operations
+  rpc AddNode(AddNodeRequest) returns (AddNodeResponse);
+  rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
+  rpc RemoveNode(RemoveNodeRequest) returns (RemoveNodeResponse);
+
+  // Edge operations
+  rpc AddEdge(AddEdgeRequest) returns (AddEdgeResponse);
+  rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse);
+  rpc RemoveEdge(RemoveEdgeRequest) returns (RemoveEdgeResponse);
+
+  // Query and analysis
+  rpc Query(QueryRequest) returns (QueryResponse);
+  rpc DetectContradictions(DetectContradictionsRequest) returns (DetectContradictionsResponse);
+  rpc DetectOmissions(DetectOmissionsRequest) returns (DetectOmissionsResponse);
+
+  // Terminology resolution
+  rpc ResolveTerminology(ResolveTerminologyRequest) returns (ResolveTerminologyResponse);
+}
+
+// --- Node types ---
+
+message SpecNode {
+  string id = 1;
+  string content = 2;
+  SpecNodeKind kind = 3;
+  map<string, string> metadata = 4;
+}
+
+enum SpecNodeKind {
+  SPEC_NODE_KIND_UNSPECIFIED = 0;
+  ASSERTION = 1;       // A concrete claim about behavior
+  CONSTRAINT = 2;      // A universal constraint (invariant)
+  SCENARIO = 3;        // An existential requirement (a path that must exist)
+  DEFINITION = 4;      // A term definition
+  DOMAIN = 5;          // A domain boundary declaration
+}
+
+// --- Edge types ---
+
+message SpecEdge {
+  string id = 1;
+  string source_id = 2;
+  string target_id = 3;
+  SpecEdgeKind kind = 4;
+  map<string, string> metadata = 5;
+}
+
+enum SpecEdgeKind {
+  SPEC_EDGE_KIND_UNSPECIFIED = 0;
+  REFINES = 1;         // Target refines source (is more specific)
+  DEPENDS_ON = 2;      // Source depends on target
+  CONTRADICTS = 3;     // Source contradicts target
+  DERIVES_FROM = 4;    // Source is derived from target
+  SYNONYM = 5;         // Source and target are synonymous terms
+  COMPOSES = 6;        // Source composes with target into a higher-level spec
+}
+
+// --- Request/Response messages ---
+
+message AddNodeRequest {
+  string content = 1;
+  SpecNodeKind kind = 2;
+  map<string, string> metadata = 3;
+}
+
+message AddNodeResponse {
+  SpecNode node = 1;
+}
+
+message GetNodeRequest {
+  string id = 1;
+}
+
+message GetNodeResponse {
+  SpecNode node = 1;
+}
+
+message ListNodesRequest {
+  SpecNodeKind kind_filter = 1;  // 0 = no filter
+}
+
+message ListNodesResponse {
+  repeated SpecNode nodes = 1;
+}
+
+message RemoveNodeRequest {
+  string id = 1;
+}
+
+message RemoveNodeResponse {}
+
+message AddEdgeRequest {
+  string source_id = 1;
+  string target_id = 2;
+  SpecEdgeKind kind = 3;
+  map<string, string> metadata = 4;
+}
+
+message AddEdgeResponse {
+  SpecEdge edge = 1;
+}
+
+message ListEdgesRequest {
+  string node_id = 1;  // empty = list all
+}
+
+message ListEdgesResponse {
+  repeated SpecEdge edges = 1;
+}
+
+message RemoveEdgeRequest {
+  string id = 1;
+}
+
+message RemoveEdgeResponse {}
+
+message QueryRequest {
+  string natural_language_query = 1;
+}
+
+message QueryResponse {
+  repeated SpecNode matching_nodes = 1;
+  string explanation = 2;
+}
+
+message DetectContradictionsRequest {}
+
+message DetectContradictionsResponse {
+  repeated Contradiction contradictions = 1;
+}
+
+message Contradiction {
+  SpecNode node_a = 1;
+  SpecNode node_b = 2;
+  string explanation = 3;
+}
+
+message DetectOmissionsRequest {}
+
+message DetectOmissionsResponse {
+  repeated Omission omissions = 1;
+}
+
+message Omission {
+  string description = 1;
+  repeated SpecNode related_nodes = 2;
+}
+
+message ResolveTerminologyRequest {
+  string term = 1;
+}
+
+message ResolveTerminologyResponse {
+  repeated SpecNode definitions = 1;
+  repeated string synonyms = 2;
+}

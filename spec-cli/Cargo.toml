@@ -1,0 +1,20 @@
+[package]
+name = "spec-cli"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "spec"
+path = "src/main.rs"
+
+[dependencies]
+spec-core = { path = "../spec-core" }
+tonic = { workspace = true }
+prost = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[build-dependencies]
+tonic-build = { workspace = true }
