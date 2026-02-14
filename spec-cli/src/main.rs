@@ -1603,6 +1603,77 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                 }
             }
         }
+        Commands::Extract { source, language, min_confidence } => {
+            // Extract specifications from source code and save to graph
+            use spec_core::{RustExtractor, InferredSpecification};
+            use std::path::Path;
+
+            let path = Path::new(&source);
+            let mut graph = store.load_graph().map_err(|e| format!("Failed to load graph: {}", e))?;
+
+            println!("🔍 Extracting specifications from: {}\n", source);
+
+            // Extract specifications
+            let specs: Vec<InferredSpecification> = if path.is_file() {
+                if language != "rust" {
+                    eprintln!("Only Rust extraction is currently supported");
+                    return Ok(());
+                }
+                RustExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?
+            } else if path.is_dir() {
+                // Extract from all .rs files in directory recursively
+                use std::fs;
+                let mut all_specs = Vec::new();
+                for entry in fs::read_dir(path).map_err(|e| format!("Failed to read directory: {}", e))? {
+                    let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+                    let entry_path = entry.path();
+                    if entry_path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                        match RustExtractor::extract(&entry_path) {
+                            Ok(specs) => all_specs.extend(specs),
+                            Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
+                        }
+                    }
+                }
+                all_specs
+            } else {
+                eprintln!("❌ Source path not found: {}", source);
+                return Ok(());
+            };
+
+            // Filter by confidence and ingest into graph
+            let filtered: Vec<_> = specs.into_iter()
+                .filter(|s| s.confidence >= min_confidence)
+                .collect();
+
+            println!("📊 Extracted {} specifications (confidence >= {})\n", filtered.len(), min_confidence);
+
+            if filtered.is_empty() {
+                println!("✓ No specifications extracted");
+                return Ok(());
+            }
+
+            // Ingest extracted specs into graph
+            let report = graph.ingest(filtered.clone());
+
+            // Save updated graph
+            store.save_graph(&graph).map_err(|e| format!("Failed to save graph: {}", e))?;
+
+            println!("✅ Ingestion complete:");
+            println!("   Nodes created: {}", report.nodes_created);
+            println!("   Nodes skipped: {} (low confidence)", report.nodes_skipped);
+            println!("   Edges created: {}", report.edges_created);
+            println!("   Edge suggestions: {} (require review)", report.suggestions.len());
+
+            if !report.contradictions_found.is_empty() {
+                println!("\n⚠️  Contradictions detected:");
+                for contra in &report.contradictions_found {
+                    println!("   • {}", contra);
+                }
+            }
+
+            println!("\n💡 To verify: spec check");
+            println!("💡 To inspect: spec list-nodes --kind Scenario");
+        }
         _ => {
             eprintln!("Command not yet supported in standalone mode.");
             eprintln!("For advanced features, use server mode (start specd first).");
