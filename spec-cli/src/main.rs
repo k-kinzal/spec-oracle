@@ -686,19 +686,34 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             let proto_kind = parse_node_kind(&kind);
             let core_kind = proto_to_core_kind(proto_kind);
             let node = graph.add_node(content.clone(), core_kind, HashMap::new());
+            let node_id = node.id.clone();
 
-            println!("  ✓ Created specification [{}]", &node.id[..8]);
+            println!("  ✓ Created specification [{}]", &node_id[..8]);
+
+            // Auto-infer relationships (unless disabled)
+            if !no_infer {
+                println!("\n  🔗 Auto-inferring relationships...");
+                let report = graph.auto_connect_node(&node_id);
+
+                if report.edges_created > 0 {
+                    println!("  ✓ Created {} automatic relationship(s)", report.edges_created);
+                }
+
+                if !report.suggestions.is_empty() {
+                    println!("  💡 {} medium-confidence suggestion(s) (use 'spec trace {}' to view)",
+                        report.suggestions.len(), &node_id[..8]);
+                }
+
+                if report.edges_created == 0 && report.suggestions.is_empty() {
+                    println!("  ℹ No relationships inferred (spec may be isolated)");
+                }
+            }
 
             // Save
             store.save(&graph)?;
 
-            if !no_infer {
-                println!("\n  Auto-relationship inference not yet supported in standalone mode");
-                println!("  Use server mode for advanced features");
-            }
-
             println!("\n✓ Specification added successfully");
-            println!("  To view all: spec list-nodes");
+            println!("  To view relationships: spec trace {}", &node_id[..8]);
         }
         Commands::Api(api_cmd) => {
             // Low-level graph API operations in standalone mode
