@@ -687,8 +687,17 @@ impl SpecGraph {
         let b_lower = content_b.to_lowercase();
 
         // Check for must/must not conflicts (only if concepts are related)
-        if (a_lower.contains("must") && !a_lower.contains("must not"))
-            && (b_lower.contains("must not") || b_lower.contains("forbidden"))
+        // Exclude specs that have both "must" and "must not" within the same text
+        // (e.g., "must maintain idempotency: ... must not create duplicates" - not contradictory)
+        let a_has_must = a_lower.contains("must") && !a_lower.contains("must not");
+        let b_has_must_not = b_lower.contains("must not") || b_lower.contains("forbidden");
+        let a_has_both = a_lower.contains("must") && a_lower.contains("must not");
+        let b_has_both = b_lower.contains("must") && b_lower.contains("must not");
+
+        if a_has_must
+            && b_has_must_not
+            && !a_has_both  // Exclude if A has both "must" and "must not"
+            && !b_has_both  // Exclude if B has both "must" and "must not"
             && Self::are_related_concepts(content_a, content_b)
         {
             return Some("Contradictory requirement: 'must' vs 'must not'".to_string());
