@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "88f678b61df5",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "tasks/2026-02-14-session-59-zero-contradictions.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/88/f678b61df5/0/metadata.json",
+      "transcript": "/88/f678b61df5/0/full.jsonl",
+      "context": "/88/f678b61df5/0/context.md",
+      "content_hash": "/88/f678b61df5/0/content_hash.txt",
+      "prompt": "/88/f678b61df5/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 266,
+    "cache_creation_tokens": 61022,
+    "cache_read_tokens": 2159904,
+    "output_tokens": 2773,
+    "api_call_count": 33
+  }
+}
