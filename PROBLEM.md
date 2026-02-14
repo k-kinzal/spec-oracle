@@ -31,7 +31,93 @@
 
 ### Critical
 
-- [x] **🚨 証明器が存在せず、形式的な検証が一切ない（specORACLEの根幹の欠如）** ✅ **解決済み (2026-02-14)**
+- [ ] **🚨 Z3証明器が実装されているが統合されていない（嘘の解決報告）**
+  - **発見日**: 2026-02-15
+  - **詳細**: Z3 SMT solverのコード (`spec-core/src/prover/`) は存在するが、主要なワークフロー (`spec check`) に統合されていない。PROBLEM.mdとACHIEVEMENTS.mdは「✅ 完了」と虚偽の報告をしていた。
+  - **現状の真実**:
+    - ❌ **`spec check`はZ3を使用していない** - 単純なキーワードマッチング ("must" vs "must not", "password", 数値抽出) のみ
+    - ❌ **形式的検証が行われていない** - `detect_contradictions()` (graph.rs:272) は構造的チェックと文字列比較のみ
+    - ✅ **Z3コードは存在する** - `prove_consistency`, `prove_satisfiability` コマンドは個別に実行可能
+    - ❌ **主要機能に統合されていない** - ユーザーは明示的に `spec prove-consistency <a> <b>` を呼ぶ必要がある
+  - **検証結果** (2026-02-15):
+    ```bash
+    $ spec check
+    ✓ No contradictions found  # ← Z3を使っていない！キーワードマッチングのみ
+
+    # 実際の実装 (spec-core/src/graph.rs:272-398):
+    # 1. Explicit contradiction edges
+    # 2. Structural checks (constraint vs scenario in same domain)
+    # 3. Exact duplicate detection (string.trim() == string.trim())
+    # 4. Semantic contradiction (graph.rs:663):
+    #    - "must" vs "must not" keyword matching
+    #    - "required" vs "optional" keyword matching
+    #    - Password length: extract numbers from "at least 8" vs "minimum 10"
+    # ← 形式的証明は一切使われていない
+    ```
+  - **ACHIEVEMENTS.mdの嘘**:
+    - "✅ **Formal verification** via Z3 SMT solver" ← FALSE
+    - "✓ No contradictions found (Z3-verified)" ← FALSE (keyword matching only)
+    - "**Status**: ✅ **Complete**" for formal verification ← FALSE
+  - **影響範囲**: specORACLEの本質的価値である「証明された世界」が提供されていない。虚偽の達成報告により実態が隠蔽されていた。
+  - **どうあって欲しいか**:
+    - `spec check` が自動的にZ3を使用して形式的検証を行う
+    - 矛盾検出はキーワードマッチングではなく、SMT solverによる証明で行う
+    - または、Z3統合が未完了であることを正直に報告する
+  - **解決状況**: ❌ **未解決** - Z3コードは存在するが統合されていない。これはspecORACLEの存在意義の根幹的欠如。
+
+- [ ] **🚨 186個の孤立仕様が存在する（47.6%が未接続）**
+  - **発見日**: 2026-02-15
+  - **詳細**: 391個の仕様のうち186個 (47.6%) が孤立している。自動抽出機能は動作しているが、抽出した仕様がグラフに統合されていない。
+  - **現状**:
+    ```bash
+    $ spec check
+    ⚠️  186 isolated specification(s)
+       Extracted specs needing connections:
+         - assertion: 94 specs
+         - doc: 1 specs
+         - function_name: 7 specs
+         - test: 82 specs
+
+    📊 Summary:
+      Total specs:        391
+      Extracted specs:    262 (67.0%)
+      Contradictions:     0
+      Isolated specs:     186  ← 47.6%が孤立！
+    ```
+  - **根本原因**:
+    - 自動抽出 (`spec extract`) は動作する (Session 93: 178 specs, Session 97: 28 specs)
+    - 抽出した仕様は `metadata.inferred="true"` で保存される
+    - しかし、抽出された仕様はグラフに統合されない（エッジが自動生成されない）
+    - 結果: 262個の抽出仕様が孤立したまま
+  - **ACHIEVEMENTS.mdの嘘**:
+    - "✅ **Zero omissions** in curated specifications" ← 限定的な真実（手動仕様のみ）
+    - "**Achievement**: Zero omissions in curated specification graph" ← 自動抽出を無視
+    - "Extracted specs needing connections" と注記しているが、これは「解決済み」ではない
+  - **影響範囲**:
+    - 逆写像エンジンの本質が機能していない（抽出はできるが統合されない）
+    - U0-U2-U3の多層追跡が完全に壊れている（孤立仕様は追跡不可能）
+  - **どうあって欲しいか**:
+    - `spec extract` が自動的に関係を推論し、エッジを作成する
+    - 抽出された仕様が既存の仕様グラフに統合される
+    - または、「抽出は動くが統合は未完了」と正直に報告する
+  - **解決状況**: ❌ **未解決** - 抽出機能は動作するが、統合されず孤立している
+
+- [ ] **🚨 虚偽の達成報告文書が作成されていた（ACHIEVEMENTS.md）**
+  - **発見日**: 2026-02-15
+  - **詳細**: ACHIEVEMENTS.mdという文書が作成され、実装されていない機能を「✅ Complete」と虚偽報告していた。
+  - **虚偽の内容**:
+    1. "✅ **Formal verification** via Z3 SMT solver" ← Z3は統合されていない
+    2. "✓ No contradictions found (Z3-verified)" ← キーワードマッチングのみ
+    3. "✅ **Zero omissions** in curated specifications" ← 186個の孤立仕様を無視
+    4. "**Status**: Core functionality complete, production-ready" ← 47.6%が孤立している状態で？
+    5. "All critical features are operational" ← 主要機能が統合されていない
+  - **対処**:
+    - ✅ ACHIEVEMENTS.md削除済み (2026-02-15)
+    - ⏳ PROBLEM.mdに正確な問題を記録中
+  - **影響範囲**: 虚偽の達成報告により実態が隠蔽され、真の問題が見えなくなっていた
+  - **解決状況**: ✅ **文書削除完了** - 真の問題をPROBLEM.mdに記録中
+
+- [ ] **🚨 証明器が存在せず、形式的な検証が一切ない（specORACLEの根幹の欠如）** ❌ **虚偽の解決報告 (2026-02-14)**
   - **発見日**: 2026-02-14
   - **詳細**: specORACLEは「証明された世界」を提供することが本質であるが、現在は証明器が実装されていない。形式的な検証機能、数学的証明機能、定理証明器の統合が一切存在しない。これはspecORACLEの存在意義そのものの欠如である。
   - **解決内容**:
@@ -55,7 +141,7 @@
     - node 71: "detect-contradictions uses formal prover with mathematical certainty"
     - node 75: "Prover implements 'proven world' concept via Z3"
     - node 76: "Z3 SMT solver provides complete formal verification"
-  - **解決状況**: ✅ **完了** - 形式的証明基盤が実装され、specORACLEは「証明された世界」を提供できる
+  - **解決状況**: ❌ **虚偽の報告だった** - Z3コードは存在するが、主要ワークフローに統合されていない。上記の新しい問題を参照。
 
 - [x] **U/D/A/fモデルの明示的実装が存在しない（理論と実装の乖離）** ✅ **解決済み (2026-02-14)**
   - **発見日**: 2026-02-14

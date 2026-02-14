@@ -32,8 +32,11 @@ least-upper-bound characterization of $U0$, monotonic growth under layer-set ext
 a layer-transfer theorem under relation-preserving assumptions,
 an inter-layer composition law for induced inverse images,
 an extraction-adequacy transfer theorem, and contradiction/consistency duality.
+We further report an external case study on real OSS artifacts
+(PostgreSQL, zlib, SQLite) using an automated constraint-extraction pipeline.
 The contribution is a mechanically checked core semantics for U0 construction,
 not full semantic adequacy of the whole UAD/f methodology.
+The external study is limited to numeric-bound constraints (not full structural or temporal semantics).
 \end{abstract}
 
 \section{Problem Statement and Research Questions}
@@ -45,13 +48,14 @@ This paper asks:
 \item[\textbf{RQ2}] Can admissible-vs-domain constraints be lifted to the root level?
 \item[\textbf{RQ3}] Is root construction monotone under layer-set extension?
 \item[\textbf{RQ4}] Can a general extraction relation be connected to induced inverse images, and can that theorem be instantiated to a concrete decision rule?
+\item[\textbf{RQ5}] Can constraints extracted from real OSS requirement/API/code artifacts be handled consistently in this model?
 \end{enumerate}
 \noindent
 UAD/f is treated as a self-contained model in this paper: all required entities
 ($\Omega, I, \beta_i, D_i, A_i, \mathrm{proj}_i$) are fully specified in text and Lean code.
 \noindent
 Paper type: this is a mechanization-oriented original article.
-Claims are restricted to formal coherence of the typed UAD/f core and reusable machine-checked lemmas, not external effectiveness on real industrial repositories.
+Claims are centered on formal coherence of the typed UAD/f core and reusable machine-checked lemmas; external evidence is limited to a small three-project OSS case study (not broad industrial effectiveness).
 
 \section{Typed UAD/f Core}
 \begin{definition}[Typed model]
@@ -225,6 +229,7 @@ Current footprint:
 \item The composition theorem relies on case-splitting over \texttt{Option.bind} (\texttt{some}/\texttt{none}) and normalization under the commutation hypothesis.
 \item Predicate-as-set encoding (\texttt{SpecSet}) requires explicit membership/subset instances and repeated extensionality reasoning (\texttt{set\_ext}).
 \item Quantitatively, \texttt{preimage\_compose} contains two explicit case splits and four \texttt{calc} chains, while \texttt{lifted\_transfer} uses nested witness reconstruction across relation hypotheses.
+\item Theorem-level linkage: \texttt{preimage\_union} depends on dependent witness scoping, \texttt{lifted\_subset\_preimage\_domain} on explicit projection witnesses, and \texttt{preimage\_compose} on \texttt{Option.bind} normalization.
 \end{itemize}
 
 \paragraph{Synthetic consistency cross-check}
@@ -237,7 +242,27 @@ The key validation is agreement between the closed-form decision rule and brute-
 \item distribution indicator: contradiction ratio = 0.214478
 \end{itemize}
 \noindent
-We do not claim external validity from this synthetic check; real-project artifact evaluation is left as future work.
+This synthetic check validates implementation alignment only; external validity is evaluated separately in the next paragraph.
+
+\paragraph{External validation on real OSS artifacts}
+We add a real-artifact case study
+(\texttt{paper/case-study/real\_projects/external\_validation.py})
+that fetches official docs/source pages and extracts layer constraints:
+\begin{itemize}
+\item PostgreSQL identifier length (runtime preset / lexical doc / \texttt{NAMEDATALEN})
+\item zlib compression level (manual / Python API doc / \texttt{zlib.h} constants)
+\item SQLite page size (PRAGMA doc / file-format doc / \texttt{sqliteLimit.h})
+\end{itemize}
+Observed results (2026-02-14):
+\begin{itemize}
+\item real projects: 3, consistent: 3, contradictory: 0
+\item mutation sensitivity test (forcing requirement lower bound above upper bound): 3/3 contradictions detected
+\end{itemize}
+This section is the main case-study evidence for external applicability at small scale.
+For RQ5, these values are the primary external-validity indicators:
+\texttt{n\_real\_projects=3}, \texttt{n\_real\_consistent=3}, mutation detection \texttt{3/3}.
+Their theoretical role is to instantiate Theorem 3 (domain-respecting lifting)
+and Theorem 4 (existence of domain-valid witnesses) on non-synthetic artifacts.
 
 \section{Related Work and Positioning}
 Our order-theoretic lemmas are compatible with classical abstract interpretation
@@ -247,6 +272,9 @@ In particular, our \texttt{preimage} operator is induced by
 $\mathrm{proj}:\Omega\to Option\,\beta_i$; because undefined points are explicit,
 embedding into a standard total-map Galois adjunction requires additional domain/totality assumptions.
 This difference is formalized by a mechanized non-adjunction theorem for undefined projection points.
+This is not an isolated fact: it justifies why U0 correctness arguments in this
+paper explicitly track witnesses (\texttt{proj\_i(x)=some(y)}) instead of relying on
+implicit adjunction-based transport.
 Institution-style semantic transport (Goguen \& Burstall, 1984) addresses
 language-independent satisfaction, whereas we focus on a concrete U0 operator.
 Our correspondence is: layer index set $I$ as signature-level indexing and
@@ -267,7 +295,7 @@ Not proven here:
 \begin{enumerate}[leftmargin=2em]
 \item faithfulness of concrete extractors to $\mathrm{proj}_i$,
 \item global completeness/soundness of end-to-end UAD/f workflows,
-\item external validity on real project artifact corpora (current check is synthetic).
+\item large-scale external validity (current real-artifact study covers three projects and numeric-bound constraints).
 \end{enumerate}
 
 \section{Conclusion}

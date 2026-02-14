@@ -1,0 +1,114 @@
+{
+  "date": "2026-02-14",
+  "n_real_projects": 3,
+  "n_real_consistent": 3,
+  "n_real_contradictory": 0,
+  "mutation_total": 3,
+  "mutation_detected": 3,
+  "real_results": [
+    {
+      "project": "PostgreSQL identifier length",
+      "consistent": true,
+      "intersection_lower": 1,
+      "intersection_upper": 63,
+      "artifacts": {
+        "name": "PostgreSQL identifier length",
+        "requirement": {
+          "lower": 1,
+          "upper": 63,
+          "source": "https://www.postgresql.org/docs/current/runtime-config-preset.html",
+          "note": "max_identifier_length is documented as 63 bytes by default."
+        },
+        "api": {
+          "lower": 1,
+          "upper": 63,
+          "source": "https://www.postgresql.org/docs/current/sql-syntax-lexical.html",
+          "note": "SQL lexical doc states maximum identifier length is 63 bytes by default."
+        },
+        "code": {
+          "lower": null,
+          "upper": 63,
+          "source": "https://raw.githubusercontent.com/postgres/postgres/master/src/include/pg_config_manual.h",
+          "note": "NAMEDATALEN=64 implies default identifier cap 63 bytes."
+        }
+      }
+    },
+    {
+      "project": "zlib compression level",
+      "consistent": true,
+      "intersection_lower": -1,
+      "intersection_upper": 9,
+      "artifacts": {
+        "name": "zlib compression level",
+        "requirement": {
+          "lower": -1,
+          "upper": 9,
+          "source": "https://www.zlib.net/manual.html",
+          "note": "manual: level is Z_DEFAULT_COMPRESSION or between 0 and 9."
+        },
+        "api": {
+          "lower": -1,
+          "upper": 9,
+          "source": "https://docs.python.org/3/library/zlib.html",
+          "note": "python zlib API: integer from 0 to 9 or -1."
+        },
+        "code": {
+          "lower": -1,
+          "upper": 9,
+          "source": "https://raw.githubusercontent.com/madler/zlib/master/zlib.h",
+          "note": "zlib.h constants define supported range endpoints."
+        }
+      }
+    },
+    {
+      "project": "SQLite page size",
+      "consistent": true,
+      "intersection_lower": 512,
+      "intersection_upper": 65536,
+      "artifacts": {
+        "name": "SQLite page size",
+        "requirement": {
+          "lower": 512,
+          "upper": 65536,
+          "source": "https://www.sqlite.org/pragma.html#pragma_page_size",
+          "note": "PRAGMA page_size: power of two between 512 and 65536 inclusive."
+        },
+        "api": {
+          "lower": 512,
+          "upper": 65536,
+          "source": "https://www.sqlite.org/fileformat.html",
+          "note": "file format doc states same page-size range."
+        },
+        "code": {
+          "lower": null,
+          "upper": 65536,
+          "source": "https://www.sqlite.org/src/doc/tip/src/sqliteLimit.h",
+          "note": "sqliteLimit.h: SQLITE_MAX_PAGE_SIZE=65536, SQLITE_DEFAULT_PAGE_SIZE=4096."
+        }
+      }
+    }
+  ],
+  "mutation_results": [
+    {
+      "project": "PostgreSQL identifier length",
+      "expected_contradictory": true,
+      "detected_contradictory": true,
+      "mutated_intersection_lower": 64,
+      "mutated_intersection_upper": 63
+    },
+    {
+      "project": "zlib compression level",
+      "expected_contradictory": true,
+      "detected_contradictory": true,
+      "mutated_intersection_lower": 10,
+      "mutated_intersection_upper": 9
+    },
+    {
+      "project": "SQLite page size",
+      "expected_contradictory": true,
+      "detected_contradictory": true,
+      "mutated_intersection_lower": 65537,
+      "mutated_intersection_upper": 65536
+    }
+  ]
+}
