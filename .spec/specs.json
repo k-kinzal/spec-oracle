@@ -154,8 +154,8 @@
         "kind": "Assertion",
         "metadata": {
           "line": "171-181",
-          "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2"
+          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -167,8 +167,8 @@
         "kind": "Assertion",
         "metadata": {
           "function": "detect_contradictions",
-          "formality_layer": "U3",
-          "source_file": "spec-core/src/graph.rs"
+          "source_file": "spec-core/src/graph.rs",
+          "formality_layer": "U3"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -197,9 +197,9 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
           "line": "183-192",
-          "formality_layer": "U2"
+          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -211,8 +211,8 @@
         "kind": "Assertion",
         "metadata": {
           "function": "detect_omissions",
-          "formality_layer": "U3",
-          "source_file": "spec-core/src/graph.rs"
+          "source_file": "spec-core/src/graph.rs",
+          "formality_layer": "U3"
         },
         "created_at": 1771061597,
         "modified_at": 1771061597,
@@ -233,8 +233,8 @@
         "kind": "Assertion",
         "metadata": {
           "source_file": "proto/spec_oracle.proto",
-          "line": "7,105-113",
-          "formality_layer": "U2"
+          "formality_layer": "U2",
+          "line": "7,105-113"
         },
         "created_at": 1771061822,
         "modified_at": 1771061822,
@@ -245,9 +245,9 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Add",
-          "formality_layer": "U3"
+          "function": "Commands::Add"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -259,8 +259,8 @@
         "kind": "Assertion",
         "metadata": {
           "formality_layer": "U2",
-          "source_file": "proto/spec_oracle.proto",
-          "line": "19-20"
+          "line": "19-20",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -271,9 +271,9 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
-          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Check"
+          "function": "Commands::Check",
+          "formality_layer": "U3"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -310,9 +310,9 @@
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
           "source_file": "proto/spec_oracle.proto",
-          "line": "14,148-153"
+          "line": "14,148-153",
+          "formality_layer": "U2"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -323,9 +323,9 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "spec-cli/src/main.rs",
           "formality_layer": "U3",
-          "function": "Commands::Trace",
-          "source_file": "spec-cli/src/main.rs"
+          "function": "Commands::Trace"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -877,10 +877,10 @@
         "content": "Session 57 verified goal achievement through comprehensive implementation audit: prover module with Z3 SMT solver integration (spec-core/src/prover/), complete U/D/A/f model implementation (spec-core/src/udaf.rs), and beyond-DSL paradigm realization. All three critical PROBLEM.md issues resolved. The project goal 'create an open-source specification description tool for a new era' is confirmed achieved.",
         "kind": "Assertion",
         "metadata": {
-          "session": "57",
-          "date": "2026-02-14",
           "resolved_issues": "3 critical",
-          "verified_modules": "prover, udaf"
+          "verified_modules": "prover, udaf",
+          "session": "57",
+          "date": "2026-02-14"
         },
         "created_at": 1771070800,
         "modified_at": 1771070800,
@@ -929,6 +929,15 @@
         "metadata": {},
         "created_at": 1771071747,
         "modified_at": 1771071747,
+        "formality_layer": 0
+      },
+      {
+        "id": "f4d22f85-d4f6-4234-9657-13e0e661dc10",
+        "content": "The summary command provides an overview of specifications with statistics by kind, layer, edge count, and health metrics",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771072218,
+        "modified_at": 1771072218,
         "formality_layer": 0
       }
     ],

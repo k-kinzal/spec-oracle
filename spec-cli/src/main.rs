@@ -91,6 +91,8 @@ enum Commands {
     DetectOmissions,
     /// Check specifications for issues (contradictions and omissions)
     Check,
+    /// Display summary statistics of specifications
+    Summary,
     /// Find specifications by semantic search (high-level interface)
     Find {
         /// Search query in natural language
@@ -753,6 +755,83 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                     println!("     B: [{}] {}", &contradiction.node_b.id[..8], contradiction.node_b.content);
                 }
                 std::process::exit(1);
+            }
+        }
+        Commands::Summary => {
+            let graph = store.load()?;
+
+            // Collect statistics
+            let nodes = graph.list_nodes(None);
+            let total = nodes.len();
+
+            // Count by kind
+            let mut by_kind = HashMap::new();
+            for node in &nodes {
+                *by_kind.entry(node.kind).or_insert(0) += 1;
+            }
+
+            // Count by layer
+            let mut by_layer = HashMap::new();
+            for node in &nodes {
+                let layer = parse_formality_layer(&node.metadata, node.formality_layer);
+                *by_layer.entry(layer).or_insert(0) += 1;
+            }
+
+            // Count edges
+            let all_edges = graph.list_edges(None);
+            let total_edges = all_edges.len();
+
+            // Health metrics
+            let contradictions = graph.detect_contradictions();
+            let isolated = graph.detect_omissions();
+
+            // Display summary
+            println!("📊 Specification Summary\n");
+            println!("Total Specifications: {}", total);
+            println!();
+
+            println!("By Kind:");
+            for (kind, count) in &by_kind {
+                let kind_str = match kind {
+                    CoreNodeKind::Assertion => "  Assertions",
+                    CoreNodeKind::Constraint => "  Constraints",
+                    CoreNodeKind::Scenario => "  Scenarios",
+                    CoreNodeKind::Definition => "  Definitions",
+                    CoreNodeKind::Domain => "  Domains",
+                };
+                println!("{}: {}", kind_str, count);
+            }
+            println!();
+
+            println!("By Formality Layer:");
+            let mut sorted_layers: Vec<_> = by_layer.iter().collect();
+            sorted_layers.sort_by_key(|(k, _)| *k);
+            for (layer, count) in sorted_layers {
+                println!("  U{}: {}", layer, count);
+            }
+            println!();
+
+            println!("Relationships: {} edges", total_edges);
+            println!();
+
+            println!("Health:");
+            if contradictions.is_empty() {
+                println!("  ✓ No contradictions");
+            } else {
+                println!("  ⚠️  {} contradiction(s)", contradictions.len());
+            }
+            if isolated.is_empty() {
+                println!("  ✓ No isolated specs");
+            } else {
+                println!("  ⚠️  {} isolated spec(s)", isolated.len());
+            }
+
+            if contradictions.is_empty() && isolated.is_empty() {
+                println!("\n✅ Specifications are healthy!");
+            } else if !contradictions.is_empty() {
+                println!("\n❌ Critical issues found. Run 'spec check' for details.");
+            } else {
+                println!("\n⚠️  Minor issues. Run 'spec check' for details.");
             }
         }
         Commands::Find { query, layer, max } => {
@@ -1824,6 +1903,99 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("     A: [{}] {}", a.id, a.content);
                     println!("     B: [{}] {}", b.id, b.content);
                 }
+            }
+        }
+        Commands::Summary => {
+            // Get all nodes
+            let nodes_resp = client
+                .list_nodes(Request::new(proto::ListNodesRequest {
+                    kind_filter: 0, // 0 means no filter
+                }))
+                .await?;
+            let nodes = nodes_resp.into_inner().nodes;
+            let total = nodes.len();
+
+            // Count by kind
+            let mut by_kind = HashMap::new();
+            for node in &nodes {
+                let kind = SpecNodeKind::try_from(node.kind).unwrap_or(SpecNodeKind::Assertion);
+                *by_kind.entry(kind).or_insert(0) += 1;
+            }
+
+            // Count by layer
+            let mut by_layer = HashMap::new();
+            for node in &nodes {
+                let layer = parse_formality_layer(&node.metadata, node.formality_layer as u8);
+                *by_layer.entry(layer).or_insert(0) += 1;
+            }
+
+            // Count edges
+            let edges_resp = client
+                .list_edges(Request::new(proto::ListEdgesRequest {
+                    node_id: String::new(), // Empty string to get all edges
+                }))
+                .await?;
+            let total_edges = edges_resp.into_inner().edges.len();
+
+            // Health metrics
+            let contra_resp = client
+                .detect_contradictions(Request::new(proto::DetectContradictionsRequest {}))
+                .await?;
+            let contradictions = contra_resp.into_inner().contradictions;
+
+            let omit_resp = client
+                .detect_omissions(Request::new(proto::DetectOmissionsRequest {}))
+                .await?;
+            let isolated = omit_resp.into_inner().omissions;
+
+            // Display summary
+            println!("📊 Specification Summary\n");
+            println!("Total Specifications: {}", total);
+            println!();
+
+            println!("By Kind:");
+            for (kind, count) in &by_kind {
+                let kind_str = match kind {
+                    SpecNodeKind::Assertion => "  Assertions",
+                    SpecNodeKind::Constraint => "  Constraints",
+                    SpecNodeKind::Scenario => "  Scenarios",
+                    SpecNodeKind::Definition => "  Definitions",
+                    SpecNodeKind::Domain => "  Domains",
+                    SpecNodeKind::Unspecified => "  Unspecified",
+                };
+                println!("{}: {}", kind_str, count);
+            }
+            println!();
+
+            println!("By Formality Layer:");
+            let mut sorted_layers: Vec<_> = by_layer.iter().collect();
+            sorted_layers.sort_by_key(|(k, _)| *k);
+            for (layer, count) in sorted_layers {
+                println!("  U{}: {}", layer, count);
+            }
+            println!();
+
+            println!("Relationships: {} edges", total_edges);
+            println!();
+
+            println!("Health:");
+            if contradictions.is_empty() {
+                println!("  ✓ No contradictions");
+            } else {
+                println!("  ⚠️  {} contradiction(s)", contradictions.len());
+            }
+            if isolated.is_empty() {
+                println!("  ✓ No isolated specs");
+            } else {
+                println!("  ⚠️  {} isolated spec(s)", isolated.len());
+            }
+
+            if contradictions.is_empty() && isolated.is_empty() {
+                println!("\n✅ Specifications are healthy!");
+            } else if !contradictions.is_empty() {
+                println!("\n❌ Critical issues found. Run 'spec check' for details.");
+            } else {
+                println!("\n⚠️  Minor issues. Run 'spec check' for details.");
             }
         }
         Commands::Find { query, layer, max } => {
