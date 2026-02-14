@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "87ed69adb3d5",
+  "session_id": "ccc92fab-a273-4d74-893e-5efa62f82596",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T10:07:19.302993Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "tasks/2026-02-14-session-44-complete-isolation-elimination.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 146,
+    "cache_creation_tokens": 64228,
+    "cache_read_tokens": 1153129,
+    "output_tokens": 7304,
+    "api_call_count": 18
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T10:07:19.194641Z",
+    "agent_lines": 292,
+    "human_added": 2106,
+    "human_modified": 2,
+    "human_removed": 0,
+    "total_committed": 2400,
+    "agent_percentage": 12.166666666666668
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/ccc92fab-a273-4d74-893e-5efa62f82596.jsonl"
+}
