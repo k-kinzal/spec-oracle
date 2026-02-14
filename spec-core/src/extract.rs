@@ -1477,6 +1477,101 @@ impl ArchitectureExtractor {
     }
 }
 
+/// Extract specifications from PHP test files (PHPUnit)
+///
+/// Supports PHPUnit tests with #[Test] attributes:
+/// ```php
+/// #[Test]
+/// public function fixtureReturnsArray(): void {
+///     // test body
+/// }
+/// ```
+pub struct PHPTestExtractor;
+
+impl PHPTestExtractor {
+    /// Extract specifications from PHP test file
+    pub fn extract(file_path: &Path) -> Result<Vec<InferredSpecification>, String> {
+        let content = std::fs::read_to_string(file_path)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+
+        let mut specs = Vec::new();
+        let file_name = file_path.to_string_lossy().to_string();
+
+        let mut has_test_attribute = false;
+        let mut test_start_line = 0;
+
+        for (line_num, line) in content.lines().enumerate() {
+            let trimmed = line.trim();
+
+            // Detect #[Test] attribute
+            if trimmed == "#[Test]" || trimmed.starts_with("#[Test") {
+                has_test_attribute = true;
+                test_start_line = line_num + 2; // Next line is function declaration
+            } else if has_test_attribute && trimmed.starts_with("public function ") {
+                // Extract test method name
+                if let Some(name) = Self::extract_test_method_name(trimmed) {
+                    // Convert camelCase to human-readable scenario
+                    let scenario_name = Self::convert_camel_case_to_readable(&name);
+
+                    specs.push(InferredSpecification {
+                        content: format!("Test scenario: {}", scenario_name),
+                        kind: NodeKind::Scenario,
+                        confidence: 0.85,
+                        source_file: file_name.clone(),
+                        source_line: test_start_line,
+                        formality_layer: 3, // U3 - Executable test
+                        metadata: HashMap::from([
+                            ("test_method".to_string(), name.clone()),
+                            ("extractor".to_string(), "php_test".to_string()),
+                            ("test_framework".to_string(), "phpunit".to_string()),
+                        ]),
+                    });
+                }
+                has_test_attribute = false;
+            }
+        }
+
+        Ok(specs)
+    }
+
+    /// Extract test method name from PHP function declaration
+    fn extract_test_method_name(line: &str) -> Option<String> {
+        // Match: public function testName(): void
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        for (i, part) in parts.iter().enumerate() {
+            if *part == "function" && i + 1 < parts.len() {
+                let name = parts[i + 1];
+                // Remove parentheses and return type
+                let name = name.split('(').next().unwrap_or(name);
+                return Some(name.to_string());
+            }
+        }
+        None
+    }
+
+    /// Convert camelCase to human-readable format
+    /// Example: "fixtureReturnsArray" → "fixture returns array"
+    fn convert_camel_case_to_readable(name: &str) -> String {
+        let mut result = String::new();
+        let mut prev_lowercase = false;
+
+        for ch in name.chars() {
+            if ch.is_uppercase() {
+                if prev_lowercase {
+                    result.push(' ');
+                }
+                result.push(ch.to_ascii_lowercase());
+                prev_lowercase = false;
+            } else {
+                result.push(ch);
+                prev_lowercase = true;
+            }
+        }
+
+        result
+    }
+}
+
 #[cfg(test)]
 mod proto_extractor_tests {
     use super::*;
