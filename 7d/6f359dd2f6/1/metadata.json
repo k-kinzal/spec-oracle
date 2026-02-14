@@ -1,11 +1,12 @@
 {
   "cli_version": "0.4.4",
   "checkpoint_id": "7d6f359dd2f6",
+  "session_id": "d7f27e47-ef4b-48e7-aa57-67ce62ed9df0",
   "strategy": "manual-commit",
+  "created_at": "2026-02-14T14:34:27.167311Z",
   "branch": "main",
-  "checkpoints_count": 2,
+  "checkpoints_count": 1,
   "files_touched": [
-    ".claude/claude-loop.state.json",
     "paper/lean/.lake/build/bin/uadf_u0_paper",
     "paper/lean/.lake/build/bin/uadf_u0_paper.hash",
     "paper/lean/.lake/build/bin/uadf_u0_paper.trace",
@@ -120,37 +121,26 @@
     "paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/Minimality.trace",
     "paper/lean/UadfU0/Examples/TransferExample.lean",
     "paper/lean/UadfU0/InterLayer/Transfer.lean",
-    "paper/manuscript/uadf_u0_spec_proof.tex",
-    "paper/reviews/professor_review_round1.md",
-    "paper/reviews/professor_review_round2.md",
     "paper/reviews/revision_after_user_critique.md",
-    "scripts/connect_u0_u3.py",
-    "spec-cli/src/main.rs",
-    "tasks/2026-02-14-session-94-connect-extracted-specs.md",
     "tasks/2026-02-14-session-95-proto-extraction-and-connections.md",
     "tasks/SESSION-95-SUMMARY.md"
   ],
-  "sessions": [
-    {
-      "metadata": "/7d/6f359dd2f6/0/metadata.json",
-      "transcript": "/7d/6f359dd2f6/0/full.jsonl",
-      "context": "/7d/6f359dd2f6/0/context.md",
-      "content_hash": "/7d/6f359dd2f6/0/content_hash.txt",
-      "prompt": "/7d/6f359dd2f6/0/prompt.txt"
-    },
-    {
-      "metadata": "/7d/6f359dd2f6/1/metadata.json",
-      "transcript": "/7d/6f359dd2f6/1/full.jsonl",
-      "context": "/7d/6f359dd2f6/1/context.md",
-      "content_hash": "/7d/6f359dd2f6/1/content_hash.txt",
-      "prompt": "/7d/6f359dd2f6/1/prompt.txt"
-    }
-  ],
+  "agent": "Claude Code",
   "token_usage": {
-    "input_tokens": 636,
-    "cache_creation_tokens": 167100,
-    "cache_read_tokens": 6207711,
-    "output_tokens": 16785,
-    "api_call_count": 79
-  }
+    "input_tokens": 274,
+    "cache_creation_tokens": 71594,
+    "cache_read_tokens": 2426006,
+    "output_tokens": 5975,
+    "api_call_count": 34
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T14:34:27.080307Z",
+    "agent_lines": 2754,
+    "human_added": 4744,
+    "human_modified": 152,
+    "human_removed": 0,
+    "total_committed": 7650,
+    "agent_percentage": 36
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/d7f27e47-ef4b-48e7-aa57-67ce62ed9df0.jsonl"
 }
