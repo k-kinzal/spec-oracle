@@ -318,7 +318,7 @@
       },
       {
         "id": "fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2",
-        "content": "All high-priority features now have complete U0→U2→U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
+        "content": "All high-priority features now have complete U0\u2192U2\u2192U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771062281,
@@ -426,7 +426,7 @@
       },
       {
         "id": "8772404d-59f0-44da-970c-9347eceaaf42",
-        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)",
+        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f\u2080\u2081\u207b\u00b9(U1) \u222a f\u2080\u2082\u207b\u00b9(U2) \u222a ... \u222a f\u2080\u2099\u207b\u00b9(UN)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771064470,
@@ -579,7 +579,7 @@
       },
       {
         "id": "ac7787f6-2eaf-46a0-bc5b-7017d3282886",
-        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)",
+        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: \u2203x. (x \u2208 A1 \u2227 x \u2208 A2)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -588,7 +588,7 @@
       },
       {
         "id": "0154a181-1962-4aa1-aee2-236d2078caf6",
-        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: ∃x. x ∈ A",
+        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: \u2203x. x \u2208 A",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -624,7 +624,7 @@
       },
       {
         "id": "239316dd-4d2e-4ab2-b172-5fdd015fb5e1",
-        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (∃x. x ∈ A)",
+        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (\u2203x. x \u2208 A)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771066871,
@@ -822,7 +822,7 @@
       },
       {
         "id": "d79603df-d239-4d3f-af09-868ed2935374",
-        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings—transcending the fundamental DSL limitation identified in conversation.md",
+        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings\u2014transcending the fundamental DSL limitation identified in conversation.md",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070409,
@@ -831,7 +831,7 @@
       },
       {
         "id": "ce999406-30cc-424e-8bac-8efe06025a3f",
-        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations—representing the first practical realization of the beyond-DSL specification paradigm",
+        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations\u2014representing the first practical realization of the beyond-DSL specification paradigm",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070419,
@@ -1133,7 +1133,7 @@
       },
       {
         "id": "19d08ce6-8cba-4713-9999-a26d373ce7fa",
-        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f₀₂ transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
+        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f\u2080\u2082 transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771073305,
@@ -2019,7 +2019,7 @@
       },
       {
         "id": "ac78bcec-f784-49aa-a201-30f4641fdc16",
-        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f₀₃⁻¹(U3) = f₀₃⁻¹(f₀₃⁻¹(U3)) for the reverse mapping function.",
+        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f\u2080\u2083\u207b\u00b9(U3) = f\u2080\u2083\u207b\u00b9(f\u2080\u2083\u207b\u00b9(U3)) for the reverse mapping function.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771087179,
@@ -2046,7 +2046,7 @@
       },
       {
         "id": "98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5",
-        "content": "Cross-layer edge inference uses layer-aware similarity threshold: 0.15 for cross-layer connections (U0↔U2, U0↔U3), 0.3 for same-layer connections. This enables automatic U0-U2-U3 relationship creation for the reverse mapping engine.",
+        "content": "Cross-layer edge inference uses layer-aware similarity threshold: 0.15 for cross-layer connections (U0\u2194U2, U0\u2194U3), 0.3 for same-layer connections. This enables automatic U0-U2-U3 relationship creation for the reverse mapping engine.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771088204,
@@ -2139,7 +2139,7 @@
       },
       {
         "id": "e33e97b5-f089-4146-b8c1-4d3a9a97f613",
-        "content": "The reverse mapping engine is verified as functional: f₀₁⁻¹(U1) extracts from documentation, f₀₂⁻¹(U2) extracts from proto, f₀₃⁻¹(U3) extracts from code, Z3 formal verification detects contradictions with mathematical proof, and idempotent extraction prevents duplicates",
+        "content": "The reverse mapping engine is verified as functional: f\u2080\u2081\u207b\u00b9(U1) extracts from documentation, f\u2080\u2082\u207b\u00b9(U2) extracts from proto, f\u2080\u2083\u207b\u00b9(U3) extracts from code, Z3 formal verification detects contradictions with mathematical proof, and idempotent extraction prevents duplicates",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771093376,
@@ -2189,7 +2189,7 @@
       },
       {
         "id": "69af9728-29c3-4294-ba84-78799a10cad6",
-        "content": "- \"must be\" / \"must not be\" → boolean constraints",
+        "content": "- \"must be\" / \"must not be\" \u2192 boolean constraints",
         "kind": "Constraint",
         "metadata": {
           "doc_comment": "true",
@@ -2495,7 +2495,7 @@
       },
       {
         "id": "b549f3a8-d094-4f57-b67e-6048b3a09704",
-        "content": "The extraction engine must use AI to extract intent from test functions, generating U0 root specifications through reverse mapping f₀₃⁻¹",
+        "content": "The extraction engine must use AI to extract intent from test functions, generating U0 root specifications through reverse mapping f\u2080\u2083\u207b\u00b9",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771094270,
@@ -2570,261 +2570,6 @@
         "created_at": 1771095538,
         "modified_at": 1771095538,
         "formality_layer": 0
-      },
-      {
-        "id": "8d6092ee-9cc6-4938-b2ba-26ff0b2748a4",
-        "content": "spec add \"Password must be at least 8 characters\"",
-        "kind": "Definition",
-        "metadata": {
-          "example_source": "PROBLEM.md documentation",
-          "confidence": "0.85",
-          "inferred": "true",
-          "source_line": "45",
-          "extractor": "documentation",
-          "source_file": "README.md",
-          "is_example": "true"
-        },
-        "created_at": 1771095538,
-        "modified_at": 1771095538,
-        "formality_layer": 0
-      },
-      {
-        "id": "c6ef9c10-7754-4033-962b-a7b06f3d3e27",
-        "content": "How it works: The CLI automatically detects `.spec/` directory and runs in standalone mode (direct file access, no server required). For advanced features (AI inference, watch mode), server mode is available.",
-        "kind": "Constraint",
-        "metadata": {
-          "source_file": "README.md",
-          "source_line": "68",
-          "extractor": "documentation",
-          "inferred": "true",
-          "confidence": "0.85"
-        },
-        "created_at": 1771095538,
-        "modified_at": 1771095538,
-        "formality_layer": 0
-      },
-      {
-        "id": "8b0339ee-c27d-4401-b76e-a1a9b0c0a775",
-        "content": "cargo run --bin spec -- add-node \"Passwords must be >= 8 chars\" --kind constraint",
-        "kind": "Definition",
-        "metadata": {
-          "source_line": "89",
-          "extractor": "documentation",
-          "source_file": "README.md",
-          "is_example": "true",
-          "confidence": "0.85",
-          "inferred": "true",
-          "example_source": "PROBLEM.md documentation"
-        },
-        "created_at": 1771095538,
-        "modified_at": 1771095538,
-        "formality_layer": 0
-      },
-      {
-        "id": "b65f4b11-5cfe-4296-86c2-f4b313ab4699",
-        "content": "cargo run --bin spec -- add-edge <constraint-id> <domain-id> --kind refines",
-        "kind": "Definition",
-        "metadata": {
-          "confidence": "0.85",
-          "source_line": "92",
-          "source_file": "README.md",
-          "inferred": "true",
-          "is_example": "true",
-          "example_source": "command example or explanation",
-          "extractor": "documentation"
-        },
-        "created_at": 1771095538,
-        "modified_at": 1771095538,
-        "formality_layer": 0
-      },
-      {
-        "id": "5be3ec05-c9f6-4dc7-87b3-318acbc2253a",
-        "content": "Breakthrough feature: Specifications automatically stay synchronized with code evolution - no manual intervention required.",
-        "kind": "Constraint",
-        "metadata": {
-          "source_file": "README.md",
-          "inferred": "true",
-          "confidence": "0.85",
-          "extractor": "documentation",
-          "source_line": "150"
-        },
-        "created_at": 1771095538,
-        "modified_at": 1771095538,
-        "formality_layer": 0
-      },
-      {
-        "id": "4eb3510e-fdb6-4b5f-a3c8-05a4fa5bee1c",
-        "content": "/// Password must be at least 8 characters",
-        "kind": "Definition",
-        "metadata": {
-          "is_example": "true",
-          "source_file": "README.md",
-          "example_source": "PROBLEM.md documentation",
-          "extractor": "documentation",
-          "source_line": "158",
-          "confidence": "0.85",
-          "inferred": "true"
-        },
-        "created_at": 1771095538,
-        "modified_at": 1771095538,
-        "formality_layer": 0
-      },
-      {
-        "id": "509cfe9a-2857-48e1-bf47-05d672c918b8",
-        "content": "Impact: Can reduce 600+ isolated specifications down to ~100-200 by recognizing cross-layer equivalences that simple text matching cannot detect.",
-        "kind": "Assertion",
-        "metadata": {
-          "confidence": "0.75",
-          "source_line": "186",
-          "inferred": "true",
-          "source_file": "README.md",
-          "extractor": "documentation"
-        },
-        "created_at": 1771095538,
-        "modified_at": 1771095538,
-        "formality_layer": 0
-      },
-      {
-        "id": "d2dde5c6-8013-44d9-82ce-b6e355666dfd",
-        "content": "constraint: Universal invariant",
-        "kind": "Definition",
-        "metadata": {
-          "example_source": "command example or explanation",
-          "confidence": "0.85",
-          "is_example": "true",
-          "inferred": "true",
-          "source_line": "232",
-          "extractor": "documentation",
-          "source_file": "README.md"
-        },
-        "created_at": 1771095538,
-        "modified_at": 1771095538,
-        "formality_layer": 0
-      },
-      {
-        "id": "0955b543-fff8-4d89-b52f-a81ff590659f",
-        "content": "scenario: Existential requirement (required path)",
-        "kind": "Definition",
-        "metadata": {
-          "confidence": "0.85",
-          "extractor": "documentation",
-          "source_line": "233",
-          "source_file": "README.md",
-          "inferred": "true",
-          "is_example": "true",
-          "example_source": "command example or explanation"
-        },
-        "created_at": 1771095538,
-        "modified_at": 1771095538,
-        "formality_layer": 0
-      },
-      {
-        "id": "b1a7c55d-872c-47e3-b091-57160224add6",
-        "content": "Invariant: fetched.content, \"User must authenticate\"",
-        "kind": "Definition",
-        "metadata": {
-          "inferred": "true",
-          "confidence": "0.95",
-          "source_file": "spec-core/src/graph.rs",
-          "is_example": "true",
-          "assertion": "fetched.content, \"User must authenticate\"",
-          "source_line": "1784",
-          "extractor": "assertion",
-          "example_source": "extractor test code"
-        },
-        "created_at": 1771095766,
-        "modified_at": 1771095766,
-        "formality_layer": 3
-      },
-      {
-        "id": "27a1f536-812c-4cdf-a043-519cd8a2fb06",
-        "content": "Invariant: user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-        "kind": "Definition",
-        "metadata": {
-          "confidence": "0.95",
-          "example_source": "extractor test code",
-          "extractor": "assertion",
-          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-          "inferred": "true",
-          "source_line": "2038",
-          "is_example": "true",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771095766,
-        "modified_at": 1771095766,
-        "formality_layer": 3
-      },
-      {
-        "id": "d200ae00-5306-454c-b1ec-e2076327b059",
-        "content": "- \"Password must be >= 8 chars\" (natural language)",
-        "kind": "Definition",
-        "metadata": {
-          "source_file": "spec-core/src/ai_semantic.rs",
-          "doc_comment": "true",
-          "extractor": "doc",
-          "example_source": "PROBLEM.md documentation",
-          "is_example": "true",
-          "confidence": "0.8",
-          "source_line": "5",
-          "inferred": "true"
-        },
-        "created_at": 1771095766,
-        "modified_at": 1771095766,
-        "formality_layer": 0
-      },
-      {
-        "id": "82c6e40c-30ed-484c-be17-28d10970fea8",
-        "content": "Invariant: user.is_authenticated()",
-        "kind": "Definition",
-        "metadata": {
-          "assertion": "user.is_authenticated()",
-          "example_source": "extractor test code",
-          "confidence": "0.95",
-          "is_example": "true",
-          "source_file": "spec-core/src/extract.rs",
-          "extractor": "assertion",
-          "source_line": "1074",
-          "inferred": "true"
-        },
-        "created_at": 1771095766,
-        "modified_at": 1771095766,
-        "formality_layer": 3
-      },
-      {
-        "id": "c838d6b7-1bba-4cff-b9ed-0ccd0d59ecca",
-        "content": "Scenario: extract intent from test with ai",
-        "kind": "Definition",
-        "metadata": {
-          "confidence": "0.9",
-          "extractor": "test",
-          "is_example": "true",
-          "example_source": "extractor test code",
-          "source_file": "spec-core/src/extract.rs",
-          "test_function": "extract_intent_from_test_with_ai",
-          "source_line": "806",
-          "inferred": "true"
-        },
-        "created_at": 1771095766,
-        "modified_at": 1771095766,
-        "formality_layer": 3
-      },
-      {
-        "id": "b43a2ac9-88c3-4122-85e4-1e02592cfdfa",
-        "content": "Violation: Amount must be greater than zero",
-        "kind": "Definition",
-        "metadata": {
-          "source_file": "spec-core/src/extract.rs",
-          "extractor": "panic",
-          "inferred": "true",
-          "is_example": "true",
-          "confidence": "0.85",
-          "source_line": "1086",
-          "panic": "Amount must be greater than zero",
-          "example_source": "extractor test code"
-        },
-        "created_at": 1771095766,
-        "modified_at": 1771095766,
-        "formality_layer": 3
       },
       {
         "id": "9d92e2df-3f34-4c68-9f28-de054a4aaffa",
@@ -5701,45 +5446,6 @@
         }
       ],
       [
-        223,
-        8,
-        {
-          "id": "readme-223-8",
-          "kind": "DerivesFrom",
-          "metadata": {
-            "reason": "README documentation of existing feature",
-            "confidence": "0.95"
-          },
-          "created_at": 1771090000
-        }
-      ],
-      [
-        226,
-        189,
-        {
-          "id": "readme-226-189",
-          "kind": "DerivesFrom",
-          "metadata": {
-            "confidence": "0.8",
-            "reason": "README documentation of existing feature"
-          },
-          "created_at": 1771090000
-        }
-      ],
-      [
-        228,
-        121,
-        {
-          "id": "readme-228-121",
-          "kind": "DerivesFrom",
-          "metadata": {
-            "reason": "README documentation of existing feature",
-            "confidence": "0.8"
-          },
-          "created_at": 1771090000
-        }
-      ],
-      [
         221,
         180,
         {
@@ -5750,6 +5456,42 @@
             "confidence": "0.90"
           },
           "created_at": 1771090100
+        }
+      ],
+      [
+        222,
+        2,
+        {
+          "id": "meta-self-verify-refines-contradiction",
+          "kind": "Refines",
+          "metadata": {
+            "reason": "Self-verification is a specific application of contradiction detection"
+          },
+          "created_at": 1771098670
+        }
+      ],
+      [
+        223,
+        186,
+        {
+          "id": "meta-cli-violation-contradicts-separation",
+          "kind": "Contradicts",
+          "metadata": {
+            "reason": "U3 (actual CLI structure) contradicts U0 (separation requirement)"
+          },
+          "created_at": 1771098670
+        }
+      ],
+      [
+        224,
+        2,
+        {
+          "id": "meta-essence-refines-contradiction",
+          "kind": "Refines",
+          "metadata": {
+            "reason": "Defines the essence of governance as U3/U0 contradiction detection"
+          },
+          "created_at": 1771098670
         }
       ]
     ]
