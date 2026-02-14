@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "6e33d42574cf",
+  "session_id": "d4551022-b586-4a22-aecd-ff14fc53a114",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T08:44:31.830525Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/claude-loop.state.json",
+    "PROBLEM.md",
+    "spec-core/src/graph.rs",
+    "tasks/2026-02-14-semantic-contradiction-false-positives.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 418,
+    "cache_creation_tokens": 77668,
+    "cache_read_tokens": 3088539,
+    "output_tokens": 4782,
+    "api_call_count": 52
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T08:44:31.404327Z",
+    "agent_lines": 44,
+    "human_added": 1567,
+    "human_modified": 50,
+    "human_removed": 0,
+    "total_committed": 1659,
+    "agent_percentage": 2.652200120554551
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/d4551022-b586-4a22-aecd-ff14fc53a114.jsonl"
+}
