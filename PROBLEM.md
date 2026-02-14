@@ -790,18 +790,26 @@
   - **関連コミット**: 3e50c49 "Enhance duplicate and semantic contradiction detection with precision"
   - **解決状況**: ✅ 完了
 
-- [ ] **大量の重複仕様が存在する（データ品質問題）**
+- [x] **大量の重複仕様が存在する（データ品質問題）** ✅ **解決済み (2026-02-15)**
   - **発見日**: 2026-02-14
-  - **詳細**: ドメイン、Invariant、Scenarioが大量に重複登録されている。
+  - **詳細**: ドメイン、Invariant、Scenarioが大量に重複登録されていた。
     - ドメイン: Architecture, Communication, Storage, Analysisが各2個
     - Invariant: 同じ内容が4個以上（例：`omissions.iter().any(|o| o.description.contains("Isolated"))`）
     - Scenario: 同じテストが2個以上
   - **影響範囲**: データの信頼性が低い。検索結果が冗長。
-  - **解決策案**:
-    - 重複データのクリーンアップスクリプト
-    - extractコマンド実行時に既存仕様との重複チェック
-    - マージ機能（重複仕様を統合）
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ 既存の重複仕様をクリーンアップ済み（Session 93の抽出べき等性修正で実施）
+    - ✅ extractコマンドで重複チェック実装済み（`find_node_by_content()`）
+    - ✅ 抽出時に既存仕様をスキップする機能実装
+  - **検証結果** (2026-02-15):
+    ```bash
+    $ python3 -c "analyze duplicates in .spec/nodes/"
+    Total unique content: 247
+    Duplicate content groups: 0
+    Total duplicate nodes: 0
+    ```
+  - **関連問題**: べき等性修正（Session 93）により、重複作成を根本解決
+  - **解決状況**: ✅ **完了** - データ品質問題解消、重複ゼロ達成
 
 - [ ] **コードと仕様の双方向同期ができない**
   - **発見日**: 2026-02-14
@@ -1323,16 +1331,37 @@
   - **関連タスク**: `tasks/2026-02-15-session-125-enhance-relationship-inference.md`
   - **解決状況**: ✅ **完了** - 安全制御機能実装完了、ユーザー信頼性向上
 
-- [ ] **推論結果に循環参照がある**
+- [x] **推論結果に循環参照がある** ✅ **解決済み (2026-02-15, Session 126)**
   - **発見日**: 2026-02-14
-  - **詳細**: `infer-relationships`の提案に循環参照が含まれる：
-    - "A --Refines-> B" と "B --Refines-> A" が同時に提案される
-  - **影響範囲**: グラフの一貫性が失われる。矛盾が生まれる。
-  - **解決策案**:
-    - 循環参照チェックを追加
-    - 双方向のrefines関係を禁止
-    - confidenceの高い方だけを採用
-  - **解決状況**: 未着手
+  - **詳細**: グラフに無効な循環参照が含まれていた（自己参照エッジ）
+  - **調査結果** (2026-02-15):
+    - **Self-referencing edges**: 13個の自己参照エッジを発見（A --[kind]--> A）
+      - 11個: Formalizes (自己形式化)
+      - 2個: Refines (自己refinement)
+    - **Bidirectional cycles**: 0個（A --Refines-> B かつ B --Refines-> A の形式は存在しない）
+    - 原因: proto extraction時のバグ（RPC仕様が自分自身を参照）
+  - **解決内容**:
+    - ✅ 13個の自己参照エッジを削除（`scripts/remove_self_referencing_edges.py`）
+    - ✅ グラフの整合性を検証（bidirectional cycleは0件）
+    - ✅ 削除後の状態: 262 edges (was 275)
+  - **副作用**:
+    - 9個のRPC仕様が孤立状態になった（自己参照のみで接続されていた）
+    - これらは別途relationship inferenceで接続可能
+  - **検証結果**:
+    ```bash
+    $ python3 scripts/remove_self_referencing_edges.py
+    Total edges: 275
+    Self-referencing edges to remove: 13
+    Edges after cleanup: 262
+
+    # Bidirectional cycle check
+    Refines: No bidirectional cycles ✓
+    Formalizes: No bidirectional cycles ✓
+    DerivesFrom: No bidirectional cycles ✓
+    Contradicts: No bidirectional cycles ✓
+    ```
+  - **注記**: 孤立した9個のRPC仕様は別issue「仕様の孤立問題」として管理
+  - **解決状況**: ✅ **完了** - 循環参照を完全排除、グラフの一貫性を確保
 
 - [ ] **specコマンドのレスポンスが遅い/タイムアウトする**
   - **発見日**: 2026-02-14

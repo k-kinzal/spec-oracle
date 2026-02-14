@@ -145,7 +145,8 @@
   id: refines-refines-session44-008
   kind: Refines
   metadata:
-    reason: Multi-layer management is the mechanism for ORACLE's single source of truth
+    reason: Multi-layer management is the mechanism for ORACLE's single source of
+      truth
   created_at: 1771062899
 - source: 41052fda-aef8-4443-991f-80e5165991c7
   target: 81afa3f5-4a41-4b04-b958-224d1037d76f
@@ -508,24 +509,6 @@
   kind: Formalizes
   metadata: {}
   created_at: 1771073204
-- source: 3c7619aa-cbeb-4ecb-be4e-86fa766fb48b
-  target: 3c7619aa-cbeb-4ecb-be4e-86fa766fb48b
-  id: 8359e57f-f3e2-4648-94c4-ebad96b62db9
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
-- source: f2d3472b-f1f5-4981-b584-46b9eb5e26a8
-  target: f2d3472b-f1f5-4981-b584-46b9eb5e26a8
-  id: 405875cf-a245-4989-9950-e2226f5996f3
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
-- source: c579b564-4c42-4236-a73d-b3c1348c015a
-  target: c579b564-4c42-4236-a73d-b3c1348c015a
-  id: b53a5fae-c783-44c8-b8d3-1b2acda3fe51
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
 - source: f6953636-fe61-4381-9856-940f797a1e9b
   target: cc5845c7-ead9-4be0-9d0d-cce130918b22
   id: 358c4931-db35-4d25-b9ed-acb334e5a024
@@ -535,12 +518,6 @@
 - source: f6953636-fe61-4381-9856-940f797a1e9b
   target: 6a808993-3ce7-4891-a500-166635a45a2d
   id: 81351055-026d-40f1-83ef-4db6b7e89bcc
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
-- source: 77f19988-13ad-43c3-922a-d5cefb8f4a3d
-  target: 77f19988-13ad-43c3-922a-d5cefb8f4a3d
-  id: 3dd5f0b1-ad28-44cc-ae63-97521ec0fc0d
   kind: Formalizes
   metadata: {}
   created_at: 1771073204
@@ -556,12 +533,6 @@
   kind: Formalizes
   metadata: {}
   created_at: 1771073204
-- source: 3ae53ced-97e7-4649-af35-325318f4ecc3
-  target: 3ae53ced-97e7-4649-af35-325318f4ecc3
-  id: 2216ebfb-ab39-4bdb-9e29-a6dba360208e
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
 - source: 2b68b299-73ba-46e4-b910-1c5287379bc5
   target: 9f2314ee-d6fb-42cc-bbc9-0cc44a68eb55
   id: 9ba1c25f-ebe9-493f-a5e8-2c0e5b4d6051
@@ -574,18 +545,6 @@
   kind: Formalizes
   metadata: {}
   created_at: 1771073204
-- source: 8cfad6bd-006d-4458-b4bd-cfb3256d9e18
-  target: 8cfad6bd-006d-4458-b4bd-cfb3256d9e18
-  id: 14f7ac14-5293-4b16-9894-f6ab01e9149f
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
-- source: 9bdc5e64-ef88-46e6-9ef1-bc81c5d9fe43
-  target: 9bdc5e64-ef88-46e6-9ef1-bc81c5d9fe43
-  id: 656583a7-cc91-497f-9fb8-54e13846d902
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
 - source: 2b68b299-73ba-46e4-b910-1c5287379bc5
   target: 4ec2b719-3069-4859-a9fb-db75a371425e
   id: 6abd6ee4-3d28-4e31-bf88-ae01d0717c22
@@ -595,12 +554,6 @@
 - source: 724bc4c0-aa15-4ce4-969a-b153079559b6
   target: ae4521ec-da44-4cee-a5f2-5c5198110b60
   id: 2b117116-1aa7-4c37-8bc5-4da2cf006d6c
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
-- source: 4e295d71-c8e6-4ca5-9d28-dacda62d6a22
-  target: 4e295d71-c8e6-4ca5-9d28-dacda62d6a22
-  id: fd5a02b0-7d00-45c6-af12-5428c91eaca6
   kind: Formalizes
   metadata: {}
   created_at: 1771073204
@@ -631,24 +584,6 @@
 - source: d1c6549f-be1c-4ef9-95c7-01425bc01d81
   target: 0f0997eb-f199-40a9-a065-59256d6ef940
   id: e32d7c07-a485-46fa-b11f-36310dec63d6
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
-- source: 948d4e48-d0c2-4464-8d9c-60a0d438867b
-  target: 948d4e48-d0c2-4464-8d9c-60a0d438867b
-  id: 6311ef96-5df5-44f7-9474-2c741dac8d72
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
-- source: a68d401b-be6a-4fb8-ad97-0556ceac2c4e
-  target: a68d401b-be6a-4fb8-ad97-0556ceac2c4e
-  id: 465b6921-93e2-4093-9989-a687680f20c2
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771073204
-- source: 279cc3cc-23bf-483e-aede-1e31809df0ee
-  target: 279cc3cc-23bf-483e-aede-1e31809df0ee
-  id: 79106d52-2a10-43df-9c19-62ea1fb004f8
   kind: Formalizes
   metadata: {}
   created_at: 1771073204
@@ -695,7 +630,8 @@
   id: edge-122-27-formalizes
   kind: Formalizes
   metadata:
-    note: Layer label display requirement (U0) formalized by find command implementation (U3)
+    note: Layer label display requirement (U0) formalized by find command implementation
+      (U3)
   created_at: 1771075492
 - source: 6b8373d8-0f4e-46aa-87be-09a6e6249c57
   target: ea15885e-98ff-45f6-a8b7-3e130accc425
@@ -1103,7 +1039,8 @@
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'AI-powered relationship inference' to U0 'Cross-layer edge inference'
+    reason: Connect proto_rpc 'AI-powered relationship inference' to U0 'Cross-layer
+      edge inference'
   created_at: 1771090244
 - source: 617996d9-eb49-4abf-9dc7-88ec4e87f188
   target: 98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5
@@ -1111,7 +1048,8 @@
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Automatic relationship inference' to U0 'Cross-layer edge inference'
+    reason: Connect proto_rpc 'Automatic relationship inference' to U0 'Cross-layer
+      edge inference'
   created_at: 1771090244
 - source: ff0a505f-1d9d-418b-9a0b-af8bd28760eb
   target: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
@@ -1143,14 +1081,16 @@
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'
+    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal
+      verification'
   created_at: 1771090244
 - source: dfbd8aef-7dfd-4272-b97a-c22733dac4b7
   target: 0dc100e8-5514-4ab8-9cb5-3a067aac5536
   id: cf1abf10-0c4b-4b60-a2b1-dcef8de580b5
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'
+    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal
+      verification'
     created_by: connect_isolated_proto_rpc.py
   created_at: 1771090244
 - source: 7807965f-40b8-4412-8848-7d09658f0965
@@ -1158,7 +1098,8 @@
   id: a0dea57b-0004-44bf-bd49-313bafa8a7f4
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'
+    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal
+      verification'
     created_by: connect_isolated_proto_rpc.py
   created_at: 1771090244
 - source: 9212713c-0da1-42f9-bccf-5be3cb38860c
@@ -1167,7 +1108,8 @@
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Layer-aware operations' to U0 'specORACLE manages multi-layered specifications'
+    reason: Connect proto_rpc 'Layer-aware operations' to U0 'specORACLE manages multi-layered
+      specifications'
   created_at: 1771090244
 - source: 9212713c-0da1-42f9-bccf-5be3cb38860c
   target: e009137a-645b-4c3b-96c4-af884b4359d6
@@ -1175,14 +1117,16 @@
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Layer-aware operations' to U0 'Specifications at different formality layers'
+    reason: Connect proto_rpc 'Layer-aware operations' to U0 'Specifications at different
+      formality layers'
   created_at: 1771090244
 - source: a6c844d5-8c7e-4199-8e70-07c9804c0d7f
   target: 070f3b22-e508-4953-b15c-a330fd5f8b22
   id: 1829bed3-77a6-4816-9027-94b250a08e90
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'Set node universe' to U0 'Universe struct represents the space'
+    reason: Connect proto_rpc 'Set node universe' to U0 'Universe struct represents
+      the space'
     created_by: connect_isolated_proto_rpc.py
   created_at: 1771090244
 - source: f3b07262-2e70-4e13-a492-252c48632372
@@ -1255,7 +1199,8 @@
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Executable contracts' to U0 'AdmissibleSet struct symbolically represents'
+    reason: Connect proto_rpc 'Executable contracts' to U0 'AdmissibleSet struct symbolically
+      represents'
   created_at: 1771090244
 - source: a52e97be-acd3-487a-8bea-b72af975f799
   target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
@@ -1303,14 +1248,16 @@
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Find formalizations' to U0 'Multi-layer specification tracking'
+    reason: Connect proto_rpc 'Find formalizations' to U0 'Multi-layer specification
+      tracking'
   created_at: 1771090244
 - source: 922d3d6c-de1b-4fdf-8dfc-1e5f67fe083d
   target: ee493f23-22d4-483c-8afe-2926a0ec1f73
   id: 05948ac4-f894-4d7d-ba5e-2aca70094ae6
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'Query and analysis' to U0 'find command provides semantic search'
+    reason: Connect proto_rpc 'Query and analysis' to U0 'find command provides semantic
+      search'
     created_by: connect_remaining_proto_rpc.py
   created_at: 1771090327
 - source: b3949bb3-1013-40a0-9c6e-18a723e25133
@@ -1385,14 +1332,6 @@
     auto_connected: 'true'
     script: connect_isolated_proto_rpcs.py
   created_at: 1771086000
-- source: ee97d8f2-7874-4988-bf9a-6d838368d1be
-  target: ee97d8f2-7874-4988-bf9a-6d838368d1be
-  id: ce8b98cf-f96c-4b4f-a68b-5c28b52116c5
-  kind: Refines
-  metadata:
-    auto_connected: 'true'
-    script: connect_isolated_proto_rpcs.py
-  created_at: 1771086000
 - source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
   target: 564b6e40-b052-440d-8654-3ab97c7dfae9
   id: c449418b-548a-448c-9225-7bb91f987a0c
@@ -1412,14 +1351,6 @@
 - source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
   target: c3a22518-a340-45b2-9e94-2d00d99e657d
   id: f53add65-e2aa-4a90-bca8-553af1f0d7d3
-  kind: Refines
-  metadata:
-    auto_connected: 'true'
-    script: connect_isolated_proto_rpcs.py
-  created_at: 1771086000
-- source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
-  target: 0e01afc7-1685-4e95-ade3-1149f4f614aa
-  id: a7004aa8-8f74-4023-9658-2d8ecd321550
   kind: Refines
   metadata:
     auto_connected: 'true'
@@ -1824,7 +1755,7 @@
   id: 49b943da-demonstrates-d79603df
   kind: Refines
   metadata:
-    description: f₀₃⁻¹ for PHP demonstrates language-agnostic extraction
+    description: "f\u2080\u2083\u207B\xB9 for PHP demonstrates language-agnostic extraction"
   created_at: 1739590000
 - source: 0d10ca75-a053-467c-bff5-cb7c0a5c94e9
   target: fbf3767e-6241-428d-912c-887b8e1990dd
