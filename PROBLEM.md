@@ -826,9 +826,14 @@
 
 ### High
 
-- [ ] **spec-cliが継ぎ足し実装の集合になっており、体系化された操作モデルとHuman Friendlyな体験が崩壊している**
+- [ ] **spec-cliが継ぎ足し実装の集合になっており、体系化された操作モデルとHuman Friendlyな体験が崩壊している** 📝 **仕様化済み (2026-02-15, Session 100)**
   - **発見日**: 2026-02-14
   - **詳細**: 現在の`spec-cli`は、機能追加のたびにコマンドやモードを足した構造になっており、**一貫した思想（情報設計・操作設計・責務分離）**が見えない。結果として、ユーザーは「何をしたいか」ではなく「内部実装都合（server/standalone、high-level/low-level、subcommand差分）」を理解しないと操作できない。
+  - **仕様化 (Session 100)**:
+    - ✅ **[c6119c42]** - CLI coherent layered structure requirement
+    - ✅ **[c6920b06]** - Human-friendly UX definition
+    - ✅ **[b706e529]** - CLI separation of concerns requirement
+    - これらの問題が**specORACLE自身で管理される仕様**として記録された
   - **観測された症状（コード/ドキュメント上の根拠）**:
     - `spec-cli/src/main.rs`に30+サブコマンドが集中し、`main`が巨大な分岐となっている（CLI境界・アプリケーションサービス境界・表示境界が未分離）。
     - **同一ユースケースの二重実装**: standalone経路とserver経路でほぼ同等のロジックを別々に持っており、出力・対応コマンド・挙動が一致しない。
