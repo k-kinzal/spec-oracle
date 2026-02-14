@@ -1083,15 +1083,34 @@
   - **関連コミット**: 81031bf "Session 67: Show layer labels for all specifications in search results"
   - **解決状況**: ✅ **完了** - 多層仕様の区別が可能になり、UX向上
 
-- [ ] **get-nodeの出力情報が少なすぎる**
+- [x] **get-nodeの出力情報が少なすぎる** ✅ **解決済み (2026-02-15, Session 123)**
   - **発見日**: 2026-02-14
   - **詳細**: `spec get-node <id>`がContentとKindしか表示しない。formality_layer、metadata、関連ノード、作成日時などが見えない。
   - **影響範囲**: ノードの詳細情報を得られない。
-  - **解決策案**:
-    - 全フィールドを表示（layer, metadata, timestamps）
-    - 関連ノードも一緒に表示（incoming/outgoing edges）
-    - `--verbose`フラグで詳細表示
-  - **解決状況**: 未着手
+  - **解決内容** (Session 123):
+    - ✅ Formality layer表示追加 (`[U0]`, `[U1]`, `[U2]`, `[U3]`)
+    - ✅ Timestamps表示追加 (created, modified - human-readable format)
+    - ✅ Metadata表示追加 (source_file, inferred, confidence, extractor, etc.)
+    - ✅ Relationships表示追加 (direction `←`/`→`, edge kind, related node preview)
+    - ✅ 10個制限 + "... and N more" indicator for many edges
+  - **検証結果** (Session 123):
+    ```bash
+    $ spec api get-node 26f7f710-4e23-4bff-819d-1ed0a46b6e7f
+    📋 Node: 26f7f710-4e23-4bff-819d-1ed0a46b6e7f
+      Content: Invariant: !validate_user_authentication(&user)
+      Kind: Constraint
+      Layer: U3
+      Created: 2026-02-14 18:29:12 UTC
+      Metadata:
+        source_file: spec-core/src/extract.rs
+        inferred: true
+        confidence: 0.95
+      Relationships: 1 edge(s)
+        ← DerivesFrom [U0] [9e1a2dce] specORACLE manages...
+    ```
+  - **関連コミット**: dfec5d2 "Session 123: Enhance get-node output with comprehensive information"
+  - **タスク**: `tasks/2026-02-15-session-123-understand-current-state.md`
+  - **解決状況**: ✅ **完了** - 包括的な情報表示を実現
 
 - [ ] **list-edgesがUUIDしか表示せず、内容が分からない**
   - **発見日**: 2026-02-14
