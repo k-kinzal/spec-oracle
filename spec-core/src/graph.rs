@@ -26,7 +26,7 @@ pub enum EdgeKind {
     Formalizes,  // Target is a more formal version of source
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SpecNodeData {
     pub id: String,
     pub content: String,
@@ -486,6 +486,123 @@ impl SpecGraph {
             Vec::new()
         }
     }
+
+    /// Find potentially related terms based on co-occurrence in metadata or content.
+    /// This provides a lightweight semantic clustering without requiring external AI.
+    pub fn find_related_terms(&self, term: &str) -> Vec<(&SpecNodeData, f32)> {
+        let t = term.to_lowercase();
+        let mut scored_nodes: Vec<(&SpecNodeData, f32)> = Vec::new();
+
+        // Find nodes that mention the term
+        let mentioning_nodes: Vec<&SpecNodeData> = self
+            .graph
+            .node_weights()
+            .filter(|n| n.content.to_lowercase().contains(&t))
+            .collect();
+
+        if mentioning_nodes.is_empty() {
+            return scored_nodes;
+        }
+
+        // Extract significant words from mentioning nodes (excluding common words)
+        let stop_words = ["the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for"];
+        let mut term_context: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        for node in &mentioning_nodes {
+            for word in node.content.to_lowercase().split_whitespace() {
+                let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric());
+                if clean_word.len() > 2 && !stop_words.contains(&clean_word) {
+                    term_context.insert(clean_word.to_string());
+                }
+            }
+        }
+
+        // Score all nodes based on context overlap
+        for node in self.graph.node_weights() {
+            if mentioning_nodes.contains(&node) {
+                continue; // Skip nodes that directly mention the term
+            }
+
+            let node_words: std::collections::HashSet<String> = node
+                .content
+                .to_lowercase()
+                .split_whitespace()
+                .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()).to_string())
+                .filter(|w| w.len() > 2 && !stop_words.contains(&w.as_str()))
+                .collect();
+
+            let overlap = term_context.intersection(&node_words).count();
+            if overlap > 0 {
+                let score = overlap as f32 / term_context.len().max(1) as f32;
+                scored_nodes.push((node, score));
+            }
+        }
+
+        // Sort by score descending
+        scored_nodes.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        scored_nodes
+    }
+
+    /// Detect potential synonym pairs based on graph structure.
+    /// Nodes that share similar connections might be semantically related.
+    pub fn detect_potential_synonyms(&self) -> Vec<(SpecNodeData, SpecNodeData, f32)> {
+        let mut candidates = Vec::new();
+        let definition_nodes: Vec<(NodeIndex, &SpecNodeData)> = self
+            .graph
+            .node_indices()
+            .map(|idx| (idx, &self.graph[idx]))
+            .filter(|(_, n)| n.kind == NodeKind::Definition)
+            .collect();
+
+        for i in 0..definition_nodes.len() {
+            for j in (i + 1)..definition_nodes.len() {
+                let (idx_a, node_a) = definition_nodes[i];
+                let (idx_b, node_b) = definition_nodes[j];
+
+                // Skip if already marked as synonyms
+                let already_synonyms = self
+                    .graph
+                    .edges_directed(idx_a, Direction::Outgoing)
+                    .chain(self.graph.edges_directed(idx_a, Direction::Incoming))
+                    .any(|e| {
+                        self.graph[e.id()].kind == EdgeKind::Synonym
+                            && (e.source() == idx_b || e.target() == idx_b)
+                    });
+
+                if already_synonyms {
+                    continue;
+                }
+
+                // Calculate structural similarity (Jaccard similarity of neighbors)
+                let neighbors_a: std::collections::HashSet<NodeIndex> = self
+                    .graph
+                    .neighbors_undirected(idx_a)
+                    .collect();
+                let neighbors_b: std::collections::HashSet<NodeIndex> = self
+                    .graph
+                    .neighbors_undirected(idx_b)
+                    .collect();
+
+                if neighbors_a.is_empty() && neighbors_b.is_empty() {
+                    continue;
+                }
+
+                let intersection = neighbors_a.intersection(&neighbors_b).count();
+                let union = neighbors_a.union(&neighbors_b).count();
+
+                if union > 0 {
+                    let similarity = intersection as f32 / union as f32;
+                    if similarity > 0.3 {
+                        // Threshold for potential synonyms
+                        candidates.push((node_a.clone(), node_b.clone(), similarity));
+                    }
+                }
+            }
+        }
+
+        candidates.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+        candidates
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -729,5 +846,52 @@ mod tests {
         let natural_sources = g.find_natural_source(&formal_id);
         assert_eq!(natural_sources.len(), 1);
         assert_eq!(natural_sources[0].id, natural_id);
+    }
+
+    #[test]
+    fn find_related_terms_by_context() {
+        let mut g = SpecGraph::new();
+        g.add_node("User must authenticate with valid credentials".into(), NodeKind::Assertion, HashMap::new());
+        g.add_node("Authentication requires username and password".into(), NodeKind::Constraint, HashMap::new());
+        g.add_node("Login system validates credentials".into(), NodeKind::Scenario, HashMap::new());
+        g.add_node("Data must be encrypted at rest".into(), NodeKind::Constraint, HashMap::new());
+
+        let related = g.find_related_terms("authenticate");
+        // Should find nodes about login/credentials but not encryption
+        assert!(related.len() > 0);
+        assert!(related.iter().any(|(n, _)| n.content.contains("Login")));
+    }
+
+    #[test]
+    fn detect_potential_synonyms_by_structure() {
+        let mut g = SpecGraph::new();
+        let auth_def = g.add_node("Authentication".into(), NodeKind::Definition, HashMap::new()).id.clone();
+        let login_def = g.add_node("Login".into(), NodeKind::Definition, HashMap::new()).id.clone();
+        let crypto_def = g.add_node("Encryption".into(), NodeKind::Definition, HashMap::new()).id.clone();
+        let domain = g.add_node("Security domain".into(), NodeKind::Domain, HashMap::new()).id.clone();
+
+        // Both Authentication and Login connect to Security domain
+        g.add_edge(&auth_def, &domain, EdgeKind::Refines, HashMap::new()).unwrap();
+        g.add_edge(&login_def, &domain, EdgeKind::Refines, HashMap::new()).unwrap();
+        g.add_edge(&crypto_def, &domain, EdgeKind::Refines, HashMap::new()).unwrap();
+
+        let synonyms = g.detect_potential_synonyms();
+        // Should detect auth and login as potential synonyms (both connect to same domain)
+        assert!(synonyms.len() > 0);
+    }
+
+    #[test]
+    fn no_synonyms_when_already_marked() {
+        let mut g = SpecGraph::new();
+        let a = g.add_node("Auth".into(), NodeKind::Definition, HashMap::new()).id.clone();
+        let b = g.add_node("Login".into(), NodeKind::Definition, HashMap::new()).id.clone();
+
+        g.add_edge(&a, &b, EdgeKind::Synonym, HashMap::new()).unwrap();
+
+        let synonyms = g.detect_potential_synonyms();
+        // Should not suggest already marked synonyms
+        assert!(!synonyms.iter().any(|(n1, n2, _)|
+            (n1.id == a && n2.id == b) || (n1.id == b && n2.id == a)
+        ));
     }
 }

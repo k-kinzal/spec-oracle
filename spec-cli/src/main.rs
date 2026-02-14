@@ -108,6 +108,20 @@ enum Commands {
         /// Node ID
         id: String,
     },
+    /// Find semantically related terms
+    FindRelatedTerms {
+        /// Term to search for
+        term: String,
+        /// Maximum number of results (0 = no limit)
+        #[arg(long, default_value = "10")]
+        max: u32,
+    },
+    /// Detect potential synonym pairs
+    DetectPotentialSynonyms {
+        /// Minimum similarity threshold (0.0-1.0)
+        #[arg(long, default_value = "0.3")]
+        min_similarity: f32,
+    },
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -462,6 +476,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if result.formalizations.is_empty() && result.natural_sources.is_empty() {
                 println!("  No formalizations or sources found.");
+            }
+        }
+        Commands::FindRelatedTerms { term, max } => {
+            let resp = client
+                .find_related_terms(Request::new(proto::FindRelatedTermsRequest {
+                    term: term.clone(),
+                    max_results: max,
+                }))
+                .await?;
+            let result = resp.into_inner();
+
+            if result.nodes.is_empty() {
+                println!("No related terms found for '{term}'.");
+            } else {
+                println!("Found {} semantically related node(s) for '{term}':", result.nodes.len());
+                for scored in result.nodes {
+                    if let Some(node) = scored.node {
+                        println!("  [{}] {} (score: {:.2}) - {}",
+                            node.id, node_kind_name(node.kind), scored.score, node.content);
+                    }
+                }
+            }
+        }
+        Commands::DetectPotentialSynonyms { min_similarity } => {
+            let resp = client
+                .detect_potential_synonyms(Request::new(proto::DetectPotentialSynonymsRequest {
+                    min_similarity,
+                }))
+                .await?;
+            let result = resp.into_inner();
+
+            if result.candidates.is_empty() {
+                println!("No potential synonym pairs detected (threshold: {:.2}).", min_similarity);
+            } else {
+                println!("Found {} potential synonym pair(s):", result.candidates.len());
+                for candidate in result.candidates {
+                    let a = candidate.node_a.unwrap();
+                    let b = candidate.node_b.unwrap();
+                    println!("\n  Potential synonyms (similarity: {:.2}):", candidate.similarity);
+                    println!("    [{}] {}", a.id, a.content);
+                    println!("    [{}] {}", b.id, b.content);
+                }
             }
         }
     }

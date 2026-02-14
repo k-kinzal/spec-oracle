@@ -334,4 +334,55 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
             natural_sources,
         }))
     }
+
+    async fn find_related_terms(
+        &self,
+        request: Request<proto::FindRelatedTermsRequest>,
+    ) -> Result<Response<proto::FindRelatedTermsResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+        let mut related = graph.find_related_terms(&req.term);
+
+        if req.max_results > 0 && related.len() > req.max_results as usize {
+            related.truncate(req.max_results as usize);
+        }
+
+        let nodes: Vec<proto::ScoredNode> = related
+            .into_iter()
+            .map(|(node, score)| proto::ScoredNode {
+                node: Some(to_proto_node(node)),
+                score,
+            })
+            .collect();
+
+        Ok(Response::new(proto::FindRelatedTermsResponse { nodes }))
+    }
+
+    async fn detect_potential_synonyms(
+        &self,
+        request: Request<proto::DetectPotentialSynonymsRequest>,
+    ) -> Result<Response<proto::DetectPotentialSynonymsResponse>, Status> {
+        let req = request.into_inner();
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+        let min_sim = if req.min_similarity > 0.0 {
+            req.min_similarity
+        } else {
+            0.3
+        };
+
+        let candidates: Vec<proto::SynonymCandidate> = graph
+            .detect_potential_synonyms()
+            .into_iter()
+            .filter(|(_, _, sim)| *sim >= min_sim)
+            .map(|(node_a, node_b, similarity)| proto::SynonymCandidate {
+                node_a: Some(to_proto_node(&node_a)),
+                node_b: Some(to_proto_node(&node_b)),
+                similarity,
+            })
+            .collect();
+
+        Ok(Response::new(proto::DetectPotentialSynonymsResponse {
+            candidates,
+        }))
+    }
 }

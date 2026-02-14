@@ -26,6 +26,10 @@ service SpecOracle {
   // Layer-aware operations
   rpc FilterByLayer(FilterByLayerRequest) returns (FilterByLayerResponse);
   rpc FindFormalizations(FindFormalizationsRequest) returns (FindFormalizationsResponse);
+
+  // Semantic normalization
+  rpc FindRelatedTerms(FindRelatedTermsRequest) returns (FindRelatedTermsResponse);
+  rpc DetectPotentialSynonyms(DetectPotentialSynonymsRequest) returns (DetectPotentialSynonymsResponse);
 }
 
 // --- Node types ---
@@ -199,4 +203,32 @@ message FindFormalizationsRequest {
 message FindFormalizationsResponse {
   repeated SpecNode formalizations = 1;
   repeated SpecNode natural_sources = 2;
+}
+
+message FindRelatedTermsRequest {
+  string term = 1;
+  uint32 max_results = 2;  // 0 = no limit
+}
+
+message FindRelatedTermsResponse {
+  repeated ScoredNode nodes = 1;
+}
+
+message ScoredNode {
+  SpecNode node = 1;
+  float score = 2;  // Similarity score 0.0-1.0
+}
+
+message DetectPotentialSynonymsRequest {
+  float min_similarity = 1;  // Minimum similarity threshold (default 0.3)
+}
+
+message DetectPotentialSynonymsResponse {
+  repeated SynonymCandidate candidates = 1;
+}
+
+message SynonymCandidate {
+  SpecNode node_a = 1;
+  SpecNode node_b = 2;
+  float similarity = 3;
 }
