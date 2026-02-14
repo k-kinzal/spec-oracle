@@ -3,7 +3,7 @@
   "checkpoint_id": "6e33d42574cf",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 6,
+  "checkpoints_count": 7,
   "files_touched": [
     ".claude/claude-loop.state.json",
     "CLAUDE.md",
@@ -15,7 +15,9 @@
     "specd/src/service.rs",
     "tasks/2026-02-14-continue-goal-session-34.md",
     "tasks/2026-02-14-continue-goal-session-35.md",
+    "tasks/2026-02-14-continue-goal-session-36.md",
     "tasks/2026-02-14-high-level-add-command.md",
+    "tasks/2026-02-14-native-project-local-support.md",
     "tasks/2026-02-14-project-local-specs.md",
     "tasks/2026-02-14-semantic-contradiction-false-positives.md"
   ],
@@ -47,13 +49,20 @@
       "context": "/6e/33d42574cf/3/context.md",
       "content_hash": "/6e/33d42574cf/3/content_hash.txt",
       "prompt": "/6e/33d42574cf/3/prompt.txt"
+    },
+    {
+      "metadata": "/6e/33d42574cf/4/metadata.json",
+      "transcript": "/6e/33d42574cf/4/full.jsonl",
+      "context": "/6e/33d42574cf/4/context.md",
+      "content_hash": "/6e/33d42574cf/4/content_hash.txt",
+      "prompt": "/6e/33d42574cf/4/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 1276,
-    "cache_creation_tokens": 616936,
-    "cache_read_tokens": 12273690,
-    "output_tokens": 22971,
-    "api_call_count": 158
+    "input_tokens": 1790,
+    "cache_creation_tokens": 710362,
+    "cache_read_tokens": 17752549,
+    "output_tokens": 28611,
+    "api_call_count": 222
   }
 }
