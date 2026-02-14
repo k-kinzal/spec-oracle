@@ -163,6 +163,17 @@ enum Commands {
         /// Node ID
         id: String,
     },
+    /// Extract specifications from source code
+    Extract {
+        /// Source directory or file path
+        source: String,
+        /// Programming language (rust, python, etc.)
+        #[arg(long, default_value = "rust")]
+        language: String,
+        /// Minimum confidence threshold (0.0-1.0)
+        #[arg(long, default_value = "0.7")]
+        min_confidence: f32,
+    },
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -815,6 +826,86 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 println!("Node '{}' not found or no compliance data.", id);
             }
+        }
+        Commands::Extract { source, language, min_confidence } => {
+            // Extract specifications locally (doesn't need server for extraction)
+            use spec_core::{RustExtractor, InferredSpecification};
+            use std::path::Path;
+
+            let path = Path::new(&source);
+            let specs: Vec<InferredSpecification> = if path.is_file() {
+                if language != "rust" {
+                    eprintln!("Only Rust extraction is currently supported");
+                    return Ok(());
+                }
+                RustExtractor::extract(path).map_err(|e| {
+                    tonic::Status::internal(format!("Extraction failed: {}", e))
+                })?
+            } else if path.is_dir() {
+                // Extract from all .rs files in directory
+                use std::fs;
+                let mut all_specs = Vec::new();
+                for entry in fs::read_dir(path).map_err(|e| {
+                    tonic::Status::internal(format!("Failed to read directory: {}", e))
+                })? {
+                    let entry = entry.map_err(|e| {
+                        tonic::Status::internal(format!("Failed to read entry: {}", e))
+                    })?;
+                    let entry_path = entry.path();
+                    if entry_path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                        match RustExtractor::extract(&entry_path) {
+                            Ok(specs) => all_specs.extend(specs),
+                            Err(e) => eprintln!("Warning: Failed to extract from {:?}: {}", entry_path, e),
+                        }
+                    }
+                }
+                all_specs
+            } else {
+                eprintln!("Source path not found: {}", source);
+                return Ok(());
+            };
+
+            // Filter by confidence
+            let filtered: Vec<_> = specs.into_iter()
+                .filter(|s| s.confidence >= min_confidence)
+                .collect();
+
+            println!("Extracted {} specifications (confidence >= {}):\n", filtered.len(), min_confidence);
+
+            // Create nodes via server
+            for spec in &filtered {
+                let kind = match spec.kind {
+                    spec_core::NodeKind::Assertion => SpecNodeKind::Assertion,
+                    spec_core::NodeKind::Constraint => SpecNodeKind::Constraint,
+                    spec_core::NodeKind::Scenario => SpecNodeKind::Scenario,
+                    spec_core::NodeKind::Definition => SpecNodeKind::Definition,
+                    spec_core::NodeKind::Domain => SpecNodeKind::Domain,
+                };
+
+                let mut metadata = spec.metadata.clone();
+                metadata.insert("confidence".to_string(), spec.confidence.to_string());
+                metadata.insert("extracted".to_string(), "true".to_string());
+                metadata.insert("formality_layer".to_string(), spec.formality_layer.to_string());
+
+                let resp = client
+                    .add_node(Request::new(proto::AddNodeRequest {
+                        content: spec.content.clone(),
+                        kind: kind as i32,
+                        metadata,
+                    }))
+                    .await?;
+
+                if let Some(node) = resp.into_inner().node {
+                    println!("  [{}] {} ({}:{})",
+                        node.id[..8].to_string(),
+                        spec.content,
+                        spec.source_file,
+                        spec.source_line
+                    );
+                }
+            }
+
+            println!("\n✓ Extracted and ingested {} specifications", filtered.len());
         }
     }
 

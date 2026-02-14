@@ -133,6 +133,17 @@ impl SpecGraph {
         self.id_to_index.get(id).map(|&idx| &self.graph[idx])
     }
 
+    pub fn update_node_formality(&mut self, id: &str, formality_layer: u8) -> bool {
+        if let Some(&idx) = self.id_to_index.get(id) {
+            if let Some(node) = self.graph.node_weight_mut(idx) {
+                node.formality_layer = formality_layer;
+                node.modified_at = Utc::now().timestamp();
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn remove_node(&mut self, id: &str) -> Option<SpecNodeData> {
         if let Some(&idx) = self.id_to_index.get(id) {
             // Remove related edge index entries

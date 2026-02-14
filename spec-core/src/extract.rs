@@ -1,0 +1,488 @@
+use crate::{NodeKind, SpecGraph};
+use std::collections::HashMap;
+use std::path::Path;
+
+/// Specification inferred from source code analysis
+#[derive(Debug, Clone)]
+pub struct InferredSpecification {
+    pub content: String,
+    pub kind: NodeKind,
+    pub confidence: f32,      // 0.0-1.0
+    pub source_file: String,
+    pub source_line: usize,
+    pub formality_layer: u8,  // 0=natural, 1=structured, 2=formal, 3=executable
+    pub metadata: HashMap<String, String>,
+}
+
+/// Result of ingesting inferred specifications into graph
+#[derive(Debug)]
+pub struct IngestionReport {
+    pub nodes_created: usize,
+    pub nodes_skipped: usize,
+    pub edges_created: usize,
+    pub suggestions: Vec<EdgeSuggestion>,
+    pub contradictions_found: Vec<String>,
+}
+
+/// Suggested edge that needs human review
+#[derive(Debug)]
+pub struct EdgeSuggestion {
+    pub source_id: String,
+    pub target_id: String,
+    pub kind: crate::EdgeKind,
+    pub confidence: f32,
+    pub explanation: String,
+}
+
+impl SpecGraph {
+    /// Ingest inferred specifications into the graph
+    pub fn ingest(&mut self, specs: Vec<InferredSpecification>) -> IngestionReport {
+        let mut report = IngestionReport {
+            nodes_created: 0,
+            nodes_skipped: 0,
+            edges_created: 0,
+            suggestions: Vec::new(),
+            contradictions_found: Vec::new(),
+        };
+
+        // Create nodes for high-confidence inferences
+        let mut created_ids = Vec::new();
+        for spec in specs {
+            if spec.confidence >= 0.7 {
+                let mut metadata = spec.metadata.clone();
+                metadata.insert("source_file".to_string(), spec.source_file.clone());
+                metadata.insert("source_line".to_string(), spec.source_line.to_string());
+                metadata.insert("confidence".to_string(), spec.confidence.to_string());
+                metadata.insert("inferred".to_string(), "true".to_string());
+
+                let node = self.add_node_with_layer(
+                    spec.content,
+                    spec.kind,
+                    spec.formality_layer,
+                    metadata,
+                );
+                created_ids.push(node.id.clone());
+                report.nodes_created += 1;
+            } else {
+                report.nodes_skipped += 1;
+            }
+        }
+
+        // Detect contradictions among newly created nodes
+        let contras = self.detect_contradictions();
+        for contra in contras {
+            if created_ids.contains(&contra.node_a.id) || created_ids.contains(&contra.node_b.id) {
+                report.contradictions_found.push(format!(
+                    "Inferred contradiction: {} vs {}",
+                    contra.node_a.content, contra.node_b.content
+                ));
+            }
+        }
+
+        report
+    }
+
+    /// Add node with explicit formality layer
+    pub fn add_node_with_layer(
+        &mut self,
+        content: String,
+        kind: NodeKind,
+        formality_layer: u8,
+        metadata: HashMap<String, String>,
+    ) -> crate::SpecNodeData {
+        // Use existing add_node infrastructure
+        let node = self.add_node(content, kind, metadata);
+        let node_id = node.id.clone();
+
+        // Update formality layer
+        self.update_node_formality(&node_id, formality_layer);
+
+        // Return updated node
+        self.get_node(&node_id).unwrap().clone()
+    }
+}
+
+/// Extract specifications from Rust source code
+pub struct RustExtractor;
+
+impl RustExtractor {
+    /// Extract specifications from Rust file
+    pub fn extract(file_path: &Path) -> Result<Vec<InferredSpecification>, String> {
+        let content = std::fs::read_to_string(file_path)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+
+        let mut specs = Vec::new();
+
+        // Extract from function names (conventions like validate_*, check_*, require_*)
+        specs.extend(Self::extract_from_function_names(&content, file_path)?);
+
+        // Extract from assertions (assert!, assert_eq!, debug_assert!)
+        specs.extend(Self::extract_from_assertions(&content, file_path)?);
+
+        // Extract from test functions
+        specs.extend(Self::extract_from_tests(&content, file_path)?);
+
+        // Extract from doc comments
+        specs.extend(Self::extract_from_docs(&content, file_path)?);
+
+        // Extract from panic messages
+        specs.extend(Self::extract_from_panics(&content, file_path)?);
+
+        Ok(specs)
+    }
+
+    fn extract_from_function_names(
+        content: &str,
+        file_path: &Path,
+    ) -> Result<Vec<InferredSpecification>, String> {
+        let mut specs = Vec::new();
+        let file_name = file_path.to_string_lossy().to_string();
+
+        for (line_num, line) in content.lines().enumerate() {
+            // Match function definitions
+            if let Some(fn_name) = Self::extract_fn_name(line) {
+                // Convention-based inference
+                let (kind, confidence, description) = if fn_name.starts_with("validate_") {
+                    (NodeKind::Constraint, 0.8, format!("Must {}", fn_name.strip_prefix("validate_").unwrap().replace('_', " ")))
+                } else if fn_name.starts_with("check_") {
+                    (NodeKind::Constraint, 0.75, format!("Must {}", fn_name.strip_prefix("check_").unwrap().replace('_', " ")))
+                } else if fn_name.starts_with("require_") {
+                    (NodeKind::Constraint, 0.85, format!("Requires {}", fn_name.strip_prefix("require_").unwrap().replace('_', " ")))
+                } else if fn_name.starts_with("test_") {
+                    (NodeKind::Scenario, 0.9, fn_name.strip_prefix("test_").unwrap().replace('_', " "))
+                } else {
+                    continue;
+                };
+
+                specs.push(InferredSpecification {
+                    content: description,
+                    kind,
+                    confidence,
+                    source_file: file_name.clone(),
+                    source_line: line_num + 1,
+                    formality_layer: 1, // Structured (from naming convention)
+                    metadata: HashMap::from([
+                        ("function".to_string(), fn_name.to_string()),
+                        ("extractor".to_string(), "function_name".to_string()),
+                    ]),
+                });
+            }
+        }
+
+        Ok(specs)
+    }
+
+    fn extract_from_assertions(
+        content: &str,
+        file_path: &Path,
+    ) -> Result<Vec<InferredSpecification>, String> {
+        let mut specs = Vec::new();
+        let file_name = file_path.to_string_lossy().to_string();
+
+        for (line_num, line) in content.lines().enumerate() {
+            // Match assert!, assert_eq!, debug_assert!, etc.
+            if let Some(assertion) = Self::extract_assertion(line) {
+                specs.push(InferredSpecification {
+                    content: format!("Invariant: {}", assertion),
+                    kind: NodeKind::Constraint,
+                    confidence: 0.95, // Assertions are high-confidence constraints
+                    source_file: file_name.clone(),
+                    source_line: line_num + 1,
+                    formality_layer: 3, // Executable (actual code)
+                    metadata: HashMap::from([
+                        ("assertion".to_string(), assertion.clone()),
+                        ("extractor".to_string(), "assertion".to_string()),
+                    ]),
+                });
+            }
+        }
+
+        Ok(specs)
+    }
+
+    fn extract_from_tests(
+        content: &str,
+        file_path: &Path,
+    ) -> Result<Vec<InferredSpecification>, String> {
+        let mut specs = Vec::new();
+        let file_name = file_path.to_string_lossy().to_string();
+
+        let mut in_test = false;
+        let mut test_name = String::new();
+        let mut test_start_line = 0;
+
+        for (line_num, line) in content.lines().enumerate() {
+            let trimmed = line.trim();
+
+            // Detect #[test] or #[cfg(test)]
+            if trimmed.starts_with("#[test]") || trimmed.contains("#[test]") {
+                in_test = true;
+                test_start_line = line_num + 1;
+            } else if in_test && trimmed.starts_with("fn ") {
+                if let Some(name) = Self::extract_fn_name(trimmed) {
+                    test_name = name.to_string();
+                }
+            } else if in_test && trimmed == "}" && !test_name.is_empty() {
+                // End of test function
+                specs.push(InferredSpecification {
+                    content: format!("Scenario: {}", test_name.strip_prefix("test_").unwrap_or(&test_name).replace('_', " ")),
+                    kind: NodeKind::Scenario,
+                    confidence: 0.9,
+                    source_file: file_name.clone(),
+                    source_line: test_start_line,
+                    formality_layer: 3, // Executable test
+                    metadata: HashMap::from([
+                        ("test_function".to_string(), test_name.clone()),
+                        ("extractor".to_string(), "test".to_string()),
+                    ]),
+                });
+
+                in_test = false;
+                test_name.clear();
+            }
+        }
+
+        Ok(specs)
+    }
+
+    fn extract_from_docs(
+        content: &str,
+        file_path: &Path,
+    ) -> Result<Vec<InferredSpecification>, String> {
+        let mut specs = Vec::new();
+        let file_name = file_path.to_string_lossy().to_string();
+
+        for (line_num, line) in content.lines().enumerate() {
+            let trimmed = line.trim();
+
+            // Match /// or //! doc comments
+            if let Some(doc) = trimmed.strip_prefix("///").or_else(|| trimmed.strip_prefix("//!")) {
+                let doc_text = doc.trim();
+
+                // Look for specification keywords
+                let (kind, confidence) = if doc_text.contains("must") || doc_text.contains("shall") || doc_text.contains("required") {
+                    (NodeKind::Constraint, 0.8)
+                } else if doc_text.contains("should") || doc_text.contains("expected") {
+                    (NodeKind::Assertion, 0.7)
+                } else if doc_text.contains("example") || doc_text.contains("scenario") {
+                    (NodeKind::Scenario, 0.6)
+                } else {
+                    continue; // Not a specification
+                };
+
+                if !doc_text.is_empty() {
+                    specs.push(InferredSpecification {
+                        content: doc_text.to_string(),
+                        kind,
+                        confidence,
+                        source_file: file_name.clone(),
+                        source_line: line_num + 1,
+                        formality_layer: 0, // Natural language
+                        metadata: HashMap::from([
+                            ("doc_comment".to_string(), "true".to_string()),
+                            ("extractor".to_string(), "doc".to_string()),
+                        ]),
+                    });
+                }
+            }
+        }
+
+        Ok(specs)
+    }
+
+    fn extract_from_panics(
+        content: &str,
+        file_path: &Path,
+    ) -> Result<Vec<InferredSpecification>, String> {
+        let mut specs = Vec::new();
+        let file_name = file_path.to_string_lossy().to_string();
+
+        for (line_num, line) in content.lines().enumerate() {
+            // Match panic! with message
+            if let Some(panic_msg) = Self::extract_panic_message(line) {
+                specs.push(InferredSpecification {
+                    content: format!("Violation: {}", panic_msg),
+                    kind: NodeKind::Constraint,
+                    confidence: 0.85,
+                    source_file: file_name.clone(),
+                    source_line: line_num + 1,
+                    formality_layer: 3, // Executable
+                    metadata: HashMap::from([
+                        ("panic".to_string(), panic_msg.clone()),
+                        ("extractor".to_string(), "panic".to_string()),
+                    ]),
+                });
+            }
+        }
+
+        Ok(specs)
+    }
+
+    // Helper parsers
+
+    fn extract_fn_name(line: &str) -> Option<String> {
+        let trimmed = line.trim();
+        if trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") {
+            let after_fn = trimmed.split("fn ").nth(1)?;
+            let name = after_fn.split('(').next()?.trim();
+            Some(name.to_string())
+        } else {
+            None
+        }
+    }
+
+    fn extract_assertion(line: &str) -> Option<String> {
+        let trimmed = line.trim();
+
+        // Match assert!(...), assert_eq!(...), etc.
+        for macro_name in &["assert!", "assert_eq!", "assert_ne!", "debug_assert!"] {
+            if let Some(idx) = trimmed.find(macro_name) {
+                let after_macro = &trimmed[idx + macro_name.len()..];
+                if let Some(start) = after_macro.find('(') {
+                    if let Some(end) = after_macro.rfind(')') {
+                        let assertion = &after_macro[start + 1..end];
+                        return Some(assertion.trim().to_string());
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    fn extract_panic_message(line: &str) -> Option<String> {
+        let trimmed = line.trim();
+
+        if let Some(idx) = trimmed.find("panic!(") {
+            let after_panic = &trimmed[idx + 7..];
+            if let Some(start) = after_panic.find('"') {
+                if let Some(end) = after_panic[start + 1..].find('"') {
+                    let message = &after_panic[start + 1..start + 1 + end];
+                    return Some(message.to_string());
+                }
+            }
+        }
+
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn extract_from_rust_file() {
+        let temp = TempDir::new().unwrap();
+        let file_path = temp.path().join("test.rs");
+
+        fs::write(
+            &file_path,
+            r#"
+/// User must be authenticated
+fn validate_user_authentication(user: &User) -> bool {
+    assert!(user.is_authenticated());
+    user.auth_token.is_some()
+}
+
+#[test]
+fn test_authentication_required() {
+    let user = User::new();
+    assert!(!validate_user_authentication(&user));
+}
+
+fn process_payment(amount: u64) {
+    if amount == 0 {
+        panic!("Amount must be greater than zero");
+    }
+}
+"#,
+        )
+        .unwrap();
+
+        let specs = RustExtractor::extract(&file_path).unwrap();
+
+        assert!(specs.len() >= 4, "Should extract multiple specifications");
+
+        // Check for function name extraction
+        assert!(
+            specs.iter().any(|s| s.content.contains("user authentication")),
+            "Should extract from function name"
+        );
+
+        // Check for assertion extraction
+        assert!(
+            specs.iter().any(|s| s.content.contains("Invariant")),
+            "Should extract assertions"
+        );
+
+        // Check for test extraction
+        assert!(
+            specs.iter().any(|s| s.kind == NodeKind::Scenario),
+            "Should extract test scenarios"
+        );
+
+        // Check for panic extraction
+        assert!(
+            specs.iter().any(|s| s.content.contains("greater than zero")),
+            "Should extract panic messages"
+        );
+
+        // Check formality layers
+        let executable = specs.iter().filter(|s| s.formality_layer == 3).count();
+        assert!(executable > 0, "Should have executable specifications");
+
+        let natural = specs.iter().filter(|s| s.formality_layer == 0).count();
+        assert!(natural > 0, "Should have natural language specifications");
+    }
+
+    #[test]
+    fn ingest_inferred_specs() {
+        let mut graph = SpecGraph::new();
+
+        let specs = vec![
+            InferredSpecification {
+                content: "User must be authenticated".to_string(),
+                kind: NodeKind::Constraint,
+                confidence: 0.9,
+                source_file: "auth.rs".to_string(),
+                source_line: 42,
+                formality_layer: 0,
+                metadata: HashMap::new(),
+            },
+            InferredSpecification {
+                content: "Password length >= 8".to_string(),
+                kind: NodeKind::Constraint,
+                confidence: 0.95,
+                source_file: "auth.rs".to_string(),
+                source_line: 55,
+                formality_layer: 3,
+                metadata: HashMap::new(),
+            },
+            InferredSpecification {
+                content: "Low confidence spec".to_string(),
+                kind: NodeKind::Assertion,
+                confidence: 0.5, // Below threshold
+                source_file: "test.rs".to_string(),
+                source_line: 10,
+                formality_layer: 0,
+                metadata: HashMap::new(),
+            },
+        ];
+
+        let report = graph.ingest(specs);
+
+        assert_eq!(report.nodes_created, 2, "Should create 2 high-confidence nodes");
+        assert_eq!(report.nodes_skipped, 1, "Should skip 1 low-confidence node");
+
+        let nodes = graph.list_nodes(None);
+        assert_eq!(nodes.len(), 2);
+
+        // Verify metadata is preserved
+        let auth_node = nodes.iter().find(|n| n.content.contains("authenticated")).unwrap();
+        assert_eq!(auth_node.metadata.get("source_file").unwrap(), "auth.rs");
+        assert_eq!(auth_node.metadata.get("inferred").unwrap(), "true");
+    }
+}
