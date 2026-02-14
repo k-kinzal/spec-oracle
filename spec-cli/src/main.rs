@@ -5,6 +5,7 @@ mod proto {
 mod presentation;
 mod persistence;
 mod utils;
+mod commands;
 
 use clap::{Parser, Subcommand};
 use proto::spec_oracle_client::SpecOracleClient;
@@ -498,7 +499,7 @@ async fn handle_ai_query(question: &str, ai_cmd: &str) -> Result<String, Box<dyn
 
 /// Run commands in standalone mode (direct file access, no server needed)
 async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    let store = FileStore::new(&spec_path);
+    let mut store = FileStore::new(&spec_path);
 
     match command {
         Commands::Init { path: _ } => {
@@ -507,47 +508,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             return Ok(());
         }
         Commands::Add { content, no_infer } => {
-            println!("Adding specification: {}\n", content);
-
-            // Load graph
-            let mut graph = store.load()?;
-
-            // Infer kind
-            let kind = infer_spec_kind(&content);
-            println!("  Inferred kind: {}", kind);
-
-            // Add node
-            let proto_kind = parse_node_kind(&kind);
-            let core_kind = proto_to_core_kind(proto_kind);
-            let node = graph.add_node(content.clone(), core_kind, HashMap::new());
-            let node_id = node.id.clone();
-
-            println!("  ✓ Created specification [{}]", &node_id[..8]);
-
-            // Auto-infer relationships (unless disabled)
-            if !no_infer {
-                println!("\n  🔗 Auto-inferring relationships...");
-                let report = graph.auto_connect_node(&node_id);
-
-                if report.edges_created > 0 {
-                    println!("  ✓ Created {} automatic relationship(s)", report.edges_created);
-                }
-
-                if !report.suggestions.is_empty() {
-                    println!("  💡 {} medium-confidence suggestion(s) (use 'spec trace {}' to view)",
-                        report.suggestions.len(), &node_id[..8]);
-                }
-
-                if report.edges_created == 0 && report.suggestions.is_empty() {
-                    println!("  ℹ No relationships inferred (spec may be isolated)");
-                }
-            }
-
-            // Save
-            store.save(&graph)?;
-
-            println!("\n✓ Specification added successfully");
-            println!("  To view relationships: spec trace {}", &node_id[..8]);
+            commands::execute_add_standalone(&mut store, content, no_infer)?;
         }
         Commands::Api(api_cmd) => {
             // Low-level graph API operations in standalone mode
@@ -808,98 +769,8 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             }
         }
         Commands::Check => {
-            let graph = store.load()?;
-
-            println!("🔍 Checking specifications...\n");
-
-            // Collect statistics
-            let all_nodes = graph.list_nodes(None);
-            let total_nodes = all_nodes.len();
-            let inferred_nodes: Vec<_> = all_nodes.iter()
-                .filter(|n| n.metadata.get("inferred").map(|s| s.as_str()) == Some("true"))
-                .collect();
-            let inferred_count = inferred_nodes.len();
-
-            // Check contradictions
-            println!("  Checking for contradictions...");
-            let contradictions = graph.detect_contradictions();
-            if contradictions.is_empty() {
-                println!("  ✓ No contradictions found");
-            } else {
-                println!("  ⚠️  {} contradiction(s) found", contradictions.len());
-            }
-
-            // Check omissions and analyze by extractor
-            println!("  Checking for omissions...");
-            let omissions = graph.detect_omissions();
-
-            // Count isolated inferred specs by extractor
-            let mut isolated_by_extractor: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-            for omission in &omissions {
-                for node in &omission.related_nodes {
-                    if node.metadata.get("inferred").map(|s| s.as_str()) == Some("true") {
-                        let extractor = node.metadata.get("extractor")
-                            .map(|s| s.as_str())
-                            .unwrap_or("unknown");
-                        *isolated_by_extractor.entry(extractor.to_string()).or_insert(0) += 1;
-                    }
-                }
-            }
-            let isolated_inferred: usize = isolated_by_extractor.values().sum();
-
-            if omissions.is_empty() {
-                println!("  ✓ No isolated specifications");
-            } else {
-                println!("  ⚠️  {} isolated specification(s)", omissions.len());
-                if isolated_inferred > 0 {
-                    println!("     Extracted specs needing connections:");
-                    for (extractor, count) in isolated_by_extractor.iter() {
-                        println!("       - {}: {} specs", extractor, count);
-                    }
-                }
-            }
-
-            // Summary
-            println!("\n📊 Summary:");
-            println!("  Total specs:        {}", total_nodes);
-            println!("  Extracted specs:    {} ({:.1}%)", inferred_count,
-                inferred_count as f64 / total_nodes as f64 * 100.0);
-            println!("  Contradictions:     {}", contradictions.len());
-            println!("  Isolated specs:     {}", omissions.len());
-
-            let total_issues = contradictions.len() + omissions.len();
-            if total_issues == 0 {
-                println!("\n✅ All checks passed! No issues found.");
-                std::process::exit(0);
-            } else if contradictions.is_empty() {
-                println!("\n⚠️  Minor issues found (isolated specifications may need relationships)");
-
-                // Show first few omissions as examples
-                if !omissions.is_empty() {
-                    println!("\nExamples of isolated specifications:");
-                    for (i, omission) in omissions.iter().take(3).enumerate() {
-                        println!("  {}. {}", i + 1, omission.description);
-                        for node in &omission.related_nodes {
-                            println!("     - [{}] {}", &node.id[..8], node.content);
-                        }
-                    }
-                    if omissions.len() > 3 {
-                        println!("  ... and {} more", omissions.len() - 3);
-                    }
-                }
-                std::process::exit(1);
-            } else {
-                println!("\n❌ Critical issues found!");
-
-                // Show contradictions
-                println!("\nContradictions:");
-                for (i, contradiction) in contradictions.iter().enumerate() {
-                    println!("  {}. {}", i + 1, contradiction.explanation);
-                    println!("     A: [{}] {}", &contradiction.node_a.id[..8], contradiction.node_a.content);
-                    println!("     B: [{}] {}", &contradiction.node_b.id[..8], contradiction.node_b.content);
-                }
-                std::process::exit(1);
-            }
+            let exit_code = commands::execute_check_standalone(&store)?;
+            std::process::exit(exit_code);
         }
         Commands::Summary => {
             let graph = store.load()?;
