@@ -358,6 +358,10 @@ impl SpecGraph {
             .graph
             .node_indices()
             .map(|idx| (idx, &self.graph[idx]))
+            .filter(|(_, node)| {
+                // Skip Definitions (meta-specifications, examples, test data)
+                node.kind != NodeKind::Definition
+            })
             .collect();
 
         for i in 0..all_nodes.len() {
