@@ -15,6 +15,7 @@ Consistency condition:
 ## Files
 - `password_policy_benchmark.py`: benchmark runner
 - `benchmark_results.json`: generated summary from 5 runs x 200,000 cases
+  - includes baseline comparison against brute-force checker (20,000 cases)
 
 ## Reproduce
 ```bash

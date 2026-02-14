@@ -6,7 +6,7 @@
 
 1. `U, D, A, f` の型付き定義を本文に完結に記述
 2. `f_{0i}^{-1}` をブラックボックス扱いせず、部分射影 `proj_i` から誘導定義
-3. 単なる union 展開に留まらない性質（領域整合、層追加単調性、層間伝播、抽出判定の完全性）を証明
+3. 単なる union 展開に留まらない性質（領域整合、層追加単調性、層間伝播、層間合成則、抽出判定の完全性）を証明
 
 ## 1. 問題設定と研究課題
 多層仕様管理では、層ごとに異なる形式体系（自然言語、API、実装、契約）を使うため、共通の根仕様 `U0` をどう構成するかが曖昧になりやすい。  
@@ -114,7 +114,15 @@ Contradictory(i,j)\Leftrightarrow \neg Consistent(i,j)
 \]
 Lean: `contradictory_iff_not_consistent`。
 
-### 定理9（抽出判定器の健全性・完全性）
+### 定理9（層間合成則）
+`proj_j = bind(proj_i, g)` を満たすとき
+\[
+f_{0j}^{-1}(S) = f_{0i}^{-1}(g^{-1}(S))
+\]
+が成り立つ（`g^{-1}` は `pullbackVia` として定義）。  
+Lean: `preimage_compose`（`paper/lean/UadfU0/InterLayer/Composition.lean`）。
+
+### 定理10（抽出判定器の健全性・完全性）
 ケーススタディ（パスワード長制約）で、アーティファクト
 
 - 要求: `min_req ≤ n ≤ max_req`
@@ -141,7 +149,8 @@ Lean: `checkConsistent_iff_allThree`（`paper/lean/UadfU0/CaseStudy/PasswordPoli
 3. **`D/A` の接続証明**: `A_i ⊆ D_i` が `U0` 側の証人妥当性に伝播する（定理3,4）。
 4. **運用上の性質**: 層追加時の `U0` 単調拡大（定理6）により、差分統合の理論的基礎を与える。
 5. **層間意味保存**: 関係 `R` の仮定下で `lifted(j) ⊆ lifted(i)` を導く（定理7）。
-6. **実行可能判定と論理仕様の同値**: 具体抽出器の判定式と交差非空性を同値化（定理9）。
+6. **層間合成の保存則**: `proj_j = bind(proj_i,g)` から逆像合成則を導出（定理9）。
+7. **実行可能判定と論理仕様の同値**: 具体抽出器の判定式と交差非空性を同値化（定理10）。
 
 ## 5. 形式化実装と評価
 ### 5.1 実装構成
@@ -150,13 +159,14 @@ Lean: `checkConsistent_iff_allThree`（`paper/lean/UadfU0/CaseStudy/PasswordPoli
 - `paper/lean/UadfU0/U0Spec/Minimality.lean`: 上限性
 - `paper/lean/UadfU0/InterLayer/Consistency.lean`: 矛盾/整合双対
 - `paper/lean/UadfU0/InterLayer/Transfer.lean`: 層間伝播定理
+- `paper/lean/UadfU0/InterLayer/Composition.lean`: 層間合成則
 - `paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean`: 抽出判定器の健全性/完全性
 - `paper/lean/UadfU0/Examples/*.lean`: 一致例・矛盾例
 - `paper/case-study/password_policy_benchmark.py`: 実証ベンチマーク
 
 ### 5.2 形式化規模（本稿時点）
-- Leanファイル総行数: 649 LOC（ケーススタディ含む）
-- `theorem` 宣言数: 27
+- Leanファイル総行数: 779 LOC（ケーススタディ/合成則含む）
+- `theorem` 宣言数: 30
 - 中核定義: `Layer`, `Model`, `preimage`, `lifted`, `U0`
 
 ### 5.3 再現性

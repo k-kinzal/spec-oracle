@@ -318,7 +318,7 @@
       },
       {
         "id": "fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2",
-        "content": "All high-priority features now have complete U0→U2→U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
+        "content": "All high-priority features now have complete U0\u2192U2\u2192U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771062281,
@@ -426,7 +426,7 @@
       },
       {
         "id": "8772404d-59f0-44da-970c-9347eceaaf42",
-        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)",
+        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f\u2080\u2081\u207b\u00b9(U1) \u222a f\u2080\u2082\u207b\u00b9(U2) \u222a ... \u222a f\u2080\u2099\u207b\u00b9(UN)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771064470,
@@ -579,7 +579,7 @@
       },
       {
         "id": "ac7787f6-2eaf-46a0-bc5b-7017d3282886",
-        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)",
+        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: \u2203x. (x \u2208 A1 \u2227 x \u2208 A2)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -588,7 +588,7 @@
       },
       {
         "id": "0154a181-1962-4aa1-aee2-236d2078caf6",
-        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: ∃x. x ∈ A",
+        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: \u2203x. x \u2208 A",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -624,7 +624,7 @@
       },
       {
         "id": "239316dd-4d2e-4ab2-b172-5fdd015fb5e1",
-        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (∃x. x ∈ A)",
+        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (\u2203x. x \u2208 A)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771066871,
@@ -822,7 +822,7 @@
       },
       {
         "id": "d79603df-d239-4d3f-af09-868ed2935374",
-        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings—transcending the fundamental DSL limitation identified in conversation.md",
+        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings\u2014transcending the fundamental DSL limitation identified in conversation.md",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070409,
@@ -831,7 +831,7 @@
       },
       {
         "id": "ce999406-30cc-424e-8bac-8efe06025a3f",
-        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations—representing the first practical realization of the beyond-DSL specification paradigm",
+        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations\u2014representing the first practical realization of the beyond-DSL specification paradigm",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070419,
@@ -1133,7 +1133,7 @@
       },
       {
         "id": "19d08ce6-8cba-4713-9999-a26d373ce7fa",
-        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f₀₂ transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
+        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f\u2080\u2082 transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771073305,
@@ -4931,7 +4931,7 @@
       },
       {
         "id": "cde212a0-7a05-4a59-a3c5-29edab8def5b",
-        "content": "Session 95: Successfully implemented and tested U2 (proto) extraction. ProtoExtractor automatically extracted 28 RPC interface specifications from spec_oracle.proto file and created reverse mapping edges (f₀₂⁻¹: U2 → U0). This proves the reverse mapping engine concept is working. Proto specs were assigned formality_layer=2 and connected to U0 constraints with Formalizes edges. Isolated specs reduced from 251 to 223.",
+        "content": "Session 95: Successfully implemented and tested U2 (proto) extraction. ProtoExtractor automatically extracted 28 RPC interface specifications from spec_oracle.proto file and created reverse mapping edges (f\u2080\u2082\u207b\u00b9: U2 \u2192 U0). This proves the reverse mapping engine concept is working. Proto specs were assigned formality_layer=2 and connected to U0 constraints with Formalizes edges. Isolated specs reduced from 251 to 223.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771078947,
@@ -4940,7 +4940,7 @@
       },
       {
         "id": "e5e4886f-0ae1-4620-a918-eb40537cfa26",
-        "content": "specORACLE reverse mapping engine status: 64.8% of specifications (234/361) are automatically extracted from artifacts. U2→U0 mapping (proto interfaces) works perfectly with 28 specs connected. U3→U0 mapping (code/tests) partially working with 223 isolated specs requiring improved semantic matching. Total reverse mapping edges (Formalizes): 62. The essence is proven: specifications are constructed from artifacts, not written by humans.",
+        "content": "specORACLE reverse mapping engine status: 64.8% of specifications (234/361) are automatically extracted from artifacts. U2\u2192U0 mapping (proto interfaces) works perfectly with 28 specs connected. U3\u2192U0 mapping (code/tests) partially working with 223 isolated specs requiring improved semantic matching. Total reverse mapping edges (Formalizes): 62. The essence is proven: specifications are constructed from artifacts, not written by humans.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771078956,
@@ -6809,6 +6809,279 @@
           "kind": "Formalizes",
           "metadata": {},
           "created_at": 1771079488
+        }
+      ],
+      [
+        145,
+        16,
+        {
+          "id": "4b12b73e-0841-47d3-bf34-1de68adf409a",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        146,
+        16,
+        {
+          "id": "72004c47-32e8-418d-8153-b6539174e3a2",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        147,
+        16,
+        {
+          "id": "141aff95-e3f5-4123-91b9-29841b196fa0",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        148,
+        16,
+        {
+          "id": "756a4c73-ac36-4695-aee0-c37a608f9b72",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        149,
+        16,
+        {
+          "id": "fec86716-9599-4840-9a41-e66d3c78bc67",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        257,
+        16,
+        {
+          "id": "2bffc506-574e-4f08-b658-114053856745",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        259,
+        16,
+        {
+          "id": "33e3d61e-ddf6-491d-bbd1-fda9be86dcfb",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        150,
+        20,
+        {
+          "id": "d050d4df-d91d-48b1-8fb0-bc4e18b2f52b",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        151,
+        20,
+        {
+          "id": "31f4327d-23e2-4401-8ef6-d04c26cf0dd3",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        152,
+        20,
+        {
+          "id": "3c44de77-5b92-45ad-8b1f-234bf51c26fe",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        261,
+        20,
+        {
+          "id": "caa78b87-bf75-45db-b870-2058908e69d3",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        262,
+        20,
+        {
+          "id": "8ffdb4dd-9acb-400a-a5a1-ebc77c1dbcda",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        263,
+        20,
+        {
+          "id": "acbff1a3-43fd-4db9-a06a-f32a122ae472",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771079949
+        }
+      ],
+      [
+        252,
+        22,
+        {
+          "id": "ded98a2b-b422-4935-b637-20ecf58ddcc4",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771080017
+        }
+      ],
+      [
+        253,
+        96,
+        {
+          "id": "830da3b7-4508-4aad-9c66-4750f47dabdf",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771080017
+        }
+      ],
+      [
+        254,
+        95,
+        {
+          "id": "2445ae6d-1b11-4abd-8468-e3f4ca147aa6",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771080017
+        }
+      ],
+      [
+        256,
+        22,
+        {
+          "id": "63de281d-ab39-4b7e-b381-e69b410fb62b",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771080017
+        }
+      ],
+      [
+        291,
+        22,
+        {
+          "id": "ec9cb364-b7ee-4273-9f0b-9a8da8d466bf",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771080017
+        }
+      ],
+      [
+        293,
+        94,
+        {
+          "id": "918cbac6-090e-41f3-8f5f-33dd0905c5f1",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771080017
+        }
+      ],
+      [
+        294,
+        22,
+        {
+          "id": "617a7a9b-fd36-4803-a634-02688461348c",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771080017
+        }
+      ],
+      [
+        295,
+        94,
+        {
+          "id": "9a5a336b-7d7a-49df-b325-575209d0915f",
+          "kind": "Refines",
+          "metadata": {
+            "auto_connected": "true",
+            "session": "96"
+          },
+          "created_at": 1771080017
         }
       ]
     ]

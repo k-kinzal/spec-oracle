@@ -1,6 +1,6 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
- "outputs": "a48447671c61efe9.o",
+ "outputs": "7f7a679a75c745b4.o",
  "log":
  [{"message":
    ".> /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/clang -c -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0.c -I /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/include -fstack-clash-protection -fwrapv -fvisibility=hidden -Wno-unused-command-line-argument --sysroot /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0 -nostdinc -isystem /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/include/clang -O3 -DNDEBUG -DLEAN_EXPORTING",
@@ -8,11 +8,11 @@
  "inputs":
  [["UadfU0:c",
    [["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0.c",
-     "6c85d797afb63d7d"],
+     "8469beec9384ffb8"],
     ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
      "9a2be90fd35343e5"]]],
   ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
    "9a2be90fd35343e5"],
   ["traceArgs: #[-O3, -DNDEBUG, -DLEAN_EXPORTING]", "c1efb66122fb2b9a"],
   ["arm64-apple-darwin24.6.0", "77c16133d139df5a"]],
- "depHash": "ec9bb3c665c2d2f8"}
+ "depHash": "717dd96790775cef"}

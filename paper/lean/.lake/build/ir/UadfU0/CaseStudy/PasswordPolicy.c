@@ -1,6 +1,6 @@
 // Lean compiler output
 // Module: UadfU0.CaseStudy.PasswordPolicy
-// Imports: public import Init public import UadfU0.InterLayer.Transfer
+// Imports: public import Init public import UadfU0.InterLayer.Adequacy
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -742,7 +742,7 @@ return x_1;
 }
 }
 lean_object* initialize_Init(uint8_t builtin);
-lean_object* initialize_UadfU0Paper_UadfU0_InterLayer_Transfer(uint8_t builtin);
+lean_object* initialize_UadfU0Paper_UadfU0_InterLayer_Adequacy(uint8_t builtin);
 static bool _G_initialized = false;
 LEAN_EXPORT lean_object* initialize_UadfU0Paper_UadfU0_CaseStudy_PasswordPolicy(uint8_t builtin) {
 lean_object * res;
@@ -751,7 +751,7 @@ _G_initialized = true;
 res = initialize_Init(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
-res = initialize_UadfU0Paper_UadfU0_InterLayer_Transfer(builtin);
+res = initialize_UadfU0Paper_UadfU0_InterLayer_Adequacy(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 lp_UadfU0Paper_UadfU0_CaseStudy_instReprLayerIx_repr___closed__0 = _init_lp_UadfU0Paper_UadfU0_CaseStudy_instReprLayerIx_repr___closed__0();

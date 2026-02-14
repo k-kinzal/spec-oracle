@@ -12,6 +12,7 @@ Consistency iff max(min_req, min_api) <= min(max_req, max_code)
 from __future__ import annotations
 
 import json
+import platform
 import random
 import statistics
 import time
@@ -43,6 +44,14 @@ def check_consistent(req: ReqArtifact, api: ApiArtifact, code: CodeArtifact) -> 
 
 def classify(req: ReqArtifact, api: ApiArtifact, code: CodeArtifact) -> str:
     return "consistent" if check_consistent(req, api, code) else "contradictory"
+
+
+def brute_force_consistent(req: ReqArtifact, api: ApiArtifact, code: CodeArtifact) -> bool:
+    upper_scan = max(req.max_len, code.max_len, api.min_len, req.min_len)
+    for n in range(upper_scan + 1):
+        if req.min_len <= n <= req.max_len and api.min_len <= n and n <= code.max_len:
+            return True
+    return False
 
 
 def sample_artifact(rng: random.Random) -> tuple[ReqArtifact, ApiArtifact, CodeArtifact]:
@@ -93,12 +102,42 @@ def main() -> None:
     seeds = [17, 29, 43, 71, 89]
     runs = [run_once(seed, n_cases) for seed in seeds]
 
+    # Baseline: compare O(1) closed-form checker vs brute-force scan.
+    baseline_seed = 101
+    baseline_cases = 20_000
+    rng = random.Random(baseline_seed)
+    artifacts = [sample_artifact(rng) for _ in range(baseline_cases)]
+
+    t_formula0 = time.perf_counter()
+    formula_results = [check_consistent(req, api, code) for req, api, code in artifacts]
+    t_formula = time.perf_counter() - t_formula0
+
+    t_bruteforce0 = time.perf_counter()
+    brute_results = [brute_force_consistent(req, api, code) for req, api, code in artifacts]
+    t_bruteforce = time.perf_counter() - t_bruteforce0
+
+    mismatches = sum(1 for a, b in zip(formula_results, brute_results) if a != b)
+
     summary = {
         "n_cases_per_run": n_cases,
         "n_runs": len(runs),
         "avg_contradictory_ratio": statistics.mean(r["contradictory_ratio"] for r in runs),
         "avg_elapsed_sec": statistics.mean(r["elapsed_sec"] for r in runs),
         "avg_throughput_cases_per_sec": statistics.mean(r["throughput_cases_per_sec"] for r in runs),
+        "environment": {
+            "python_version": platform.python_version(),
+            "platform": platform.platform(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+        },
+        "baseline_comparison": {
+            "seed": baseline_seed,
+            "n_cases": baseline_cases,
+            "formula_elapsed_sec": t_formula,
+            "bruteforce_elapsed_sec": t_bruteforce,
+            "speedup_formula_vs_bruteforce": (t_bruteforce / t_formula) if t_formula > 0 else None,
+            "result_mismatches": mismatches,
+        },
         "runs": runs,
     }
 

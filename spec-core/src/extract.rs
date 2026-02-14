@@ -35,6 +35,38 @@ pub struct EdgeSuggestion {
 }
 
 impl SpecGraph {
+    /// Check if inferred spec has sufficient semantic quality
+    fn is_high_quality_spec(spec: &InferredSpecification) -> bool {
+        let content = &spec.content;
+
+        // Skip low-quality test assertions that are just code artifacts
+        // Examples: "Invariant: g.node_count(), 1", "Invariant: fetched.kind, NodeKind::Assertion"
+        if content.starts_with("Invariant: ") {
+            // Check if content contains semantic keywords indicating it's a real specification
+            let semantic_keywords = [
+                "must", "should", "shall", "require", "ensure", "verify", "validate",
+                "detect", "identify", "check", "test verifies", "system", "user",
+                "specification", "requirement", "constraint"
+            ];
+
+            let has_semantic_meaning = semantic_keywords.iter()
+                .any(|kw| content.to_lowercase().contains(kw));
+
+            if !has_semantic_meaning {
+                // Low-quality test assertion - skip it
+                return false;
+            }
+        }
+
+        // Skip trivial scenario names that provide no information
+        // Examples: "scenario {}", "coverage empty graph" (already connected)
+        if content == "scenario {}" || content.trim().is_empty() {
+            return false;
+        }
+
+        true
+    }
+
     /// Ingest inferred specifications into the graph
     pub fn ingest(&mut self, specs: Vec<InferredSpecification>) -> IngestionReport {
         let mut report = IngestionReport {
@@ -48,7 +80,8 @@ impl SpecGraph {
         // Create nodes for high-confidence inferences
         let mut created_ids = Vec::new();
         for spec in specs {
-            if spec.confidence >= 0.7 {
+            // Apply both confidence threshold and quality filter
+            if spec.confidence >= 0.7 && Self::is_high_quality_spec(&spec) {
                 let mut metadata = spec.metadata.clone();
                 metadata.insert("source_file".to_string(), spec.source_file.clone());
                 metadata.insert("source_line".to_string(), spec.source_line.to_string());

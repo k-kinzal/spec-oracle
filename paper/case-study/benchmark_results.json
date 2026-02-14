@@ -2,8 +2,22 @@
   "n_cases_per_run": 200000,
   "n_runs": 5,
   "avg_contradictory_ratio": 0.214478,
-  "avg_elapsed_sec": 0.7499452165999999,
-  "avg_throughput_cases_per_sec": 267334.8141168551,
+  "avg_elapsed_sec": 0.7241029169999998,
+  "avg_throughput_cases_per_sec": 276301.6885429306,
+  "environment": {
+    "python_version": "3.9.6",
+    "platform": "macOS-14.5-arm64-arm-64bit",
+    "machine": "arm64",
+    "processor": "arm"
+  },
+  "baseline_comparison": {
+    "seed": 101,
+    "n_cases": 20000,
+    "formula_elapsed_sec": 0.007018791000000135,
+    "bruteforce_elapsed_sec": 0.07042679100000004,
+    "speedup_formula_vs_bruteforce": 10.03403449397463,
+    "result_mismatches": 0
+  },
   "runs": [
     {
       "seed": 17,
@@ -13,8 +27,8 @@
       "contradictory_ratio": 0.214165,
       "avg_lower": 24.697265,
       "avg_upper": 48.55372,
-      "elapsed_sec": 0.7097267079999999,
-      "throughput_cases_per_sec": 281798.6102898639
+      "elapsed_sec": 0.703156625,
+      "throughput_cases_per_sec": 284431.6513408375
     },
     {
       "seed": 29,
@@ -24,8 +38,8 @@
       "contradictory_ratio": 0.21445,
       "avg_lower": 24.736115,
       "avg_upper": 48.609975,
-      "elapsed_sec": 0.7341345,
-      "throughput_cases_per_sec": 272429.6433419217
+      "elapsed_sec": 0.745568917,
+      "throughput_cases_per_sec": 268251.52637096855
     },
     {
       "seed": 43,
@@ -35,8 +49,8 @@
       "contradictory_ratio": 0.214565,
       "avg_lower": 24.736285,
       "avg_upper": 48.56848,
-      "elapsed_sec": 0.7363832909999999,
-      "throughput_cases_per_sec": 271597.6889269206
+      "elapsed_sec": 0.7282698749999998,
+      "throughput_cases_per_sec": 274623.4697679896
     },
     {
       "seed": 71,
@@ -46,8 +60,8 @@
       "contradictory_ratio": 0.21514,
       "avg_lower": 24.729565,
       "avg_upper": 48.551755,
-      "elapsed_sec": 0.8215780420000001,
-      "throughput_cases_per_sec": 243433.96460929269
+      "elapsed_sec": 0.7209879589999999,
+      "throughput_cases_per_sec": 277397.14304992993
     },
     {
       "seed": 89,
@@ -57,8 +71,8 @@
       "contradictory_ratio": 0.21407,
       "avg_lower": 24.703555,
       "avg_upper": 48.54782,
-      "elapsed_sec": 0.7479035419999995,
-      "throughput_cases_per_sec": 267414.1634162766
+      "elapsed_sec": 0.7225312089999996,
+      "throughput_cases_per_sec": 276804.6521849274
     }
   ]
 }

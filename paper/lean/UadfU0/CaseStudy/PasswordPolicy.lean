@@ -1,4 +1,4 @@
-import UadfU0.InterLayer.Transfer
+import UadfU0.InterLayer.Adequacy
 
 namespace UadfU0
 namespace CaseStudy
@@ -73,6 +73,24 @@ def allThreeConsistent (r : ReqArtifact) (a : ApiArtifact) (c : CodeArtifact) : 
   let M := passwordModel r a c
   ∃ n : Nat,
     n ∈ M.lifted .req ∧ n ∈ M.lifted .api ∧ n ∈ M.lifted .code
+
+def reqExtractRel (r : ReqArtifact) (a : ApiArtifact) (c : CodeArtifact) :
+    Nat → (passwordModel r a c).carrier .req → Prop :=
+  fun x y => y = x
+
+theorem req_projection_adequacy
+    (r : ReqArtifact) (a : ApiArtifact) (c : CodeArtifact) :
+    (passwordModel r a c).preimage .req (reqAdmissible r) =
+      (passwordModel r a c).semanticPullback (reqExtractRel r a c) (reqAdmissible r) := by
+  refine Model.preimage_eq_semanticPullback (M := passwordModel r a c) .req (reqExtractRel r a c) ?hEq (reqAdmissible r)
+  intro x y
+  constructor
+  · intro hproj
+    exact (by simpa [passwordModel] using hproj : x = y).symm
+  · intro hrel
+    have hyx : y = x := by
+      simpa [reqExtractRel] using hrel
+    simpa [passwordModel, hyx]
 
 theorem checkConsistent_true_implies_allThree
     (r : ReqArtifact) (a : ApiArtifact) (c : CodeArtifact)

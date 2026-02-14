@@ -4,6 +4,7 @@ import UadfU0.U0Spec.Minimality
 import UadfU0.InterLayer.Consistency
 import UadfU0.InterLayer.Transfer
 import UadfU0.InterLayer.Composition
+import UadfU0.InterLayer.Adequacy
 import UadfU0.CaseStudy.PasswordPolicy
 import UadfU0.Examples.TwoLayer
 import UadfU0.Examples.ContradictoryLayers

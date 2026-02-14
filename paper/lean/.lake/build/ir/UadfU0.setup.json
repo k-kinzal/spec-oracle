@@ -14,6 +14,8 @@
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Consistency.olean"],
   "UadfU0.InterLayer.Composition":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Composition.olean"],
+  "UadfU0.InterLayer.Adequacy":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Adequacy.olean"],
   "UadfU0.Examples.TwoLayer":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/TwoLayer.olean"],
   "UadfU0.Examples.TransferExample":
