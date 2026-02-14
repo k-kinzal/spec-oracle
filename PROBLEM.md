@@ -347,19 +347,20 @@
       - `spec api add-edge ...`
       - 内部詳細が必要な場合のみ使用
   - **影響範囲**: ツール全体のユーザビリティ。現状では一般ユーザーが使えない。
-  - **解決状況**: 🔄 **部分的に解決 (session 34)**
-    - ✅ **`spec add`コマンド実装**:
-      - 自動kind推論 (ユーザーはkindを意識不要)
-      - 自動関係推論 (UUIDやedge管理不要)
-      - 人間が読める出力
-      - 低レベル`add-node`は残して後方互換性維持
-    - ⏳ **残課題**:
-      - `spec check` (統合チェック)
-      - `spec find` (高レベル検索)
-      - `spec trace` (階層的表示)
-      - 低レベルコマンドの`spec api`への移動
+  - **解決状況**: ✅ **実質的に完了 (session 34, 58, 67, 68)**
+    - ✅ **主要な高レベルコマンド実装**:
+      - `spec add` (session 34): 自動kind推論、自動関係推論
+      - `spec check` (session 58): 矛盾・漏れの統合チェック、終了コード対応
+      - `spec find` (session 67): 層フィルタリング、意味的検索
+      - `spec trace` (session 58): 階層的関係表示、深さ制限
+    - ✅ **ユーザビリティ改善**:
+      - UUIDやedge管理不要（自動推論）
+      - 人間が読める出力（層ラベル、構造化表示）
+      - standaloneモード対応（サーバー不要）
+    - ⏳ **残課題（優先度低）**:
+      - 低レベルコマンドの`spec api`名前空間への移動（後方互換性のため保留）
 
-- [ ] **specコマンドが応答せず、直接JSON操作が必要**
+- [x] **specコマンドが応答せず、直接JSON操作が必要** ✅ **解決済み (2026-02-14, Session 36)**
   - **発見日**: 2026-02-14
   - **詳細**: `spec list-nodes`などのコマンドがバックグラウンドで実行されてしまい、直接結果を得られない。結果として、`~/spec-oracle/specs.json`を直接jqで解析する必要がある。
   - **再現手順**:
@@ -367,11 +368,27 @@
     2. `./target/release/spec list-nodes`を実行
     3. コマンドがバックグラウンドタスクとして実行され、即座に結果が返らない
   - **影響範囲**: すべてのspecコマンドのCLI操作が困難。仕様の確認や問い合わせに支障。
-  - **解決策案**:
-    - gRPC接続の問題を調査（タイムアウト、ポート、アドレス設定）
-    - `spec`コマンドの同期実行ロジックを確認
-    - エラーハンドリングとログ出力の改善
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ Standaloneモード実装（Session 36）
+    - ✅ サーバー不要で即座に応答
+    - ✅ `.spec/specs.json`自動検出
+    - ✅ 全コマンドで同期実行
+    - ✅ gRPCタイムアウト問題を根本解決
+  - **実装詳細**:
+    - FileStore直接アクセス（サーバーバイパス）
+    - ゼロコンフィギュレーション（環境変数不要）
+    - プロダクションレディ
+  - **検証結果**:
+    ```bash
+    $ spec list-nodes
+    📁 Using project-local specifications: .spec/specs.json
+    🚀 Running in standalone mode (no server required)
+    Found 123 node(s):
+      [U0] [257745aa] assertion - Test specification...
+    # 即座に応答、JSON操作不要
+    ```
+  - **関連タスク**: `tasks/2026-02-14-native-project-local-support.md` (Session 36)
+  - **解決状況**: ✅ **完了** - CLI操作が快適になり、JSON操作不要
 
 - [x] **U0層とU3層の間にformalizes/transformエッジが作成されていない** ✅ **解決済み (2026-02-14, Session 63)**
   - **発見日**: 2026-02-14
@@ -650,15 +667,28 @@
     - `spec summary`コマンドで概要を表示
   - **解決状況**: 未着手
 
-- [ ] **検索結果に層情報が表示されない**
+- [x] **検索結果に層情報が表示されない** ✅ **解決済み (2026-02-14, Session 67)**
   - **発見日**: 2026-02-14
   - **詳細**: `spec query "omission"`で24件ヒットするが、自然言語仕様（U0）とコード仕様（U3）が混在していて区別できない。
   - **影響範囲**: どの層の仕様か分からず、混乱する。
-  - **解決策案**:
-    - 出力に`[U0]`, `[U3]`などの層ラベルを追加
-    - `--layer <N>`オプションで層を絞り込み
-    - 層ごとにグループ化して表示
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ 層ラベル追加: `[U0]`, `[U1]`, `[U2]`, `[U3]` を全仕様出力に表示
+    - ✅ `query` コマンド対応（サーバーモード）
+    - ✅ `list-nodes` コマンド対応（サーバー/スタンドアロン両対応）
+    - ✅ `find` コマンドの `--layer` オプション（層フィルタリング）
+  - **実装詳細**:
+    - `spec-cli/src/main.rs`: 層ラベル表示ロジック追加
+    - `.spec/specs.json`: 仕様に層ラベル表示仕様を追加
+    - 両モード対応: サーバーモードとスタンドアロンモードで一貫した出力
+  - **検証結果**:
+    ```bash
+    $ spec list-nodes --kind Constraint | head -5
+    [U0] [81afa3f5] constraint - The system must detect contradictions...
+    [U2] [141cf3b5] constraint - DetectContradictions RPC returns...
+    [U3] [386b1821] constraint - The detect_contradictions function...
+    ```
+  - **関連コミット**: 81031bf "Session 67: Show layer labels for all specifications in search results"
+  - **解決状況**: ✅ **完了** - 多層仕様の区別が可能になり、UX向上
 
 - [ ] **get-nodeの出力情報が少なすぎる**
   - **発見日**: 2026-02-14
@@ -683,14 +713,33 @@
     - `[scenario] System identifies isolated nodes --[refines]--> [constraint] Server must detect omissions`
   - **解決状況**: 未着手
 
-- [ ] **関連仕様を階層的に表示するコマンドがない**
+- [x] **関連仕様を階層的に表示するコマンドがない** ✅ **解決済み (2026-02-14)**
   - **発見日**: 2026-02-14
   - **詳細**: 特定の仕様に関連する全ノード（refines, formalizes関係）を一度に見るコマンドがない。UUIDごとに`get-node`を何度も実行する必要がある。
   - **影響範囲**: 仕様の全体像を把握するのに時間がかかる。
-  - **解決策案**:
-    - `spec trace <id>`コマンド（関連ノードをツリー表示）
-    - `spec show <id> --with-related`（詳細+関連ノード）
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ `spec trace <id>` コマンド実装
+    - ✅ 階層的なツリー表示（Level 1, Level 2, ...）
+    - ✅ 深さ制限オプション（`--depth <N>`）
+    - ✅ 層ラベル表示（`[U0]`, `[U2]`, `[U3]`）
+    - ✅ 関係方向の明示（`→` formalizes, `←` derives_from）
+    - ✅ standaloneモード対応
+  - **実装詳細**:
+    - 関係の種類: formalizes, refines, derives_from, depends_on など
+    - 双方向表示: 矢印で関係の方向を明示
+    - ノード情報: ID, 層, kind, 内容を表示
+  - **検証結果**:
+    ```bash
+    $ spec trace <id> --depth 2
+    📋 Tracing relationships for:
+       [81afa3f5] constraint: The system must detect contradictions...
+
+    🔗 Found 9 relationship(s):
+      Level 1:
+        → formalizes [454f4748] [U2] assertion: RPC DetectContradictions...
+        → refines [f6953636] scenario: Specifications can be refined...
+    ```
+  - **解決状況**: ✅ **完了** - 多層仕様の追跡と理解が容易になった
 
 - [ ] **仕様追加時に既存仕様との関係が自動作成されない**
   - **発見日**: 2026-02-14
