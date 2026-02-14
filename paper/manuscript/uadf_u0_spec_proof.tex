@@ -9,7 +9,7 @@
 \newtheorem{proposition}{Proposition}
 \newtheorem{remark}{Remark}
 
-\title{Typed U0 Construction in the UAD/f Model:\\A Lean4 Mechanization}
+\title{Typed Semantics for Root-Spec Integration in UAD/f:\\Lean4 Formalization of U0 Construction}
 \author{spec-oracle project}
 \date{February 14, 2026}
 
@@ -17,8 +17,8 @@
 \maketitle
 
 \begin{abstract}
-We formalize the U0-construction core of the UAD/f model in Lean4.
-The key issue is definitional ambiguity: many descriptions write
+We formalize the root-specification integration core (U0 construction) of UAD/f in Lean4.
+The research problem is definitional ambiguity: many descriptions write
 $U0=\bigcup_i f^{-1}_{0i}(A_i)$ without typing the layer spaces or defining
 what $f^{-1}_{0i}$ means for partial mappings.
 We introduce a typed setting with root space $\Omega$, per-layer carriers $\beta_i$,
@@ -46,6 +46,9 @@ This paper asks:
 \item[\textbf{RQ3}] Is root construction monotone under layer-set extension?
 \item[\textbf{RQ4}] Can a general extraction relation be connected to induced inverse images, and can that theorem be instantiated to a concrete decision rule?
 \end{enumerate}
+\noindent
+UAD/f is treated as a self-contained model in this paper: all required entities
+($\Omega, I, \beta_i, D_i, A_i, \mathrm{proj}_i$) are fully specified in text and Lean code.
 \noindent
 Paper type: this is a mechanization-oriented original article.
 Claims are restricted to formal coherence of the typed UAD/f core and reusable machine-checked lemmas, not external effectiveness on real industrial repositories.
@@ -129,6 +132,8 @@ Then $lifted(j)\subseteq lifted(i)$.
 Mechanized instances are provided in \texttt{TransferExample.lean}
 (\texttt{false -> true}) and \texttt{TransferChainExample.lean}
 (\texttt{code -> api -> req}).
+Operationally, this supports safe propagation of stronger constraints across
+traceability updates (e.g., code/API constraints to requirement-layer root witnesses).
 
 \begin{theorem}[Consistency/contradiction duality]
 $\mathrm{Contradictory}(i,j)\iff\neg\mathrm{Consistent}(i,j)$.
@@ -145,6 +150,8 @@ f^{-1}_{0j}(S) = f^{-1}_{0i}(g^{-1}(S)).
 The commutation hypothesis matches extractor pipelines where layer-$j$
 projection is implemented as a post-transform over layer-$i$ projection;
 see \texttt{CompositionExample.lean}.
+This enables decomposition of higher-layer inverse-image checks into lower-layer
+checks plus an explicit transformer $g$, useful for incremental extractor validation.
 
 \begin{theorem}[General extraction adequacy transfer]
 If an extraction relation $E : \Omega \to \beta_i \to Prop$ satisfies
@@ -172,6 +179,14 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code).
 \]
 \end{theorem}
 
+\begin{theorem}[Non-adjunction under partial projection]
+If there exists $x_0\in\Omega$ with $\mathrm{proj}_i(x_0)=none$, then
+the existential preimage operator at layer $i$ has no left adjoint on full powersets:
+\[
+\neg \exists F,\ \forall S,T,\ F(S)\subseteq T \iff S\subseteq f^{-1}_{0i}(T).
+\]
+\end{theorem}
+
 \section{Mechanization and Reproducibility}
 Lean artifacts are organized by proof purpose:
 \begin{itemize}
@@ -192,12 +207,16 @@ Pinned toolchain:
 \begin{itemize}
 \item Lean4: \texttt{leanprover/lean4:v4.27.0}
 \item Lake: \texttt{5.0.0-src+db93fe1}
+\item toolchain file: \texttt{paper/lean/lean-toolchain}
+\item lake definition: \texttt{paper/lean/lakefile.lean}
+\item manifest: \texttt{paper/lean/lake-manifest.json} (packages = [])
+\item reproducibility commit: \texttt{3b06520d9704c09dcec03d609731910bcfa0edc9}
 \end{itemize}
 
 Current footprint:
 \begin{itemize}
-\item 914 LOC across core Lean files
-\item 34 theorem declarations
+\item 979 LOC across core Lean files
+\item 35 theorem declarations
 \end{itemize}
 
 \paragraph{Non-trivial proof engineering points}
@@ -227,8 +246,13 @@ typed partial projections for root-specification reconstruction.
 In particular, our \texttt{preimage} operator is induced by
 $\mathrm{proj}:\Omega\to Option\,\beta_i$; because undefined points are explicit,
 embedding into a standard total-map Galois adjunction requires additional domain/totality assumptions.
+This difference is formalized by a mechanized non-adjunction theorem for undefined projection points.
 Institution-style semantic transport (Goguen \& Burstall, 1984) addresses
 language-independent satisfaction, whereas we focus on a concrete U0 operator.
+Our correspondence is: layer index set $I$ as signature-level indexing and
+$lifted(i)$ as root-level satisfaction set for layer $i$.
+Unlike general institution axiomatization, satisfaction-preservation obligations
+are given explicitly as assumptions ($R$ in transfer, $hcomm$ in composition).
 Compared with system-level formal methods (e.g., TLA+, Lamport 2002), this work
 does not model full system behavior; it isolates and mechanizes the U0 integration kernel,
 and connects it to an executable decision rule in a concrete case study.
@@ -253,6 +277,9 @@ Lean4 proofs establish domain-respecting lifting, supremum characterization of U
 layer-extension monotonicity, composition preservation, and extraction-adequacy transfer.
 This provides a precise baseline for stronger future results (composition laws,
 extractor correctness, and CI-level artifact guarantees).
+The scientific increment is not restating elementary set facts, but exposing
+missing assumptions in typed partial multi-layer integration (including mechanized
+non-adjunction under undefined projections).
 
 \paragraph{References (informal)}
 [1] P. Cousot and R. Cousot, ``Abstract Interpretation,'' POPL 1977.\\

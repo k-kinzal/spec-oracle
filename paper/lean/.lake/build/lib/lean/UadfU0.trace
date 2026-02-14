@@ -1,9 +1,9 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["1783efb89bd5ba9d.olean"],
-  "i": "226ff9e86a2891ba.ilean",
-  "c": "ac61221a1766818e.c"},
+ {"o": ["e60939ae3138b0a5.olean"],
+  "i": "51a6b6b44d6db189.ilean",
+  "c": "ffa249ecad83e3d5.c"},
  "log":
  [{"message":
    ".> LEAN_PATH=/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/ab/Projects/spec-oracle/paper/lean/UadfU0.lean -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0.olean -i /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0.ilean -c /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0.c --setup /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0.setup.json --json",
@@ -35,6 +35,9 @@
         ["UadfU0.InterLayer.Adequacy transitive imports (legacy)",
          "8eacf4170447dd9b"],
         ["UadfU0.InterLayer.Adequacy:importAllArts", "4ceed177b88e6152"],
+        ["UadfU0.RelatedWork.Galois transitive imports (legacy)",
+         "f42258e499a8b77a"],
+        ["UadfU0.RelatedWork.Galois:importAllArts", "06d901f74fca46a9"],
         ["UadfU0.CaseStudy.PasswordPolicy transitive imports (legacy)",
          "1440f5d71fc1e131"],
         ["UadfU0.CaseStudy.PasswordPolicy:importAllArts", "ce3eca8357197bbf"],
@@ -63,7 +66,7 @@
       ["module plugins", "00000000000006bb"]]]]],
   ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
    "9a2be90fd35343e5"],
-  ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0.lean", "45eb9401a481fd49"],
+  ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0.lean", "cabdb955a85836bf"],
   ["options", "00000000000006bb"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "05c2c29adc17ef85"}
+ "depHash": "ef1fc6995af2be2a"}

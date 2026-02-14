@@ -1,7 +1,7 @@
-# UAD/fモデルにおける型付きU0構成規則の機械検証
+# UAD/fにおける根仕様統合の型付き意味論: U0構成規則のLean4形式化
 
 ## 0. 位置づけ（結論先出し）
-本稿は「UAD/f意味論の完全証明」ではなく、**U0構成規則の形式的コア**を Lean4 で機械検証する原著である。  
+本稿は「UAD/f意味論の完全証明」ではなく、**根仕様統合（U0構成）の形式的コア**を Lean4 で機械検証する原著である。  
 査読で問題になりやすい「定義の曖昧さ」「型不整合」「自明性」を避けるため、次を明示した。
 
 1. `U, D, A, f` の型付き定義を本文に完結に記述
@@ -23,6 +23,20 @@
 - `RQ3`: 層集合の追加・拡張に対して `U0` が単調に拡大することを示せるか。
 - `RQ4`: 一般抽出関係 `E` と `proj` の点ごとの同値仮定から逆像一致を導けるか。また、具体事例（パスワード長制約）において判定器同値性を証明可能か。
 
+### 1.1 UAD/fモデルの出典と本稿の責務
+本稿では UAD/f を**本稿内で自己完結に定義されるモデル**として扱う。  
+したがって、外部文献の略記定義には依存せず、`Ω, I, β_i, D_i, A_i, proj_i` の全構成要素を本文と Lean 実装の双方で明示する。
+
+### 1.2 RQに対する評価軸
+本稿の評価は以下の4軸で行う。
+
+| 軸 | 評価内容 | 本稿での指標 |
+|---|---|---|
+| 定義妥当性 | 型の整合・定義の非曖昧性 | §2 と `Model.lean` の1対1対応 |
+| 理論妥当性 | RQに対応する不変条件・定理 | §3 の定理1〜12 |
+| 形式化コスト | 形式化規模と難所の透明化 | §4.2, §5.2 |
+| 再現可能性 | 他者が同一結果を再実行可能か | §5.3（toolchain/manifest/commit） |
+
 ## 2. UAD/f の型付き定義
 ### 2.1 空間と層
 - ルート空間（root universe）: `Ω`
@@ -31,8 +45,8 @@
 
 ### 2.2 U, D, A, f
 - `U_i` は本稿では `A_i` と同義に扱う（層仕様集合）
-- `D_i ⊆ β_i`: 層 `i` の対象領域（Domain）
-- `A_i ⊆ D_i`: 層 `i` の許容集合（Admissible）
+- `D(i) ⊆ β_i`: 層 `i` の対象領域（Domain）
+- `A(i) ⊆ D(i)`: 層 `i` の許容集合（Admissible）
 - `f_{0i}` は部分写像として  
   \[
   f_{0i} : Ω \rightharpoonup β_i
@@ -63,7 +77,7 @@ def preimage (M : Model ι α) (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α
 
 ### 2.4 U0 構成規則
 \[
-lifted(i) := f_{0i}^{-1}(A_i), \qquad
+lifted(i) := f_{0i}^{-1}(A(i)), \qquad
 U0 := \bigcup_{i \in I} lifted(i)
 \]
 
@@ -128,6 +142,10 @@ Lean: `lifted_transfer`（`paper/lean/UadfU0/InterLayer/Transfer.lean`）。
 - `paper/lean/UadfU0/Examples/TransferExample.lean`: `false → true` の伝播
 - `paper/lean/UadfU0/Examples/TransferChainExample.lean`: `code → api` と `api → req` の2段伝播
 
+運用シナリオ（例）:
+- API層で `minLen ≥ 12` が確定したとき、実装層抽出から `minLen ≥ 8` が得られても、`R` による許容性保存が成立すれば root 側ではより強い制約へ安全に伝播できる。
+- 契約注釈層から要求層へのトレーサビリティ更新時に、`lifted_transfer` は「更新で失われない整合集合」を保証する補題として使える。
+
 ### 定理8（矛盾・整合の双対）
 \[
 Contradictory(i,j)\Leftrightarrow \neg Consistent(i,j)
@@ -144,6 +162,10 @@ Lean: `preimage_compose`（`paper/lean/UadfU0/InterLayer/Composition.lean`）。
 
 仮定 `proj_j = bind(proj_i, g)` は、層`j`抽出器が層`i`抽出器の後段変換として実装される場合を表す。  
 具体例は `paper/lean/UadfU0/Examples/CompositionExample.lean` に示した。
+
+運用シナリオ（例）:
+- `i`: API仕様（OpenAPI）抽出、`j`: セキュリティ要求抽出とすると、`g` は「API制約から要求制約への写像」になる。  
+  このとき定理9は、要求層での逆像計算を API層での逆像＋`g`の引き戻しに分解できることを保証し、抽出チェーンの差分検証に使える。
 
 ### 定理10（抽出関係の一般適合定理）
 `E : Ω → β_i → Prop` が
@@ -175,6 +197,13 @@ check = true \Leftrightarrow \exists n,\ n \in lifted(req)\cap lifted(api)\cap l
 が成り立つ。  
 Lean: `req_projection_adequacy`, `checkConsistent_iff_allThree`（`paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean`）。
 
+### 定理12（部分射影下での非随伴性）
+層 `i` に対して `∃x0, proj_i(x0)=none` が成り立つとき、`preimage_i` は冪集合上の左随伴を持たない：
+\[
+\neg \exists F,\ \forall S,T,\ F(S)\subseteq T \Leftrightarrow S\subseteq preimage_i(T)
+\]
+Lean: `no_left_adjoint_of_partial`（`paper/lean/UadfU0/RelatedWork/Galois.lean`）。
+
 ## 4. 何が「自明」で何が本稿の増分か
 確かに定理1,2,5,8は集合論の古典的事実に近い。  
 本稿の増分は以下にある。
@@ -186,6 +215,7 @@ Lean: `req_projection_adequacy`, `checkConsistent_iff_allThree`（`paper/lean/Ua
 5. **層間意味保存**: 関係 `R` の仮定下で `lifted(j) ⊆ lifted(i)` を導く（定理7）。
 6. **層間合成の保存則**: `proj_j = bind(proj_i,g)` から逆像合成則を導出（定理9）。
 7. **一般適合＋具体実装の二段構成**: `proj` と抽出関係 `E` の一致から逆像一致を導き（定理10）、その後に具体判定器同値へ落とす（定理11）。
+8. **既存随伴理論との差分の形式証明**: 未定義点を持つ部分射影では `preimage` が左随伴を持たないことを機械検証（定理12）。
 
 ### 4.1 機械検証の必要性：型検証上の非自明点
 
@@ -237,13 +267,14 @@ Lean では `Option.bind` が `some/none` 場合分けを含むため、`proj_j 
 - `paper/lean/UadfU0/InterLayer/Transfer.lean`: 層間伝播定理
 - `paper/lean/UadfU0/InterLayer/Composition.lean`: 層間合成則
 - `paper/lean/UadfU0/InterLayer/Adequacy.lean`: 抽出関係の一般適合定理
+- `paper/lean/UadfU0/RelatedWork/Galois.lean`: 部分射影下での非随伴性
 - `paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean`: 抽出判定器の健全性/完全性
 - `paper/lean/UadfU0/Examples/*.lean`: 一致例・矛盾例・伝播例・合成例
 - `paper/case-study/password_policy_benchmark.py`: 判定式と全探索の一致検証
 
 ### 5.2 形式化規模（本稿時点）
-- Leanファイル総行数: 914 LOC（ケーススタディ/適合定理/追加伝播例を含む）
-- `theorem` 宣言数: 34
+- Leanファイル総行数: 979 LOC（関連研究比較の形式証明を含む）
+- `theorem` 宣言数: 35
 - 中核定義: `Layer`, `Model`, `preimage`, `lifted`, `U0`
 
 ### 5.3 再現性
@@ -253,6 +284,11 @@ cd paper/lean
 ```
 - Lean4: `leanprover/lean4:v4.27.0`
 - Lake: `5.0.0-src+db93fe1`
+- toolchainファイル: `paper/lean/lean-toolchain`
+- Lake定義: `paper/lean/lakefile.lean`
+- manifest: `paper/lean/lake-manifest.json`
+- 外部パッケージ依存: なし（manifest の `packages = []`）
+- 再現参照コミット: `3b06520d9704c09dcec03d609731910bcfa0edc9`
 - 本稿作成時点で `Build completed successfully` を確認。
 
 ### 5.4 判定器実装の一致チェック（補助）
@@ -288,10 +324,12 @@ cd paper/lean
   抽象関数 `α : C → A` と具体化関数 `γ : A → C` が `∀c∀a, α(c) ≤ a ⇔ c ⊑ γ(a)` を満たす。
   本稿の枠組みと比較すると、`preimage` は形式的には `γ` (具体化方向) に対応し、逆像単調性（定理1）は Galois 接続の性質と整合する。
   **相違点として**、本稿の `proj : Ω → Option β_i` は `none` を含む部分性を一次的に表現する。
-  したがって、標準的な総写像ベースの随伴 `α ⊣ γ` への埋め込みには追加条件（定義域制約や総定義化）が必要になる。
-  本稿では随伴の成立/非成立は断定せず、`Option` 部分性を持つ型付きモデルの機械検証に焦点を絞る。
+  この点は定理12で形式化し、未定義点が存在する場合に `preimage` が冪集合上の左随伴を持たないことを Lean で示した。
+  よって標準的な総写像ベース随伴への埋め込みには追加条件（定義域制約や総定義化）が必要になる。
 - Institution 理論（Goguen/Burstall）:
   言語間満足の移送と問題意識を共有するが、本稿は一般 institution 公理化ではなく、`Option` による部分性を明示した具体モデル。
+  対応関係としては、`I` を署名インデックス、`lifted(i)` を層 `i` の root 充足集合と見なせる。  
+  一方で institution の Satisfaction Condition に相当する写像整合は本稿では仮定 `R`（定理7）と `hcomm`（定理9）として個別に与えるため、一般公理化より具体的である。
 - Refinement/traceability 系:
   層追加単調性（定理6）と層間伝播（定理7）を通じ、運用時の増分統合の基礎を与える。
 - 形式手法実装（TLA+, Alloy, Lean）:
@@ -316,6 +354,8 @@ cd paper/lean
 ## 9. 結論
 UAD/f の `U,D,A,f` を型付きで明示し、`f^{-1}` を部分射影から定義することで、`U0` 構成則の曖昧性を除去した。  
 その上で、領域整合・上限性・層追加単調性・層間合成・抽出適合性を Lean4 で機械検証し、`U0` を単なる記法ではなく、検証可能な統合演算として位置づけた。
+
+本稿の科学的増分は、既知集合論事実の再掲ではなく、**部分性を含む型付き多層統合モデルにおける不足仮定（随伴の非成立条件を含む）を機械的に可視化した点**にある。
 
 ---
 ### 参考文献（簡易）

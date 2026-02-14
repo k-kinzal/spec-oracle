@@ -8,6 +8,8 @@
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/Minimality.olean"],
   "UadfU0.U0Spec.Construction":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/Construction.olean"],
+  "UadfU0.RelatedWork.Galois":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/RelatedWork/Galois.olean"],
   "UadfU0.InterLayer.Transfer":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/InterLayer/Transfer.olean"],
   "UadfU0.InterLayer.Consistency":
