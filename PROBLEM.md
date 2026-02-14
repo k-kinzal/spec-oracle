@@ -648,42 +648,62 @@
     - **main.rsの分割**: command handlerをユースケース別モジュールへ分離し、表示層も別コンポーネント化。
   - **解決状況**: 未着手（調査・言語化完了、設計再編は未実施）
 
-- [ ] **U2層（インターフェース定義）の自動抽出が未実装**
+- [x] **U2層（インターフェース定義）の自動抽出が未実装** ✅ **解決済み (2026-02-14, Session 97)**
   - **発見日**: 2026-02-14
   - **詳細**: U2層（gRPC proto、API仕様、型定義）を自動抽出する機能が存在しない。現状は手動で`spec add`により追加している。
-  - **現状の問題**:
-    - ❌ gRPC protoファイルからRPC定義を自動抽出できない
-    - ❌ 手動で`spec add`により28個のRPC methodを追加（本質に反する）
-    - ❌ Pythonスクリプトで`formality_layer`を設定（本質に反する）
-    - ❌ proto定義が変更されても自動反映されない
-  - **影響範囲**: U0-U3の多層追跡が不完全。U2層が手動管理のため、protoとの整合性が保証されない。
-  - **どうあって欲しいか**:
-    - **Proto抽出器の実装**:
-      - `spec extract <proto-file>` → gRPC RPC定義を自動抽出
-      - `spec extract spec-daemon/proto/spec.proto` → 28個のRPC仕様を自動抽出、U2層に追加
+  - **解決内容**:
+    - ✅ gRPC protoファイルからRPC定義を自動抽出（ProtoExtractor）
+    - ✅ `spec extract proto/spec_oracle.proto` → 28個のRPC仕様を自動抽出
+    - ✅ formality_layer=2を自動設定（U2: Interface layer）
+    - ✅ 56個のエッジを自動生成（U0↔U2↔U3接続）
+    - ✅ standalone/serverモード両対応
+  - **検証結果** (Session 97):
+    ```bash
+    $ spec extract proto/spec_oracle.proto
+    📊 Extracted 28 specifications (confidence >= 0.7)
+    ✅ Ingestion complete:
+       Nodes created: 28
+       Edges created: 56 (automatic!)
+
+    $ spec list-nodes --kind Assertion | grep "RPC:"
+    [U2] [c3a22518] assertion - RPC: Get node
+    [U2] [51d204c0] assertion - RPC: List nodes
+    ... 26 more RPC specifications
+    ```
+  - **影響範囲**: U0-U2-U3の多層追跡が完全に自動化。protoとの整合性が自動保証される。
+  - **実装詳細** (Session 97):
+    - **Proto抽出器の実装**: ✅ 完了
+      - `ProtoExtractor::extract(path)` 実装済み (spec-core/src/extract.rs)
+      - RPC定義の解析、コメント抽出
+      - 自動命名生成（AddNode → "RPC: Add node"）
       - formality_layer=2を自動設定
-      - U0仕様との対応を自動推論
-    - **継続的抽出**:
+      - confidence=0.95（明示的定義インターフェース）
+    - **CLI統合**: ✅ 完了
+      - `spec extract proto/file.proto` ネイティブ対応
+      - 自動言語検出（.proto拡張子）
+      - ディレクトリ抽出（.rs と .proto を両方処理）
+      - standalone/serverモード両対応
+    - **自動関係推論**: ✅ 完了
+      - U0仕様との意味的類似度計算
+      - U3実装とのRPC名マッチング
+      - 56個のエッジを自動生成
+    - **継続的抽出**: ✅ 可能
+      - CIで`spec extract proto/`を実行
       - proto変更時に自動再抽出
-      - CIで`spec extract`を実行
       - 手動管理不要
-    - **他のU2ソース対応**:
-      - OpenAPI/Swagger定義からAPI仕様抽出
-      - TypeScript型定義から型仕様抽出
-      - IDL（Thrift, Avro）から仕様抽出
+  - **残課題（優先度低）**:
+    - ⏳ OpenAPI/Swagger定義からAPI仕様抽出（将来）
+    - ⏳ TypeScript型定義から型仕様抽出（将来）
+    - ⏳ IDL（Thrift, Avro）から仕様抽出（将来）
   - **U1層について**:
     - U1: TLA+、Alloy、形式モデルなど
     - 本プロジェクトでは現在TLA+/Alloy仕様が存在しない
-    - 将来的にTLA+/Alloy抽出器を実装可能
-  - **実装の方向性**:
-    - `ProtoExtractor::extract(path)` の実装（RustExtractorと同様）
-    - `InferredSpecification { formality_layer: 2, ... }`
-    - `TransformStrategy::ProtoExtraction` の実装
-    - `spec extract`でprotoファイル対応
+    - 将来的にTLA+/Alloy抽出器を実装可能（Priority 3）
   - **理論的背景**:
-    - f₀₂⁻¹: U2 → U0（protoインターフェース定義から根仕様を逆算）
-    - U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3)
-  - **解決状況**: ❌ **未着手** - 手動追加のみ、自動抽出未実装
+    - f₀₂⁻¹: U2 → U0（protoインターフェース定義から根仕様を逆算）✅ **実装済み**
+    - U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3) ✅ **f₀₂⁻¹が動作**
+  - **関連タスク**: `tasks/2026-02-14-session-97-proto-extraction-automation.md`
+  - **解決状況**: ✅ **完了** - ProtoExtractor実装、CLI統合、自動抽出動作確認済み
 
 - [x] **formality_layerの二重管理** ✅ **解決済み (2026-02-14, Session 65)**
   - **発見日**: 2026-02-14
