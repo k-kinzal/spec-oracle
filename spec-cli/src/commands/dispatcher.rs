@@ -29,6 +29,10 @@ pub async fn dispatch_standalone(
             eprintln!("Error: Init command should not reach standalone mode");
             return Ok(());
         }
+        crate::Commands::Migrate { source, target } => {
+            commands::execute_migrate(source, target)?;
+            return Ok(());
+        }
         crate::Commands::Add { content, no_infer } => {
             commands::execute_add_standalone(&mut store, content, no_infer)?;
         }
@@ -235,6 +239,9 @@ pub async fn dispatch_server(
         }
         crate::Commands::Init { path } => {
             commands::execute_init(path)?;
+        }
+        crate::Commands::Migrate { source, target } => {
+            commands::execute_migrate(source, target)?;
         }
         crate::Commands::ConstructU0 { execute: _, verbose: _ } => {
             println!("ConstructU0 command requires standalone mode (project-local .spec/ directory)");

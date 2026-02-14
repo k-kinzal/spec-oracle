@@ -402,6 +402,15 @@ enum Commands {
         #[arg(default_value = ".")]
         path: String,
     },
+    /// Migrate specifications from JSON file to directory format
+    Migrate {
+        /// Source JSON file (defaults to .spec/specs.json)
+        #[arg(long)]
+        source: Option<String>,
+        /// Target directory (defaults to .spec/)
+        #[arg(long)]
+        target: Option<String>,
+    },
     /// Remove low-quality extracted specifications (cleanup isolated test artifacts)
     CleanupLowQuality {
         /// Actually remove specs (default: dry-run mode)

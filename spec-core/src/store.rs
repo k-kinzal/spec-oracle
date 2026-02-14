@@ -5,8 +5,10 @@ use std::path::{Path, PathBuf};
 pub enum StoreError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Serialization error: {0}")]
-    Serde(#[from] serde_json::Error),
+    #[error("JSON serialization error: {0}")]
+    Json(#[from] serde_json::Error),
+    #[error("YAML serialization error: {0}")]
+    Yaml(#[from] serde_yaml::Error),
 }
 
 /// File-based persistence for the specification graph.
@@ -65,6 +67,125 @@ mod tests {
     #[test]
     fn load_nonexistent_returns_empty() {
         let store = FileStore::new("/tmp/nonexistent_spec_oracle_test.json");
+        let graph = store.load().unwrap();
+        assert_eq!(graph.node_count(), 0);
+    }
+}
+
+/// Directory-based persistence for the specification graph.
+/// Each node is saved as an individual YAML file for better merge conflict resolution.
+pub struct DirectoryStore {
+    base_path: PathBuf,
+}
+
+impl DirectoryStore {
+    pub fn new(path: impl AsRef<Path>) -> Self {
+        Self {
+            base_path: path.as_ref().to_path_buf(),
+        }
+    }
+
+    fn nodes_dir(&self) -> PathBuf {
+        self.base_path.join("nodes")
+    }
+
+    fn edges_file(&self) -> PathBuf {
+        self.base_path.join("edges.yaml")
+    }
+
+    fn metadata_file(&self) -> PathBuf {
+        self.base_path.join("metadata.yaml")
+    }
+
+    pub fn load(&self) -> Result<SpecGraph, StoreError> {
+        if !self.base_path.exists() {
+            return Ok(SpecGraph::new());
+        }
+
+        let mut graph = SpecGraph::new();
+
+        // Load nodes from individual YAML files
+        let nodes_dir = self.nodes_dir();
+        if nodes_dir.exists() {
+            for entry in std::fs::read_dir(&nodes_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("yaml") {
+                    let content = std::fs::read_to_string(&path)?;
+                    let node: crate::graph::SpecNodeData = serde_yaml::from_str(&content)?;
+                    graph.add_node_from_loaded(node);
+                }
+            }
+        }
+
+        // Load edges from edges.yaml
+        let edges_file = self.edges_file();
+        if edges_file.exists() {
+            let content = std::fs::read_to_string(&edges_file)?;
+            let edges: Vec<crate::graph::Edge> = serde_yaml::from_str(&content)?;
+            for edge in edges {
+                let _ = graph.add_edge_from_loaded(edge);
+            }
+        }
+
+        graph.rebuild_indices();
+        Ok(graph)
+    }
+
+    pub fn save(&self, graph: &SpecGraph) -> Result<(), StoreError> {
+        std::fs::create_dir_all(&self.base_path)?;
+        let nodes_dir = self.nodes_dir();
+        std::fs::create_dir_all(&nodes_dir)?;
+
+        // Save each node as individual YAML file
+        for node in graph.nodes() {
+            let filename = format!("{}.yaml", node.id);
+            let path = nodes_dir.join(filename);
+            let content = serde_yaml::to_string(&node)?;
+            std::fs::write(&path, content)?;
+        }
+
+        // Save edges as single YAML file
+        let edges: Vec<_> = graph.edges().collect();
+        let edges_content = serde_yaml::to_string(&edges)?;
+        std::fs::write(self.edges_file(), edges_content)?;
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod directory_store_tests {
+    use super::*;
+    use crate::graph::NodeKind;
+    use std::collections::HashMap;
+
+    #[test]
+    fn directory_store_roundtrip() {
+        let dir = std::env::temp_dir().join(format!("spec_oracle_dir_test_{}", uuid::Uuid::new_v4()));
+        let store = DirectoryStore::new(&dir);
+
+        let mut graph = SpecGraph::new();
+        let node = graph.add_node("test node".into(), NodeKind::Assertion, HashMap::new());
+        let node_id = node.id.clone();
+
+        store.save(&graph).unwrap();
+
+        // Verify individual node file exists
+        let node_file = dir.join("nodes").join(format!("{}.yaml", node_id));
+        assert!(node_file.exists());
+
+        // Verify roundtrip
+        let loaded = store.load().unwrap();
+        assert_eq!(loaded.node_count(), 1);
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn directory_store_load_nonexistent() {
+        let dir = std::env::temp_dir().join(format!("spec_oracle_nonexistent_{}", uuid::Uuid::new_v4()));
+        let store = DirectoryStore::new(&dir);
         let graph = store.load().unwrap();
         assert_eq!(graph.node_count(), 0);
     }

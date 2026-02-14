@@ -54,6 +54,15 @@ pub struct SpecEdgeData {
     pub created_at: i64,
 }
 
+/// Edge with source/target node IDs (for serialization)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Edge {
+    pub source: String,
+    pub target: String,
+    #[serde(flatten)]
+    pub data: SpecEdgeData,
+}
+
 #[derive(Debug, Clone)]
 pub struct Contradiction {
     pub node_a: SpecNodeData,
@@ -142,6 +151,14 @@ impl SpecGraph {
         let idx = self.graph.add_node(data);
         self.id_to_index.insert(id, idx);
         &self.graph[idx]
+    }
+
+    /// Add a node from loaded data (preserves existing ID and timestamps)
+    pub fn add_node_from_loaded(&mut self, node: SpecNodeData) -> String {
+        let id = node.id.clone();
+        let idx = self.graph.add_node(node);
+        self.id_to_index.insert(id.clone(), idx);
+        id
     }
 
     pub fn get_node(&self, id: &str) -> Option<&SpecNodeData> {
@@ -239,6 +256,23 @@ impl SpecGraph {
         Ok(&self.graph[eidx])
     }
 
+    /// Add an edge from loaded data (preserves existing ID and timestamps)
+    pub fn add_edge_from_loaded(&mut self, edge: Edge) -> Result<String, GraphError> {
+        let &src_idx = self
+            .id_to_index
+            .get(&edge.source)
+            .ok_or_else(|| GraphError::NodeNotFound(edge.source.clone()))?;
+        let &tgt_idx = self
+            .id_to_index
+            .get(&edge.target)
+            .ok_or_else(|| GraphError::NodeNotFound(edge.target.clone()))?;
+
+        let id = edge.data.id.clone();
+        let eidx = self.graph.add_edge(src_idx, tgt_idx, edge.data);
+        self.edge_id_to_index.insert(id.clone(), eidx);
+        Ok(id)
+    }
+
     pub fn remove_edge(&mut self, id: &str) -> Option<SpecEdgeData> {
         if let Some(&eidx) = self.edge_id_to_index.get(id) {
             let data = self.graph.remove_edge(eidx)?;
@@ -275,6 +309,26 @@ impl SpecGraph {
 
     pub fn edge_count(&self) -> usize {
         self.graph.edge_count()
+    }
+
+    /// Iterator over all nodes (for serialization)
+    pub fn nodes(&self) -> impl Iterator<Item = &SpecNodeData> {
+        self.graph.node_weights()
+    }
+
+    /// Iterator over all edges with source/target IDs (for serialization)
+    pub fn edges(&self) -> impl Iterator<Item = Edge> + '_ {
+        self.graph.edge_indices().filter_map(move |eidx| {
+            let (src_idx, tgt_idx) = self.graph.edge_endpoints(eidx)?;
+            let edge_data = self.graph[eidx].clone();
+            let source = self.graph[src_idx].id.clone();
+            let target = self.graph[tgt_idx].id.clone();
+            Some(Edge {
+                source,
+                target,
+                data: edge_data,
+            })
+        })
     }
 
     /// Detect contradictions: pairs of nodes explicitly connected by a Contradicts edge,
