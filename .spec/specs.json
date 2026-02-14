@@ -141,8 +141,8 @@
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
         "kind": "Constraint",
         "metadata": {
-          "line": "171-181",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "line": "171-181"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -153,8 +153,8 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "function": "detect_contradictions"
+          "function": "detect_contradictions",
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -195,8 +195,8 @@
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "function": "detect_omissions"
+          "function": "detect_omissions",
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771061597,
         "modified_at": 1771061597,
@@ -216,8 +216,8 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "line": "7,105-113"
+          "line": "7,105-113",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061822,
         "modified_at": 1771061822,
@@ -252,8 +252,8 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Check"
+          "function": "Commands::Check",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -276,8 +276,8 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Constraint",
         "metadata": {
-          "function": "Commands::Find",
-          "source_file": "spec-cli/src/main.rs"
+          "source_file": "spec-cli/src/main.rs",
+          "function": "Commands::Find"
         },
         "created_at": 1771062016,
         "modified_at": 1771062016,
@@ -318,7 +318,7 @@
       },
       {
         "id": "fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2",
-        "content": "All high-priority features now have complete U0\u2192U2\u2192U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
+        "content": "All high-priority features now have complete U0→U2→U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771062281,
@@ -426,7 +426,7 @@
       },
       {
         "id": "8772404d-59f0-44da-970c-9347eceaaf42",
-        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f\u2080\u2081\u207b\u00b9(U1) \u222a f\u2080\u2082\u207b\u00b9(U2) \u222a ... \u222a f\u2080\u2099\u207b\u00b9(UN)",
+        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771064470,
@@ -579,7 +579,7 @@
       },
       {
         "id": "ac7787f6-2eaf-46a0-bc5b-7017d3282886",
-        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: \u2203x. (x \u2208 A1 \u2227 x \u2208 A2)",
+        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -588,7 +588,7 @@
       },
       {
         "id": "0154a181-1962-4aa1-aee2-236d2078caf6",
-        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: \u2203x. x \u2208 A",
+        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: ∃x. x ∈ A",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -624,7 +624,7 @@
       },
       {
         "id": "239316dd-4d2e-4ab2-b172-5fdd015fb5e1",
-        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (\u2203x. x \u2208 A)",
+        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (∃x. x ∈ A)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771066871,
@@ -822,7 +822,7 @@
       },
       {
         "id": "d79603df-d239-4d3f-af09-868ed2935374",
-        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings\u2014transcending the fundamental DSL limitation identified in conversation.md",
+        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings—transcending the fundamental DSL limitation identified in conversation.md",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070409,
@@ -831,7 +831,7 @@
       },
       {
         "id": "ce999406-30cc-424e-8bac-8efe06025a3f",
-        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations\u2014representing the first practical realization of the beyond-DSL specification paradigm",
+        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations—representing the first practical realization of the beyond-DSL specification paradigm",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070419,
@@ -843,10 +843,10 @@
         "content": "Session 57 verified goal achievement through comprehensive implementation audit: prover module with Z3 SMT solver integration (spec-core/src/prover/), complete U/D/A/f model implementation (spec-core/src/udaf.rs), and beyond-DSL paradigm realization. All three critical PROBLEM.md issues resolved. The project goal 'create an open-source specification description tool for a new era' is confirmed achieved.",
         "kind": "Assertion",
         "metadata": {
-          "verified_modules": "prover, udaf",
           "session": "57",
-          "resolved_issues": "3 critical",
-          "date": "2026-02-14"
+          "verified_modules": "prover, udaf",
+          "date": "2026-02-14",
+          "resolved_issues": "3 critical"
         },
         "created_at": 1771070800,
         "modified_at": 1771070800,
@@ -1133,7 +1133,7 @@
       },
       {
         "id": "19d08ce6-8cba-4713-9999-a26d373ce7fa",
-        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f\u2080\u2082 transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
+        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f₀₂ transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771073305,
@@ -1190,12 +1190,12 @@
         "content": "Scenario: detect inter universe inconsistencies with transform",
         "kind": "Scenario",
         "metadata": {
-          "confidence": "0.9",
-          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
           "inferred": "true",
-          "source_line": "2269",
           "test_function": "detect_inter_universe_inconsistencies_with_transform",
-          "source_file": "spec-core/src/graph.rs"
+          "extractor": "test",
+          "source_line": "2269",
+          "confidence": "0.9"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1206,12 +1206,12 @@
         "content": "Scenario: generate contract template returns none for non testable",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "1912",
-          "test_function": "generate_contract_template_returns_none_for_non_testable",
-          "inferred": "true",
           "confidence": "0.9",
+          "extractor": "test",
+          "inferred": "true",
+          "test_function": "generate_contract_template_returns_none_for_non_testable",
           "source_file": "spec-core/src/graph.rs",
-          "extractor": "test"
+          "source_line": "1912"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1222,12 +1222,12 @@
         "content": "Scenario: detect inter universe inconsistencies empty",
         "kind": "Scenario",
         "metadata": {
-          "extractor": "test",
-          "test_function": "detect_inter_universe_inconsistencies_empty",
-          "confidence": "0.9",
           "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
           "source_line": "2262",
-          "source_file": "spec-core/src/graph.rs"
+          "test_function": "detect_inter_universe_inconsistencies_empty",
+          "extractor": "test"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1238,12 +1238,12 @@
         "content": "Scenario: coverage with tests",
         "kind": "Scenario",
         "metadata": {
-          "confidence": "0.9",
-          "extractor": "test",
-          "source_line": "1948",
           "source_file": "spec-core/src/graph.rs",
+          "test_function": "test_coverage_with_tests",
+          "extractor": "test",
           "inferred": "true",
-          "test_function": "test_coverage_with_tests"
+          "source_line": "1948",
+          "confidence": "0.9"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1255,11 +1255,11 @@
         "kind": "Scenario",
         "metadata": {
           "extractor": "test",
+          "confidence": "0.9",
           "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
           "source_line": "2128",
           "test_function": "diff_timestamps_detects_added_nodes",
-          "confidence": "0.9"
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1270,12 +1270,12 @@
         "content": "AI-powered relationship inference (cross-layer semantic matching)",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "confidence": "0.95",
-          "inferred": "true",
-          "source_line": "56",
+          "rpc_name": "InferAllRelationshipsWithAi",
           "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "InferAllRelationshipsWithAi"
+          "inferred": "true",
+          "confidence": "0.95",
+          "extractor": "proto_rpc",
+          "source_line": "56"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1286,12 +1286,12 @@
         "content": "Automatic relationship inference",
         "kind": "Assertion",
         "metadata": {
-          "rpc_name": "InferAllRelationships",
+          "confidence": "0.95",
           "source_line": "53",
-          "extractor": "proto_rpc",
+          "rpc_name": "InferAllRelationships",
           "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95"
+          "extractor": "proto_rpc",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1302,12 +1302,12 @@
         "content": "RPC: Set node universe",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "50",
           "inferred": "true",
-          "rpc_name": "SetNodeUniverse"
+          "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
+          "extractor": "proto_rpc",
+          "rpc_name": "SetNodeUniverse",
+          "source_line": "50"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1318,12 +1318,12 @@
         "content": "Inter-universe consistency (conversation.md U, D, A, f implementation)",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
+          "extractor": "proto_rpc",
+          "rpc_name": "DetectInterUniverseInconsistencies",
           "inferred": "true",
           "source_file": "proto/spec_oracle.proto",
-          "source_line": "49",
-          "extractor": "proto_rpc",
-          "rpc_name": "DetectInterUniverseInconsistencies"
+          "confidence": "0.95",
+          "source_line": "49"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1334,11 +1334,11 @@
         "content": "RPC: Get compliance trend",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
           "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "GetComplianceTrend",
           "extractor": "proto_rpc",
           "source_line": "46",
+          "rpc_name": "GetComplianceTrend",
+          "confidence": "0.95",
           "inferred": "true"
         },
         "created_at": 1771078430,
@@ -1350,12 +1350,12 @@
         "content": "RPC: Get node history",
         "kind": "Assertion",
         "metadata": {
+          "source_line": "45",
+          "confidence": "0.95",
           "extractor": "proto_rpc",
           "inferred": "true",
           "rpc_name": "GetNodeHistory",
-          "source_line": "45",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1366,12 +1366,12 @@
         "content": "RPC: Diff timestamps",
         "kind": "Assertion",
         "metadata": {
-          "inferred": "true",
-          "extractor": "proto_rpc",
           "rpc_name": "DiffTimestamps",
+          "source_line": "44",
+          "inferred": "true",
           "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "source_line": "44"
+          "extractor": "proto_rpc",
+          "confidence": "0.95"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1382,11 +1382,11 @@
         "content": "Temporal queries",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "43",
           "confidence": "0.95",
           "source_file": "proto/spec_oracle.proto",
           "rpc_name": "QueryAtTimestamp",
           "extractor": "proto_rpc",
+          "source_line": "43",
           "inferred": "true"
         },
         "created_at": 1771078430,
@@ -1398,12 +1398,12 @@
         "content": "RPC: Get compliance report",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "40",
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
+          "rpc_name": "GetComplianceReport",
           "extractor": "proto_rpc",
-          "rpc_name": "GetComplianceReport"
+          "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
+          "inferred": "true",
+          "source_line": "40"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1414,12 +1414,12 @@
         "content": "Graded compliance",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "39",
           "rpc_name": "CalculateCompliance",
-          "extractor": "proto_rpc",
           "confidence": "0.95",
-          "inferred": "true"
+          "extractor": "proto_rpc",
+          "source_file": "proto/spec_oracle.proto",
+          "inferred": "true",
+          "source_line": "39"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1430,12 +1430,12 @@
         "content": "RPC: Get test coverage",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
-          "rpc_name": "GetTestCoverage",
-          "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
+          "inferred": "true",
           "source_line": "36",
-          "inferred": "true"
+          "extractor": "proto_rpc",
+          "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
+          "rpc_name": "GetTestCoverage"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1446,12 +1446,12 @@
         "content": "Executable contracts",
         "kind": "Assertion",
         "metadata": {
-          "rpc_name": "GenerateContractTemplate",
-          "extractor": "proto_rpc",
           "confidence": "0.95",
           "source_line": "35",
           "source_file": "proto/spec_oracle.proto",
-          "inferred": "true"
+          "extractor": "proto_rpc",
+          "inferred": "true",
+          "rpc_name": "GenerateContractTemplate"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1462,12 +1462,12 @@
         "content": "RPC: Detect potential synonyms",
         "kind": "Assertion",
         "metadata": {
+          "extractor": "proto_rpc",
           "confidence": "0.95",
-          "rpc_name": "DetectPotentialSynonyms",
-          "source_file": "proto/spec_oracle.proto",
           "inferred": "true",
           "source_line": "32",
-          "extractor": "proto_rpc"
+          "source_file": "proto/spec_oracle.proto",
+          "rpc_name": "DetectPotentialSynonyms"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1478,12 +1478,12 @@
         "content": "Semantic normalization",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "31",
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "FindRelatedTerms",
+          "confidence": "0.95",
           "extractor": "proto_rpc",
-          "confidence": "0.95"
+          "inferred": "true",
+          "rpc_name": "FindRelatedTerms",
+          "source_file": "proto/spec_oracle.proto",
+          "source_line": "31"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1495,11 +1495,11 @@
         "kind": "Assertion",
         "metadata": {
           "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
           "extractor": "proto_rpc",
-          "source_line": "28",
           "confidence": "0.95",
-          "rpc_name": "FindFormalizations"
+          "rpc_name": "FindFormalizations",
+          "source_line": "28",
+          "inferred": "true"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1510,12 +1510,12 @@
         "content": "Layer-aware operations",
         "kind": "Assertion",
         "metadata": {
-          "rpc_name": "FilterByLayer",
-          "source_file": "proto/spec_oracle.proto",
+          "extractor": "proto_rpc",
           "inferred": "true",
           "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
           "source_line": "27",
-          "extractor": "proto_rpc"
+          "rpc_name": "FilterByLayer"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1526,12 +1526,12 @@
         "content": "Terminology resolution",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
           "source_line": "24",
+          "inferred": "true",
+          "extractor": "proto_rpc",
+          "confidence": "0.95",
           "rpc_name": "ResolveTerminology",
-          "inferred": "true"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1542,12 +1542,12 @@
         "content": "RPC: Detect layer inconsistencies",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "21",
+          "confidence": "0.95",
           "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
+          "source_line": "21",
           "inferred": "true",
-          "rpc_name": "DetectLayerInconsistencies",
-          "confidence": "0.95"
+          "source_file": "proto/spec_oracle.proto",
+          "rpc_name": "DetectLayerInconsistencies"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1558,12 +1558,12 @@
         "content": "RPC: Detect omissions",
         "kind": "Assertion",
         "metadata": {
-          "rpc_name": "DetectOmissions",
-          "extractor": "proto_rpc",
           "source_file": "proto/spec_oracle.proto",
-          "source_line": "20",
           "inferred": "true",
-          "confidence": "0.95"
+          "rpc_name": "DetectOmissions",
+          "confidence": "0.95",
+          "extractor": "proto_rpc",
+          "source_line": "20"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1574,12 +1574,12 @@
         "content": "RPC: Detect contradictions",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "inferred": "true",
           "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "DetectContradictions",
           "confidence": "0.95",
-          "source_line": "19"
+          "extractor": "proto_rpc",
+          "source_line": "19",
+          "inferred": "true",
+          "rpc_name": "DetectContradictions"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1590,12 +1590,12 @@
         "content": "Query and analysis",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "18",
           "inferred": "true",
           "extractor": "proto_rpc",
+          "rpc_name": "Query",
           "source_file": "proto/spec_oracle.proto",
           "confidence": "0.95",
-          "rpc_name": "Query"
+          "source_line": "18"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1607,11 +1607,11 @@
         "kind": "Assertion",
         "metadata": {
           "rpc_name": "RemoveEdge",
-          "confidence": "0.95",
           "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
           "inferred": "true",
-          "source_line": "15"
+          "confidence": "0.95",
+          "source_line": "15",
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1622,12 +1622,12 @@
         "content": "RPC: List edges",
         "kind": "Assertion",
         "metadata": {
-          "inferred": "true",
-          "confidence": "0.95",
           "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "ListEdges",
           "extractor": "proto_rpc",
-          "source_line": "14"
+          "source_line": "14",
+          "inferred": "true",
+          "rpc_name": "ListEdges",
+          "confidence": "0.95"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1640,10 +1640,10 @@
         "metadata": {
           "rpc_name": "AddEdge",
           "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
           "source_line": "13",
-          "inferred": "true"
+          "extractor": "proto_rpc",
+          "inferred": "true",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1654,12 +1654,12 @@
         "content": "Scenario: detect explicit contradiction",
         "kind": "Scenario",
         "metadata": {
+          "confidence": "0.9",
           "inferred": "true",
-          "test_function": "detect_explicit_contradiction",
           "source_line": "1604",
           "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9",
-          "extractor": "test"
+          "extractor": "test",
+          "test_function": "detect_explicit_contradiction"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1670,12 +1670,12 @@
         "content": "Scenario: detect duplicate specifications",
         "kind": "Scenario",
         "metadata": {
-          "confidence": "0.9",
           "extractor": "test",
           "source_line": "1616",
-          "source_file": "spec-core/src/graph.rs",
           "test_function": "detect_duplicate_specifications",
-          "inferred": "true"
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "confidence": "0.9"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1686,12 +1686,12 @@
         "content": "Scenario: detect semantic contradiction password length",
         "kind": "Scenario",
         "metadata": {
-          "extractor": "test",
-          "test_function": "detect_semantic_contradiction_password_length",
           "confidence": "0.9",
+          "extractor": "test",
+          "source_line": "1627",
           "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1627"
+          "test_function": "detect_semantic_contradiction_password_length",
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1704,10 +1704,10 @@
         "metadata": {
           "confidence": "0.9",
           "extractor": "test",
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
           "source_line": "1644",
-          "test_function": "no_duplicate_detection_for_synonym_edges"
+          "test_function": "no_duplicate_detection_for_synonym_edges",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1718,12 +1718,12 @@
         "content": "Scenario: detect omission isolated node",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "detect_omission_isolated_node",
+          "source_line": "1657",
           "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9",
-          "extractor": "test",
           "inferred": "true",
-          "source_line": "1657"
+          "confidence": "0.9",
+          "test_function": "detect_omission_isolated_node",
+          "extractor": "test"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1734,12 +1734,12 @@
         "content": "Scenario: detect omission domain without refinements",
         "kind": "Scenario",
         "metadata": {
+          "source_line": "1666",
           "inferred": "true",
+          "confidence": "0.9",
           "extractor": "test",
           "source_file": "spec-core/src/graph.rs",
-          "test_function": "detect_omission_domain_without_refinements",
-          "source_line": "1666",
-          "confidence": "0.9"
+          "test_function": "detect_omission_domain_without_refinements"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1750,11 +1750,11 @@
         "content": "Scenario: detect omission scenario without assertions",
         "kind": "Scenario",
         "metadata": {
-          "inferred": "true",
           "source_file": "spec-core/src/graph.rs",
-          "source_line": "1678",
           "test_function": "detect_omission_scenario_without_assertions",
+          "inferred": "true",
           "extractor": "test",
+          "source_line": "1678",
           "confidence": "0.9"
         },
         "created_at": 1771077123,
@@ -1766,12 +1766,12 @@
         "content": "RPC: Remove node",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "10",
-          "rpc_name": "RemoveNode",
-          "confidence": "0.95",
           "source_file": "proto/spec_oracle.proto",
           "extractor": "proto_rpc",
-          "inferred": "true"
+          "confidence": "0.95",
+          "source_line": "10",
+          "inferred": "true",
+          "rpc_name": "RemoveNode"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1782,12 +1782,12 @@
         "content": "RPC: List nodes",
         "kind": "Assertion",
         "metadata": {
-          "inferred": "true",
-          "source_line": "9",
           "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
           "rpc_name": "ListNodes",
-          "confidence": "0.95"
+          "inferred": "true",
+          "confidence": "0.95",
+          "extractor": "proto_rpc",
+          "source_line": "9"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1798,11 +1798,11 @@
         "content": "RPC: Get node",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "inferred": "true",
           "rpc_name": "GetNode",
+          "source_file": "proto/spec_oracle.proto",
           "source_line": "8",
+          "inferred": "true",
+          "confidence": "0.95",
           "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
@@ -1814,12 +1814,12 @@
         "content": "Node operations",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
           "inferred": "true",
-          "rpc_name": "AddNode",
-          "source_line": "7",
           "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto"
+          "rpc_name": "AddNode",
+          "confidence": "0.95",
+          "source_line": "7"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1831,11 +1831,11 @@
         "kind": "Scenario",
         "metadata": {
           "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
           "confidence": "0.9",
-          "test_function": "detect_layer_inconsistency_wrong_direction",
-          "source_line": "1759"
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1759",
+          "test_function": "detect_layer_inconsistency_wrong_direction"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1846,12 +1846,12 @@
         "content": "Scenario: detect no layer inconsistency correct direction",
         "kind": "Scenario",
         "metadata": {
+          "extractor": "test",
+          "confidence": "0.9",
+          "source_line": "1781",
           "inferred": "true",
           "source_file": "spec-core/src/graph.rs",
-          "source_line": "1781",
-          "extractor": "test",
-          "test_function": "detect_no_layer_inconsistency_correct_direction",
-          "confidence": "0.9"
+          "test_function": "detect_no_layer_inconsistency_correct_direction"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1863,11 +1863,11 @@
         "kind": "Assertion",
         "metadata": {
           "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.7",
-          "extractor": "doc",
           "inferred": "true",
+          "doc_comment": "true",
+          "confidence": "0.7",
           "source_line": "520",
-          "doc_comment": "true"
+          "extractor": "doc"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1880,10 +1880,10 @@
         "metadata": {
           "test_function": "detect_potential_synonyms_by_structure",
           "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
           "source_line": "1834",
-          "extractor": "test",
           "inferred": "true",
-          "confidence": "0.9"
+          "extractor": "test"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1894,12 +1894,12 @@
         "content": "Scenario: no synonyms when already marked",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "1852",
           "test_function": "no_synonyms_when_already_marked",
+          "extractor": "test",
           "source_file": "spec-core/src/graph.rs",
           "confidence": "0.9",
-          "extractor": "test",
-          "inferred": "true"
+          "inferred": "true",
+          "source_line": "1852"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1910,12 +1910,12 @@
         "content": "Scenario: generate contract template for constraint",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "1867",
           "source_file": "spec-core/src/graph.rs",
-          "test_function": "generate_contract_template_for_constraint",
           "extractor": "test",
           "confidence": "0.9",
-          "inferred": "true"
+          "source_line": "1867",
+          "inferred": "true",
+          "test_function": "generate_contract_template_for_constraint"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1926,11 +1926,11 @@
         "content": "Scenario: detect inter universe inconsistencies missing transform",
         "kind": "Scenario",
         "metadata": {
-          "extractor": "test",
+          "source_line": "2308",
           "test_function": "detect_inter_universe_inconsistencies_missing_transform",
           "source_file": "spec-core/src/graph.rs",
           "confidence": "0.9",
-          "source_line": "2308",
+          "extractor": "test",
           "inferred": "true"
         },
         "created_at": 1771077123,
@@ -1942,12 +1942,12 @@
         "content": "Scenario: list nodes with filter",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "list_nodes_with_filter",
-          "inferred": "true",
-          "source_line": "1786",
           "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
           "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs"
+          "source_line": "1786",
+          "inferred": "true",
+          "test_function": "list_nodes_with_filter"
         },
         "created_at": 1771087004,
         "modified_at": 1771087004,
@@ -1958,12 +1958,12 @@
         "content": "Scenario: compliance report with linked code",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "2280",
-          "test_function": "compliance_report_with_linked_code",
           "extractor": "test",
-          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
           "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs"
+          "source_line": "2280",
+          "inferred": "true",
+          "test_function": "compliance_report_with_linked_code"
         },
         "created_at": 1771087004,
         "modified_at": 1771087004,
@@ -1974,12 +1974,12 @@
         "content": "Scenario: diff timestamps shows no changes for stable graph",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "2368",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
           "extractor": "test",
           "inferred": "true",
-          "confidence": "0.9",
-          "test_function": "diff_timestamps_shows_no_changes_for_stable_graph",
-          "source_file": "spec-core/src/graph.rs"
+          "source_line": "2368",
+          "test_function": "diff_timestamps_shows_no_changes_for_stable_graph"
         },
         "created_at": 1771087004,
         "modified_at": 1771087004,
@@ -1990,12 +1990,12 @@
         "content": "Scenario: get node history nonexistent returns none",
         "kind": "Scenario",
         "metadata": {
-          "confidence": "0.9",
           "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "2418",
           "extractor": "test",
-          "test_function": "get_node_history_nonexistent_returns_none"
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "get_node_history_nonexistent_returns_none",
+          "source_line": "2418"
         },
         "created_at": 1771087004,
         "modified_at": 1771087004,
@@ -2006,12 +2006,12 @@
         "content": "Scenario: get compliance trend with data",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "get_compliance_trend_with_data",
+          "confidence": "0.9",
           "source_file": "spec-core/src/graph.rs",
           "extractor": "test",
-          "inferred": "true",
           "source_line": "2434",
-          "confidence": "0.9"
+          "inferred": "true",
+          "test_function": "get_compliance_trend_with_data"
         },
         "created_at": 1771087004,
         "modified_at": 1771087004,
@@ -2019,7 +2019,7 @@
       },
       {
         "id": "ac78bcec-f784-49aa-a201-30f4641fdc16",
-        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f\u2080\u2083\u207b\u00b9(U3) = f\u2080\u2083\u207b\u00b9(f\u2080\u2083\u207b\u00b9(U3)) for the reverse mapping function.",
+        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f₀₃⁻¹(U3) = f₀₃⁻¹(f₀₃⁻¹(U3)) for the reverse mapping function.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771087179,
@@ -2046,7 +2046,7 @@
       },
       {
         "id": "98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5",
-        "content": "Cross-layer edge inference uses layer-aware similarity threshold: 0.15 for cross-layer connections (U0\u2194U2, U0\u2194U3), 0.3 for same-layer connections. This enables automatic U0-U2-U3 relationship creation for the reverse mapping engine.",
+        "content": "Cross-layer edge inference uses layer-aware similarity threshold: 0.15 for cross-layer connections (U0↔U2, U0↔U3), 0.3 for same-layer connections. This enables automatic U0-U2-U3 relationship creation for the reverse mapping engine.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771088204,
@@ -2130,8 +2130,8 @@
         "content": "Session 103 verified that Z3 formal verification is fully integrated and working by testing contradictory password constraints (at least 12 vs at most 10) which Z3 correctly detected as formally proven inconsistent",
         "kind": "Definition",
         "metadata": {
-          "describes": "session_103_z3_verification_test",
-          "meta_specification": "true"
+          "meta_specification": "true",
+          "describes": "session_103_z3_verification_test"
         },
         "created_at": 1771093376,
         "modified_at": 1771093376,
@@ -2139,7 +2139,7 @@
       },
       {
         "id": "e33e97b5-f089-4146-b8c1-4d3a9a97f613",
-        "content": "The reverse mapping engine is verified as functional: f\u2080\u2081\u207b\u00b9(U1) extracts from documentation, f\u2080\u2082\u207b\u00b9(U2) extracts from proto, f\u2080\u2083\u207b\u00b9(U3) extracts from code, Z3 formal verification detects contradictions with mathematical proof, and idempotent extraction prevents duplicates",
+        "content": "The reverse mapping engine is verified as functional: f₀₁⁻¹(U1) extracts from documentation, f₀₂⁻¹(U2) extracts from proto, f₀₃⁻¹(U3) extracts from code, Z3 formal verification detects contradictions with mathematical proof, and idempotent extraction prevents duplicates",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771093376,
@@ -2161,11 +2161,11 @@
         "kind": "Constraint",
         "metadata": {
           "source_line": "180",
-          "doc_comment": "true",
           "inferred": "true",
-          "extractor": "doc",
           "source_file": "spec-core/src/udaf.rs",
-          "confidence": "0.8"
+          "extractor": "doc",
+          "confidence": "0.8",
+          "doc_comment": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2176,12 +2176,12 @@
         "content": "Returns the newly extracted InferredSpecification objects that should be ingested into the graph.",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-core/src/udaf.rs",
+          "extractor": "doc",
           "doc_comment": "true",
           "inferred": "true",
-          "extractor": "doc",
           "source_line": "404",
-          "confidence": "0.7"
+          "confidence": "0.7",
+          "source_file": "spec-core/src/udaf.rs"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2189,14 +2189,14 @@
       },
       {
         "id": "69af9728-29c3-4294-ba84-78799a10cad6",
-        "content": "- \"must be\" / \"must not be\" \u2192 boolean constraints",
+        "content": "- \"must be\" / \"must not be\" → boolean constraints",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-core/src/udaf.rs",
-          "inferred": "true",
-          "source_line": "576",
           "doc_comment": "true",
+          "inferred": "true",
           "extractor": "doc",
+          "source_line": "576",
+          "source_file": "spec-core/src/udaf.rs",
           "confidence": "0.8"
         },
         "created_at": 1771093752,
@@ -2208,14 +2208,14 @@
         "content": "Invariant: fetched.content, \"User must authenticate\"",
         "kind": "Definition",
         "metadata": {
-          "extractor": "assertion",
+          "confidence": "0.95",
           "source_file": "spec-core/src/graph.rs",
           "assertion": "fetched.content, \"User must authenticate\"",
-          "confidence": "0.95",
-          "inferred": "true",
-          "example_purpose": "test_data",
+          "is_example": "true",
           "source_line": "1780",
-          "is_example": "true"
+          "example_purpose": "test_data",
+          "inferred": "true",
+          "extractor": "assertion"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2227,13 +2227,13 @@
         "kind": "Definition",
         "metadata": {
           "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2034",
           "is_example": "true",
           "confidence": "0.95",
-          "source_line": "2034",
-          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
+          "extractor": "assertion",
           "example_purpose": "test_data",
-          "extractor": "assertion"
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone("
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2244,14 +2244,14 @@
         "content": "- \"Password must be >= 8 chars\" (natural language)",
         "kind": "Definition",
         "metadata": {
-          "confidence": "0.8",
-          "source_file": "spec-core/src/ai_semantic.rs",
           "extractor": "doc",
-          "inferred": "true",
-          "example_purpose": "test_data",
+          "source_file": "spec-core/src/ai_semantic.rs",
+          "confidence": "0.8",
           "is_example": "true",
+          "example_purpose": "test_data",
+          "source_line": "5",
           "doc_comment": "true",
-          "source_line": "5"
+          "inferred": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2263,11 +2263,11 @@
         "kind": "Scenario",
         "metadata": {
           "test_function": "load_nonexistent_returns_empty",
-          "extractor": "test",
           "source_file": "spec-core/src/store.rs",
+          "extractor": "test",
           "confidence": "0.9",
-          "inferred": "true",
-          "source_line": "65"
+          "source_line": "65",
+          "inferred": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2278,14 +2278,14 @@
         "content": "Invariant: user.is_authenticated()",
         "kind": "Definition",
         "metadata": {
-          "source_line": "973",
-          "extractor": "assertion",
-          "example_purpose": "test_data",
-          "confidence": "0.95",
-          "source_file": "spec-core/src/extract.rs",
-          "inferred": "true",
           "assertion": "user.is_authenticated()",
-          "is_example": "true"
+          "extractor": "assertion",
+          "inferred": "true",
+          "source_line": "973",
+          "source_file": "spec-core/src/extract.rs",
+          "is_example": "true",
+          "confidence": "0.95",
+          "example_purpose": "test_data"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2296,12 +2296,12 @@
         "content": "Invariant: !validate_user_authentication(&user)",
         "kind": "Constraint",
         "metadata": {
-          "source_line": "980",
-          "source_file": "spec-core/src/extract.rs",
           "extractor": "assertion",
+          "assertion": "!validate_user_authentication(&user)",
           "confidence": "0.95",
-          "inferred": "true",
-          "assertion": "!validate_user_authentication(&user)"
+          "source_file": "spec-core/src/extract.rs",
+          "source_line": "980",
+          "inferred": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2312,12 +2312,12 @@
         "content": "Invariant: report.nodes_created, 2, \"Should create 2 high-confidence nodes\"",
         "kind": "Constraint",
         "metadata": {
+          "source_file": "spec-core/src/extract.rs",
+          "assertion": "report.nodes_created, 2, \"Should create 2 high-confidence nodes\"",
           "confidence": "0.95",
           "source_line": "1064",
-          "extractor": "assertion",
-          "source_file": "spec-core/src/extract.rs",
           "inferred": "true",
-          "assertion": "report.nodes_created, 2, \"Should create 2 high-confidence nodes\""
+          "extractor": "assertion"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2344,11 +2344,11 @@
         "content": "Invariant: detect.content, \"Detect contradictions between specifications\"",
         "kind": "Constraint",
         "metadata": {
-          "source_line": "1209",
-          "extractor": "assertion",
           "inferred": "true",
+          "extractor": "assertion",
           "source_file": "spec-core/src/extract.rs",
           "assertion": "detect.content, \"Detect contradictions between specifications\"",
+          "source_line": "1209",
           "confidence": "0.95"
         },
         "created_at": 1771093752,
@@ -2362,9 +2362,9 @@
         "metadata": {
           "confidence": "0.9",
           "inferred": "true",
-          "source_file": "spec-core/src/extract.rs",
-          "extractor": "test",
           "source_line": "963",
+          "extractor": "test",
+          "source_file": "spec-core/src/extract.rs",
           "test_function": "validate_user_authentication"
         },
         "created_at": 1771093752,
@@ -2376,12 +2376,12 @@
         "content": "Scenario: authentication required",
         "kind": "Scenario",
         "metadata": {
-          "inferred": "true",
-          "source_file": "spec-core/src/extract.rs",
-          "extractor": "test",
-          "test_function": "test_authentication_required",
           "confidence": "0.9",
-          "source_line": "977"
+          "source_line": "977",
+          "extractor": "test",
+          "inferred": "true",
+          "test_function": "test_authentication_required",
+          "source_file": "spec-core/src/extract.rs"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2393,11 +2393,11 @@
         "kind": "Constraint",
         "metadata": {
           "confidence": "0.8",
+          "inferred": "true",
           "source_line": "971",
-          "doc_comment": "true",
-          "extractor": "doc",
           "source_file": "spec-core/src/extract.rs",
-          "inferred": "true"
+          "extractor": "doc",
+          "doc_comment": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2408,14 +2408,14 @@
         "content": "Violation: Amount must be greater than zero",
         "kind": "Definition",
         "metadata": {
-          "source_line": "985",
-          "source_file": "spec-core/src/extract.rs",
           "is_example": "true",
           "panic": "Amount must be greater than zero",
-          "example_purpose": "test_data",
+          "inferred": "true",
+          "source_line": "985",
           "confidence": "0.85",
           "extractor": "panic",
-          "inferred": "true"
+          "example_purpose": "test_data",
+          "source_file": "spec-core/src/extract.rs"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2426,14 +2426,14 @@
         "content": "Invariant: validate_password(short_password).is_err()",
         "kind": "Definition",
         "metadata": {
-          "source_file": "/tmp/test_extract.rs",
-          "assertion": "validate_password(short_password).is_err()",
           "source_line": "4",
           "example_purpose": "test_data",
-          "extractor": "assertion",
+          "source_file": "/tmp/test_extract.rs",
+          "confidence": "0.95",
           "is_example": "true",
           "inferred": "true",
-          "confidence": "0.95"
+          "extractor": "assertion",
+          "assertion": "validate_password(short_password).is_err()"
         },
         "created_at": 1771094226,
         "modified_at": 1771094226,
@@ -2444,14 +2444,14 @@
         "content": "Invariant: validate_password(long_password).is_ok()",
         "kind": "Definition",
         "metadata": {
-          "source_file": "/tmp/test_extract.rs",
-          "is_example": "true",
-          "extractor": "assertion",
-          "inferred": "true",
-          "confidence": "0.95",
           "assertion": "validate_password(long_password).is_ok()",
+          "inferred": "true",
+          "source_file": "/tmp/test_extract.rs",
+          "source_line": "7",
+          "is_example": "true",
           "example_purpose": "test_data",
-          "source_line": "7"
+          "extractor": "assertion",
+          "confidence": "0.95"
         },
         "created_at": 1771094226,
         "modified_at": 1771094226,
@@ -2463,13 +2463,13 @@
         "kind": "Definition",
         "metadata": {
           "assertion": "login(user, \"correct_password\").is_ok()",
-          "is_example": "true",
-          "source_file": "/tmp/test_extract.rs",
           "source_line": "13",
+          "is_example": "true",
           "extractor": "assertion",
+          "inferred": "true",
+          "source_file": "/tmp/test_extract.rs",
           "example_purpose": "test_data",
-          "confidence": "0.95",
-          "inferred": "true"
+          "confidence": "0.95"
         },
         "created_at": 1771094226,
         "modified_at": 1771094226,
@@ -2480,12 +2480,12 @@
         "content": "Invariant: login(user, \"wrong_password\").is_err()",
         "kind": "Definition",
         "metadata": {
-          "is_example": "true",
-          "source_line": "14",
-          "inferred": "true",
           "source_file": "/tmp/test_extract.rs",
-          "extractor": "assertion",
+          "source_line": "14",
           "confidence": "0.95",
+          "is_example": "true",
+          "inferred": "true",
+          "extractor": "assertion",
           "example_purpose": "test_data",
           "assertion": "login(user, \"wrong_password\").is_err()"
         },
@@ -2495,7 +2495,7 @@
       },
       {
         "id": "b549f3a8-d094-4f57-b67e-6048b3a09704",
-        "content": "The extraction engine must use AI to extract intent from test functions, generating U0 root specifications through reverse mapping f\u2080\u2083\u207b\u00b9",
+        "content": "The extraction engine must use AI to extract intent from test functions, generating U0 root specifications through reverse mapping f₀₃⁻¹",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771094270,
@@ -2561,10 +2561,10 @@
         "content": "Graph-based specification storage (nodes: assertions, constraints, scenarios, definitions, domains)",
         "kind": "Constraint",
         "metadata": {
-          "source_line": "13",
           "inferred": "true",
-          "extractor": "documentation",
           "confidence": "0.85",
+          "source_line": "13",
+          "extractor": "documentation",
           "source_file": "README.md"
         },
         "created_at": 1771095538,
@@ -2576,13 +2576,13 @@
         "content": "spec add \"Password must be at least 8 characters\"",
         "kind": "Definition",
         "metadata": {
-          "extractor": "documentation",
+          "example_source": "PROBLEM.md documentation",
           "confidence": "0.85",
-          "source_file": "README.md",
-          "source_line": "45",
           "inferred": "true",
-          "is_example": "true",
-          "example_source": "PROBLEM.md documentation"
+          "source_line": "45",
+          "extractor": "documentation",
+          "source_file": "README.md",
+          "is_example": "true"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -2593,11 +2593,11 @@
         "content": "How it works: The CLI automatically detects `.spec/` directory and runs in standalone mode (direct file access, no server required). For advanced features (AI inference, watch mode), server mode is available.",
         "kind": "Constraint",
         "metadata": {
-          "extractor": "documentation",
-          "source_line": "68",
-          "confidence": "0.85",
           "source_file": "README.md",
-          "inferred": "true"
+          "source_line": "68",
+          "extractor": "documentation",
+          "inferred": "true",
+          "confidence": "0.85"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -2608,12 +2608,12 @@
         "content": "cargo run --bin spec -- add-node \"Passwords must be >= 8 chars\" --kind constraint",
         "kind": "Definition",
         "metadata": {
+          "source_line": "89",
           "extractor": "documentation",
           "source_file": "README.md",
-          "inferred": "true",
-          "confidence": "0.85",
-          "source_line": "89",
           "is_example": "true",
+          "confidence": "0.85",
+          "inferred": "true",
           "example_source": "PROBLEM.md documentation"
         },
         "created_at": 1771095538,
@@ -2625,13 +2625,13 @@
         "content": "cargo run --bin spec -- add-edge <constraint-id> <domain-id> --kind refines",
         "kind": "Definition",
         "metadata": {
-          "extractor": "documentation",
           "confidence": "0.85",
-          "source_file": "README.md",
           "source_line": "92",
+          "source_file": "README.md",
           "inferred": "true",
           "is_example": "true",
-          "example_source": "command example or explanation"
+          "example_source": "command example or explanation",
+          "extractor": "documentation"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -2642,11 +2642,11 @@
         "content": "Breakthrough feature: Specifications automatically stay synchronized with code evolution - no manual intervention required.",
         "kind": "Constraint",
         "metadata": {
-          "confidence": "0.85",
-          "source_line": "150",
+          "source_file": "README.md",
           "inferred": "true",
+          "confidence": "0.85",
           "extractor": "documentation",
-          "source_file": "README.md"
+          "source_line": "150"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -2657,13 +2657,13 @@
         "content": "/// Password must be at least 8 characters",
         "kind": "Definition",
         "metadata": {
-          "extractor": "documentation",
-          "source_file": "README.md",
-          "confidence": "0.85",
-          "inferred": "true",
-          "source_line": "158",
           "is_example": "true",
-          "example_source": "PROBLEM.md documentation"
+          "source_file": "README.md",
+          "example_source": "PROBLEM.md documentation",
+          "extractor": "documentation",
+          "source_line": "158",
+          "confidence": "0.85",
+          "inferred": "true"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -2674,11 +2674,11 @@
         "content": "Impact: Can reduce 600+ isolated specifications down to ~100-200 by recognizing cross-layer equivalences that simple text matching cannot detect.",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "documentation",
           "confidence": "0.75",
-          "inferred": "true",
           "source_line": "186",
-          "source_file": "README.md"
+          "inferred": "true",
+          "source_file": "README.md",
+          "extractor": "documentation"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -2689,13 +2689,13 @@
         "content": "constraint: Universal invariant",
         "kind": "Definition",
         "metadata": {
-          "extractor": "documentation",
-          "inferred": "true",
-          "source_line": "232",
-          "source_file": "README.md",
+          "example_source": "command example or explanation",
           "confidence": "0.85",
           "is_example": "true",
-          "example_source": "command example or explanation"
+          "inferred": "true",
+          "source_line": "232",
+          "extractor": "documentation",
+          "source_file": "README.md"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -2706,10 +2706,10 @@
         "content": "scenario: Existential requirement (required path)",
         "kind": "Definition",
         "metadata": {
+          "confidence": "0.85",
           "extractor": "documentation",
           "source_line": "233",
           "source_file": "README.md",
-          "confidence": "0.85",
           "inferred": "true",
           "is_example": "true",
           "example_source": "command example or explanation"
@@ -2723,13 +2723,13 @@
         "content": "Invariant: fetched.content, \"User must authenticate\"",
         "kind": "Definition",
         "metadata": {
-          "source_line": "1784",
-          "confidence": "0.95",
-          "extractor": "assertion",
-          "assertion": "fetched.content, \"User must authenticate\"",
           "inferred": "true",
+          "confidence": "0.95",
           "source_file": "spec-core/src/graph.rs",
           "is_example": "true",
+          "assertion": "fetched.content, \"User must authenticate\"",
+          "source_line": "1784",
+          "extractor": "assertion",
           "example_source": "extractor test code"
         },
         "created_at": 1771095766,
@@ -2741,14 +2741,14 @@
         "content": "Invariant: user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
         "kind": "Definition",
         "metadata": {
-          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-          "extractor": "assertion",
-          "source_line": "2038",
-          "source_file": "spec-core/src/graph.rs",
           "confidence": "0.95",
+          "example_source": "extractor test code",
+          "extractor": "assertion",
+          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
           "inferred": "true",
+          "source_line": "2038",
           "is_example": "true",
-          "example_source": "extractor test code"
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771095766,
         "modified_at": 1771095766,
@@ -2759,14 +2759,14 @@
         "content": "- \"Password must be >= 8 chars\" (natural language)",
         "kind": "Definition",
         "metadata": {
-          "source_line": "5",
           "source_file": "spec-core/src/ai_semantic.rs",
-          "inferred": "true",
-          "extractor": "doc",
           "doc_comment": "true",
-          "confidence": "0.8",
+          "extractor": "doc",
+          "example_source": "PROBLEM.md documentation",
           "is_example": "true",
-          "example_source": "PROBLEM.md documentation"
+          "confidence": "0.8",
+          "source_line": "5",
+          "inferred": "true"
         },
         "created_at": 1771095766,
         "modified_at": 1771095766,
@@ -2778,13 +2778,13 @@
         "kind": "Definition",
         "metadata": {
           "assertion": "user.is_authenticated()",
+          "example_source": "extractor test code",
           "confidence": "0.95",
-          "source_line": "1074",
-          "inferred": "true",
-          "extractor": "assertion",
-          "source_file": "spec-core/src/extract.rs",
           "is_example": "true",
-          "example_source": "extractor test code"
+          "source_file": "spec-core/src/extract.rs",
+          "extractor": "assertion",
+          "source_line": "1074",
+          "inferred": "true"
         },
         "created_at": 1771095766,
         "modified_at": 1771095766,
@@ -2795,14 +2795,14 @@
         "content": "Scenario: extract intent from test with ai",
         "kind": "Definition",
         "metadata": {
-          "test_function": "extract_intent_from_test_with_ai",
-          "extractor": "test",
-          "inferred": "true",
           "confidence": "0.9",
-          "source_line": "806",
-          "source_file": "spec-core/src/extract.rs",
+          "extractor": "test",
           "is_example": "true",
-          "example_source": "extractor test code"
+          "example_source": "extractor test code",
+          "source_file": "spec-core/src/extract.rs",
+          "test_function": "extract_intent_from_test_with_ai",
+          "source_line": "806",
+          "inferred": "true"
         },
         "created_at": 1771095766,
         "modified_at": 1771095766,
@@ -2813,18 +2813,45 @@
         "content": "Violation: Amount must be greater than zero",
         "kind": "Definition",
         "metadata": {
+          "source_file": "spec-core/src/extract.rs",
           "extractor": "panic",
           "inferred": "true",
-          "panic": "Amount must be greater than zero",
-          "source_line": "1086",
-          "confidence": "0.85",
-          "source_file": "spec-core/src/extract.rs",
           "is_example": "true",
+          "confidence": "0.85",
+          "source_line": "1086",
+          "panic": "Amount must be greater than zero",
           "example_source": "extractor test code"
         },
         "created_at": 1771095766,
         "modified_at": 1771095766,
         "formality_layer": 3
+      },
+      {
+        "id": "9d92e2df-3f34-4c68-9f28-de054a4aaffa",
+        "content": "specORACLE must verify that its own implementation satisfies its specifications by extracting architectural properties from code (file size, module structure, responsibility distribution) and comparing them against U0 requirements",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771098272,
+        "modified_at": 1771098272,
+        "formality_layer": 0
+      },
+      {
+        "id": "d26341fb-a813-4ea6-a987-97d258de8529",
+        "content": "The CLI architecture (spec-cli/src/main.rs at 4475 lines) violates the separation of concerns specification [b706e529] which requires separate modules for command parsing, use case implementation, and presentation formatting",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771098274,
+        "modified_at": 1771098274,
+        "formality_layer": 0
+      },
+      {
+        "id": "99d081e1-2c83-4965-b2c2-3fa4cf470714",
+        "content": "The essence of specORACLE governance is detecting violations through observable contradictions: when U3 (extracted from actual code) contradicts U0 (requirements), the system has failed to govern itself. Currently missing: architectural property extraction that would reveal spec-cli/src/main.rs violates separation of concerns.",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771098398,
+        "modified_at": 1771098398,
+        "formality_layer": 0
       }
     ],
     "node_holes": [],
@@ -4069,9 +4096,9 @@
           "id": "f0a1e3a4-9dcc-404d-bdf1-f5a426dbefd2",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
+            "method": "semantic_keyword_match",
             "confidence": "0.6636363636363636",
-            "method": "semantic_keyword_match"
+            "auto_inferred": "true"
           },
           "created_at": 1771077954
         }
@@ -4083,9 +4110,9 @@
           "id": "9a267acc-43c4-4481-827b-028d12e194e8",
           "kind": "Formalizes",
           "metadata": {
-            "method": "semantic_keyword_match",
             "auto_inferred": "true",
-            "confidence": "0.62"
+            "confidence": "0.62",
+            "method": "semantic_keyword_match"
           },
           "created_at": 1771077954
         }
@@ -4097,9 +4124,9 @@
           "id": "5fa64f56-f9d4-4299-a658-900d53eaae9d",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
+            "method": "semantic_keyword_match",
             "confidence": "0.5904761904761905",
-            "method": "semantic_keyword_match"
+            "auto_inferred": "true"
           },
           "created_at": 1771077970
         }
@@ -4111,8 +4138,8 @@
           "id": "99ad9264-1927-4ef9-8a4f-027d2f1b252f",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.5818181818181818",
             "method": "semantic_keyword_match",
+            "confidence": "0.5818181818181818",
             "auto_inferred": "true"
           },
           "created_at": 1771077970
@@ -4125,9 +4152,9 @@
           "id": "980c9534-96b0-40e5-8f5f-a30d949b4d85",
           "kind": "Formalizes",
           "metadata": {
-            "method": "semantic_keyword_match",
+            "auto_inferred": "true",
             "confidence": "0.5739130434782609",
-            "auto_inferred": "true"
+            "method": "semantic_keyword_match"
           },
           "created_at": 1771077970
         }
@@ -4153,9 +4180,9 @@
           "id": "3c49520d-bae0-4476-a6c8-5cf8891367e1",
           "kind": "Formalizes",
           "metadata": {
+            "method": "semantic_keyword_match",
             "auto_inferred": "true",
-            "confidence": "0.5173913043478261",
-            "method": "semantic_keyword_match"
+            "confidence": "0.5173913043478261"
           },
           "created_at": 1771077970
         }
@@ -4167,8 +4194,8 @@
           "id": "2bffc506-574e-4f08-b658-114053856745",
           "kind": "Refines",
           "metadata": {
-            "auto_connected": "true",
-            "session": "96"
+            "session": "96",
+            "auto_connected": "true"
           },
           "created_at": 1771079949
         }
@@ -4180,8 +4207,8 @@
           "id": "33e3d61e-ddf6-491d-bbd1-fda9be86dcfb",
           "kind": "Refines",
           "metadata": {
-            "session": "96",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "session": "96"
           },
           "created_at": 1771079949
         }
@@ -4193,8 +4220,8 @@
           "id": "caa78b87-bf75-45db-b870-2058908e69d3",
           "kind": "Refines",
           "metadata": {
-            "auto_connected": "true",
-            "session": "96"
+            "session": "96",
+            "auto_connected": "true"
           },
           "created_at": 1771079949
         }
@@ -4245,8 +4272,8 @@
           "id": "81afa3f5-e901ead6-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.75"
           },
           "created_at": 1771084159
         }
@@ -4258,8 +4285,8 @@
           "id": "81afa3f5-e29eda14-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.50",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.50"
           },
           "created_at": 1771084159
         }
@@ -4323,8 +4350,8 @@
           "id": "c8f23449-c54e4333-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.75"
+            "confidence": "0.75",
+            "auto_inferred": "true"
           },
           "created_at": 1771084159
         }
@@ -4336,8 +4363,8 @@
           "id": "81afa3f5-e784e25b-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.50",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.50"
           },
           "created_at": 1771084159
         }
@@ -4388,8 +4415,8 @@
           "id": "9e1a2dce-ba2882a1-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "1.00",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "1.00"
           },
           "created_at": 1771084159
         }
@@ -4414,8 +4441,8 @@
           "id": "724bc4c0-83d7d395-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
-            "confidence": "1.00"
+            "confidence": "1.00",
+            "auto_inferred": "true"
           },
           "created_at": 1771084159
         }
@@ -4427,8 +4454,8 @@
           "id": "9e1a2dce-48b035be-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "1.00",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "1.00"
           },
           "created_at": 1771084159
         }
@@ -4453,8 +4480,8 @@
           "id": "e009137a-835ce953-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.75"
           },
           "created_at": 1771084159
         }
@@ -4466,9 +4493,9 @@
           "id": "2b68b299-0eb92ed0-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "manual_connection": "true",
             "confidence": "0.80",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "manual_connection": "true"
           },
           "created_at": 1771084396
         }
@@ -4481,8 +4508,8 @@
           "kind": "Formalizes",
           "metadata": {
             "manual_connection": "true",
-            "confidence": "0.80",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.80"
           },
           "created_at": 1771084396
         }
@@ -4494,9 +4521,9 @@
           "id": "2b68b299-cdd049cc-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
             "confidence": "0.80",
-            "manual_connection": "true"
+            "manual_connection": "true",
+            "auto_inferred": "true"
           },
           "created_at": 1771084396
         }
@@ -4523,9 +4550,9 @@
           "id": "30caeedd-6e95-42ab-84f1-063d55a15e94",
           "kind": "DerivesFrom",
           "metadata": {
+            "reconnection": "true",
             "date": "2026-02-15",
             "similarity": "0.15384615384615385",
-            "reconnection": "true",
             "auto_generated": "true"
           },
           "created_at": 1771087906
@@ -4539,9 +4566,9 @@
           "kind": "DerivesFrom",
           "metadata": {
             "similarity": "0.15384615384615385",
-            "date": "2026-02-15",
             "reconnection": "true",
-            "auto_generated": "true"
+            "auto_generated": "true",
+            "date": "2026-02-15"
           },
           "created_at": 1771087906
         }
@@ -4553,9 +4580,9 @@
           "id": "3ca0b77b-27c1-4117-b2b5-05c326529738",
           "kind": "DerivesFrom",
           "metadata": {
+            "similarity": "0.16666666666666666",
             "auto_generated": "true",
             "date": "2026-02-15",
-            "similarity": "0.16666666666666666",
             "reconnection": "true"
           },
           "created_at": 1771087906
@@ -4568,9 +4595,9 @@
           "id": "0f8710a5-027b-4a19-95dc-e8286c257310",
           "kind": "DerivesFrom",
           "metadata": {
-            "auto_generated": "true",
             "similarity": "0.16666666666666666",
             "reconnection": "true",
+            "auto_generated": "true",
             "date": "2026-02-15"
           },
           "created_at": 1771087906
@@ -4583,9 +4610,9 @@
           "id": "e498c612-69cb-4ca2-8de3-c1e4bbe0ed35",
           "kind": "DerivesFrom",
           "metadata": {
+            "date": "2026-02-15",
             "reconnection": "true",
             "similarity": "0.16666666666666666",
-            "date": "2026-02-15",
             "auto_generated": "true"
           },
           "created_at": 1771087906
@@ -4598,9 +4625,9 @@
           "id": "41e95467-ceb4-41fa-9fc0-ef82973bd6d4",
           "kind": "DerivesFrom",
           "metadata": {
-            "reconnection": "true",
-            "similarity": "0.17647058823529413",
             "auto_generated": "true",
+            "similarity": "0.17647058823529413",
+            "reconnection": "true",
             "date": "2026-02-15"
           },
           "created_at": 1771087906
@@ -4628,10 +4655,10 @@
           "id": "028134d0-309e-4cc2-80f9-c921bea81ce5",
           "kind": "DerivesFrom",
           "metadata": {
-            "similarity": "0.15789473684210525",
-            "date": "2026-02-15",
+            "auto_generated": "true",
             "reconnection": "true",
-            "auto_generated": "true"
+            "date": "2026-02-15",
+            "similarity": "0.15789473684210525"
           },
           "created_at": 1771087906
         }
@@ -4721,8 +4748,8 @@
           "id": "cf1abf10-0c4b-4b60-a2b1-dcef8de580b5",
           "kind": "DerivesFrom",
           "metadata": {
-            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'",
-            "created_by": "connect_isolated_proto_rpc.py"
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'"
           },
           "created_at": 1771090244
         }
@@ -4734,8 +4761,8 @@
           "id": "a0dea57b-0004-44bf-bd49-313bafa8a7f4",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'"
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4773,8 +4800,8 @@
           "id": "1829bed3-77a6-4816-9027-94b250a08e90",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Set node universe' to U0 'Universe struct represents the space'"
+            "reason": "Connect proto_rpc 'Set node universe' to U0 'Universe struct represents the space'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4786,8 +4813,8 @@
           "id": "41a5953c-c154-4c5f-9eb1-99d8de0542d8",
           "kind": "DerivesFrom",
           "metadata": {
-            "reason": "Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'",
-            "created_by": "connect_isolated_proto_rpc.py"
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'"
           },
           "created_at": 1771090244
         }
@@ -4812,8 +4839,8 @@
           "id": "5499ae8e-e8cd-42a4-848b-1ceaf8f411a8",
           "kind": "Refines",
           "metadata": {
-            "reason": "Connect proto_rpc 'Temporal queries' to U0 'Query'",
-            "created_by": "connect_isolated_proto_rpc.py"
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Temporal queries' to U0 'Query'"
           },
           "created_at": 1771090244
         }
@@ -4825,8 +4852,8 @@
           "id": "f72ff793-e101-4597-8d06-5c5e1113e314",
           "kind": "Refines",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Temporal queries' to U0 'Query'"
+            "reason": "Connect proto_rpc 'Temporal queries' to U0 'Query'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4877,8 +4904,8 @@
           "id": "28070883-e2ac-42f2-a53d-1c5656aae45e",
           "kind": "Refines",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'node history' to U0 'Query'"
+            "reason": "Connect proto_rpc 'node history' to U0 'Query'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4916,8 +4943,8 @@
           "id": "f7dc1c01-ba3d-4ab9-ae02-0a4e454bbe1e",
           "kind": "DerivesFrom",
           "metadata": {
-            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'",
-            "created_by": "connect_isolated_proto_rpc.py"
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'"
           },
           "created_at": 1771090244
         }
@@ -4955,8 +4982,8 @@
           "id": "527a541b-6591-4921-88a6-be1b6cb13513",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'"
+            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4994,8 +5021,8 @@
           "id": "a8c3e77b-f813-4c72-89db-d37c36085009",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_remaining_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Semantic normalization' to U0 'AI-powered'"
+            "reason": "Connect proto_rpc 'Semantic normalization' to U0 'AI-powered'",
+            "created_by": "connect_remaining_proto_rpc.py"
           },
           "created_at": 1771090327
         }
@@ -5007,8 +5034,8 @@
           "id": "15cdba5c-bbb9-4d0e-823e-ecbdacc39c5c",
           "kind": "DerivesFrom",
           "metadata": {
-            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'",
-            "created_by": "connect_remaining_proto_rpc.py"
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
           },
           "created_at": 1771090327
         }
@@ -5020,8 +5047,8 @@
           "id": "29a837cf-cecf-4e26-915e-36101641af35",
           "kind": "DerivesFrom",
           "metadata": {
-            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'",
-            "created_by": "connect_remaining_proto_rpc.py"
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
           },
           "created_at": 1771090327
         }
@@ -5046,8 +5073,8 @@
           "id": "5685b8e5-9053-4081-a5c5-b47fad73f6c5",
           "kind": "DerivesFrom",
           "metadata": {
-            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'",
-            "created_by": "connect_remaining_proto_rpc.py"
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
           },
           "created_at": 1771090327
         }
@@ -5072,8 +5099,8 @@
           "id": "b8efdf1f-63a3-4e46-b45e-60efd14abd8f",
           "kind": "Refines",
           "metadata": {
-            "auto_connected": "true",
-            "script": "connect_isolated_proto_rpcs.py"
+            "script": "connect_isolated_proto_rpcs.py",
+            "auto_connected": "true"
           },
           "created_at": 1771086000
         }
@@ -5150,8 +5177,8 @@
           "id": "f53add65-e2aa-4a90-bca8-553af1f0d7d3",
           "kind": "Refines",
           "metadata": {
-            "script": "connect_isolated_proto_rpcs.py",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "script": "connect_isolated_proto_rpcs.py"
           },
           "created_at": 1771086000
         }
@@ -5176,8 +5203,8 @@
           "id": "5a7f4dba-078c-45d3-98b9-b2be1b940d8b",
           "kind": "Refines",
           "metadata": {
-            "auto_connected": "true",
-            "script": "connect_remaining_isolated.py"
+            "script": "connect_remaining_isolated.py",
+            "auto_connected": "true"
           },
           "created_at": 1771086100
         }
@@ -5202,8 +5229,8 @@
           "id": "8c8f4a09-43c2-42c3-9cc8-a65d20fe0bb8",
           "kind": "Formalizes",
           "metadata": {
-            "script": "connect_remaining_isolated.py",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "script": "connect_remaining_isolated.py"
           },
           "created_at": 1771086100
         }
@@ -5241,8 +5268,8 @@
           "id": "bf0a0517-16f5-4938-b5a4-4aa8060b5c60",
           "kind": "DependsOn",
           "metadata": {
-            "script": "connect_remaining_isolated.py",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "script": "connect_remaining_isolated.py"
           },
           "created_at": 1771086100
         }
@@ -5293,8 +5320,8 @@
           "id": "c355bb25-9e58-471b-be88-5f3f01a90cee",
           "kind": "Refines",
           "metadata": {
-            "script": "connect_final_four.py",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "script": "connect_final_four.py"
           },
           "created_at": 1771086200
         }
@@ -5680,8 +5707,8 @@
           "id": "readme-223-8",
           "kind": "DerivesFrom",
           "metadata": {
-            "confidence": "0.95",
-            "reason": "README documentation of existing feature"
+            "reason": "README documentation of existing feature",
+            "confidence": "0.95"
           },
           "created_at": 1771090000
         }
@@ -5706,8 +5733,8 @@
           "id": "readme-228-121",
           "kind": "DerivesFrom",
           "metadata": {
-            "confidence": "0.8",
-            "reason": "README documentation of existing feature"
+            "reason": "README documentation of existing feature",
+            "confidence": "0.8"
           },
           "created_at": 1771090000
         }
@@ -5719,8 +5746,8 @@
           "id": "readme-graph-storage",
           "kind": "DerivesFrom",
           "metadata": {
-            "confidence": "0.90",
-            "reason": "README describes SpecGraph implementation"
+            "reason": "README describes SpecGraph implementation",
+            "confidence": "0.90"
           },
           "created_at": 1771090100
         }
