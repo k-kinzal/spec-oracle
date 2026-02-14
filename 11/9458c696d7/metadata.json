@@ -3,12 +3,17 @@
   "checkpoint_id": "119458c696d7",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 1,
+  "checkpoints_count": 2,
   "files_touched": [
     "spec-cli/src/main.rs",
+    "spec-core/src/lib.rs",
+    "spec-core/src/prover.rs",
     "spec-core/src/udaf.rs",
     "tasks/2026-02-14-integrate-extractor-with-udaf-complete.md",
     "tasks/2026-02-14-integrate-extractor-with-udaf.md",
+    "tasks/2026-02-14-session-48-complete-summary.md",
+    "tasks/2026-02-14-session-48-prover-cli-demo.md",
+    "tasks/2026-02-14-session-48-prover-foundation.md",
     "tasks/2026-02-14-session-complete-executable-theory.md"
   ],
   "sessions": [
@@ -18,13 +23,20 @@
       "context": "/11/9458c696d7/0/context.md",
       "content_hash": "/11/9458c696d7/0/content_hash.txt",
       "prompt": "/11/9458c696d7/0/prompt.txt"
+    },
+    {
+      "metadata": "/11/9458c696d7/1/metadata.json",
+      "transcript": "/11/9458c696d7/1/full.jsonl",
+      "context": "/11/9458c696d7/1/context.md",
+      "content_hash": "/11/9458c696d7/1/content_hash.txt",
+      "prompt": "/11/9458c696d7/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 322,
-    "cache_creation_tokens": 103099,
-    "cache_read_tokens": 3417308,
-    "output_tokens": 17798,
-    "api_call_count": 40
+    "input_tokens": 1112,
+    "cache_creation_tokens": 216640,
+    "cache_read_tokens": 8922487,
+    "output_tokens": 29601,
+    "api_call_count": 91
   }
 }
