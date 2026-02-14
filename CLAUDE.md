@@ -9,7 +9,7 @@ This goal has not yet been met. Research it. Search for it. Surpass the failures
 
 - Behavior must always be guaranteed through tests, contracts, properties, and proofs.
 - Changes and commits should always be kept to the absolute minimum.
-- Specification management should be conducted using new specification tools to perform dogfooding.
+- Specifications should always be managed using specification description tools.
 - Do not implement everything from scratch; utilize existing tools and libraries where possible.
 - The user cannot answer your questions. Asking for clarification is prohibited.
 - There is no interest in plans. Planning mode is prohibited.

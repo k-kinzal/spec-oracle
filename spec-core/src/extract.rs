@@ -68,6 +68,29 @@ impl SpecGraph {
             }
         }
 
+        // Infer relationships between newly created nodes and existing nodes
+        for node_id in &created_ids {
+            let suggestions = self.infer_relationships_for_node(node_id);
+
+            for suggestion in suggestions {
+                if suggestion.confidence >= 0.8 {
+                    // High confidence: auto-create edge
+                    match self.add_edge(
+                        &suggestion.source_id,
+                        &suggestion.target_id,
+                        suggestion.kind,
+                        HashMap::new(),
+                    ) {
+                        Ok(_) => report.edges_created += 1,
+                        Err(_) => {} // Ignore errors (node might not exist)
+                    }
+                } else if suggestion.confidence >= 0.5 {
+                    // Medium confidence: suggest for human review
+                    report.suggestions.push(suggestion);
+                }
+            }
+        }
+
         // Detect contradictions among newly created nodes
         let contras = self.detect_contradictions();
         for contra in contras {
@@ -99,6 +122,146 @@ impl SpecGraph {
 
         // Return updated node
         self.get_node(&node_id).unwrap().clone()
+    }
+
+    /// Infer relationships for a specific node
+    fn infer_relationships_for_node(&self, node_id: &str) -> Vec<EdgeSuggestion> {
+        let mut suggestions = Vec::new();
+
+        let source_node = match self.get_node(node_id) {
+            Some(n) => n,
+            None => return suggestions,
+        };
+
+        // Get all other nodes
+        let all_nodes = self.list_nodes(None);
+
+        for target_node in all_nodes {
+            if target_node.id == node_id {
+                continue; // Skip self
+            }
+
+            // Calculate semantic similarity
+            let similarity = self.calculate_semantic_similarity(
+                &source_node.content,
+                &target_node.content,
+            );
+
+            if similarity < 0.3 {
+                continue; // Too dissimilar
+            }
+
+            // Infer edge kind and confidence based on multiple factors
+            if let Some((edge_kind, confidence, explanation)) =
+                self.infer_edge_kind(source_node, target_node, similarity)
+            {
+                suggestions.push(EdgeSuggestion {
+                    source_id: node_id.to_string(),
+                    target_id: target_node.id.clone(),
+                    kind: edge_kind,
+                    confidence,
+                    explanation,
+                });
+            }
+        }
+
+        suggestions
+    }
+
+    /// Calculate semantic similarity between two texts
+    fn calculate_semantic_similarity(&self, text1: &str, text2: &str) -> f32 {
+        // Simple keyword-based similarity (can be enhanced with AI embeddings later)
+        let lower1 = text1.to_lowercase();
+        let lower2 = text2.to_lowercase();
+
+        let words1: std::collections::HashSet<String> =
+            lower1.split_whitespace().map(|s| s.to_string()).collect();
+        let words2: std::collections::HashSet<String> =
+            lower2.split_whitespace().map(|s| s.to_string()).collect();
+
+        if words1.is_empty() || words2.is_empty() {
+            return 0.0;
+        }
+
+        let intersection = words1.intersection(&words2).count();
+        let union = words1.union(&words2).count();
+
+        intersection as f32 / union as f32
+    }
+
+    /// Infer edge kind between two nodes
+    fn infer_edge_kind(
+        &self,
+        source: &crate::SpecNodeData,
+        target: &crate::SpecNodeData,
+        similarity: f32,
+    ) -> Option<(crate::EdgeKind, f32, String)> {
+        // Rule 1: Formalizes - same concept, different formality levels
+        if similarity > 0.5 && source.formality_layer < target.formality_layer {
+            return Some((
+                crate::EdgeKind::Formalizes,
+                similarity * 0.9,
+                format!(
+                    "Same concept at different formality levels ({} -> {})",
+                    source.formality_layer, target.formality_layer
+                ),
+            ));
+        }
+
+        // Rule 2: Refines - scenario refines constraint, or same kind with high similarity
+        if similarity > 0.6 {
+            if source.kind == NodeKind::Scenario && target.kind == NodeKind::Constraint {
+                return Some((
+                    crate::EdgeKind::Refines,
+                    similarity * 0.85,
+                    "Scenario refines constraint".to_string(),
+                ));
+            }
+            if source.kind == target.kind {
+                return Some((
+                    crate::EdgeKind::Refines,
+                    similarity * 0.75,
+                    "Similar specifications (potential refinement)".to_string(),
+                ));
+            }
+        }
+
+        // Rule 3: DerivesFrom - assertion derives from constraint
+        if similarity > 0.5
+            && source.kind == NodeKind::Assertion
+            && target.kind == NodeKind::Constraint
+        {
+            return Some((
+                crate::EdgeKind::DerivesFrom,
+                similarity * 0.8,
+                "Assertion derives from constraint".to_string(),
+            ));
+        }
+
+        // Rule 4: Synonym - very high similarity, same kind
+        if similarity > 0.8 && source.kind == target.kind {
+            return Some((
+                crate::EdgeKind::Synonym,
+                similarity * 0.95,
+                "Nearly identical content".to_string(),
+            ));
+        }
+
+        // Rule 5: Same source file suggests relationship
+        if let (Some(src_file), Some(tgt_file)) = (
+            source.metadata.get("source_file"),
+            target.metadata.get("source_file"),
+        ) {
+            if src_file == tgt_file && similarity > 0.4 {
+                return Some((
+                    crate::EdgeKind::Refines,
+                    similarity * 0.7,
+                    "Same source file".to_string(),
+                ));
+            }
+        }
+
+        None
     }
 }
 

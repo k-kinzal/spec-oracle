@@ -624,10 +624,49 @@ impl SpecGraph {
             return Some("Contradictory requirement: 'required' vs 'optional'".to_string());
         }
 
+        // Extract and compare numeric constraints
+        if let (Some(num_a), Some(num_b)) = (Self::extract_minimum_value(&a_lower), Self::extract_minimum_value(&b_lower)) {
+            if num_a != num_b && a_lower.contains("password") && b_lower.contains("password") {
+                return Some(format!("Conflicting password length: {} vs {} characters", num_a, num_b));
+            }
+            if num_a != num_b && (a_lower.contains("length") || b_lower.contains("length")
+                || a_lower.contains("minimum") || b_lower.contains("minimum")
+                || a_lower.contains("at least") || b_lower.contains("at least")) {
+                return Some(format!("Conflicting minimum values: {} vs {}", num_a, num_b));
+            }
+        }
+
         // Check for conflicting numeric constraints (e.g., ">= 8" vs "< 8")
-        // This is a simplified heuristic - real implementation would parse properly
         if a_lower.contains(">=") && b_lower.contains("<") {
             return Some("Potentially conflicting numeric constraints".to_string());
+        }
+
+        None
+    }
+
+    /// Extract minimum value from phrases like "at least 8", "minimum 10", ">= 5", etc.
+    fn extract_minimum_value(text: &str) -> Option<u32> {
+        // Try to find patterns like "at least N", "minimum N", ">= N", "min N", "minimum of N"
+        use regex::Regex;
+        let patterns = [
+            r"at least (\d+)",
+            r"minimum (\d+)",
+            r"min (\d+)",
+            r"minimum of (\d+)",
+            r">= ?(\d+)",
+            r"≥ ?(\d+)",
+        ];
+
+        for pattern in &patterns {
+            if let Ok(re) = Regex::new(pattern) {
+                if let Some(cap) = re.captures(text) {
+                    if let Some(num_str) = cap.get(1) {
+                        if let Ok(num) = num_str.as_str().parse::<u32>() {
+                            return Some(num);
+                        }
+                    }
+                }
+            }
         }
 
         None
