@@ -42,6 +42,73 @@ python3 scripts/export_specs_md.py --with-edges > docs/specs-with-edges.md
 - **Created**: 2026-02-14 18:10:08
 ```
 
+### `export_specs_dot.py`
+
+Generate DOT graph format for visualization with Graphviz.
+
+**Basic Usage:**
+```bash
+# Generate DOT file for all specifications
+python3 scripts/export_specs_dot.py > specs.dot
+
+# Render to PNG (requires graphviz)
+dot -Tpng specs.dot -o specs.png
+
+# Render to SVG
+dot -Tsvg specs.dot -o specs.svg
+
+# Interactive visualization
+dot -Tx11 specs.dot
+```
+
+**Filtering Options:**
+```bash
+# Export only U0 layer
+python3 scripts/export_specs_dot.py --layer 0 > u0_specs.dot
+
+# Export only constraints
+python3 scripts/export_specs_dot.py --kind constraint > constraints.dot
+
+# Limit content length in nodes
+python3 scripts/export_specs_dot.py --max-content 30 > specs_short.dot
+
+# Use different layout engine
+python3 scripts/export_specs_dot.py --layout neato > specs_neato.dot
+```
+
+**Statistics:**
+```bash
+# Print graph statistics instead of DOT
+python3 scripts/export_specs_dot.py --stats
+```
+
+**Layout Engines:**
+- `dot` - Hierarchical (default, good for directed graphs)
+- `neato` - Spring model (good for undirected graphs)
+- `fdp` - Force-directed (good for large graphs)
+- `sfdp` - Scalable force-directed (good for very large graphs)
+- `circo` - Circular layout
+- `twopi` - Radial layout
+
+**Visual Features:**
+- Color-coded nodes by kind (Assertion=blue, Constraint=orange, Scenario=green)
+- Color-coded borders by layer (U0=blue, U1=green, U2=orange, U3=pink)
+- Edge colors by relationship type (Formalizes=blue, Refines=green, etc.)
+- Truncated content for readability
+- Short IDs (8 chars) for reference
+
+**Installing Graphviz:**
+```bash
+# macOS
+brew install graphviz
+
+# Ubuntu/Debian
+sudo apt-get install graphviz
+
+# Windows (via Chocolatey)
+choco install graphviz
+```
+
 ## Specification Connection
 
 ### `connect_layer_label_spec.py`
@@ -60,6 +127,7 @@ graph connectivity and enable traceability.
 
 - Python 3.6+
 - No external dependencies (uses only standard library)
+- Graphviz (optional, for rendering DOT files)
 
 ## See Also
 

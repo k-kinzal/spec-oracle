@@ -216,8 +216,8 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Constraint",
         "metadata": {
-          "line": "7,105-113",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "line": "7,105-113"
         },
         "created_at": 1771061822,
         "modified_at": 1771061822,
@@ -228,8 +228,8 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Add"
+          "function": "Commands::Add",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -252,8 +252,8 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
-          "function": "Commands::Check",
-          "source_file": "spec-cli/src/main.rs"
+          "source_file": "spec-cli/src/main.rs",
+          "function": "Commands::Check"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -264,8 +264,8 @@
         "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
         "kind": "Constraint",
         "metadata": {
-          "line": "18,162-169",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "line": "18,162-169"
         },
         "created_at": 1771062014,
         "modified_at": 1771062014,
@@ -276,8 +276,8 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Constraint",
         "metadata": {
-          "function": "Commands::Find",
-          "source_file": "spec-cli/src/main.rs"
+          "source_file": "spec-cli/src/main.rs",
+          "function": "Commands::Find"
         },
         "created_at": 1771062016,
         "modified_at": 1771062016,
@@ -288,8 +288,8 @@
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "line": "14,148-153"
+          "line": "14,148-153",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -844,9 +844,9 @@
         "kind": "Assertion",
         "metadata": {
           "session": "57",
-          "verified_modules": "prover, udaf",
+          "resolved_issues": "3 critical",
           "date": "2026-02-14",
-          "resolved_issues": "3 critical"
+          "verified_modules": "prover, udaf"
         },
         "created_at": 1771070800,
         "modified_at": 1771070800,
@@ -1147,6 +1147,42 @@
         "metadata": {},
         "created_at": 1771075170,
         "modified_at": 1771075170,
+        "formality_layer": 0
+      },
+      {
+        "id": "ea15885e-98ff-45f6-a8b7-3e130accc425",
+        "content": "The export_specs_dot.py script exports specifications as DOT graph format for Graphviz visualization",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771076326,
+        "modified_at": 1771076326,
+        "formality_layer": 0
+      },
+      {
+        "id": "6b8373d8-0f4e-46aa-87be-09a6e6249c57",
+        "content": "Graph visualization supports filtering by layer and kind",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771076326,
+        "modified_at": 1771076326,
+        "formality_layer": 0
+      },
+      {
+        "id": "250c2181-da8c-40fe-a340-57cd2db18410",
+        "content": "Graph nodes are color-coded by kind (Assertion=blue, Constraint=orange, Scenario=green) with borders color-coded by layer (U0=blue, U1=green, U2=orange, U3=pink)",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771076328,
+        "modified_at": 1771076328,
+        "formality_layer": 0
+      },
+      {
+        "id": "39df83fe-8f5b-4603-9a3f-c7dfb287fcf7",
+        "content": "Graph edges are styled by relationship type (Formalizes=blue, Refines=green, DerivesFrom=purple, DependsOn=orange)",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771076329,
+        "modified_at": 1771076329,
         "formality_layer": 0
       }
     ],
@@ -2323,6 +2359,72 @@
             "note": "Layer label display requirement (U0) formalized by find command implementation (U3)"
           },
           "created_at": 1771075492
+        }
+      ],
+      [
+        124,
+        123,
+        {
+          "id": "feb37a83-06bc-4de1-9ff7-6d4f118fb892",
+          "kind": "Refines",
+          "description": "Filtering is a refinement of export capability",
+          "created_at": 1771076416,
+          "metadata": {}
+        }
+      ],
+      [
+        125,
+        123,
+        {
+          "id": "11cdd1d2-1abf-45e7-a37f-387f27011814",
+          "kind": "Refines",
+          "description": "Visual encoding is a refinement of export",
+          "created_at": 1771076416,
+          "metadata": {}
+        }
+      ],
+      [
+        126,
+        123,
+        {
+          "id": "3fc75d7d-1771-4424-9d5c-9a4096902a59",
+          "kind": "Refines",
+          "description": "Edge styling is a refinement of export",
+          "created_at": 1771076416,
+          "metadata": {}
+        }
+      ],
+      [
+        124,
+        123,
+        {
+          "id": "600c5373-8df3-4c0b-988c-845d9223c73c",
+          "kind": "Refines",
+          "description": "Filtering is a refinement of export capability",
+          "created_at": 1771076400,
+          "metadata": {}
+        }
+      ],
+      [
+        125,
+        123,
+        {
+          "id": "3b2346d8-3fee-42aa-8ac0-d72b13d5b83c",
+          "kind": "Refines",
+          "description": "Visual encoding is a refinement of export",
+          "created_at": 1771076400,
+          "metadata": {}
+        }
+      ],
+      [
+        126,
+        123,
+        {
+          "id": "2620baf0-d6ac-4b2f-a851-eb815a9d59e9",
+          "kind": "Refines",
+          "description": "Edge styling is a refinement of export",
+          "created_at": 1771076400,
+          "metadata": {}
         }
       ]
     ]

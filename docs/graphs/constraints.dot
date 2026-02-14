@@ -1,0 +1,56 @@
+digraph specORACLE {
+  // Graph attributes
+  layout="dot";
+  rankdir="TB";
+  node [shape=box, style="rounded,filled", fontname="Arial", fontsize=10];
+  edge [fontname="Arial", fontsize=9];
+  bgcolor="white";
+  splines="ortho";
+
+  // Nodes
+  "81afa3f5-4a41-4b04-b958-224d1037d76f" [label="[U0] 81afa3f5\nConstraint\n\nThe system must detect contradictions...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "c8f23449-3f4c-40b1-a8f4-6dc2c93444b1" [label="[U0] c8f23449\nConstraint\n\nThe system must detect omissions wher...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "ec5f2497-a3ac-4162-8f75-c5da40436bc5" [label="[U0] ec5f2497\nConstraint\n\nProject-local specifications must be ...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "ea3f4e7a-e577-465b-810d-ea4247d5ec48" [label="[U0] ea3f4e7a\nConstraint\n\nThe CLI must work in standalone mode ...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "dbc5525f-ec05-42fa-8823-dddd359567ed" [label="[U0] dbc5525f\nConstraint\n\nThe check command must run both contr...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "49f551db-6fa3-40d2-9e36-bdb5e90a687b" [label="[U0] 49f551db\nConstraint\n\nThe check command must exit with code...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "ee493f23-22d4-483c-8afe-2926a0ec1f73" [label="[U0] ee493f23\nConstraint\n\nThe find command provides semantic se...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "b9d116dd-afde-498c-8fe2-0dca01b6c08b" [label="[U0] b9d116dd\nConstraint\n\nThe find command must show helpful su...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "b176641e-ab94-414b-a777-0a69ab47e035" [label="[U0] b176641e\nConstraint\n\nThe trace command displays all relati...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "141cf3b5-c73b-4bb8-bfe5-77b21a0df7e3" [label="[U2] 141cf3b5\nConstraint\n\nDetectContradictions RPC returns Cont...", fillcolor="#FFF3E0", color="#FFE0B2", penwidth=2];
+  "386b1821-73e9-4b1c-90e4-618204cbad0e" [label="[U3] 386b1821\nConstraint\n\nThe detect_contradictions function mu...", fillcolor="#FFF3E0", color="#F8BBD0", penwidth=2];
+  "7c6d4b66-e684-4281-b83c-81c5fc7d07e3" [label="[U2] 7c6d4b66\nConstraint\n\nDetectOmissions RPC returns Omission ...", fillcolor="#FFF3E0", color="#FFE0B2", penwidth=2];
+  "194a46a7-fed0-4e65-8b0f-4f60813edd62" [label="[U3] 194a46a7\nConstraint\n\nThe detect_omissions function must id...", fillcolor="#FFF3E0", color="#F8BBD0", penwidth=2];
+  "41052fda-aef8-4443-991f-80e5165991c7" [label="[U2] 41052fda\nConstraint\n\nAddNode RPC accepts content, kind, an...", fillcolor="#FFF3E0", color="#FFE0B2", penwidth=2];
+  "f52e0895-4753-4ceb-b59f-cc9dac67a3f8" [label="[U3] f52e0895\nConstraint\n\nThe add command must infer spec kind ...", fillcolor="#FFF3E0", color="#F8BBD0", penwidth=2];
+  "c8f0f89e-be5e-4ea9-b24d-a9a1eb4d4f03" [label="[U2] c8f0f89e\nConstraint\n\nCheck RPC invokes DetectContradiction...", fillcolor="#FFF3E0", color="#FFE0B2", penwidth=2];
+  "ae111e6b-256c-47dc-9862-f4165150f62e" [label="[U3] ae111e6b\nConstraint\n\nThe check command implementation must...", fillcolor="#FFF3E0", color="#F8BBD0", penwidth=2];
+  "a565f8bd-53f8-485d-9141-da7fb5686fe9" [label="[U2] a565f8bd\nConstraint\n\nQuery RPC accepts natural_language_qu...", fillcolor="#FFF3E0", color="#FFE0B2", penwidth=2];
+  "8a79071d-6eac-42c5-97ff-539bade167e5" [label="[U3] 8a79071d\nConstraint\n\nThe find command must search specific...", fillcolor="#FFF3E0", color="#F8BBD0", penwidth=2];
+  "97578131-68b3-4d13-be53-12f0c4da819d" [label="[U2] 97578131\nConstraint\n\nListEdges RPC returns all edges for a...", fillcolor="#FFF3E0", color="#FFE0B2", penwidth=2];
+  "8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80" [label="[U3] 8c2c0d20\nConstraint\n\nThe trace command must traverse relat...", fillcolor="#FFF3E0", color="#F8BBD0", penwidth=2];
+  "717b4b00-779b-4d39-9c7f-3ebcb82dd0ec" [label="[U0] 717b4b00\nConstraint\n\nThe verify-layers command checks mult...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "0dc100e8-5514-4ab8-9cb5-3a067aac5536" [label="[U0] 0dc100e8\nConstraint\n\nThe verify-layers command provides fo...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "072d1cd5-1d4a-40b3-8061-fadabebc6117" [label="[U3] 072d1cd5\nConstraint\n\nparse_formality_layer() converts meta...", fillcolor="#FFF3E0", color="#F8BBD0", penwidth=2];
+  "b36f3a5f-d36a-48fd-bc75-b7d110df376f" [label="[U3] b36f3a5f\nConstraint\n\nCompleteness check traverses Formaliz...", fillcolor="#FFF3E0", color="#F8BBD0", penwidth=2];
+  "df2be5a7-c131-4e44-97da-81f2a4995fe6" [label="[U3] df2be5a7\nConstraint\n\nSoundness check traverses inverse For...", fillcolor="#FFF3E0", color="#F8BBD0", penwidth=2];
+  "254cb58e-a050-4402-ba62-2ae3274ba619" [label="[U0] 254cb58e\nConstraint\n\nThe inspect-model command displays th...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+  "d1c6549f-be1c-4ef9-95c7-01425bc01d81" [label="[U0] d1c6549f\nConstraint\n\nThe node-history command displays the...", fillcolor="#FFF3E0", color="#BBDEFB", penwidth=2];
+
+  // Edges
+  "c8f23449-3f4c-40b1-a8f4-6dc2c93444b1" -> "386b1821-73e9-4b1c-90e4-618204cbad0e" [label="Formalizes", color="blue", fontcolor="blue"];
+  "ec5f2497-a3ac-4162-8f75-c5da40436bc5" -> "f52e0895-4753-4ceb-b59f-cc9dac67a3f8" [label="Formalizes", color="blue", fontcolor="blue"];
+  "f52e0895-4753-4ceb-b59f-cc9dac67a3f8" -> "c8f0f89e-be5e-4ea9-b24d-a9a1eb4d4f03" [label="Formalizes", color="blue", fontcolor="blue"];
+  "49f551db-6fa3-40d2-9e36-bdb5e90a687b" -> "ae111e6b-256c-47dc-9862-f4165150f62e" [label="Formalizes", color="blue", fontcolor="blue"];
+  "ae111e6b-256c-47dc-9862-f4165150f62e" -> "a565f8bd-53f8-485d-9141-da7fb5686fe9" [label="Formalizes", color="blue", fontcolor="blue"];
+  "b9d116dd-afde-498c-8fe2-0dca01b6c08b" -> "8a79071d-6eac-42c5-97ff-539bade167e5" [label="Formalizes", color="blue", fontcolor="blue"];
+  "8a79071d-6eac-42c5-97ff-539bade167e5" -> "97578131-68b3-4d13-be53-12f0c4da819d" [label="Formalizes", color="blue", fontcolor="blue"];
+  "ee493f23-22d4-483c-8afe-2926a0ec1f73" -> "49f551db-6fa3-40d2-9e36-bdb5e90a687b" [label="Refines", color="green", fontcolor="green"];
+  "b176641e-ab94-414b-a777-0a69ab47e035" -> "b9d116dd-afde-498c-8fe2-0dca01b6c08b" [label="Refines", color="green", fontcolor="green"];
+  "ee493f23-22d4-483c-8afe-2926a0ec1f73" -> "49f551db-6fa3-40d2-9e36-bdb5e90a687b" [label="Refines", color="green", fontcolor="green"];
+  "b176641e-ab94-414b-a777-0a69ab47e035" -> "b9d116dd-afde-498c-8fe2-0dca01b6c08b" [label="Refines", color="green", fontcolor="green"];
+  "7c6d4b66-e684-4281-b83c-81c5fc7d07e3" -> "ea3f4e7a-e577-465b-810d-ea4247d5ec48" [label="Refines", color="green", fontcolor="green"];
+  "41052fda-aef8-4443-991f-80e5165991c7" -> "81afa3f5-4a41-4b04-b958-224d1037d76f" [label="DerivesFrom", color="purple", fontcolor="purple"];
+  "072d1cd5-1d4a-40b3-8061-fadabebc6117" -> "b36f3a5f-d36a-48fd-bc75-b7d110df376f" [label="Formalizes", color="blue", fontcolor="blue"];
+  "072d1cd5-1d4a-40b3-8061-fadabebc6117" -> "df2be5a7-c131-4e44-97da-81f2a4995fe6" [label="Formalizes", color="blue", fontcolor="blue"];
+}
