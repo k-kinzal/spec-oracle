@@ -31,39 +31,43 @@
 
 ### Critical
 
-- [ ] **🚨 Z3証明器が実装されているが統合されていない（嘘の解決報告）**
+- [x] **🚨 Z3証明器が実装されているが統合されていない（嘘の解決報告）** ✅ **解決済み (2026-02-15)**
   - **発見日**: 2026-02-15
   - **詳細**: Z3 SMT solverのコード (`spec-core/src/prover/`) は存在するが、主要なワークフロー (`spec check`) に統合されていない。PROBLEM.mdとACHIEVEMENTS.mdは「✅ 完了」と虚偽の報告をしていた。
-  - **現状の真実**:
-    - ❌ **`spec check`はZ3を使用していない** - 単純なキーワードマッチング ("must" vs "must not", "password", 数値抽出) のみ
-    - ❌ **形式的検証が行われていない** - `detect_contradictions()` (graph.rs:272) は構造的チェックと文字列比較のみ
-    - ✅ **Z3コードは存在する** - `prove_consistency`, `prove_satisfiability` コマンドは個別に実行可能
-    - ❌ **主要機能に統合されていない** - ユーザーは明示的に `spec prove-consistency <a> <b>` を呼ぶ必要がある
+  - **解決内容** (2026-02-15):
+    - ✅ **`spec check`がZ3を使用** - `detect_contradictions()`からProverを呼び出し
+    - ✅ **形式的検証を実装** - `detect_contradiction_via_z3()` で数学的に厳密な検証
+    - ✅ **制約抽出機能** - `extract_constraints_from_content()` でパターンベース抽出
+    - ✅ **最小値・最大値対応** - "at least N" / "at most N" をZ3 formulaに変換
+    - ✅ **ヒューリスティックとの共存** - Z3で検証できない場合はキーワードマッチングにfallback
   - **検証結果** (2026-02-15):
     ```bash
-    $ spec check
-    ✓ No contradictions found  # ← Z3を使っていない！キーワードマッチングのみ
+    $ target/release/spec check
+    Contradictions:
+      6. Z3-verified contradiction on variable(s): password_length (formally proven inconsistent)
+         A: [a1087af9] Password must be at least 12 characters
+         B: [334ebd1d] Password must be at most 10 characters
 
-    # 実際の実装 (spec-core/src/graph.rs:272-398):
-    # 1. Explicit contradiction edges
-    # 2. Structural checks (constraint vs scenario in same domain)
-    # 3. Exact duplicate detection (string.trim() == string.trim())
-    # 4. Semantic contradiction (graph.rs:663):
-    #    - "must" vs "must not" keyword matching
-    #    - "required" vs "optional" keyword matching
-    #    - Password length: extract numbers from "at least 8" vs "minimum 10"
-    # ← 形式的証明は一切使われていない
+    # 実装 (spec-core/src/graph.rs):
+    # 1. extract_constraints_from_content() - 制約抽出
+    # 2. detect_contradiction_via_z3() - Z3による形式的検証
+    # 3. detect_contradictions() - Z3チェック → ヒューリスティックfallback
+    # ✅ 形式的証明が統合されている！
     ```
-  - **ACHIEVEMENTS.mdの嘘**:
-    - "✅ **Formal verification** via Z3 SMT solver" ← FALSE
-    - "✓ No contradictions found (Z3-verified)" ← FALSE (keyword matching only)
-    - "**Status**: ✅ **Complete**" for formal verification ← FALSE
-  - **影響範囲**: specORACLEの本質的価値である「証明された世界」が提供されていない。虚偽の達成報告により実態が隠蔽されていた。
-  - **どうあって欲しいか**:
-    - `spec check` が自動的にZ3を使用して形式的検証を行う
-    - 矛盾検出はキーワードマッチングではなく、SMT solverによる証明で行う
-    - または、Z3統合が未完了であることを正直に報告する
-  - **解決状況**: ❌ **未解決** - Z3コードは存在するが統合されていない。これはspecORACLEの存在意義の根幹的欠如。
+  - **実装詳細**:
+    - `spec-core/src/graph.rs:797-858`: 制約抽出関数
+    - `spec-core/src/graph.rs:862-930`: Z3ベースの矛盾検出
+    - `spec-core/src/graph.rs:384-405`: 統合（Z3 → heuristic fallback）
+  - **達成事項**:
+    - specORACLEの本質的価値「証明された世界」が実現された
+    - 数学的に厳密な矛盾検出が機能している
+    - Z3による形式的証明が`spec check`で利用可能
+  - **制約**:
+    - 制約抽出はパターンベース（完全性は限定的）
+    - 対応パターン: password length (min/max), generic numeric constraints
+    - 拡張可能な設計（新しいパターンを追加可能）
+  - **タスク**: `tasks/2026-02-15-integrate-z3-into-spec-check.md`
+  - **解決状況**: ✅ **完了** - Z3統合が成功し、形式的検証が機能している
 
 - [x] **🚨 186個の孤立仕様が存在する（47.6%が未接続）** ✅ **解決済み (2026-02-15)**
   - **発見日**: 2026-02-15

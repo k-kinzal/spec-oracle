@@ -6,6 +6,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+// Import Z3-based formal verification modules
+use crate::udaf::{AdmissibleSet, Constraint, ConstraintKind};
+use crate::prover::{Prover, ProofStatus};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NodeKind {
     Assertion,
@@ -380,6 +384,17 @@ impl SpecGraph {
                 // Check for semantic contradictions (e.g., password 8 vs 10 chars)
                 // Only check within same formality layer to avoid false positives
                 if node_a.formality_layer == node_b.formality_layer {
+                    // Try Z3 formal verification first (provides mathematical certainty)
+                    if let Some(explanation) = Self::detect_contradiction_via_z3(node_a, node_b) {
+                        result.push(Contradiction {
+                            node_a: node_a.clone(),
+                            node_b: node_b.clone(),
+                            explanation,
+                        });
+                        continue; // Z3 proof is conclusive, skip heuristic check
+                    }
+
+                    // Fallback to heuristic keyword matching if Z3 can't extract constraints
                     if let Some(explanation) = Self::detect_semantic_contradiction(
                         &node_a.content,
                         &node_b.content,
@@ -730,6 +745,34 @@ impl SpecGraph {
         None
     }
 
+    /// Extract maximum value from phrases like "at most 10", "maximum 20", "<= 15", etc.
+    fn extract_maximum_value(text: &str) -> Option<u32> {
+        // Try to find patterns like "at most N", "maximum N", "<= N", "max N", "maximum of N"
+        use regex::Regex;
+        let patterns = [
+            r"at most (\d+)",
+            r"maximum (\d+)",
+            r"max (\d+)",
+            r"maximum of (\d+)",
+            r"<= ?(\d+)",
+            r"≤ ?(\d+)",
+        ];
+
+        for pattern in &patterns {
+            if let Ok(re) = Regex::new(pattern) {
+                if let Some(cap) = re.captures(text) {
+                    if let Some(num_str) = cap.get(1) {
+                        if let Ok(num) = num_str.as_str().parse::<u32>() {
+                            return Some(num);
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
     /// Helper: check if two concepts are related (share significant terms or word stems)
     fn are_related_concepts(content_a: &str, content_b: &str) -> bool {
         let a_lower = content_a.to_lowercase();
@@ -773,6 +816,174 @@ impl SpecGraph {
         }
 
         exact_matches >= 1 || stem_matches >= 1
+    }
+
+    /// Extract simple constraints from specification content for Z3 verification
+    ///
+    /// This is a pattern-based extractor for common constraint patterns.
+    /// Not complete, but sufficient for basic formal verification.
+    fn extract_constraints_from_content(content: &str) -> Vec<Constraint> {
+        let mut constraints = Vec::new();
+        let content_lower = content.to_lowercase();
+
+        // Pattern: "must be at least N" / "minimum N" / ">= N"
+        if let Some(min_val) = Self::extract_minimum_value(&content_lower) {
+            if content_lower.contains("password") && (content_lower.contains("character") || content_lower.contains("length")) {
+                let mut metadata = HashMap::new();
+                metadata.insert("variable".to_string(), "password_length".to_string());
+                metadata.insert("operator".to_string(), ">=".to_string());
+                metadata.insert("value".to_string(), min_val.to_string());
+
+                constraints.push(Constraint {
+                    description: format!("Password must be at least {} characters", min_val),
+                    formal: Some(format!("(>= password_length {})", min_val)),
+                    kind: ConstraintKind::Universal,
+                    metadata,
+                });
+            } else if content_lower.contains("length") || content_lower.contains("minimum") {
+                // Generic numeric constraint
+                let mut metadata = HashMap::new();
+                metadata.insert("operator".to_string(), ">=".to_string());
+                metadata.insert("value".to_string(), min_val.to_string());
+
+                constraints.push(Constraint {
+                    description: format!("Value must be at least {}", min_val),
+                    formal: Some(format!("(>= value {})", min_val)),
+                    kind: ConstraintKind::Universal,
+                    metadata,
+                });
+            }
+        }
+
+        // Pattern: "must be at most N" / "maximum N" / "<= N"
+        if let Some(max_val) = Self::extract_maximum_value(&content_lower) {
+            if content_lower.contains("password") && (content_lower.contains("character") || content_lower.contains("length")) {
+                let mut metadata = HashMap::new();
+                metadata.insert("variable".to_string(), "password_length".to_string());
+                metadata.insert("operator".to_string(), "<=".to_string());
+                metadata.insert("value".to_string(), max_val.to_string());
+
+                constraints.push(Constraint {
+                    description: format!("Password must be at most {} characters", max_val),
+                    formal: Some(format!("(<= password_length {})", max_val)),
+                    kind: ConstraintKind::Universal,
+                    metadata,
+                });
+            } else if content_lower.contains("length") || content_lower.contains("maximum") {
+                // Generic numeric constraint
+                let mut metadata = HashMap::new();
+                metadata.insert("operator".to_string(), "<=".to_string());
+                metadata.insert("value".to_string(), max_val.to_string());
+
+                constraints.push(Constraint {
+                    description: format!("Value must be at most {}", max_val),
+                    formal: Some(format!("(<= value {})", max_val)),
+                    kind: ConstraintKind::Universal,
+                    metadata,
+                });
+            }
+        }
+
+        // Pattern: "must" / "required" (universal constraint)
+        if content_lower.contains("must") && !content_lower.contains("must not") {
+            let mut metadata = HashMap::new();
+            metadata.insert("type".to_string(), "universal".to_string());
+            constraints.push(Constraint {
+                description: content.to_string(),
+                formal: None, // Natural language only
+                kind: ConstraintKind::Universal,
+                metadata,
+            });
+        }
+
+        // Pattern: "must not" / "forbidden" (universal prohibition)
+        if content_lower.contains("must not") || content_lower.contains("forbidden") {
+            let mut metadata = HashMap::new();
+            metadata.insert("type".to_string(), "prohibition".to_string());
+            constraints.push(Constraint {
+                description: content.to_string(),
+                formal: None, // Natural language only
+                kind: ConstraintKind::Universal,
+                metadata,
+            });
+        }
+
+        constraints
+    }
+
+    /// Detect contradiction using Z3 SMT solver (formal verification)
+    ///
+    /// This provides mathematical certainty about contradictions, replacing
+    /// heuristic keyword matching with formal proof.
+    ///
+    /// Returns Some(explanation) if contradiction is formally proven, None otherwise.
+    fn detect_contradiction_via_z3(node_a: &SpecNodeData, node_b: &SpecNodeData) -> Option<String> {
+        // Extract constraints from both nodes
+        let constraints_a = Self::extract_constraints_from_content(&node_a.content);
+        let constraints_b = Self::extract_constraints_from_content(&node_b.content);
+
+        // If we can't extract formal constraints, return None (fallback to heuristics)
+        if constraints_a.is_empty() || constraints_b.is_empty() {
+            return None;
+        }
+
+        // Check if constraints mention the same variable/domain
+        // We need to clone metadata access since we'll move constraints later
+        let vars_a: std::collections::HashSet<_> = constraints_a
+            .iter()
+            .filter_map(|c| c.metadata.get("variable").map(|s| s.to_string()))
+            .collect();
+        let vars_b: std::collections::HashSet<_> = constraints_b
+            .iter()
+            .filter_map(|c| c.metadata.get("variable").map(|s| s.to_string()))
+            .collect();
+
+        let common_vars: Vec<String> = vars_a.intersection(&vars_b).cloned().collect();
+        if common_vars.is_empty() {
+            // No common variables, can't prove contradiction
+            return None;
+        }
+
+        // Create admissible sets
+        let mut set_a = AdmissibleSet::new(
+            node_a.id.clone(),
+            format!("U{}", node_a.formality_layer),
+        );
+        let mut set_b = AdmissibleSet::new(
+            node_b.id.clone(),
+            format!("U{}", node_b.formality_layer),
+        );
+
+        // Now we can move constraints into admissible sets
+        for c in constraints_a {
+            set_a.add_constraint(c);
+        }
+        for c in constraints_b {
+            set_b.add_constraint(c);
+        }
+
+        // Call Z3-based Prover
+        let mut prover = Prover::new();
+        let proof = prover.prove_consistency(&set_a, &set_b);
+
+        match proof.status {
+            ProofStatus::Refuted => {
+                // Contradiction formally proven by Z3
+                let vars_list = common_vars.join(", ");
+                Some(format!(
+                    "Z3-verified contradiction on variable(s): {} (formally proven inconsistent)",
+                    vars_list
+                ))
+            }
+            ProofStatus::Proven => {
+                // Formally proven consistent (no contradiction)
+                None
+            }
+            ProofStatus::Unknown | ProofStatus::Pending => {
+                // Can't prove or refute, fallback to heuristics
+                None
+            }
+        }
     }
 
     /// Find all formalizations of a given node (nodes it formalizes to).
