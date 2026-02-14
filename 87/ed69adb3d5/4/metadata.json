@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "87ed69adb3d5",
+  "session_id": "8463ea5c-e666-4c20-9ddf-1648e1fe67a9",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T10:23:24.815647Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".spec/specs.json",
+    "spec-cli/src/main.rs",
+    "tasks/2026-02-14-session-46-cleanup-and-dogfooding.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 314,
+    "cache_creation_tokens": 80776,
+    "cache_read_tokens": 2848416,
+    "output_tokens": 10417,
+    "api_call_count": 39
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T10:23:23.881917Z",
+    "agent_lines": 622,
+    "human_added": 849,
+    "human_modified": 24,
+    "human_removed": 0,
+    "total_committed": 1495,
+    "agent_percentage": 41.60535117056856
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/8463ea5c-e666-4c20-9ddf-1648e1fe67a9.jsonl"
+}
