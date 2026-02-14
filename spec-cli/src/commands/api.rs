@@ -4,7 +4,8 @@
 /// Most users should use high-level commands instead (add, check, find, etc.)
 
 use crate::proto;
-use crate::utils::{parse_node_kind, proto_to_core_kind, format_formality_layer};
+use crate::utils::{parse_node_kind, proto_to_core_kind};
+use crate::presentation::formatter::format_formality_layer;
 use spec_core::{FileStore, EdgeKind};
 use std::collections::HashMap;
 
