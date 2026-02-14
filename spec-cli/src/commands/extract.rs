@@ -3,7 +3,7 @@
 /// This command implements the reverse mapping engine (f₀ᵢ⁻¹),
 /// extracting specifications from code, proto, and documentation.
 
-use spec_core::{FileStore, RustExtractor, ProtoExtractor, DocExtractor, InferredSpecification};
+use spec_core::{FileStore, RustExtractor, ProtoExtractor, DocExtractor, ArchitectureExtractor, InferredSpecification};
 use std::path::Path;
 
 /// Execute the Extract command in standalone mode
@@ -21,7 +21,7 @@ pub fn execute_extract_standalone(
     // Detect language from file extension if not specified
     let detected_language = if path.is_file() {
         match path.extension().and_then(|s| s.to_str()) {
-            Some("rs") => "rust",
+            Some("rs") => if language == "architecture" { "architecture" } else { "rust" },
             Some("proto") => "proto",
             Some("md") => "markdown",
             _ => &language,
@@ -36,8 +36,9 @@ pub fn execute_extract_standalone(
             "rust" => RustExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
             "proto" => ProtoExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
             "markdown" => DocExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
+            "architecture" => ArchitectureExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
             _ => {
-                eprintln!("Unsupported language: {}. Supported: rust, proto, markdown", language);
+                eprintln!("Unsupported language: {}. Supported: rust, proto, markdown, architecture", language);
                 return Ok(());
             }
         }
@@ -65,6 +66,12 @@ pub fn execute_extract_standalone(
                     match DocExtractor::extract(&entry_path) {
                         Ok(specs) => all_specs.extend(specs),
                         Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
+                    }
+                }
+                Some("rs") if detected_language == "architecture" => {
+                    match ArchitectureExtractor::extract(&entry_path) {
+                        Ok(specs) => all_specs.extend(specs),
+                        Err(e) => eprintln!("⚠️  Failed to extract architecture from {:?}: {}", entry_path, e),
                     }
                 }
                 _ => {}

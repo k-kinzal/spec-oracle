@@ -1376,6 +1376,107 @@ impl DocExtractor {
     }
 }
 
+/// Extract architectural properties from code files
+/// This enables automatic detection of architectural violations
+pub struct ArchitectureExtractor;
+
+impl ArchitectureExtractor {
+    /// Extract architectural properties from a source file
+    /// Returns specifications about file size, module structure, etc.
+    pub fn extract(file_path: &Path) -> Result<Vec<InferredSpecification>, String> {
+        let content = std::fs::read_to_string(file_path)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+
+        let mut specs = Vec::new();
+        let file_name = file_path.to_string_lossy().to_string();
+        let line_count = content.lines().count();
+
+        // Extract file size metrics
+        // This will create assertions like "spec-cli/src/main.rs has 2172 lines of code"
+        // These are U3 (implementation facts) that can contradict U0 architectural requirements
+        let size_spec = Self::extract_file_size(&file_name, line_count);
+        specs.push(size_spec);
+
+        // Extract module structure if it's a Rust file
+        if file_path.extension().and_then(|s| s.to_str()) == Some("rs") {
+            if let Some(module_spec) = Self::extract_module_structure(&content, &file_name) {
+                specs.push(module_spec);
+            }
+        }
+
+        Ok(specs)
+    }
+
+    fn extract_file_size(file_name: &str, line_count: usize) -> InferredSpecification {
+        let content = format!("{} contains {} lines of code", file_name, line_count);
+
+        // High confidence - this is a verifiable fact
+        let confidence = 1.0;
+
+        InferredSpecification {
+            content,
+            kind: NodeKind::Assertion,
+            confidence,
+            source_file: file_name.to_string(),
+            source_line: 0, // File-level property
+            formality_layer: 3, // U3: Implementation fact
+            metadata: HashMap::from([
+                ("extractor".to_string(), "architecture".to_string()),
+                ("property".to_string(), "file_size".to_string()),
+                ("line_count".to_string(), line_count.to_string()),
+            ]),
+        }
+    }
+
+    fn extract_module_structure(content: &str, file_name: &str) -> Option<InferredSpecification> {
+        // Count modules, functions, structs, etc.
+        let mut module_count = 0;
+        let mut function_count = 0;
+        let mut struct_count = 0;
+
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("mod ") && !trimmed.contains("//") {
+                module_count += 1;
+            }
+            if (trimmed.starts_with("fn ") || trimmed.starts_with("pub fn ") || trimmed.starts_with("async fn "))
+                && !trimmed.contains("//") {
+                function_count += 1;
+            }
+            if (trimmed.starts_with("struct ") || trimmed.starts_with("pub struct "))
+                && !trimmed.contains("//") {
+                struct_count += 1;
+            }
+        }
+
+        // Only create spec if there's meaningful structure
+        if function_count > 0 || struct_count > 0 {
+            let content = format!(
+                "{} contains {} functions, {} structs, {} modules",
+                file_name, function_count, struct_count, module_count
+            );
+
+            Some(InferredSpecification {
+                content,
+                kind: NodeKind::Assertion,
+                confidence: 0.95,
+                source_file: file_name.to_string(),
+                source_line: 0,
+                formality_layer: 3, // U3: Implementation fact
+                metadata: HashMap::from([
+                    ("extractor".to_string(), "architecture".to_string()),
+                    ("property".to_string(), "module_structure".to_string()),
+                    ("function_count".to_string(), function_count.to_string()),
+                    ("struct_count".to_string(), struct_count.to_string()),
+                    ("module_count".to_string(), module_count.to_string()),
+                ]),
+            })
+        } else {
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod proto_extractor_tests {
     use super::*;
