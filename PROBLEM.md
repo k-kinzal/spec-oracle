@@ -534,39 +534,61 @@
     - `tasks/2026-02-14-native-project-local-support.md` (session 36)
   - **解決状況**: ✅ **完了（プロダクションレベル）**
 
-- [x] **JSON形式の仕様データはマージ競合時に解決できない** ✅ **部分的に解決 (2026-02-15, Session 121)**
+- [x] **JSON形式の仕様データはマージ競合時に解決できない** ✅ **解決済み (2026-02-15, Session 121-122)**
   - **発見日**: 2026-02-14
   - **詳細**: 仕様データが単一のJSONファイル（specs.json）で管理されているため、チーム開発でマージ競合が頻発し、解決が困難。
   - **シナリオ**:
     - 開発者Aが仕様Xを追加してPR作成
     - 開発者Bが仕様Yを追加してPR作成
-    - 両方がnodes배列に要素を追加するため、マージ競合
+    - 両方がnodes배열に要素を追加するため、マージ競合
     - JSONを手動編集して解決する必要がある（シンタックスエラーのリスク）
     - UUID、インデックス、エッジの参照が壊れる可能性
   - **影響範囲**: チーム開発が実質不可能。
-  - **解決内容** (Session 121):
-    - ✅ **DirectoryStore実装**: 各仕様を個別YAMLファイルとして保存（`.spec/nodes/<uuid>.yaml`）
-    - ✅ **spec migrateコマンド**: JSON → ディレクトリ形式への移行
-    - ✅ **238仕様を移行成功**: 238個のYAMLファイル + edges.yaml
-    - ✅ **マージ競合を最小化**: 異なるファイル = 異なる仕様 = 競合しない
-    - ⏳ **残課題**: CLIでのDirectoryStore自動検出（次セッション）
-  - **検証結果**:
+  - **解決内容**:
+    - **Session 121**: DirectoryStore実装とマイグレーション
+      - ✅ **DirectoryStore実装**: 各仕様を個別YAMLファイルとして保存（`.spec/nodes/<uuid>.yaml`）
+      - ✅ **spec migrateコマンド**: JSON → ディレクトリ形式への移行
+      - ✅ **238仕様を移行成功**: 238個のYAMLファイル + edges.yaml
+      - ✅ **マージ競合を最小化**: 異なるファイル = 異なる仕様 = 競合しない
+    - **Session 122**: CLI統合とauto-detection
+      - ✅ **Storage auto-detection**: `.spec/nodes/`を自動検出
+      - ✅ **Store enum**: FileStoreとDirectoryStoreを統一
+      - ✅ **全コマンド対応**: 16個のコマンドモジュールをすべて更新
+      - ✅ **ゼロコンフィギュレーション**: ユーザーは何も設定不要
+      - ✅ **Fallback対応**: nodes/がない場合はspecs.jsonにfallback
+  - **検証結果** (Session 122):
     ```bash
-    $ spec migrate
-    ✅ Migration complete!
-    📁 .spec/nodes/ - 238 YAML files
-    📁 .spec/edges.yaml - Relationship definitions
-    ```
-  - **タスク**: `tasks/2026-02-15-session-121-directory-storage.md`
-  - **解決状況**: 🔄 **実装完了、自動検出は次セッション**
+    $ spec check
+    📁 Using directory-based storage: /Users/ab/Projects/spec-oracle/.spec/nodes/
+    🚀 Running in standalone mode (no server required)
+    Total specs: 238
 
-- [x] **JSON diffが読みにくく、仕様変更をレビューできない** ✅ **部分的に解決 (2026-02-15, Session 121)**
+    $ spec add "Test specification"
+    ✓ Specification added successfully
+    # → .spec/nodes/<uuid>.yaml に自動保存
+
+    # Fallback test
+    $ mv .spec/nodes .spec/nodes.bak
+    $ spec check
+    📁 Using file-based storage: /Users/ab/Projects/spec-oracle/.spec/specs.json
+    # → Fallbackが正常動作
+    ```
+  - **タスク**:
+    - `tasks/2026-02-15-session-121-directory-storage.md` (Session 121)
+    - Session 122: DirectoryStore auto-detection implementation
+  - **解決状況**: ✅ **完了** - 自動検出実装、チーム開発準備完了
+
+- [x] **JSON diffが読みにくく、仕様変更をレビューできない** ✅ **解決済み (2026-02-15, Session 121-122)**
   - **発見日**: 2026-02-14
   - **詳細**: PRで仕様が変更されても、JSONのdiffは読みにくく、何が変わったのか理解できない。
-  - **解決内容** (Session 121):
-    - ✅ **YAML形式**: 人間が読みやすい構造化フォーマット
-    - ✅ **個別ファイル**: ファイル単位でdiffが見える
-    - ✅ **明確な変更**: 新規ファイル = 新規仕様、削除 = 削除、変更 = 内容変更
+  - **解決内容**:
+    - **Session 121**: YAML形式とディレクトリ構造
+      - ✅ **YAML形式**: 人間が読みやすい構造化フォーマット
+      - ✅ **個別ファイル**: ファイル単位でdiffが見える
+      - ✅ **明確な変更**: 新規ファイル = 新規仕様、削除 = 削除、変更 = 内容変更
+    - **Session 122**: 自動適用
+      - ✅ **自動検出**: CLIが自動的にYAML形式を使用
+      - ✅ **透過的動作**: ユーザーは形式を意識不要
   - **Before (JSON)**:
     ```diff
     +      {
@@ -583,7 +605,7 @@
     + formality_layer: 0
     ```
   - **影響**: レビュアーが仕様変更を理解しやすい、PRの品質が向上
-  - **解決状況**: 🔄 **実装完了、自動検出は次セッション**
+  - **解決状況**: ✅ **完了** - YAML形式が自動適用、レビュー体験向上
   - **将来の改善案**:
     - `spec diff main..feature-branch`コマンド（高レベルサマリー）
     - 「仕様Xが追加されました」「仕様Yが削除されました」のような説明
