@@ -13,10 +13,21 @@
 
 すなわち問題は、多様な保証手法を横断して統制するための共通基準が欠けることである。
 
+本稿の立場は、**根仕様（root の完全仕様）を人間が網羅的・無矛盾に直接記述することは現実的でない**、という点にある。  
+したがって根 `U` は「先に与える対象」ではなく、層と root を結ぶ部分射影 `f_{0i}`（`proj_i`）から逆像で**構成する対象**として扱う。
+
+導入例（同一意図の層別表現）:
+- アプリ層: 「データAを取得する」
+- API層: 「システムAのAPIを呼び出して取得する」
+- HTTP層: 「`GET /A`」
+- 通信層: 「接続・再送・順序制御」
+
+同じ意図が層ごとに異なる記述として現れるため、層間比較の共通基準を root 側で構成する必要がある。
+
 ### 0.2 研究目的
 本稿の到達目標は次の3点である。
 
-1. 多層仕様統制の最小核として `U,D,A,f` を型付きで定義し、root基準構成を形式化する。
+1. 多層仕様統制の最小核として `U,D,A,f` を型付きで定義し、root を「記述」ではなく「射影逆像で構成」する形式を与える。
 2. 運用上の2用途を分離する。  
    - 変更影響や被覆合成（over-approximation）のための join 演算（`U0`）  
    - 同時満足・矛盾判定のための meet 演算（`U∧`）
@@ -26,6 +37,7 @@
 - 研究者: 暗黙仮定（随伴の成立、層間伝播仮定、抽出同値仮定）を明示し、議論可能にする。
 - 実務者: `U0`（被覆合成 / over-approximation）と `U∧`（同時満足）の使い分け定義、および抽出パイプライン技術的実行可能性のPoCを得る（一般適用性は未評価）。
 - 再現性: Lean証明・抽出スクリプト・ソースロックを同梱し、第三者検証可能にする。
+- 評価範囲: 実OSS評価は convenience sample（`n=3`）による PoC であり、母集団推定を目的としない。
 
 ## 1. 研究課題（RQ）
 本稿のRQは、上記の統制課題を「定義可能性」「証明可能性」「再現可能性」に分解したものである。
@@ -105,6 +117,28 @@ theorem UAndOn_antitone {J K : ι → Prop}
     M.UAndOn K ⊆ M.UAndOn J
 ```
 
+### 2.5 `Ω`（root空間）の実務的解釈
+`Ω` は「誰かが完全列挙した実体集合」ではなく、層横断比較のための意味領域（挙動宇宙）として置く。  
+実務上は次の近似で扱える。
+
+1. テストやシミュレーションで生成可能な挙動集合
+2. ログ/トレースとして観測される挙動集合
+3. IR制約から構成される候補挙動集合
+
+本稿が必要とするのは `Ω` の全列挙ではなく、`x ∈ lifted(i)` の membership 判定を定義できることである。
+
+### 2.6 NL入口と中間表現（IR）
+実務では自由記述自然言語（NL）を入口から排除できない。  
+本稿は NL を禁止せず、次の分離で扱う。
+
+1. 生テキスト（NL）は証拠・説明として保持する。
+2. 形式判定に使うのは `β_req` 上の中間表現（IR）とする。
+3. 抽出器（規則ベース/LLM含む）は NL→IR の候補生成器（`A(i)` 候補生成器）として扱う。
+4. IR項目には原文スパン（引用位置）を保持し、抽出結果の追跡性を確保する。
+5. 抽出器の正当性は `RQ5 (theory)` の one-sided adequacy（sound / complete）で管理する。
+
+したがって、本稿モデルは「NLを直接形式意味に同一視する」のでなく、「NL入口を許容しつつ、IR層で機械検証に接続する」立場である。
+
 ## 3. `U0` と `U∧` の役割分離
 ### 3.1 join側（被覆合成）
 \[
@@ -114,6 +148,11 @@ U0 := \bigcup_{i\in I} lifted(i)
 
 `U0` は「どれかの層で許容される root 状態」の集合であり、包含順序 `⊆` での join（最小上界）である。  
 ゆえに `U0` は各層を被覆する over-approximation であり、仕様強弱の直観では各層より弱い（許容集合が大きい）統合として解釈する。
+
+運用ミニシナリオ（変更波及の説明）:
+1. 新規層 `k` を追加したとき、`U0` は被覆集合として追跡対象を保ちやすい。
+2. 同時に `U∧` が空になれば、「新規層の制約追加で既存層との同時満足が崩れた」と診断できる。
+3. このとき `U0` と `U∧` の差分は「被覆は維持されるが同時満足が壊れた」ことを示し、調停対象層の局所化に使える。
 
 ### 3.2 meet側（同時満足統合）
 有効層集合 `active : I → Prop` に対し
@@ -160,7 +199,7 @@ Lean: `lifted_transfer` in `paper/lean/UadfU0/InterLayer/Transfer.lean`。
 pullbackVia_g(S) := \{yi \mid \exists yj,\ g(yi)=some(yj)\land yj\in S\}
 \]
 
-`proj_j = bind(proj_i, g)` なら
+`∀ x, proj_j x = Option.bind (proj_i x) g` なら
 \[
 f^{-1}_{0j}(S)=f^{-1}_{0i}(pullbackVia_g(S)).
 \]
@@ -207,6 +246,19 @@ Lean: `no_left_adjoint_of_partial` in `paper/lean/UadfU0/RelatedWork/Galois.lean
 - `U0_least_upper_bound_iff`（`U0` の LUB）
 - `contradictory_iff_not_consistent`（双対）
 
+### 4.7 `proj_i(x)=none` の解釈（must / may）
+本稿の `preimage` は
+\[
+x\in f^{-1}_{0i}(S) \iff \exists y,\ proj_i(x)=some(y)\land y\in S
+\]
+であり、`none` は membership 不成立として扱う（must 寄り）。
+
+運用上は別解釈もあり得る。
+- must解釈: `none` は観測不能/適用外として除外する（本稿の既定）。
+- may解釈: `none` は判断保留として、矛盾断定の根拠に使わない。
+
+どちらを採るかで `U∧` の空判定挙動が変わるため、適用時には偽陽性/偽陰性の優先方針と合わせて宣言する必要がある。
+
 ## 5. 形式化エンジニアリング上の設計判断
 本稿の主たる貢献は、UAD/f 最小コアの参照 mechanization を通じて、必要仮定を明示化した点にある。
 以下は本稿が初出の数学的主張であることを意図せず、UAD/f 文脈での実装可能な設計判断として提示する。
@@ -238,6 +290,9 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
 
 ### 6.2 実OSS抽出パイプラインデモ（PostgreSQL / zlib / SQLite）
 `paper/case-study/real_projects/external_validation.py` は以下を自動実行する。
+
+**重要（RQ5/RQ6境界）**: 本節は `RQ6 (practice)`（技術的再実行可能性）を対象とする。  
+`RQ5 (theory)` の adequacy（§4.3）で使う抽象関係 `E` について、regex抽出器が意味保存性を満たすことは本節で証明していない。
 
 1. 公式ドキュメント/公式ソースを取得
 2. 正規表現で境界値を抽出
@@ -283,6 +338,18 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
 - 限界: 対象は数値境界制約に限定。構造制約・時間制約は未評価。
 - 運用ポリシーの目安: 偽陽性抑制を優先する場合は soundness 側、偽陰性抑制を優先する場合は completeness 側を重視して抽出器要件を定める。
 
+### 6.4 負例（抽出揺れ）: 単位解釈ミス
+本稿の数値境界系でも、抽出揺れの負例は作れる。  
+例として SQLite page size で、`65536 bytes` を誤って `64 bytes` と解釈すると、要求層区間が `[512, 64]` となり空区間になる。  
+このとき `U∧` 判定は空となり contradiction が発生する。
+
+注記: 本負例は「抽出器リスクの構成的デモ」であり、実運用ログからの統計的実測値ではない。
+
+この負例が示す点:
+1. 抽出器の単位解釈ミスは、層間矛盾を人工的に発生させ得る。
+2. したがって `RQ5 (theory)` の one-sided adequacy（sound / complete）管理は、実抽出器に対しても運用上不可欠である。
+3. 本稿の実デモは技術的再実行可能性（RQ6）に焦点を置くため、この種の抽出意味保存評価は今後課題として分離する。
+
 ## 7. 再現可能性
 ### 7.1 Lean 再現
 ```bash
@@ -322,6 +389,8 @@ cd paper/lean
   - `paper/lean/UadfU0/RelatedWork/Galois.lean`
   - `paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean`
 
+上記43定理の役割は「定理数そのもの」ではなく、§5の設計判断（二演算分離、同一点連結仮定、one-sided adequacy、部分性と随伴破綻）を機械検証可能な依存構造として固定した点にある。
+
 ### 7.5 抽出デモのロック情報
 実OSS抽出デモは次を出力する。
 - `paper/case-study/real_projects/external_validation_results.json`
@@ -337,6 +406,7 @@ cd paper/lean
 2. オフライン追試: `python external_validation.py --offline-lock external_validation_sources.lock.json` を実行し、各 snapshot 読み込み時に lock 記録との SHA256 整合を検証しながら同じ抽出処理を再実行する（ネットワーク不要）。
 3. SHA256 検証は `paper/case-study/real_projects/external_validation.py` の `fetch_text` オフライン分岐で実装している（不一致時は例外停止）。
 4. オフライン追試で SHA256 不一致が発生した場合は、論文実行時と異なる入力であり再現性が保証されないことを意味するため、同梱 snapshot と lock の一致状態を復元して再実行する。
+5. 長期保存に関しては、ソース固定アーカイブ（例: DOI付きリポジトリアーカイブ）とURL失効時フォールバック（例: Wayback参照）を推奨する。
 
 ## 8. 関連研究と位置づけ
 本稿は既存理論の代替ではなく、UAD/f 最小コアの mechanization を目的とする。
@@ -354,6 +424,29 @@ cd paper/lean
   本稿はそれを置換せず、`Option` 部分射影と root 演算 `U0`/`U∧` の明示化に焦点を絞る。
 - 精緻化計算（Refinement Calculus）:
   段階的詳細化の一般枠組みに対し、本稿は包含順序を定理語彙として固定しつつ、仕様強弱解釈を補助的に併記して root 統制演算を具体的に機械化した位置づけである。
+- ViewPoints / inconsistency management:
+  分散視点の整合管理は要求工学の古典課題であり、本稿の「層が独立進化する」問題設定と整合する。  
+  本稿は調停手続き自体よりも、比較基準となる root 演算核を Lean で固定する点に焦点を置く。
+- 多ビュー整合（pullback 系）:
+  ビュー整合を pullback 構成で説明する系譜に対し、本稿は `Option` 部分射影と join/meet を一次表現した最小核 mechanization を与える。
+- BX / モデル同期（TGG 等）:
+  層間伝播・合成は双方向同期の問題意識と重なる。  
+  本稿は完全同期器の構成ではなく、同一点連結仮定の明示と one-sided adequacy の分離を主眼とする。  
+  不整合許容型の部分的BX議論とも接続可能である。
+- 異種仕様統合（Hets/Institution 実装系）:
+  多言語仕様を横断する一般基盤に対し、本稿は UAD/f 文脈での root 統制演算を小さく mechanize した位置づけである。
+- 要求形式化（EARS/FRET/ACE/Property Patterns）:
+  NL入口を完全排除しない実務系譜に対し、本稿は NL→IR→判定の接続点を one-sided adequacy で管理する立場を採る。
+- 仕様マイニング（Daikon 系）:
+  `A(i)` 候補の生成源は NL抽出だけでなく、トレース由来不変条件推定も取り得る。  
+  本稿は生成源に中立で、`proj` と逆像の整合性条件を核として扱う。
+- LLM × Requirements Engineering:
+  LLM を直接証明器とみなさず、抽出器候補として位置づけ、誤り特性を sound/complete 分解で管理する方針を採る。
+- NL要求→形式論理翻訳（LLM）:
+  LLMによる NL→LTL 翻訳は有望だが、失敗解析と改善ループが必要であることが報告されている。  
+  本稿は一撃翻訳を前提にせず、候補生成と adequacy 管理を分離する。
+- INCOSE系の対話的形式化:
+  対話的に NL から形式仕様へ導く系譜と整合し、本稿はその入力管理側（抽出器管理と root 比較基準）を担う位置づけである。
 
 使い分け指針:
 - root 空間上で join/meet を明示分離し、部分射影の未定義点まで追跡したい場合: 本稿の UAD/f コア。
@@ -361,13 +454,15 @@ cd paper/lean
 - 時相的ふるまいやシステム遷移を主対象にする場合: TLA+ などの時相仕様手法。
 
 ## 9. 限界と脅威
-1. 抽出器の意味保存証明は一般形では未完（定理10は接続定理）。
+1. 抽出器の意味保存証明は一般形では未完（§4.3 は抽象関係 `E` に対する接続定理）。
 2. 外部評価は convenience sample の3プロジェクト・数値境界制約に限定（母集団代表性は未保証）。
 3. 変異試験は感度確認であり、現実バグ分布の推定ではない。
 4. regex 抽出の soundness/completeness（抽出漏れ・誤抽出率）は本稿で定量評価していない。
 5. 現在のケースは層間合成連鎖や one-sided adequacy の実プロジェクト実証まで到達していない。
 6. mathlib非依存のため、既存ライブラリ比較の網羅性は今後の課題。
 7. 層間伝播定理（§4.1）は十分条件を与えるが、必要条件は未証明である。
+8. `none` の must 解釈（§4.7）は矛盾判定の偽陽性リスクを持ち得るが、本稿では数値境界制約のみを対象としたため定量評価していない。
+9. 抽出デモの長期保存戦略（永続アーカイブ DOI, Wayback など）は運用上の推奨事項として残しており、現時点で制度化していない。
 
 ## 10. 結論
 本稿は、UAD/f の root 統合問題を
@@ -388,7 +483,7 @@ cd paper/lean
 
 RQ対応の要約:
 - `RQ1`: §2.2 の型付き `preimage` 定義と `Definitions/Model.lean` で解決。
-- `RQ2`: §4.6 背景補題群（`lifted_subset_preimage_domain`, `U0_witness_projects_to_some_domain`）で解決。
+- `RQ2`: §2.1 と `paper/lean/UadfU0/U0Spec/Construction.lean` の `lifted_subset_preimage_domain`, `U0_witness_projects_to_some_domain` で解決。
 - `RQ3`: §3 と §4.5（`U0`/`U∧` の join/meet 分離と GLB/LUB 性質）で解決。
 - `RQ4`: §4.1, §4.2（`lifted_transfer`, `preimage_compose`）で仮定明示の上で解決。
 - `RQ5 (theory)`: §4.3（sound-only / complete-only / equality）で抽象関係 `E` に対する分解を定式化して解決。実抽出器への適用には抽出層の意味保存証明が別途必要（限界 §9）。
@@ -401,3 +496,17 @@ RQ対応の要約:
 - Leslie Lamport, *Specifying Systems: The TLA+ Language and Tools for Hardware and Software Engineers*, Addison-Wesley, 2002.
 - Luca de Alfaro and Thomas A. Henzinger, “Interface Automata,” *Proceedings of the 9th ACM SIGSOFT International Symposium on Foundations of Software Engineering (FSE 2001)*, pp. 109-120, 2001.
 - Ralph-Johan Back and Joakim von Wright, *Refinement Calculus: A Systematic Introduction*, Springer, 1998.
+- Bashar Nuseibeh, Jeff Kramer, Anthony Finkelstein, “A Framework for Expressing the Relationships Between Multiple Views in Requirements Specification,” IEEE TSE, 1994. URL: https://www.cs.toronto.edu/~sme/papers/1994/csrp333.pdf
+- Martin Wirsing and Alexander Knapp, “View Consistency in Software Development,” in *RADICAL 2004* (Springer LNCS), 2004. URL: https://link.springer.com/chapter/10.1007/978-3-540-24626-8_24
+- Yingfei Xiong et al., “Model Synchronization Based on Triple Graph Grammars,” *Software and Systems Modeling*, 2012. URL: https://xiongyingfei.github.io/papers/Sosym12.pdf
+- Till Mossakowski et al., “The Heterogeneous Tool Set (Hets),” CEUR-WS. URL: https://ceur-ws.org/Vol-259/paper11.pdf
+- Alistair Mavin, Philip Wilkinson, Adrian Harwood, Mark Novak, “Easy Approach to Requirements Syntax (EARS),” RE'09 workshop. URL: https://www.researchgate.net/publication/224079416_Easy_approach_to_requirements_syntax_EARS
+- NASA Formal Requirements Elicitation Tool (FRET/FRETish) Tutorial, NASA Technical Reports Server, 2022. URL: https://ntrs.nasa.gov/citations/20220009659
+- Norbert E. Fuchs et al., *Attempto Controlled English (ACE) Manual*, University of Zurich / Attempto project. URL: https://attempto.ifi.uzh.ch/site/pubs/papers/ace3manual.pdf
+- Matthew B. Dwyer, George S. Avrunin, James C. Corbett, “Patterns in Property Specifications for Finite-State Verification,” ICSE 1999. URL: https://ext.math.umass.edu/~avrunin/papers/dwyer99-icse-patterns.pdf
+- Michael D. Ernst et al., “The Daikon system for dynamic detection of likely invariants,” *Science of Computer Programming*, 2007. URL: https://web.eecs.umich.edu/~weimerw/2024-481F/readings/daikon-tool-scp2007.pdf
+- “Large Language Models (LLMs) for Requirements Engineering (RE): A Systematic Literature Review,” arXiv preprint, 2025. URL: https://arxiv.org/abs/2509.11446
+- “Learning from Failures: Translation of Natural Language Requirements into Linear Temporal Logic by LLMs,” East China Normal University repository page. URL: https://pure.ecnu.edu.cn/en/publications/learning-from-failures-translation-of-natural-language-requiremen/
+- “Transforming Natural Language Requirements to Formalism (interactive workflow),” INCOSE Systems Engineering. URL: https://incose.onlinelibrary.wiley.com/doi/10.1002/sys.70023
+- “Bidirectionally tolerating inconsistency: partial bidirectional transformations,” FoSSaCS/FASE era reference. URL: https://groups.inf.ed.ac.uk/bx/fase14.pdf
+- “Automated formalization of structured natural language requirements,” *Information and Software Technology*. URL: https://www.sciencedirect.com/science/article/abs/pii/S0950584921000707

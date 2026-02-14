@@ -55,6 +55,11 @@ Here, a ``layer'' means a specification artifact at a different abstraction leve
 Each layer $i$ is connected from root space $\Omega$ via partial projection
 $\mathrm{proj}_i:\Omega\to\mathrm{Option}\,\beta_i$.
 This causes layer contradictions, coverage gaps, and broken change propagation.
+Our position is that a complete root specification is rarely writable directly by humans;
+instead, root admissibility should be \emph{constructed} from layer projections via inverse images.
+For example, one intent ``retrieve A'' appears as different layer statements:
+application-level goal, API call, HTTP endpoint, and transport-level behavior.
+Cross-layer control therefore needs a root-side comparison basis.
 
 \textbf{Objective.}
 Formalize a minimal typed kernel for cross-layer control, separate
@@ -64,6 +69,7 @@ and mechanically validate transfer/composition/adequacy assumptions.
 \textbf{Scope.}
 The result is a reusable mechanized kernel with explicit assumptions,
 plus reproducible extraction evidence on real artifacts.
+External evidence is intentionally a convenience-sample PoC ($n=3$), not a population-level estimate.
 
 \section{Research Questions}
 \begin{enumerate}[leftmargin=2em]
@@ -88,6 +94,17 @@ D_i\subseteq\beta_i,\quad A_i\subseteq D_i,\quad
 Separating $D_i$ from $A_i$ is intentional: $D_i$ captures the addressed domain,
 while $A_i$ captures admissible behavior inside that domain.
 This separation enables root-level witness-within-domain theorems (RQ2).
+\paragraph{Practical interpretation of $\Omega$.}
+$\Omega$ is not assumed to be fully enumerated in practice; it is an interpretation space
+approximated by test/simulation traces, runtime logs, or IR-constrained candidates.
+The model requires membership judgments, not full enumeration.
+
+\paragraph{NL entry and IR.}
+Free-form natural language is allowed as an input artifact.
+Formal checks are attached to an intermediate representation (IR) layer,
+and extractors (rule-based or LLM-assisted) are treated as $A(i)$ candidate generators.
+IR items keep source spans for traceability to original text.
+Extractor correctness is then managed by one-sided adequacy assumptions (RQ5 theory).
 
 \begin{definition}[Induced inverse image]
 For $S\subseteq\beta_i$:
@@ -162,7 +179,7 @@ This theorem provides a sufficient condition; necessity is not claimed.
 \begin{theorem}[Composition law]
 \label{thm:composition}
 For $g: \beta_i\to Option\,\beta_j$,
-if $\mathrm{proj}_j=\mathrm{bind}(\mathrm{proj}_i,g)$ pointwise,
+if $\forall x,\ \mathrm{proj}_j(x)=\mathrm{bind}(\mathrm{proj}_i(x),g)$,
 then
 \[
 f^{-1}_{0j}(S)=f^{-1}_{0i}(pullbackVia_g(S)),
@@ -192,6 +209,9 @@ Operationally:
 If $\exists x_0,\ \mathrm{proj}_i(x_0)=none$, then existential preimage at layer $i$
 has no left adjoint on full powersets.
 \end{theorem}
+\noindent
+Current preimage semantics is must-oriented: $none$ implies non-membership.
+Alternative may-oriented handling can be adopted operationally, but changes emptiness diagnostics for meet-side checks.
 
 \paragraph{Foundational lemmas (background).}
 Preimage monotonicity, preimage union preservation,
@@ -221,6 +241,10 @@ This is a theorem-level equivalence between closed-form check and witness existe
 \texttt{paper/case-study/real\_projects/external\_validation.py}
 fetches official pages and extracts numeric bounds for
 PostgreSQL identifier length, zlib compression level, and SQLite page size.
+\textbf{Boundary note (RQ5/RQ6):}
+this section addresses RQ6 (practice) only.
+Adequacy assumptions in RQ5 (theory) are proved over abstract relation $E$;
+semantic preservation of the concrete regex extractor is not proved here.
 \textbf{Important:} this is a technical executability demo ($n=3$ convenience sample),
 not an estimation of contradiction prevalence or population representativeness.
 Observed results (2026-02-14):
@@ -246,6 +270,12 @@ and we do not claim direct theorem application from this regex layer.
 Thus the regex extraction layer is treated as an input-construction layer, not as a verified extractor.
 This section addresses RQ6 (practice), while practical application of RQ5 (theory)
 requires additional extractor-semantics proofs.
+\paragraph{Negative example (extraction drift).}
+Even in numeric-bound constraints, extraction drift can induce false contradictions.
+For SQLite page size, misreading ``65536 bytes'' as ``64 bytes'' yields
+an empty requirement interval $[512,64]$, making meet-side consistency fail.
+This motivates one-sided adequacy management (RQ5 theory) for practical extractors.
+This is a constructed risk demonstration, not a statistical field measurement.
 
 \paragraph{Reproducibility lock.}
 The pipeline outputs:
@@ -288,6 +318,9 @@ Current size:
 \item 43 theorem declarations
 \item theorem breakdown: 12 core theorem claims (\S4), 26 background/proof-support lemmas, 5 example theorems
 \end{itemize}
+The value is not the raw theorem count, but freezing the design obligations in \S5
+(operator split, same-root coupling, one-sided adequacy, partiality/non-adjunction)
+as machine-checkable dependencies.
 
 \section{Related Work Positioning}
 We align with abstract-interpretation intuition on monotone inverse-image behavior
@@ -305,6 +338,14 @@ but make root-level operator semantics explicit under partial projections.
 Refinement-calculus viewpoints (Back \& von Wright) provide a general
 stepwise-development framework; our focus is narrower on mechanizing
 root operators with explicit order semantics.
+ViewPoints/inconsistency-management lines motivate our distributed-layer problem framing,
+and pullback-style view-consistency work motivates a shared semantic comparison basis.
+Model-synchronization/BX lines (e.g., TGG-based synchronization) motivate transfer/composition concerns.
+On the requirements side, EARS/FRET/ACE and property-pattern work motivate practical NL-to-IR structuring,
+while Daikon-style invariant mining motivates alternative sources of layer predicates.
+Recent LLM-for-RE surveys motivate treating LLMs as extractor candidates under explicit adequacy assumptions.
+LLM-based NL-to-LTL translation studies and interactive NL-to-formal workflows
+support this ``candidate generation + explicit adequacy management'' stance.
 Practical use guideline:
 \begin{itemize}
 \item use this UAD/f core when root-level join/meet separation under partial projections is the primary concern;
@@ -319,6 +360,8 @@ Practical use guideline:
 \item Mutation checks validate detector sensitivity, not real-world bug prevalence.
 \item Regex extraction soundness/completeness is not quantified here.
 \item Current external cases do not yet exercise deep composition chains or one-sided adequacy in production extractors.
+\item Must-oriented handling of $none$ may induce false-contradiction risk in richer constraints; this is not quantified here.
+\item Long-term archival strategy (DOI-fixed artifacts / URL-fallback mirrors) is recommended but not institutionalized in this version.
 \end{enumerate}
 
 \section{Conclusion}
@@ -340,6 +383,19 @@ Extractor soundness/completeness is outside RQ6 scope and left as future work.
 [2] Joseph A. Goguen and Rod M. Burstall, ``Introducing Institutions,'' in \emph{Logics of Programs}, Lecture Notes in Computer Science 164, Springer, pp. 221--256, 1984.\\
 [3] Leslie Lamport, \emph{Specifying Systems: The TLA+ Language and Tools for Hardware and Software Engineers}, Addison-Wesley, 2002.\\
 [4] Luca de Alfaro and Thomas A. Henzinger, ``Interface Automata,'' in \emph{Proceedings of the 9th ACM SIGSOFT International Symposium on Foundations of Software Engineering (FSE 2001)}, pp. 109--120, 2001.\\
-[5] Ralph-Johan Back and Joakim von Wright, \emph{Refinement Calculus: A Systematic Introduction}, Springer, 1998.
+[5] Ralph-Johan Back and Joakim von Wright, \emph{Refinement Calculus: A Systematic Introduction}, Springer, 1998.\\
+[6] Bashar Nuseibeh, Jeff Kramer, Anthony Finkelstein, ``A Framework for Expressing the Relationships Between Multiple Views in Requirements Specification,'' IEEE TSE, 1994. URL: \url{https://www.cs.toronto.edu/~sme/papers/1994/csrp333.pdf}.\\
+[7] Martin Wirsing and Alexander Knapp, ``View Consistency in Software Development,'' RADICAL 2004. URL: \url{https://link.springer.com/chapter/10.1007/978-3-540-24626-8_24}.\\
+[8] Yingfei Xiong et al., ``Model Synchronization Based on Triple Graph Grammars,'' SoSyM 2012. URL: \url{https://xiongyingfei.github.io/papers/Sosym12.pdf}.\\
+[9] Alistair Mavin et al., ``Easy Approach to Requirements Syntax (EARS),'' RE workshop 2009. URL: \url{https://www.researchgate.net/publication/224079416_Easy_approach_to_requirements_syntax_EARS}.\\
+[10] NASA FRET Tutorial, 2022. URL: \url{https://ntrs.nasa.gov/citations/20220009659}.\\
+[11] Norbert E. Fuchs et al., \emph{Attempto Controlled English (ACE) Manual}. URL: \url{https://attempto.ifi.uzh.ch/site/pubs/papers/ace3manual.pdf}.\\
+[12] Matthew B. Dwyer et al., ``Patterns in Property Specifications for Finite-State Verification,'' ICSE 1999. URL: \url{https://ext.math.umass.edu/~avrunin/papers/dwyer99-icse-patterns.pdf}.\\
+[13] Michael D. Ernst et al., ``The Daikon system for dynamic detection of likely invariants,'' SCP 2007. URL: \url{https://web.eecs.umich.edu/~weimerw/2024-481F/readings/daikon-tool-scp2007.pdf}.\\
+[14] ``Large Language Models for Requirements Engineering: A Systematic Literature Review,'' arXiv, 2025. URL: \url{https://arxiv.org/abs/2509.11446}.\\
+[15] ``Learning from Failures: Translation of Natural Language Requirements into Linear Temporal Logic by LLMs,'' URL: \url{https://pure.ecnu.edu.cn/en/publications/learning-from-failures-translation-of-natural-language-requiremen/}.\\
+[16] ``Transforming Natural Language Requirements to Formalism,'' INCOSE Systems Engineering. URL: \url{https://incose.onlinelibrary.wiley.com/doi/10.1002/sys.70023}.\\
+[17] ``Bidirectionally tolerating inconsistency: partial bidirectional transformations,'' URL: \url{https://groups.inf.ed.ac.uk/bx/fase14.pdf}.\\
+[18] ``Automated formalization of structured natural language requirements,'' Information and Software Technology. URL: \url{https://www.sciencedirect.com/science/article/abs/pii/S0950584921000707}.
 
 \end{document}
