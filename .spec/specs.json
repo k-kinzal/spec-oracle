@@ -318,7 +318,7 @@
       },
       {
         "id": "fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2",
-        "content": "All high-priority features now have complete U0→U2→U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
+        "content": "All high-priority features now have complete U0\u2192U2\u2192U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771062281,
@@ -426,7 +426,7 @@
       },
       {
         "id": "8772404d-59f0-44da-970c-9347eceaaf42",
-        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)",
+        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f\u2080\u2081\u207b\u00b9(U1) \u222a f\u2080\u2082\u207b\u00b9(U2) \u222a ... \u222a f\u2080\u2099\u207b\u00b9(UN)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771064470,
@@ -579,7 +579,7 @@
       },
       {
         "id": "ac7787f6-2eaf-46a0-bc5b-7017d3282886",
-        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)",
+        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: \u2203x. (x \u2208 A1 \u2227 x \u2208 A2)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -588,7 +588,7 @@
       },
       {
         "id": "0154a181-1962-4aa1-aee2-236d2078caf6",
-        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: ∃x. x ∈ A",
+        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: \u2203x. x \u2208 A",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -624,7 +624,7 @@
       },
       {
         "id": "239316dd-4d2e-4ab2-b172-5fdd015fb5e1",
-        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (∃x. x ∈ A)",
+        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (\u2203x. x \u2208 A)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771066871,
@@ -822,7 +822,7 @@
       },
       {
         "id": "d79603df-d239-4d3f-af09-868ed2935374",
-        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings—transcending the fundamental DSL limitation identified in conversation.md",
+        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings\u2014transcending the fundamental DSL limitation identified in conversation.md",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070409,
@@ -831,7 +831,7 @@
       },
       {
         "id": "ce999406-30cc-424e-8bac-8efe06025a3f",
-        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations—representing the first practical realization of the beyond-DSL specification paradigm",
+        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations\u2014representing the first practical realization of the beyond-DSL specification paradigm",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070419,
@@ -1133,7 +1133,7 @@
       },
       {
         "id": "19d08ce6-8cba-4713-9999-a26d373ce7fa",
-        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f₀₂ transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
+        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f\u2080\u2082 transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771073305,
@@ -2336,24 +2336,6 @@
         "created_at": 1771080847,
         "modified_at": 1771080847,
         "formality_layer": 2
-      },
-      {
-        "id": "e5e4886f-0ae1-4620-a918-eb40537cfa26",
-        "content": "specORACLE reverse mapping engine status: 64.8% of specifications (234/361) are automatically extracted from artifacts. U2→U0 mapping (proto interfaces) works perfectly with 28 specs connected. U3→U0 mapping (code/tests) partially working with 223 isolated specs requiring improved semantic matching. Total reverse mapping edges (Formalizes): 62. The essence is proven: specifications are constructed from artifacts, not written by humans.",
-        "kind": "Assertion",
-        "metadata": {},
-        "created_at": 1771078956,
-        "modified_at": 1771078956,
-        "formality_layer": 0
-      },
-      {
-        "id": "cde212a0-7a05-4a59-a3c5-29edab8def5b",
-        "content": "Session 95: Successfully implemented and tested U2 (proto) extraction. ProtoExtractor automatically extracted 28 RPC interface specifications from spec_oracle.proto file and created reverse mapping edges (f₀₂⁻¹: U2 → U0). This proves the reverse mapping engine concept is working. Proto specs were assigned formality_layer=2 and connected to U0 constraints with Formalizes edges. Isolated specs reduced from 251 to 223.",
-        "kind": "Assertion",
-        "metadata": {},
-        "created_at": 1771078947,
-        "modified_at": 1771078947,
-        "formality_layer": 0
       },
       {
         "id": "fac937d4-8b07-4de1-b4b6-3c9e1c100a2a",
@@ -4905,7 +4887,7 @@
       ],
       [
         143,
-        268,
+        266,
         {
           "id": "a519b6ef-7c34-47ef-a5e1-bd8815602379",
           "kind": "Synonym",
@@ -4915,7 +4897,7 @@
       ],
       [
         142,
-        269,
+        267,
         {
           "id": "fa16ac06-b3c1-473d-9d5a-a3c5eefd5f72",
           "kind": "Synonym",
@@ -4925,7 +4907,7 @@
       ],
       [
         145,
-        262,
+        260,
         {
           "id": "5d59750a-517c-4667-96c7-83e3c7fbce5c",
           "kind": "Synonym",
@@ -4935,7 +4917,7 @@
       ],
       [
         146,
-        261,
+        259,
         {
           "id": "39bc421a-95e3-48cd-8756-b3e0cb81da8c",
           "kind": "Synonym",
@@ -4945,7 +4927,7 @@
       ],
       [
         144,
-        263,
+        261,
         {
           "id": "27b64b7d-956d-4cf1-8a1c-dbe3bfb05774",
           "kind": "Synonym",
@@ -4955,7 +4937,7 @@
       ],
       [
         148,
-        260,
+        258,
         {
           "id": "c3a793e3-014d-40c5-8f13-1a200db40978",
           "kind": "Synonym",
@@ -4965,7 +4947,7 @@
       ],
       [
         149,
-        259,
+        257,
         {
           "id": "e6280fa4-d6a3-4e34-849f-c98111093c43",
           "kind": "Synonym",
@@ -4975,7 +4957,7 @@
       ],
       [
         151,
-        257,
+        255,
         {
           "id": "cb4d8617-d6c8-4bb5-96f6-d7e0c4601ade",
           "kind": "Synonym",
@@ -4985,7 +4967,7 @@
       ],
       [
         153,
-        213,
+        211,
         {
           "id": "ff049798-c4a6-4119-9190-a8c59739db7b",
           "kind": "Synonym",
@@ -4995,7 +4977,7 @@
       ],
       [
         150,
-        258,
+        256,
         {
           "id": "d8085a0d-7600-45b4-aa06-38ef4835cf39",
           "kind": "Synonym",
@@ -5005,7 +4987,7 @@
       ],
       [
         152,
-        219,
+        217,
         {
           "id": "30f6b81a-fe5a-4e8f-8907-4fd8eeb0ec25",
           "kind": "Synonym",
@@ -5025,7 +5007,7 @@
       ],
       [
         154,
-        206,
+        204,
         {
           "id": "aa214462-a482-41d6-bf19-3515d6a2eb0c",
           "kind": "Synonym",
@@ -5035,7 +5017,7 @@
       ],
       [
         154,
-        203,
+        201,
         {
           "id": "cd6c12a8-2618-4ba7-b295-ca9e05620aa0",
           "kind": "Synonym",
@@ -5044,8 +5026,8 @@
         }
       ],
       [
-        203,
-        206,
+        201,
+        204,
         {
           "id": "d544eb6b-eaf7-4da5-9fb4-6f4a142ceed3",
           "kind": "Synonym",
@@ -5054,8 +5036,8 @@
         }
       ],
       [
-        206,
-        203,
+        204,
+        201,
         {
           "id": "456e3c5e-9eee-4668-83c2-eb5bf0a1148d",
           "kind": "Synonym",
@@ -5075,7 +5057,7 @@
       ],
       [
         155,
-        206,
+        204,
         {
           "id": "546638d5-9628-4092-8737-c7800808d364",
           "kind": "Synonym",
@@ -5182,30 +5164,10 @@
         }
       ],
       [
-        232,
-        267,
-        {
-          "id": "dc551114-e099-4b4c-9375-4541a683256e",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        231,
-        266,
-        {
-          "id": "7de9d3c0-85ff-452d-a285-06d44afa2272",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
         230,
         265,
         {
-          "id": "bcc34356-a326-4176-97fd-6ff0fc34eef5",
+          "id": "dc551114-e099-4b4c-9375-4541a683256e",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5215,7 +5177,7 @@
         229,
         264,
         {
-          "id": "7de2446d-1578-4470-a5e7-642e38714d62",
+          "id": "7de9d3c0-85ff-452d-a285-06d44afa2272",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5223,9 +5185,9 @@
       ],
       [
         228,
-        256,
+        263,
         {
-          "id": "de1bf1b9-9069-4f79-a941-116e701a755c",
+          "id": "bcc34356-a326-4176-97fd-6ff0fc34eef5",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5233,9 +5195,9 @@
       ],
       [
         227,
-        255,
+        262,
         {
-          "id": "9931cd38-24c5-4174-a451-cf5243aac4cf",
+          "id": "7de2446d-1578-4470-a5e7-642e38714d62",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5245,7 +5207,7 @@
         226,
         254,
         {
-          "id": "682bbf26-4287-4797-bb3e-5e5b8aad48f5",
+          "id": "de1bf1b9-9069-4f79-a941-116e701a755c",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5255,7 +5217,7 @@
         225,
         253,
         {
-          "id": "fd5667bc-4ff2-42c6-a5dd-f180e5f9c76c",
+          "id": "9931cd38-24c5-4174-a451-cf5243aac4cf",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5265,7 +5227,7 @@
         224,
         252,
         {
-          "id": "d84d591f-b56c-4867-9173-abff4196f815",
+          "id": "682bbf26-4287-4797-bb3e-5e5b8aad48f5",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5275,7 +5237,7 @@
         223,
         251,
         {
-          "id": "59c3e23e-2cae-4abc-a015-391d221d12ad",
+          "id": "fd5667bc-4ff2-42c6-a5dd-f180e5f9c76c",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5285,7 +5247,7 @@
         222,
         250,
         {
-          "id": "83c04bf5-3db7-4940-9e71-0314ec8778be",
+          "id": "d84d591f-b56c-4867-9173-abff4196f815",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5295,7 +5257,7 @@
         221,
         249,
         {
-          "id": "2b6794f7-dd0c-4a3f-9baf-2f70142c884f",
+          "id": "59c3e23e-2cae-4abc-a015-391d221d12ad",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5305,7 +5267,17 @@
         220,
         248,
         {
-          "id": "ae89bbe1-2f47-40d3-bff8-56bf8756ccc8",
+          "id": "83c04bf5-3db7-4940-9e71-0314ec8778be",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771078757
+        }
+      ],
+      [
+        219,
+        247,
+        {
+          "id": "2b6794f7-dd0c-4a3f-9baf-2f70142c884f",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5313,19 +5285,9 @@
       ],
       [
         218,
-        247,
-        {
-          "id": "f2c03767-0355-4f31-a704-fa32553c38e9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        217,
         246,
         {
-          "id": "916aa72e-5ebd-47d4-8537-be59f9959241",
+          "id": "ae89bbe1-2f47-40d3-bff8-56bf8756ccc8",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5335,7 +5297,7 @@
         216,
         245,
         {
-          "id": "f1e09bb5-e989-4d3d-96de-e15e0e950ee6",
+          "id": "f2c03767-0355-4f31-a704-fa32553c38e9",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5345,7 +5307,7 @@
         215,
         244,
         {
-          "id": "4ae989ec-51ad-435c-98cd-517f5addb906",
+          "id": "916aa72e-5ebd-47d4-8537-be59f9959241",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5355,7 +5317,17 @@
         214,
         243,
         {
-          "id": "831e960f-7a08-4b8b-8634-1cca2332e851",
+          "id": "f1e09bb5-e989-4d3d-96de-e15e0e950ee6",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771078757
+        }
+      ],
+      [
+        213,
+        242,
+        {
+          "id": "4ae989ec-51ad-435c-98cd-517f5addb906",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5363,19 +5335,9 @@
       ],
       [
         212,
-        242,
-        {
-          "id": "3ef95441-cb63-499d-9890-56e849bafbb1",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        211,
         241,
         {
-          "id": "420ad5c5-bfd1-4a5c-a200-e74f37e66467",
+          "id": "831e960f-7a08-4b8b-8634-1cca2332e851",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5385,7 +5347,7 @@
         210,
         240,
         {
-          "id": "16c04df2-2609-4bac-a7e3-c2f8e17284a8",
+          "id": "3ef95441-cb63-499d-9890-56e849bafbb1",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5395,7 +5357,7 @@
         209,
         239,
         {
-          "id": "094ec38f-3ae7-4c65-bfe1-50a6848a9db4",
+          "id": "420ad5c5-bfd1-4a5c-a200-e74f37e66467",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5405,7 +5367,7 @@
         208,
         238,
         {
-          "id": "04d40319-9de3-4426-ac5b-931577104e1b",
+          "id": "16c04df2-2609-4bac-a7e3-c2f8e17284a8",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5415,7 +5377,17 @@
         207,
         237,
         {
-          "id": "4d87f0e0-2cf1-4487-8ea5-9d7275545f56",
+          "id": "094ec38f-3ae7-4c65-bfe1-50a6848a9db4",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771078757
+        }
+      ],
+      [
+        206,
+        236,
+        {
+          "id": "04d40319-9de3-4426-ac5b-931577104e1b",
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771078757
@@ -5423,7 +5395,17 @@
       ],
       [
         205,
-        236,
+        235,
+        {
+          "id": "4d87f0e0-2cf1-4487-8ea5-9d7275545f56",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771078757
+        }
+      ],
+      [
+        203,
+        234,
         {
           "id": "49833046-072d-491c-8ad1-19d88b2b9cbd",
           "kind": "Synonym",
@@ -5432,8 +5414,8 @@
         }
       ],
       [
-        204,
-        235,
+        202,
+        233,
         {
           "id": "d2521f0a-c2b0-46f9-ac2a-c2dbbf7884dc",
           "kind": "Synonym",
@@ -5442,8 +5424,8 @@
         }
       ],
       [
-        202,
-        234,
+        200,
+        232,
         {
           "id": "164175b9-ef5b-4ba2-af21-3490a901923a",
           "kind": "Synonym",
@@ -5452,8 +5434,8 @@
         }
       ],
       [
-        201,
-        233,
+        199,
+        231,
         {
           "id": "98b7445d-2ba5-4772-b14f-2ef94baf821d",
           "kind": "Synonym",
@@ -5463,7 +5445,7 @@
       ],
       [
         127,
-        270,
+        268,
         {
           "id": "341fd674-32a3-457f-9304-ca571f8cf916",
           "kind": "Synonym",
@@ -5473,7 +5455,7 @@
       ],
       [
         128,
-        275,
+        273,
         {
           "id": "f7dbd1e8-b724-4abf-a9b0-4d72e9bdf06a",
           "kind": "Synonym",
@@ -5483,7 +5465,7 @@
       ],
       [
         129,
-        276,
+        274,
         {
           "id": "6acac1ee-ed8e-419e-abc2-31a512bf4e86",
           "kind": "Synonym",
@@ -5493,7 +5475,7 @@
       ],
       [
         130,
-        278,
+        276,
         {
           "id": "4257713b-61c3-4b29-a457-9d78df9d45ab",
           "kind": "Synonym",
@@ -5503,7 +5485,7 @@
       ],
       [
         131,
-        281,
+        279,
         {
           "id": "256de7ad-2b20-49c8-9210-9f838eb8c4d7",
           "kind": "Formalizes",
@@ -5513,7 +5495,7 @@
       ],
       [
         132,
-        282,
+        280,
         {
           "id": "4eb56751-9804-44bb-844f-b67df81df68a",
           "kind": "Synonym",
@@ -5523,7 +5505,7 @@
       ],
       [
         133,
-        271,
+        269,
         {
           "id": "344eed18-202d-4ea5-8c42-3fb2a10e4802",
           "kind": "Synonym",
@@ -5533,7 +5515,7 @@
       ],
       [
         135,
-        281,
+        279,
         {
           "id": "43df4bac-b055-4732-b35d-38dece395295",
           "kind": "Synonym",
@@ -5543,7 +5525,7 @@
       ],
       [
         136,
-        280,
+        278,
         {
           "id": "e433379f-11ea-4fd1-9904-06c9a230e4a1",
           "kind": "Synonym",
@@ -5566,7 +5548,7 @@
       ],
       [
         137,
-        279,
+        277,
         {
           "id": "145b1687-fd92-47c4-a4bd-a98deadcdc6b",
           "kind": "Synonym",
@@ -5576,7 +5558,7 @@
       ],
       [
         138,
-        277,
+        275,
         {
           "id": "16830607-451c-4e30-b6ad-64124e2e5043",
           "kind": "Synonym",
@@ -5585,7 +5567,7 @@
         }
       ],
       [
-        257,
+        255,
         16,
         {
           "id": "2bffc506-574e-4f08-b658-114053856745",
@@ -5598,7 +5580,7 @@
         }
       ],
       [
-        259,
+        257,
         16,
         {
           "id": "33e3d61e-ddf6-491d-bbd1-fda9be86dcfb",
@@ -5612,7 +5594,7 @@
       ],
       [
         139,
-        274,
+        272,
         {
           "id": "e2ef32e0-d5e2-4276-b949-bbb9670b36c9",
           "kind": "Synonym",
@@ -5622,7 +5604,7 @@
       ],
       [
         140,
-        273,
+        271,
         {
           "id": "43ea8eca-edfe-4d60-8422-2fc976452641",
           "kind": "Synonym",
@@ -5632,7 +5614,7 @@
       ],
       [
         141,
-        272,
+        270,
         {
           "id": "84638cf0-3243-4fc8-ac87-2c5ec4856b6e",
           "kind": "Synonym",
@@ -5641,7 +5623,7 @@
         }
       ],
       [
-        261,
+        259,
         20,
         {
           "id": "caa78b87-bf75-45db-b870-2058908e69d3",
@@ -5654,7 +5636,7 @@
         }
       ],
       [
-        262,
+        260,
         20,
         {
           "id": "8ffdb4dd-9acb-400a-a5a1-ebc77c1dbcda",
@@ -5667,7 +5649,7 @@
         }
       ],
       [
-        263,
+        261,
         20,
         {
           "id": "acbff1a3-43fd-4db9-a06a-f32a122ae472",
@@ -5681,7 +5663,7 @@
       ],
       [
         155,
-        203,
+        201,
         {
           "id": "b85837da-3dd1-4324-ad56-2757b1cf937f",
           "kind": "Synonym",
@@ -5720,7 +5702,7 @@
         }
       ],
       [
-        282,
+        280,
         22,
         {
           "id": "ec9cb364-b7ee-4273-9f0b-9a8da8d466bf",
@@ -5764,7 +5746,7 @@
       ],
       [
         198,
-        267,
+        265,
         {
           "id": "d3ece9ce-4267-4767-8395-3dd8ce962c62",
           "kind": "Synonym",
@@ -5774,7 +5756,7 @@
       ],
       [
         198,
-        232,
+        230,
         {
           "id": "f8b85bed-e917-45c3-bb1c-83b367f30182",
           "kind": "Synonym",
@@ -5784,7 +5766,7 @@
       ],
       [
         197,
-        266,
+        264,
         {
           "id": "37ca4879-8f76-4233-94fe-5cf5f91f0dad",
           "kind": "Synonym",
@@ -5794,7 +5776,7 @@
       ],
       [
         197,
-        231,
+        229,
         {
           "id": "52a5b7d5-2e12-4747-9b50-008473171544",
           "kind": "Synonym",
@@ -5804,7 +5786,7 @@
       ],
       [
         196,
-        265,
+        263,
         {
           "id": "3c14139a-d09e-4fbe-9bc5-e26977c83d71",
           "kind": "Synonym",
@@ -5814,7 +5796,7 @@
       ],
       [
         196,
-        230,
+        228,
         {
           "id": "0f5b1abc-5b7d-4015-90c7-cc27c0498dce",
           "kind": "Synonym",
@@ -5824,7 +5806,7 @@
       ],
       [
         195,
-        264,
+        262,
         {
           "id": "c732e10a-365c-49a3-b158-da42ffe1c80f",
           "kind": "Synonym",
@@ -5834,7 +5816,7 @@
       ],
       [
         195,
-        229,
+        227,
         {
           "id": "5d36ff39-c2d6-49fa-8e14-9d2a58967d76",
           "kind": "Synonym",
@@ -5844,7 +5826,7 @@
       ],
       [
         194,
-        256,
+        254,
         {
           "id": "c163e9b2-b6f3-4102-9be3-934980f389db",
           "kind": "Synonym",
@@ -5854,7 +5836,7 @@
       ],
       [
         194,
-        228,
+        226,
         {
           "id": "8f2a7d4b-4917-43fa-a19f-ef6106f995db",
           "kind": "Synonym",
@@ -5864,7 +5846,7 @@
       ],
       [
         193,
-        255,
+        253,
         {
           "id": "9d8107d0-f9bb-48e6-ba72-e2f89804f3ca",
           "kind": "Synonym",
@@ -5874,7 +5856,7 @@
       ],
       [
         193,
-        227,
+        225,
         {
           "id": "71eaf54f-900f-4b72-83c4-283cecbd66a4",
           "kind": "Synonym",
@@ -5884,7 +5866,7 @@
       ],
       [
         192,
-        254,
+        252,
         {
           "id": "6fa88b6d-ff72-42da-bf67-64127347ab0d",
           "kind": "Synonym",
@@ -5894,7 +5876,7 @@
       ],
       [
         192,
-        226,
+        224,
         {
           "id": "0f95abdd-ca15-4e2a-a5ab-a1fa2b6938dc",
           "kind": "Synonym",
@@ -5904,7 +5886,7 @@
       ],
       [
         191,
-        253,
+        251,
         {
           "id": "a8c8625e-ad41-45de-a660-e166b0bd626c",
           "kind": "Synonym",
@@ -5914,7 +5896,7 @@
       ],
       [
         191,
-        225,
+        223,
         {
           "id": "5fb22adb-3fc3-4422-b459-084e0c8fc0fd",
           "kind": "Synonym",
@@ -5924,7 +5906,7 @@
       ],
       [
         190,
-        252,
+        250,
         {
           "id": "b8544d3d-4c41-4ba1-ae87-1f484e03e4f4",
           "kind": "Synonym",
@@ -5934,7 +5916,7 @@
       ],
       [
         190,
-        224,
+        222,
         {
           "id": "4ada3d2d-dc08-4d44-85e5-00e05619b6ee",
           "kind": "Synonym",
@@ -5944,7 +5926,7 @@
       ],
       [
         189,
-        251,
+        249,
         {
           "id": "f9618a3c-06bf-4584-8c75-94e68b488f48",
           "kind": "Synonym",
@@ -5954,7 +5936,7 @@
       ],
       [
         189,
-        223,
+        221,
         {
           "id": "27fc04d8-f1c0-4a63-8133-e06f105b11e1",
           "kind": "Synonym",
@@ -5964,7 +5946,7 @@
       ],
       [
         188,
-        250,
+        248,
         {
           "id": "672a3904-739f-45bf-abc8-b261d086ffb1",
           "kind": "Synonym",
@@ -5974,7 +5956,7 @@
       ],
       [
         188,
-        222,
+        220,
         {
           "id": "a62cab22-4190-4943-a5f1-07ad99f5bcc3",
           "kind": "Synonym",
@@ -5984,7 +5966,7 @@
       ],
       [
         187,
-        249,
+        247,
         {
           "id": "2d3a7be3-3a75-4730-845c-e64e56470f9b",
           "kind": "Synonym",
@@ -5994,7 +5976,7 @@
       ],
       [
         187,
-        221,
+        219,
         {
           "id": "2b7d94db-6092-46e1-a3a6-b6ca6b683447",
           "kind": "Synonym",
@@ -6004,7 +5986,7 @@
       ],
       [
         186,
-        248,
+        246,
         {
           "id": "22e6eac7-52e9-4f62-b626-00c91d4c4f94",
           "kind": "Synonym",
@@ -6014,7 +5996,7 @@
       ],
       [
         186,
-        220,
+        218,
         {
           "id": "5c423670-f308-40f1-a70d-7407ac3d0853",
           "kind": "Synonym",
@@ -6024,7 +6006,7 @@
       ],
       [
         184,
-        247,
+        245,
         {
           "id": "c59f2c56-72d1-450a-8e46-b2150ac98728",
           "kind": "Synonym",
@@ -6034,7 +6016,7 @@
       ],
       [
         184,
-        218,
+        216,
         {
           "id": "024f90a1-892d-41e4-beeb-6ca63a8ce737",
           "kind": "Synonym",
@@ -6044,7 +6026,7 @@
       ],
       [
         183,
-        246,
+        244,
         {
           "id": "b880c00e-8faf-4b82-8fb3-b46a95d639bc",
           "kind": "Synonym",
@@ -6054,7 +6036,7 @@
       ],
       [
         183,
-        217,
+        215,
         {
           "id": "dbbc1d86-4503-4bb4-a953-bacf4529992c",
           "kind": "Synonym",
@@ -6064,7 +6046,7 @@
       ],
       [
         181,
-        245,
+        243,
         {
           "id": "d6ac1fe9-afa7-4f54-b67a-989f7b5380c4",
           "kind": "Synonym",
@@ -6074,7 +6056,7 @@
       ],
       [
         181,
-        216,
+        214,
         {
           "id": "17eb883f-fc8e-4c20-8424-992fd5f52203",
           "kind": "Synonym",
@@ -6084,7 +6066,7 @@
       ],
       [
         180,
-        244,
+        242,
         {
           "id": "23f9e2f8-1bdd-4e9c-9a7a-6074d8f9e295",
           "kind": "Synonym",
@@ -6094,7 +6076,7 @@
       ],
       [
         180,
-        215,
+        213,
         {
           "id": "827611b9-1a16-4e04-9648-ffe8ea06ddd7",
           "kind": "Synonym",
@@ -6104,7 +6086,7 @@
       ],
       [
         177,
-        243,
+        241,
         {
           "id": "533ffae3-3222-458a-9f71-b3ec5b699c34",
           "kind": "Synonym",
@@ -6114,7 +6096,7 @@
       ],
       [
         177,
-        214,
+        212,
         {
           "id": "66909669-9c17-4d05-8156-836a751435b1",
           "kind": "Synonym",
@@ -6124,7 +6106,7 @@
       ],
       [
         176,
-        242,
+        240,
         {
           "id": "f6874849-7de2-4654-b6ac-741208034ffd",
           "kind": "Synonym",
@@ -6134,7 +6116,7 @@
       ],
       [
         176,
-        212,
+        210,
         {
           "id": "d3edd678-bb3b-4866-8594-3f74f919dc53",
           "kind": "Synonym",
@@ -6144,7 +6126,7 @@
       ],
       [
         175,
-        241,
+        239,
         {
           "id": "6ff45d1c-6c6c-4668-a1a0-63e48e070c55",
           "kind": "Synonym",
@@ -6154,7 +6136,7 @@
       ],
       [
         175,
-        211,
+        209,
         {
           "id": "a90ec687-14fe-4776-98ca-4a4a9d5ce51e",
           "kind": "Synonym",
@@ -6164,7 +6146,7 @@
       ],
       [
         174,
-        240,
+        238,
         {
           "id": "f0294bc9-0ab5-4594-8bf3-c4a9d9e2787c",
           "kind": "Synonym",
@@ -6174,7 +6156,7 @@
       ],
       [
         174,
-        210,
+        208,
         {
           "id": "cd49221d-d3cf-4006-8792-dfda214c76f9",
           "kind": "Synonym",
@@ -6184,7 +6166,7 @@
       ],
       [
         173,
-        239,
+        237,
         {
           "id": "6e49f4eb-5496-41cc-b53b-b185030066e7",
           "kind": "Synonym",
@@ -6194,7 +6176,7 @@
       ],
       [
         173,
-        209,
+        207,
         {
           "id": "7aed3947-96bc-4f5b-9fd4-d896f2c7997e",
           "kind": "Synonym",
@@ -6204,7 +6186,7 @@
       ],
       [
         172,
-        238,
+        236,
         {
           "id": "671b0b2b-d64f-4fd1-8c68-d07a3c4d9203",
           "kind": "Synonym",
@@ -6214,7 +6196,7 @@
       ],
       [
         172,
-        208,
+        206,
         {
           "id": "c724b011-3aa1-476c-ade8-665974efc339",
           "kind": "Synonym",
@@ -6224,7 +6206,7 @@
       ],
       [
         171,
-        237,
+        235,
         {
           "id": "59496578-1e2e-4fd0-a9fa-9e75f7193dcf",
           "kind": "Synonym",
@@ -6234,7 +6216,7 @@
       ],
       [
         171,
-        207,
+        205,
         {
           "id": "6f8c572c-954a-440a-ae41-65b8eac2fc65",
           "kind": "Synonym",
@@ -6244,7 +6226,7 @@
       ],
       [
         170,
-        236,
+        234,
         {
           "id": "e2a4ab40-fd9e-4d89-a5a1-ff6a3003962f",
           "kind": "Synonym",
@@ -6254,7 +6236,7 @@
       ],
       [
         170,
-        205,
+        203,
         {
           "id": "48ae3c5b-caf5-456c-a0c7-4d7cfe54fe49",
           "kind": "Synonym",
@@ -6264,7 +6246,7 @@
       ],
       [
         168,
-        235,
+        233,
         {
           "id": "b8c3aefe-9f64-4a60-a575-eed331a26519",
           "kind": "Synonym",
@@ -6274,7 +6256,7 @@
       ],
       [
         168,
-        204,
+        202,
         {
           "id": "0e5f29fd-6187-4588-9075-b7feb675e8af",
           "kind": "Synonym",
@@ -6284,7 +6266,7 @@
       ],
       [
         166,
-        234,
+        232,
         {
           "id": "df7fdfc8-e13c-43be-aad4-14e86ad4e997",
           "kind": "Synonym",
@@ -6294,7 +6276,7 @@
       ],
       [
         166,
-        202,
+        200,
         {
           "id": "663e6f49-c88f-4d32-8cf1-bb81804f3800",
           "kind": "Synonym",
@@ -6304,7 +6286,7 @@
       ],
       [
         165,
-        233,
+        231,
         {
           "id": "51474396-a80d-4ec2-b52b-8df5ff8fb583",
           "kind": "Synonym",
@@ -6314,7 +6296,7 @@
       ],
       [
         165,
-        201,
+        199,
         {
           "id": "6c2520dc-8e28-4123-a87a-23dc73129bf8",
           "kind": "Synonym",
@@ -6350,6 +6332,584 @@
           "kind": "Synonym",
           "metadata": {},
           "created_at": 1771082309
+        }
+      ],
+      [
+        1,
+        128,
+        {
+          "id": "9e1a2dce-a62239dc-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        1,
+        129,
+        {
+          "id": "9e1a2dce-bb688b93-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        1,
+        130,
+        {
+          "id": "9e1a2dce-ea92391a-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        18,
+        132,
+        {
+          "id": "e009137a-5f17fbcc-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        0,
+        135,
+        {
+          "id": "257745aa-e8451d6e-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        0,
+        136,
+        {
+          "id": "257745aa-63c95fd5-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        0,
+        137,
+        {
+          "id": "257745aa-41074004-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        78,
+        138,
+        {
+          "id": "724bc4c0-13609f26-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        78,
+        139,
+        {
+          "id": "724bc4c0-fb751e11-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        141,
+        {
+          "id": "81afa3f5-fddfd467-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        142,
+        {
+          "id": "81afa3f5-f17f74e9-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        143,
+        {
+          "id": "81afa3f5-97f2457e-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        3,
+        144,
+        {
+          "id": "c8f23449-f7dc233e-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        3,
+        145,
+        {
+          "id": "c8f23449-57a1f422-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        3,
+        146,
+        {
+          "id": "c8f23449-9ce8afb4-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        148,
+        {
+          "id": "81afa3f5-b8941728-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        149,
+        {
+          "id": "81afa3f5-3d6d4bbc-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        150,
+        {
+          "id": "81afa3f5-b0e46ffa-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        151,
+        {
+          "id": "81afa3f5-d59145bb-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        255,
+        {
+          "id": "81afa3f5-e901ead6-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        256,
+        {
+          "id": "81afa3f5-e29eda14-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        257,
+        {
+          "id": "81afa3f5-b6face50-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        258,
+        {
+          "id": "81afa3f5-0eb92ed0-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        3,
+        259,
+        {
+          "id": "c8f23449-0d5c15ec-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        3,
+        260,
+        {
+          "id": "c8f23449-ca5d9013-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        3,
+        261,
+        {
+          "id": "c8f23449-c54e4333-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        266,
+        {
+          "id": "81afa3f5-e784e25b-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        267,
+        {
+          "id": "81afa3f5-b1e1d371-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        2,
+        270,
+        {
+          "id": "81afa3f5-4d8465c2-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        78,
+        272,
+        {
+          "id": "724bc4c0-df41c4f6-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        1,
+        273,
+        {
+          "id": "9e1a2dce-ba2882a1-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        1,
+        274,
+        {
+          "id": "9e1a2dce-7bcc1eca-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        78,
+        275,
+        {
+          "id": "724bc4c0-83d7d395-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        1,
+        276,
+        {
+          "id": "9e1a2dce-48b035be-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "1.00",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        0,
+        277,
+        {
+          "id": "257745aa-54c3b57d-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        0,
+        278,
+        {
+          "id": "257745aa-f432d0e9-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        0,
+        279,
+        {
+          "id": "257745aa-6156d643-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.50",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        18,
+        280,
+        {
+          "id": "e009137a-835ce953-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.75",
+            "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        85,
+        140,
+        {
+          "id": "2b68b299-371220e1-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.80",
+            "auto_inferred": "true",
+            "manual_connection": "true"
+          },
+          "created_at": 1771084396
+        }
+      ],
+      [
+        85,
+        141,
+        {
+          "id": "2b68b299-fddfd467-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.80",
+            "auto_inferred": "true",
+            "manual_connection": "true"
+          },
+          "created_at": 1771084396
+        }
+      ],
+      [
+        85,
+        148,
+        {
+          "id": "2b68b299-b8941728-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.80",
+            "auto_inferred": "true",
+            "manual_connection": "true"
+          },
+          "created_at": 1771084396
+        }
+      ],
+      [
+        85,
+        258,
+        {
+          "id": "2b68b299-0eb92ed0-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.80",
+            "auto_inferred": "true",
+            "manual_connection": "true"
+          },
+          "created_at": 1771084396
+        }
+      ],
+      [
+        85,
+        270,
+        {
+          "id": "2b68b299-4d8465c2-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.80",
+            "auto_inferred": "true",
+            "manual_connection": "true"
+          },
+          "created_at": 1771084396
+        }
+      ],
+      [
+        85,
+        271,
+        {
+          "id": "2b68b299-cdd049cc-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "confidence": "0.80",
+            "auto_inferred": "true",
+            "manual_connection": "true"
+          },
+          "created_at": 1771084396
         }
       ]
     ]

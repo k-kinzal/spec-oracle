@@ -446,27 +446,27 @@ impl SpecGraph {
             }
         }
 
-        // Scenarios without supporting assertions
+        // Scenarios without supporting specifications (assertions or constraints)
         for idx in self.graph.node_indices() {
             let node = &self.graph[idx];
             if node.kind == NodeKind::Scenario {
-                let has_assertion = self
+                let has_support = self
                     .graph
                     .edges_directed(idx, Direction::Incoming)
                     .any(|e| {
                         let src = e.source();
-                        self.graph[src].kind == NodeKind::Assertion
+                        matches!(self.graph[src].kind, NodeKind::Assertion | NodeKind::Constraint)
                     });
-                let has_outgoing_assertion = self
+                let has_outgoing_support = self
                     .graph
                     .edges_directed(idx, Direction::Outgoing)
                     .any(|e| {
                         let tgt = e.target();
-                        self.graph[tgt].kind == NodeKind::Assertion
+                        matches!(self.graph[tgt].kind, NodeKind::Assertion | NodeKind::Constraint)
                     });
-                if !has_assertion && !has_outgoing_assertion {
+                if !has_support && !has_outgoing_support {
                     result.push(Omission {
-                        description: "Scenario has no supporting assertions".to_string(),
+                        description: "Scenario has no supporting specifications".to_string(),
                         related_nodes: vec![node.clone()],
                     });
                 }
@@ -1894,7 +1894,7 @@ mod tests {
         g.add_edge(&s, &d, EdgeKind::Refines, HashMap::new()).unwrap();
 
         let omissions = g.detect_omissions();
-        assert!(omissions.iter().any(|o| o.description.contains("no supporting assertions")));
+        assert!(omissions.iter().any(|o| o.description.contains("no supporting specifications")));
     }
 
     #[test]
