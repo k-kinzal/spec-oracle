@@ -3,13 +3,16 @@
   "checkpoint_id": "88f678b61df5",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 8,
+  "checkpoints_count": 9,
   "files_touched": [
     ".spec/specs.json.backup-session61",
     "PROBLEM.md",
     "connect_layers.py",
+    "docs/graphs/constraints.dot",
+    "docs/graphs/u0_layer.dot",
     "scripts/README.md",
     "scripts/connect_layer_label_spec.py",
+    "scripts/export_specs_dot.py",
     "scripts/export_specs_md.py",
     "scripts/fix_formality_layer_code.py",
     "scripts/fix_layer_display.py",
@@ -84,13 +87,20 @@
       "context": "/88/f678b61df5/7/context.md",
       "content_hash": "/88/f678b61df5/7/content_hash.txt",
       "prompt": "/88/f678b61df5/7/prompt.txt"
+    },
+    {
+      "metadata": "/88/f678b61df5/8/metadata.json",
+      "transcript": "/88/f678b61df5/8/full.jsonl",
+      "context": "/88/f678b61df5/8/context.md",
+      "content_hash": "/88/f678b61df5/8/content_hash.txt",
+      "prompt": "/88/f678b61df5/8/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 2528,
-    "cache_creation_tokens": 601424,
-    "cache_read_tokens": 23333194,
-    "output_tokens": 41420,
-    "api_call_count": 314
+    "input_tokens": 2666,
+    "cache_creation_tokens": 662320,
+    "cache_read_tokens": 24423873,
+    "output_tokens": 46834,
+    "api_call_count": 331
   }
 }
