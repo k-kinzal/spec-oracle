@@ -708,6 +708,14 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
 
             println!("🔍 Checking specifications...\n");
 
+            // Collect statistics
+            let all_nodes = graph.list_nodes(None);
+            let total_nodes = all_nodes.len();
+            let inferred_nodes: Vec<_> = all_nodes.iter()
+                .filter(|n| n.metadata.get("inferred").map(|s| s.as_str()) == Some("true"))
+                .collect();
+            let inferred_count = inferred_nodes.len();
+
             // Check contradictions
             println!("  Checking for contradictions...");
             let contradictions = graph.detect_contradictions();
@@ -717,19 +725,43 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                 println!("  ⚠️  {} contradiction(s) found", contradictions.len());
             }
 
-            // Check omissions
+            // Check omissions and analyze by extractor
             println!("  Checking for omissions...");
             let omissions = graph.detect_omissions();
+
+            // Count isolated inferred specs by extractor
+            let mut isolated_by_extractor: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+            for omission in &omissions {
+                for node in &omission.related_nodes {
+                    if node.metadata.get("inferred").map(|s| s.as_str()) == Some("true") {
+                        let extractor = node.metadata.get("extractor")
+                            .map(|s| s.as_str())
+                            .unwrap_or("unknown");
+                        *isolated_by_extractor.entry(extractor.to_string()).or_insert(0) += 1;
+                    }
+                }
+            }
+            let isolated_inferred: usize = isolated_by_extractor.values().sum();
+
             if omissions.is_empty() {
                 println!("  ✓ No isolated specifications");
             } else {
                 println!("  ⚠️  {} isolated specification(s)", omissions.len());
+                if isolated_inferred > 0 {
+                    println!("     Extracted specs needing connections:");
+                    for (extractor, count) in isolated_by_extractor.iter() {
+                        println!("       - {}: {} specs", extractor, count);
+                    }
+                }
             }
 
             // Summary
             println!("\n📊 Summary:");
-            println!("  Contradictions: {}", contradictions.len());
-            println!("  Isolated specs: {}", omissions.len());
+            println!("  Total specs:        {}", total_nodes);
+            println!("  Extracted specs:    {} ({:.1}%)", inferred_count,
+                inferred_count as f64 / total_nodes as f64 * 100.0);
+            println!("  Contradictions:     {}", contradictions.len());
+            println!("  Isolated specs:     {}", omissions.len());
 
             let total_issues = contradictions.len() + omissions.len();
             if total_issues == 0 {
