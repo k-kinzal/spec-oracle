@@ -244,6 +244,15 @@ enum Commands {
         #[arg(long)]
         verbose: bool,
     },
+    /// Construct U0 from projection universes via inverse transforms (demonstrate executable theory)
+    ConstructU0 {
+        /// Actually execute transform strategies
+        #[arg(long)]
+        execute: bool,
+        /// Show detailed extraction results
+        #[arg(long)]
+        verbose: bool,
+    },
     /// Initialize project-local specification management
     Init {
         /// Project root directory (defaults to current directory)
@@ -1121,6 +1130,73 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             }
 
             println!("═══════════════════════════════════════════════════════════════");
+        }
+        Commands::ConstructU0 { execute, verbose } => {
+            let graph = store.load()?;
+
+            println!("🏗️  Constructing U0 from Projection Universes\n");
+            println!("═══════════════════════════════════════════════════════════════\n");
+
+            // Populate UDAFModel from graph
+            let mut udaf_model = spec_core::UDAFModel::new();
+            udaf_model.populate_from_graph(&graph);
+
+            println!("📊 Initial State:");
+            for (universe_id, universe) in &udaf_model.universes {
+                if universe.layer > 0 {
+                    println!("   {}: {} specifications", universe_id, universe.specifications.len());
+                }
+            }
+            println!("   Transform functions: {}", udaf_model.transforms.len());
+            println!();
+
+            if execute {
+                println!("⚙️  Executing Transform Strategies...\n");
+                println!("   This demonstrates the core theoretical operation:");
+                println!("   U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3)\n");
+
+                match udaf_model.construct_u0(&graph) {
+                    Ok(newly_created) => {
+                        println!("✅ U0 Construction Complete\n");
+                        println!("   Newly extracted specifications: {}", newly_created.len());
+
+                        if verbose && !newly_created.is_empty() {
+                            println!("\n   Extracted specs:");
+                            for (i, spec_id) in newly_created.iter().take(10).enumerate() {
+                                println!("   {}. {}", i + 1, spec_id);
+                            }
+                            if newly_created.len() > 10 {
+                                println!("   ... and {} more", newly_created.len() - 10);
+                            }
+                        }
+
+                        // Show final U0 size
+                        if let Some(u0) = udaf_model.universes.get("U0") {
+                            println!("\n📊 Final U0 State:");
+                            println!("   Total specifications in U0: {}", u0.specifications.len());
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Error during U0 construction: {}", e);
+                        return Err(e.into());
+                    }
+                }
+            } else {
+                println!("ℹ️  Dry run mode (use --execute to actually run transforms)");
+                println!("\n   Transform strategies that would be executed:");
+
+                for (id, transform) in &udaf_model.transforms {
+                    if transform.kind == spec_core::TransformKind::Inverse {
+                        println!("   • {}", id);
+                        println!("     {} -> {}", transform.source_universe, transform.target_universe);
+                        if verbose {
+                            println!("     Strategy: {:?}", transform.strategy);
+                        }
+                    }
+                }
+            }
+
+            println!("\n═══════════════════════════════════════════════════════════════");
         }
         _ => {
             eprintln!("Command not yet supported in standalone mode.");
@@ -2781,6 +2857,10 @@ echo "✓ specd stopped"
             println!("  - Each developer runs: .spec/scripts/start-specd.sh");
             println!("  - Specifications are automatically version-controlled");
             println!("\nSee .spec/README.md for more details.");
+        }
+        Commands::ConstructU0 { execute: _, verbose: _ } => {
+            println!("ConstructU0 command requires standalone mode (project-local .spec/ directory)");
+            println!("Run 'spec init' to initialize project-local specification management.");
         }
     }
 

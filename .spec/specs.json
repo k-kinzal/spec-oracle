@@ -163,8 +163,8 @@
         "kind": "Assertion",
         "metadata": {
           "line": "171-181",
-          "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2"
+          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -175,9 +175,9 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Assertion",
         "metadata": {
+          "function": "detect_contradictions",
           "source_file": "spec-core/src/graph.rs",
-          "formality_layer": "U3",
-          "function": "detect_contradictions"
+          "formality_layer": "U3"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -206,9 +206,9 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Assertion",
         "metadata": {
+          "line": "183-192",
           "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2",
-          "line": "183-192"
+          "formality_layer": "U2"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -219,8 +219,8 @@
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
         "kind": "Assertion",
         "metadata": {
-          "function": "detect_omissions",
           "source_file": "spec-core/src/graph.rs",
+          "function": "detect_omissions",
           "formality_layer": "U3"
         },
         "created_at": 1771061597,
@@ -241,9 +241,9 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U2",
           "source_file": "proto/spec_oracle.proto",
-          "line": "7,105-113",
-          "formality_layer": "U2"
+          "line": "7,105-113"
         },
         "created_at": 1771061822,
         "modified_at": 1771061822,
@@ -254,9 +254,9 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Add",
-          "formality_layer": "U3"
+          "function": "Commands::Add"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -267,9 +267,9 @@
         "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
-          "line": "19-20"
+          "line": "19-20",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -280,9 +280,9 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
+          "source_file": "spec-cli/src/main.rs",
           "formality_layer": "U3",
-          "function": "Commands::Check",
-          "source_file": "spec-cli/src/main.rs"
+          "function": "Commands::Check"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -293,9 +293,9 @@
         "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U2",
           "line": "18,162-169",
-          "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771062014,
         "modified_at": 1771062014,
@@ -307,8 +307,8 @@
         "kind": "Assertion",
         "metadata": {
           "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Find",
-          "formality_layer": "U3"
+          "formality_layer": "U3",
+          "function": "Commands::Find"
         },
         "created_at": 1771062016,
         "modified_at": 1771062016,
@@ -319,9 +319,9 @@
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
           "line": "14,148-153",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -332,9 +332,9 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Assertion",
         "metadata": {
+          "function": "Commands::Trace",
           "formality_layer": "U3",
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Trace"
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -582,6 +582,15 @@
         "metadata": {},
         "created_at": 1771065079,
         "modified_at": 1771065079,
+        "formality_layer": 0
+      },
+      {
+        "id": "8aff5987-e979-435b-b08d-9b4705c6aef4",
+        "content": "construct-u0 command demonstrates executable U0 construction by extracting specifications from source code via inverse transform strategies",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771065284,
+        "modified_at": 1771065284,
         "formality_layer": 0
       }
     ],
