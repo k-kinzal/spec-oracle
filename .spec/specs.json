@@ -26,7 +26,7 @@
       {
         "id": "81afa3f5-4a41-4b04-b958-224d1037d76f",
         "content": "The system must detect contradictions between specifications within the same formality layer",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -37,7 +37,7 @@
       {
         "id": "c8f23449-3f4c-40b1-a8f4-6dc2c93444b1",
         "content": "The system must detect omissions where specifications have no relationships to other specifications",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -59,7 +59,7 @@
       {
         "id": "ec5f2497-a3ac-4162-8f75-c5da40436bc5",
         "content": "Project-local specifications must be stored in .spec/specs.json and auto-detected by the CLI",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -92,7 +92,7 @@
       {
         "id": "ea3f4e7a-e577-465b-810d-ea4247d5ec48",
         "content": "The CLI must work in standalone mode without requiring a running server for basic operations",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -103,7 +103,7 @@
       {
         "id": "dbc5525f-ec05-42fa-8823-dddd359567ed",
         "content": "The check command must run both contradiction and omission detection and present unified results",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -114,7 +114,7 @@
       {
         "id": "49f551db-6fa3-40d2-9e36-bdb5e90a687b",
         "content": "The check command must exit with code 0 when no issues found and code 1 when issues exist",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -125,7 +125,7 @@
       {
         "id": "ee493f23-22d4-483c-8afe-2926a0ec1f73",
         "content": "The find command provides semantic search with natural language queries and layer filtering",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -136,7 +136,7 @@
       {
         "id": "b9d116dd-afde-498c-8fe2-0dca01b6c08b",
         "content": "The find command must show helpful suggestions when no results are found",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -147,7 +147,7 @@
       {
         "id": "b176641e-ab94-414b-a777-0a69ab47e035",
         "content": "The trace command displays all relationships for a specification in a hierarchical tree format",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -158,7 +158,7 @@
       {
         "id": "93651986-ff74-43f7-9600-980616db6649",
         "content": "The trace command supports depth limiting to control traversal level",
-        "kind": "Assertion",
+        "kind": "Scenario",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -169,7 +169,7 @@
       {
         "id": "141cf3b5-c73b-4bb8-bfe5-77b21a0df7e3",
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
@@ -182,7 +182,7 @@
       {
         "id": "386b1821-73e9-4b1c-90e4-618204cbad0e",
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "source_file": "spec-core/src/graph.rs",
           "function": "detect_contradictions",
@@ -217,7 +217,7 @@
       {
         "id": "7c6d4b66-e684-4281-b83c-81c5fc7d07e3",
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
@@ -230,7 +230,7 @@
       {
         "id": "194a46a7-fed0-4e65-8b0f-4f60813edd62",
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U3",
           "function": "detect_omissions",
@@ -254,7 +254,7 @@
       {
         "id": "41052fda-aef8-4443-991f-80e5165991c7",
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U2",
           "line": "7,105-113",
@@ -267,7 +267,7 @@
       {
         "id": "f52e0895-4753-4ceb-b59f-cc9dac67a3f8",
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "function": "Commands::Add",
           "formality_layer": "U3",
@@ -280,7 +280,7 @@
       {
         "id": "c8f0f89e-be5e-4ea9-b24d-a9a1eb4d4f03",
         "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U2",
           "line": "19-20",
@@ -306,7 +306,7 @@
       {
         "id": "a565f8bd-53f8-485d-9141-da7fb5686fe9",
         "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "source_file": "proto/spec_oracle.proto",
           "line": "18,162-169",
@@ -319,7 +319,7 @@
       {
         "id": "8a79071d-6eac-42c5-97ff-539bade167e5",
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "function": "Commands::Find",
           "source_file": "spec-cli/src/main.rs",
@@ -332,7 +332,7 @@
       {
         "id": "97578131-68b3-4d13-be53-12f0c4da819d",
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U2",
           "source_file": "proto/spec_oracle.proto",
@@ -345,7 +345,7 @@
       {
         "id": "8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80",
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U3",
           "function": "Commands::Trace",
@@ -413,7 +413,7 @@
       {
         "id": "717b4b00-779b-4d39-9c7f-3ebcb82dd0ec",
         "content": "The verify-layers command checks multi-layer specification consistency by verifying completeness and soundness",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -424,7 +424,7 @@
       {
         "id": "0dc100e8-5514-4ab8-9cb5-3a067aac5536",
         "content": "The verify-layers command provides formal verification of multi-layer specification consistency",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -446,7 +446,7 @@
       {
         "id": "072d1cd5-1d4a-40b3-8061-fadabebc6117",
         "content": "parse_formality_layer() converts metadata layer strings to numeric values",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U3"
         },
@@ -457,7 +457,7 @@
       {
         "id": "b36f3a5f-d36a-48fd-bc75-b7d110df376f",
         "content": "Completeness check traverses Formalizes edges from U0 to U3",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U3"
         },
@@ -468,7 +468,7 @@
       {
         "id": "df2be5a7-c131-4e44-97da-81f2a4995fe6",
         "content": "Soundness check traverses inverse Formalizes edges from U3 to U0",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U3"
         },
@@ -710,7 +710,7 @@
       {
         "id": "c9c97133-5aa5-48c3-b3dc-26f775b6d28f",
         "content": "ProofMethod enum supports multiple verification strategies: ConstraintSolving, SMTSolver, TheoremProver, PropertyTesting, Manual",
-        "kind": "Assertion",
+        "kind": "Scenario",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -875,7 +875,7 @@
       {
         "id": "254cb58e-a050-4402-ba62-2ae3274ba619",
         "content": "The inspect-model command displays the complete U/D/A/f model structure including all universes, domains, admissible sets, and transform functions",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -919,7 +919,7 @@
       {
         "id": "68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7",
         "content": "The query-at-timestamp command enables querying the specification graph state at any point in history for temporal analysis",
-        "kind": "Assertion",
+        "kind": "Scenario",
         "metadata": {
           "formality_layer": "U0"
         },
@@ -941,7 +941,7 @@
       {
         "id": "d1c6549f-be1c-4ef9-95c7-01425bc01d81",
         "content": "The node-history command displays the complete modification history of a specification including all changes over time",
-        "kind": "Assertion",
+        "kind": "Constraint",
         "metadata": {
           "formality_layer": "U0"
         },
