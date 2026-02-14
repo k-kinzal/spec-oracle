@@ -318,7 +318,7 @@
       },
       {
         "id": "fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2",
-        "content": "All high-priority features now have complete U0→U2→U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
+        "content": "All high-priority features now have complete U0\u2192U2\u2192U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771062281,
@@ -426,7 +426,7 @@
       },
       {
         "id": "8772404d-59f0-44da-970c-9347eceaaf42",
-        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)",
+        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f\u2080\u2081\u207b\u00b9(U1) \u222a f\u2080\u2082\u207b\u00b9(U2) \u222a ... \u222a f\u2080\u2099\u207b\u00b9(UN)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771064470,
@@ -579,7 +579,7 @@
       },
       {
         "id": "ac7787f6-2eaf-46a0-bc5b-7017d3282886",
-        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)",
+        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: \u2203x. (x \u2208 A1 \u2227 x \u2208 A2)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -588,7 +588,7 @@
       },
       {
         "id": "0154a181-1962-4aa1-aee2-236d2078caf6",
-        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: ∃x. x ∈ A",
+        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: \u2203x. x \u2208 A",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -624,7 +624,7 @@
       },
       {
         "id": "239316dd-4d2e-4ab2-b172-5fdd015fb5e1",
-        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (∃x. x ∈ A)",
+        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (\u2203x. x \u2208 A)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771066871,
@@ -822,7 +822,7 @@
       },
       {
         "id": "d79603df-d239-4d3f-af09-868ed2935374",
-        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings—transcending the fundamental DSL limitation identified in conversation.md",
+        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings\u2014transcending the fundamental DSL limitation identified in conversation.md",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070409,
@@ -831,7 +831,7 @@
       },
       {
         "id": "ce999406-30cc-424e-8bac-8efe06025a3f",
-        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations—representing the first practical realization of the beyond-DSL specification paradigm",
+        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations\u2014representing the first practical realization of the beyond-DSL specification paradigm",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070419,
@@ -1133,7 +1133,7 @@
       },
       {
         "id": "19d08ce6-8cba-4713-9999-a26d373ce7fa",
-        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f₀₂ transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
+        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f\u2080\u2082 transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771073305,
@@ -2019,7 +2019,7 @@
       },
       {
         "id": "ac78bcec-f784-49aa-a201-30f4641fdc16",
-        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f₀₃⁻¹(U3) = f₀₃⁻¹(f₀₃⁻¹(U3)) for the reverse mapping function.",
+        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f\u2080\u2083\u207b\u00b9(U3) = f\u2080\u2083\u207b\u00b9(f\u2080\u2083\u207b\u00b9(U3)) for the reverse mapping function.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771087179,
@@ -2046,7 +2046,7 @@
       },
       {
         "id": "98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5",
-        "content": "Cross-layer edge inference uses layer-aware similarity threshold: 0.15 for cross-layer connections (U0↔U2, U0↔U3), 0.3 for same-layer connections. This enables automatic U0-U2-U3 relationship creation for the reverse mapping engine.",
+        "content": "Cross-layer edge inference uses layer-aware similarity threshold: 0.15 for cross-layer connections (U0\u2194U2, U0\u2194U3), 0.3 for same-layer connections. This enables automatic U0-U2-U3 relationship creation for the reverse mapping engine.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771088204,
@@ -3870,6 +3870,435 @@
             "similarity": "0.15789473684210525"
           },
           "created_at": 1771087906
+        }
+      ],
+      [
+        132,
+        182,
+        {
+          "id": "84145819-9ea4-4bcc-b142-6dc88dc8e315",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'AI-powered relationship inference' to U0 'Cross-layer edge inference'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        133,
+        182,
+        {
+          "id": "4fdd8f08-3d23-4e2b-9566-28ab6ddbdabf",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Automatic relationship inference' to U0 'Cross-layer edge inference'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        136,
+        35,
+        {
+          "id": "8ace1861-d1bb-4335-804d-ce0a4187c918",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        140,
+        35,
+        {
+          "id": "15bff7fd-59c3-493e-b821-69ca56a728f1",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        141,
+        35,
+        {
+          "id": "2e8e2a25-ef99-4a74-93ad-7a45192aa85e",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        136,
+        36,
+        {
+          "id": "39bfd576-cec1-4149-9aac-13020e9ca716",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        140,
+        36,
+        {
+          "id": "cf1abf10-0c4b-4b60-a2b1-dcef8de580b5",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        141,
+        36,
+        {
+          "id": "a0dea57b-0004-44bf-bd49-313bafa8a7f4",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        147,
+        1,
+        {
+          "id": "b1f768e6-8e8f-49aa-9992-b2217948293e",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Layer-aware operations' to U0 'specORACLE manages multi-layered specifications'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        147,
+        18,
+        {
+          "id": "bc693850-7ea4-43ab-ac66-6a7d5c7a8e20",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Layer-aware operations' to U0 'Specifications at different formality layers'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        134,
+        42,
+        {
+          "id": "1829bed3-77a6-4816-9027-94b250a08e90",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Set node universe' to U0 'Universe struct represents the space'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        135,
+        47,
+        {
+          "id": "41a5953c-c154-4c5f-9eb1-99d8de0542d8",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        135,
+        55,
+        {
+          "id": "c2a2e8cc-f15b-4f2e-81bf-dad60ef927cc",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        139,
+        81,
+        {
+          "id": "5499ae8e-e8cd-42a4-848b-1ceaf8f411a8",
+          "kind": "Refines",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Temporal queries' to U0 'Query'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        139,
+        86,
+        {
+          "id": "f72ff793-e101-4597-8d06-5c5e1113e314",
+          "kind": "Refines",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Temporal queries' to U0 'Query'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        139,
+        122,
+        {
+          "id": "54164333-d79b-47c1-95c6-fdf698888325",
+          "kind": "Refines",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Temporal queries' to U0 'Query'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        137,
+        81,
+        {
+          "id": "8c9f1c3a-c3cb-48b7-81d0-5b5304d15a9a",
+          "kind": "Refines",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'node history' to U0 'Query'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        137,
+        86,
+        {
+          "id": "f31edbf8-3b70-4946-92c8-97c327a6d6e0",
+          "kind": "Refines",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'node history' to U0 'Query'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        137,
+        122,
+        {
+          "id": "28070883-e2ac-42f2-a53d-1c5656aae45e",
+          "kind": "Refines",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'node history' to U0 'Query'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        143,
+        45,
+        {
+          "id": "3504af01-4377-47cc-aab5-f4bae6991451",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Executable contracts' to U0 'AdmissibleSet struct symbolically represents'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        144,
+        79,
+        {
+          "id": "f74d7ca8-95ce-4080-bd42-78462eedb2af",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'synonym' to U0 'AI-powered'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        146,
+        17,
+        {
+          "id": "f7dc1c01-ba3d-4ab9-ae02-0a4e454bbe1e",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        146,
+        18,
+        {
+          "id": "e0acbf6a-725d-47d3-80d4-4a7d5572ae6d",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        146,
+        30,
+        {
+          "id": "12b3f5c5-2bf9-43cd-8b42-e23f5317c0b5",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        146,
+        33,
+        {
+          "id": "527a541b-6591-4921-88a6-be1b6cb13513",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        146,
+        21,
+        {
+          "id": "f642578f-317a-4628-9a8f-7c1757216150",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Multi-layer specification tracking'"
+          },
+          "created_at": 1771090244
+        }
+      ],
+      [
+        152,
+        11,
+        {
+          "id": "05948ac4-f894-4d7d-ba5e-2aca70094ae6",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Query and analysis' to U0 'find command provides semantic search'"
+          },
+          "created_at": 1771090327
+        }
+      ],
+      [
+        145,
+        79,
+        {
+          "id": "a8c3e77b-f813-4c72-89db-d37c36085009",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Semantic normalization' to U0 'AI-powered'"
+          },
+          "created_at": 1771090327
+        }
+      ],
+      [
+        148,
+        11,
+        {
+          "id": "15cdba5c-bbb9-4d0e-823e-ecbdacc39c5c",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
+          },
+          "created_at": 1771090327
+        }
+      ],
+      [
+        148,
+        79,
+        {
+          "id": "29a837cf-cecf-4e26-915e-36101641af35",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
+          },
+          "created_at": 1771090327
+        }
+      ],
+      [
+        148,
+        85,
+        {
+          "id": "de3ed124-4c22-4746-a879-00d80943a043",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
+          },
+          "created_at": 1771090327
+        }
+      ],
+      [
+        148,
+        87,
+        {
+          "id": "5685b8e5-9053-4081-a5c5-b47fad73f6c5",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
+          },
+          "created_at": 1771090327
+        }
+      ],
+      [
+        148,
+        88,
+        {
+          "id": "c434be91-ca15-431f-b23c-02906fcec765",
+          "kind": "DerivesFrom",
+          "metadata": {
+            "created_by": "connect_remaining_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
+          },
+          "created_at": 1771090327
         }
       ]
     ]
