@@ -3,16 +3,19 @@
   "checkpoint_id": "87ed69adb3d5",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 8,
+  "checkpoints_count": 9,
   "files_touched": [
     ".spec/specs.json",
     ".spec/specs.json.backup",
     "PROBLEM.md",
     "spec-cli/src/main.rs",
+    "spec-core/src/lib.rs",
+    "spec-core/src/udaf.rs",
     "tasks/2026-02-14-session-43-refine-supporting-specs.md",
     "tasks/2026-02-14-session-44-complete-isolation-elimination.md",
     "tasks/2026-02-14-session-45-implement-layer-verifier.md",
-    "tasks/2026-02-14-session-46-cleanup-and-dogfooding.md"
+    "tasks/2026-02-14-session-46-cleanup-and-dogfooding.md",
+    "tasks/2026-02-14-session-47-udaf-model-foundation.md"
   ],
   "sessions": [
     {
@@ -49,13 +52,20 @@
       "context": "/87/ed69adb3d5/4/context.md",
       "content_hash": "/87/ed69adb3d5/4/content_hash.txt",
       "prompt": "/87/ed69adb3d5/4/prompt.txt"
+    },
+    {
+      "metadata": "/87/ed69adb3d5/5/metadata.json",
+      "transcript": "/87/ed69adb3d5/5/full.jsonl",
+      "context": "/87/ed69adb3d5/5/context.md",
+      "content_hash": "/87/ed69adb3d5/5/content_hash.txt",
+      "prompt": "/87/ed69adb3d5/5/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 1228,
-    "cache_creation_tokens": 785566,
-    "cache_read_tokens": 11392505,
-    "output_tokens": 32917,
-    "api_call_count": 150
+    "input_tokens": 1454,
+    "cache_creation_tokens": 864456,
+    "cache_read_tokens": 13552656,
+    "output_tokens": 41899,
+    "api_call_count": 178
   }
 }

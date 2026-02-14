@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "87ed69adb3d5",
+  "session_id": "b9c15bc7-b0a0-4b84-b051-0ae2efeb5e66",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T10:33:07.619498Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-cli/src/main.rs",
+    "spec-core/src/lib.rs",
+    "spec-core/src/udaf.rs",
+    "tasks/2026-02-14-session-47-udaf-model-foundation.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 226,
+    "cache_creation_tokens": 78890,
+    "cache_read_tokens": 2160151,
+    "output_tokens": 8982,
+    "api_call_count": 28
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T10:33:07.320954Z",
+    "agent_lines": 350,
+    "human_added": 1719,
+    "human_modified": 12,
+    "human_removed": 0,
+    "total_committed": 2081,
+    "agent_percentage": 16.818837097549256
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/b9c15bc7-b0a0-4b84-b051-0ae2efeb5e66.jsonl"
+}
