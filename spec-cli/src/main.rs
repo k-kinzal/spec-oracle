@@ -1468,6 +1468,56 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
 
             println!("\n═══════════════════════════════════════════════════════════════");
         }
+        Commands::AddEdge { source, target, kind } => {
+            use spec_core::EdgeKind as CoreEdgeKind;
+
+            // Load graph
+            let mut graph = store.load()?;
+
+            // Convert kind string to CoreEdgeKind
+            let core_kind = match kind.to_lowercase().as_str() {
+                "refines" => CoreEdgeKind::Refines,
+                "depends_on" | "depends-on" => CoreEdgeKind::DependsOn,
+                "contradicts" => CoreEdgeKind::Contradicts,
+                "derives_from" | "derives-from" => CoreEdgeKind::DerivesFrom,
+                "synonym" => CoreEdgeKind::Synonym,
+                "composes" => CoreEdgeKind::Composes,
+                "formalizes" => CoreEdgeKind::Formalizes,
+                "transform" => CoreEdgeKind::Transform,
+                _ => CoreEdgeKind::Refines,
+            };
+
+            // Add edge
+            match graph.add_edge(&source, &target, core_kind, HashMap::new()) {
+                Ok(edge) => {
+                    let edge_id = edge.id.clone();
+
+                    // Save
+                    store.save(&graph)?;
+
+                    let edge_name = match core_kind {
+                        CoreEdgeKind::Refines => "refines",
+                        CoreEdgeKind::DependsOn => "depends_on",
+                        CoreEdgeKind::Contradicts => "contradicts",
+                        CoreEdgeKind::DerivesFrom => "derives_from",
+                        CoreEdgeKind::Synonym => "synonym",
+                        CoreEdgeKind::Composes => "composes",
+                        CoreEdgeKind::Formalizes => "formalizes",
+                        CoreEdgeKind::Transform => "transform",
+                    };
+
+                    println!("✓ Added edge: {}", edge_id);
+                    println!("  [{}] --[{}]--> [{}]",
+                        &source[..8],
+                        edge_name,
+                        &target[..8]);
+                }
+                Err(e) => {
+                    eprintln!("Error adding edge: {}", e);
+                    return Err(e.into());
+                }
+            }
+        }
         _ => {
             eprintln!("Command not yet supported in standalone mode.");
             eprintln!("For advanced features, use server mode (start specd first).");

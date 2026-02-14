@@ -162,9 +162,9 @@
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
         "kind": "Assertion",
         "metadata": {
-          "line": "171-181",
           "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2"
+          "formality_layer": "U2",
+          "line": "171-181"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -175,9 +175,9 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
           "function": "detect_contradictions",
-          "formality_layer": "U3"
+          "formality_layer": "U3",
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -206,9 +206,9 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto",
           "line": "183-192",
-          "source_file": "proto/spec_oracle.proto"
+          "formality_layer": "U2"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -219,8 +219,8 @@
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
           "function": "detect_omissions",
+          "source_file": "spec-core/src/graph.rs",
           "formality_layer": "U3"
         },
         "created_at": 1771061597,
@@ -241,8 +241,8 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
           "line": "7,105-113",
+          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2"
         },
         "created_at": 1771061822,
@@ -254,9 +254,9 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
           "function": "Commands::Add",
-          "formality_layer": "U3"
+          "formality_layer": "U3",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -267,9 +267,9 @@
         "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
         "kind": "Assertion",
         "metadata": {
+          "line": "19-20",
           "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2",
-          "line": "19-20"
+          "formality_layer": "U2"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -280,8 +280,8 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
-          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
+          "formality_layer": "U3",
           "function": "Commands::Check"
         },
         "created_at": 1771061935,
@@ -306,8 +306,8 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
           "formality_layer": "U3",
+          "source_file": "spec-cli/src/main.rs",
           "function": "Commands::Find"
         },
         "created_at": 1771062016,
@@ -319,9 +319,9 @@
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
-          "line": "14,148-153",
-          "source_file": "proto/spec_oracle.proto"
+          "line": "14,148-153"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -333,8 +333,8 @@
         "kind": "Assertion",
         "metadata": {
           "formality_layer": "U3",
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Trace"
+          "function": "Commands::Trace",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -736,6 +736,33 @@
         "created_at": 1771066874,
         "modified_at": 1771066874,
         "formality_layer": 0
+      },
+      {
+        "id": "7ca251b8-8349-427e-9749-9cffd91a6d85",
+        "content": "The UDAF model implementation in spec-core/src/udaf.rs realizes the theoretical framework defined in docs/conversation.md",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771067746,
+        "modified_at": 1771067746,
+        "formality_layer": 0
+      },
+      {
+        "id": "73e33064-9b24-4e28-acbf-53ebf6b8182b",
+        "content": "The Prover module implements the 'proven world' concept from docs/motivation.md, providing mathematical certainty through Z3 SMT solver",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771067748,
+        "modified_at": 1771067748,
+        "formality_layer": 0
+      },
+      {
+        "id": "9f8de6af-d9d3-4ce5-8351-445bc1c12f34",
+        "content": "Z3 SMT solver integration provides complete formal verification, elevating specORACLE from heuristic checking to mathematical proof",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771067750,
+        "modified_at": 1771067750,
+        "formality_layer": 0
       }
     ],
     "node_holes": [],
@@ -1115,6 +1142,106 @@
           "kind": "Formalizes",
           "metadata": {},
           "created_at": 1771063903
+        }
+      ],
+      [
+        42,
+        49,
+        {
+          "id": "26e612a4-6578-44a3-8aef-4daab76d3f9c",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771067906
+        }
+      ],
+      [
+        42,
+        50,
+        {
+          "id": "e0dd8e04-f762-422e-9875-409a2d735d37",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771067912
+        }
+      ],
+      [
+        42,
+        51,
+        {
+          "id": "a33391d8-f6ff-4e70-b052-6a97d60c9171",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771067913
+        }
+      ],
+      [
+        43,
+        49,
+        {
+          "id": "bb0826b7-d361-48cc-922e-47b4fe4a1204",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771067914
+        }
+      ],
+      [
+        45,
+        50,
+        {
+          "id": "7b6b305d-387a-48f6-9bc7-6b6bd53a045d",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771067916
+        }
+      ],
+      [
+        46,
+        51,
+        {
+          "id": "43b8bccc-ec9f-4c6b-a1e8-42ff39f5b6f6",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771067917
+        }
+      ],
+      [
+        58,
+        61,
+        {
+          "id": "69858b77-d696-4851-8986-a5403945720d",
+          "kind": "Refines",
+          "metadata": {},
+          "created_at": 1771067933
+        }
+      ],
+      [
+        58,
+        62,
+        {
+          "id": "f2af523c-a072-40b1-a9b5-9f4b3bf14171",
+          "kind": "Refines",
+          "metadata": {},
+          "created_at": 1771067936
+        }
+      ],
+      [
+        58,
+        63,
+        {
+          "id": "de5d41b2-dc05-4e90-a93b-e7cb91ee8ec4",
+          "kind": "Refines",
+          "metadata": {},
+          "created_at": 1771067942
+        }
+      ],
+      [
+        58,
+        59,
+        {
+          "id": "bb08efea-593f-41ff-bb59-aeb63b3ee8f8",
+          "kind": "Refines",
+          "metadata": {},
+          "created_at": 1771067944
         }
       ]
     ]
