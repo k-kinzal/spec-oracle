@@ -22,7 +22,15 @@ This goal has not yet been met. Research it. Search for it. Surpass the failures
 
 ## Motivation
 
-@docs/conversation.md
+現代のソフトウェア開発では、多層防御（テスト・契約・性質・形式手法など）によって実装の正しさを保証します。しかし、各層が独立して進化すると、**全体としての一貫性・整合性を保つことが極めて困難**になります。
+
+specORACLEは、**多層防御の統制を保つための基準となる仕様**を管理するツールです。完全に形式化できない「根の部分の仕様」を、多少粗くても実用的な「写像の仕様群」として表現し、各層（U0: 自然言語 → U3: 実装）の整合性を検証します。
+
+単一の手法では保証できないからこそ多層防御が必要であり、多層防御は統制が困難だからこそspecORACLEが必要なのです。
+
+詳細：
+- **@docs/motivation.md** - なぜspecORACLEが必要なのか（背景・問題・役割）
+- **@docs/conversation.md** - 仕様とは何か（理論的基盤・U/D/A/fモデル）
 
 ## Minimum Requirements to Meet User Expectations
 

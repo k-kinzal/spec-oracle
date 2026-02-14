@@ -22,7 +22,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Add a new specification node
+    /// Add a specification (high-level, auto-infers kind and relationships)
+    Add {
+        /// Specification content in natural language
+        content: String,
+        /// Skip automatic relationship inference
+        #[arg(long)]
+        no_infer: bool,
+    },
+    /// Add a new specification node (low-level graph operation)
     AddNode {
         /// Content of the specification
         content: String,
@@ -257,6 +265,113 @@ fn edge_kind_name(k: i32) -> &'static str {
     }
 }
 
+/// Infer specification kind from content using keyword patterns
+fn infer_spec_kind(content: &str) -> String {
+    let lower = content.to_lowercase();
+
+    // Domain indicators
+    if lower.starts_with("domain:") || lower.contains("domain boundary") {
+        return "domain".to_string();
+    }
+
+    // Definition indicators
+    if lower.contains(" is defined as ")
+        || lower.contains("definition:")
+        || lower.contains(" means ")
+        || lower.contains(" refers to ")
+    {
+        return "definition".to_string();
+    }
+
+    // Constraint indicators (universal invariants)
+    if (lower.contains("must") || lower.contains("shall") || lower.contains("required"))
+        && (lower.contains("always") || lower.contains("all") || lower.contains("every"))
+    {
+        return "constraint".to_string();
+    }
+
+    if lower.contains("invariant")
+        || lower.contains(" >= ")
+        || lower.contains(" <= ")
+        || lower.contains("not allowed")
+        || lower.contains("forbidden")
+    {
+        return "constraint".to_string();
+    }
+
+    // Scenario indicators (existential requirements, test cases)
+    if lower.starts_with("when ")
+        || lower.starts_with("given ")
+        || lower.starts_with("scenario:")
+        || lower.contains("should be able to")
+        || lower.contains("can ")
+        || lower.contains("test:")
+    {
+        return "scenario".to_string();
+    }
+
+    // Assertion indicators (concrete claims)
+    if lower.contains("returns")
+        || lower.contains("produces")
+        || lower.contains("outputs")
+        || lower.contains("implements")
+    {
+        return "assertion".to_string();
+    }
+
+    // Default to assertion for general statements
+    "assertion".to_string()
+}
+
+/// Check if two specifications are semantically related using simple heuristics
+fn is_semantically_related(content_a: &str, content_b: &str) -> bool {
+    let a_lower = content_a.to_lowercase();
+    let b_lower = content_b.to_lowercase();
+
+    // Extract meaningful words (filter out common words)
+    let stop_words = ["the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+                      "have", "has", "had", "do", "does", "did", "will", "would", "should",
+                      "could", "may", "might", "must", "can", "to", "of", "in", "for", "on",
+                      "at", "by", "with", "from", "as", "and", "or", "but", "not"];
+
+    let a_words: Vec<&str> = a_lower
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| w.len() > 3 && !stop_words.contains(w))
+        .collect();
+
+    let b_words: Vec<&str> = b_lower
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| w.len() > 3 && !stop_words.contains(w))
+        .collect();
+
+    if a_words.is_empty() || b_words.is_empty() {
+        return false;
+    }
+
+    // Count common words
+    let mut common_count = 0;
+    for a_word in &a_words {
+        for b_word in &b_words {
+            if a_word == b_word {
+                common_count += 1;
+            } else {
+                // Check for word stems (common prefix >= 5 chars)
+                let prefix_len = a_word
+                    .chars()
+                    .zip(b_word.chars())
+                    .take_while(|(a, b)| a == b)
+                    .count();
+                if prefix_len >= 5 {
+                    common_count += 1;
+                }
+            }
+        }
+    }
+
+    // Related if at least 2 significant words in common
+    common_count >= 2
+}
+
 async fn handle_ai_query(question: &str, ai_cmd: &str) -> Result<String, Box<dyn std::error::Error>> {
     let prompt = format!(
         "You are assisting with a specification oracle system. \
@@ -304,6 +419,68 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = SpecOracleClient::connect(cli.server).await?;
 
     match cli.command {
+        Commands::Add { content, no_infer } => {
+            // High-level specification addition with auto-inference
+            println!("Adding specification: {}\n", content);
+
+            // Infer kind from content
+            let kind = infer_spec_kind(&content);
+            println!("  Inferred kind: {}", kind);
+
+            // Create the node
+            let resp = client
+                .add_node(Request::new(proto::AddNodeRequest {
+                    content: content.clone(),
+                    kind: parse_node_kind(&kind).into(),
+                    metadata: HashMap::new(),
+                }))
+                .await?;
+            let node = resp.into_inner().node.unwrap();
+            let node_id = node.id.clone();
+
+            println!("  ✓ Created specification [{}]", &node_id[..8]);
+
+            if !no_infer {
+                // Find related specifications
+                println!("\n  Searching for related specifications...");
+                let query_resp = client
+                    .query(Request::new(proto::QueryRequest {
+                        natural_language_query: content.clone(),
+                    }))
+                    .await?;
+                let matches = query_resp.into_inner().matching_nodes;
+
+                if !matches.is_empty() {
+                    println!("  Found {} potentially related specification(s):", matches.len());
+                    for (i, match_node) in matches.iter().take(3).enumerate() {
+                        if match_node.id != node_id {
+                            println!("    {}. [{}] {}",
+                                i + 1,
+                                &match_node.id[..8],
+                                match_node.content.chars().take(60).collect::<String>()
+                            );
+
+                            // Auto-create refines edge if semantically related
+                            if is_semantically_related(&content, &match_node.content) {
+                                let _ = client
+                                    .add_edge(Request::new(proto::AddEdgeRequest {
+                                        source_id: node_id.clone(),
+                                        target_id: match_node.id.clone(),
+                                        kind: SpecEdgeKind::Refines.into(),
+                                        metadata: HashMap::new(),
+                                    }))
+                                    .await;
+                                println!("       → Connected via 'refines' relationship");
+                            }
+                        }
+                    }
+                }
+            }
+
+            println!("\n✓ Specification added successfully");
+            println!("  To view: spec get-node {}", node_id);
+            println!("  To check for issues: spec detect-contradictions");
+        }
         Commands::AddNode { content, kind } => {
             let resp = client
                 .add_node(Request::new(proto::AddNodeRequest {
