@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "940c56b401f1",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-core/src/ai_semantic.rs",
+    "spec-core/src/extract.rs",
+    "tasks/2026-02-14-continue-for-goal-session-summary.md",
+    "tasks/2026-02-14-fix-applied-and-verified.md",
+    "tasks/2026-02-14-root-cause-synonym-detection-failure.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/94/0c56b401f1/0/metadata.json",
+      "transcript": "/94/0c56b401f1/0/full.jsonl",
+      "context": "/94/0c56b401f1/0/context.md",
+      "content_hash": "/94/0c56b401f1/0/content_hash.txt",
+      "prompt": "/94/0c56b401f1/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 354,
+    "cache_creation_tokens": 64954,
+    "cache_read_tokens": 2614087,
+    "output_tokens": 2919,
+    "api_call_count": 44
+  }
+}
