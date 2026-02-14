@@ -1,0 +1,38 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "ce6fe94dc3bd",
+  "session_id": "0eb36a48-62fd-4b82-8eb4-26f8eb2fc32c",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T07:34:04.689751Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "diagnose_password.rs",
+    "spec-core/src/extract.rs",
+    "tasks/2026-02-14-continue-goal-session.md",
+    "tasks/2026-02-14-goal-continuation-final.md",
+    "tasks/2026-02-14-password-spec-root-cause.md",
+    "tasks/2026-02-14-project-separation-design.md",
+    "test_edge_priority.rs",
+    "test_password_sim.rs",
+    "validate_fix.rs"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 923,
+    "cache_creation_tokens": 83300,
+    "cache_read_tokens": 2368215,
+    "output_tokens": 16060,
+    "api_call_count": 34
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T07:34:04.471132Z",
+    "agent_lines": 890,
+    "human_added": 597,
+    "human_modified": 6,
+    "human_removed": 0,
+    "total_committed": 1493,
+    "agent_percentage": 59.611520428667106
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/0eb36a48-62fd-4b82-8eb4-26f8eb2fc32c.jsonl"
+}

@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "ce6fe94dc3bd",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "diagnose_password.rs",
+    "spec-core/src/extract.rs",
+    "tasks/2026-02-14-continue-goal-session.md",
+    "tasks/2026-02-14-goal-continuation-final.md",
+    "tasks/2026-02-14-password-spec-root-cause.md",
+    "tasks/2026-02-14-project-separation-design.md",
+    "test_edge_priority.rs",
+    "test_password_sim.rs",
+    "validate_fix.rs"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ce/6fe94dc3bd/0/metadata.json",
+      "transcript": "/ce/6fe94dc3bd/0/full.jsonl",
+      "context": "/ce/6fe94dc3bd/0/context.md",
+      "content_hash": "/ce/6fe94dc3bd/0/content_hash.txt",
+      "prompt": "/ce/6fe94dc3bd/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 923,
+    "cache_creation_tokens": 83300,
+    "cache_read_tokens": 2368215,
+    "output_tokens": 16060,
+    "api_call_count": 34
+  }
+}
