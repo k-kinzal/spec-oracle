@@ -34,6 +34,7 @@ fn to_proto_node(n: &spec_core::SpecNodeData) -> proto::SpecNode {
         metadata: n.metadata.clone(),
         created_at: n.created_at,
         modified_at: n.modified_at,
+        formality_layer: n.formality_layer as u32,
     }
 }
 
@@ -77,6 +78,7 @@ fn to_proto_edge_kind(k: EdgeKind) -> proto::SpecEdgeKind {
         EdgeKind::DerivesFrom => proto::SpecEdgeKind::DerivesFrom,
         EdgeKind::Synonym => proto::SpecEdgeKind::Synonym,
         EdgeKind::Composes => proto::SpecEdgeKind::Composes,
+        EdgeKind::Formalizes => proto::SpecEdgeKind::Formalizes,
     }
 }
 
@@ -88,6 +90,7 @@ fn from_proto_edge_kind(k: i32) -> EdgeKind {
         Ok(proto::SpecEdgeKind::DerivesFrom) => EdgeKind::DerivesFrom,
         Ok(proto::SpecEdgeKind::Synonym) => EdgeKind::Synonym,
         Ok(proto::SpecEdgeKind::Composes) => EdgeKind::Composes,
+        Ok(proto::SpecEdgeKind::Formalizes) => EdgeKind::Formalizes,
         _ => EdgeKind::DependsOn,
     }
 }

@@ -23,6 +23,7 @@ pub enum EdgeKind {
     DerivesFrom,
     Synonym,
     Composes,
+    Formalizes,  // Target is a more formal version of source
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,6 +36,8 @@ pub struct SpecNodeData {
     pub created_at: i64,
     #[serde(default)]
     pub modified_at: i64,
+    #[serde(default)]
+    pub formality_layer: u8,  // 0=natural, 1=structured, 2=formal, 3=executable
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,6 +115,7 @@ impl SpecGraph {
             metadata,
             created_at: now,
             modified_at: now,
+            formality_layer: 0,  // Default to natural language
         };
         let idx = self.graph.add_node(data);
         self.id_to_index.insert(id, idx);

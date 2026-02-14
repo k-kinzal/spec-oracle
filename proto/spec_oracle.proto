@@ -32,6 +32,7 @@ message SpecNode {
   map<string, string> metadata = 4;
   int64 created_at = 5;
   int64 modified_at = 6;
+  uint32 formality_layer = 7;  // 0=natural, 1=structured, 2=formal, 3=executable
 }
 
 enum SpecNodeKind {
@@ -62,6 +63,7 @@ enum SpecEdgeKind {
   DERIVES_FROM = 4;    // Source is derived from target
   SYNONYM = 5;         // Source and target are synonymous terms
   COMPOSES = 6;        // Source composes with target into a higher-level spec
+  FORMALIZES = 7;      // Target is a more formal version of source
 }
 
 // --- Request/Response messages ---
