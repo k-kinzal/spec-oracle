@@ -246,6 +246,41 @@ impl SpecGraph {
         report
     }
 
+    /// Automatically infer and create relationships for a single newly-added node
+    /// This enables automatic re-integration when specs are added manually
+    pub fn auto_connect_node(&mut self, node_id: &str) -> IngestionReport {
+        let mut report = IngestionReport {
+            nodes_created: 0,
+            nodes_skipped: 0,
+            edges_created: 0,
+            suggestions: Vec::new(),
+            contradictions_found: Vec::new(),
+        };
+
+        // Infer relationships for the specified node
+        let suggestions = self.infer_relationships_for_node(node_id);
+
+        for suggestion in suggestions {
+            if suggestion.confidence >= 0.8 {
+                // High confidence: auto-create edge
+                match self.add_edge(
+                    &suggestion.source_id,
+                    &suggestion.target_id,
+                    suggestion.kind,
+                    HashMap::new(),
+                ) {
+                    Ok(_) => report.edges_created += 1,
+                    Err(_) => {} // Ignore errors (edge might already exist)
+                }
+            } else if suggestion.confidence >= 0.5 {
+                // Medium confidence: suggest for human review
+                report.suggestions.push(suggestion);
+            }
+        }
+
+        report
+    }
+
     /// Infer relationships with AI enhancement for cross-layer semantic matching (optimized)
     /// Only compares nodes across different formality layers to create Formalizes edges
     pub fn infer_cross_layer_relationships_with_ai(&mut self, min_confidence: f32) -> IngestionReport {
