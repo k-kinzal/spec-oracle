@@ -32,6 +32,7 @@ Humans express intent. The system infers everything else.
 
 - The user cannot answer your questions. Asking for clarification is prohibited.
 - There is no interest in plans. Planning mode is prohibited.
+- Resolving application issues with ad hoc scripts (Python, Shell, etc.). Committing them to the repository is prohibited.
 
 ## Desirable
 
