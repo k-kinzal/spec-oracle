@@ -175,19 +175,21 @@
     - 手動でformalizes関係を作成するUIコマンドを追加
   - **解決状況**: 未着手
 
-- [ ] **矛盾検出が重複仕様を検出しない**
+- [x] **矛盾検出が重複仕様を検出しない** ✅ **解決済み (2026-02-14)**
   - **発見日**: 2026-02-14
   - **詳細**: `detect-contradictions`コマンドが「No contradictions detected」と報告するが、実際には同じドメインが2つずつ、同じInvariantが4つ以上存在している。
-  - **再現手順**:
-    1. `spec list-nodes --kind domain` → Architecture, Communication, Storage, Analysisが2回ずつ
-    2. `spec query "omission"` → 同じInvariantが4回以上
-    3. `spec detect-contradictions` → 矛盾なしと報告
-  - **影響範囲**: 矛盾検出機能が信頼できない。データ品質管理ができない。
-  - **解決策案**:
-    - 同一内容の重複を検出するロジックを追加
-    - 同一ドメイン名の重複を検出
-    - 意味的に同じ仕様の重複を検出（AI活用）
-  - **解決状況**: 未着手
+  - **解決策**:
+    - ✅ 同一内容の重複を検出するロジックを追加 (session 32)
+    - ✅ 意味的な矛盾を検出（password 8 vs 10 chars）(session 32)
+    - ✅ false positive削減（53件→3件、94%削減）(session 33)
+    - ✅ Synonym edgeで意図的な重複を除外 (session 32)
+    - ✅ 層内のみで矛盾検出（層間の false positive回避）(session 32)
+  - **結果**:
+    - 重複検出: 動作確認済み（exact duplicate detection実装）
+    - 矛盾検出: 3件の実際のpassword長矛盾を検出（precision 100%）
+    - duplicate domains: Synonym edgeで管理されていることを確認
+  - **関連コミット**: 3e50c49 "Enhance duplicate and semantic contradiction detection with precision"
+  - **解決状況**: ✅ 完了
 
 - [ ] **大量の重複仕様が存在する（データ品質問題）**
   - **発見日**: 2026-02-14
@@ -440,14 +442,17 @@
     - 追加直後に自動的に関係推論を実行
   - **解決状況**: 未着手
 
-- [ ] **パスワード仕様に矛盾がある（データ品質問題）**
+- [x] **パスワード仕様に矛盾がある（データ品質問題）** ✅ **検出済み (2026-02-14)**
   - **発見日**: 2026-02-14
   - **詳細**: パスワード長の仕様が矛盾している：
     - "Password must be at least 8 characters" (77ad7450...)
+    - "Password must be at least 8 characters" (34bf0b12...)
     - "Password must be minimum 10 characters" (5237d0e8...)
-  - **影響範囲**: 仕様の信頼性がない。`detect-contradictions`で検出されるべき。
-  - **解決策案**: 矛盾検出ロジックの改善
-  - **解決状況**: 未着手
+    - "Password must be at least 8 characters long" (5fdeafb2...)
+  - **検出結果**: `detect-contradictions`で3件の矛盾として正しく検出される
+  - **次のステップ**: データクリーンアップ（8文字 or 10文字に統一するか決定）
+  - **関連コミット**: 3e50c49 "Enhance duplicate and semantic contradiction detection with precision"
+  - **解決状況**: ✅ 検出機能は完了、データ修正は未着手
 
 - [ ] **仕様からドキュメントを生成・可視化できない**
   - **発見日**: 2026-02-14
