@@ -163,6 +163,110 @@ impl SpecGraph {
         report
     }
 
+    /// Infer relationships with AI enhancement for cross-layer semantic matching (optimized)
+    /// Only compares nodes across different formality layers to create Formalizes edges
+    pub fn infer_cross_layer_relationships_with_ai(&mut self, min_confidence: f32) -> IngestionReport {
+        let mut report = IngestionReport {
+            nodes_created: 0,
+            nodes_skipped: 0,
+            edges_created: 0,
+            suggestions: Vec::new(),
+            contradictions_found: Vec::new(),
+        };
+
+        // Initialize AI engine
+        let ai = crate::AISemantic::default();
+        if !ai.is_available() {
+            eprintln!("Warning: AI command not available");
+            return report;
+        }
+
+        println!("Using AI-enhanced semantic matching for cross-layer relationships...");
+
+        // Group nodes by formality layer
+        let all_nodes = self.list_nodes(None);
+        let mut layers: HashMap<u8, Vec<crate::SpecNodeData>> = HashMap::new();
+        for node in all_nodes {
+            layers.entry(node.formality_layer).or_default().push(node.clone());
+        }
+
+        let layer_keys: Vec<u8> = layers.keys().copied().collect();
+        println!("  Found layers: {:?}", layer_keys);
+
+        // Only compare across layers (source_layer < target_layer for Formalizes)
+        let mut total_comparisons = 0;
+        for source_layer in &layer_keys {
+            for target_layer in &layer_keys {
+                if source_layer >= target_layer {
+                    continue; // Skip same-layer and reverse comparisons
+                }
+
+                let source_nodes = layers.get(source_layer).unwrap();
+                let target_nodes = layers.get(target_layer).unwrap();
+                let comparisons = source_nodes.len() * target_nodes.len();
+                total_comparisons += comparisons;
+
+                println!("  Comparing layer {} -> {} ({} × {} = {} pairs)",
+                    source_layer, target_layer,
+                    source_nodes.len(), target_nodes.len(), comparisons);
+
+                for (i, source_node) in source_nodes.iter().enumerate() {
+                    if i % 10 == 0 && i > 0 {
+                        println!("    Progress: {}/{} layer {} nodes", i, source_nodes.len(), source_layer);
+                    }
+
+                    for target_node in target_nodes {
+                        let similarity = self.calculate_semantic_similarity_with_ai(
+                            &source_node.content,
+                            source_node.formality_layer,
+                            &target_node.content,
+                            target_node.formality_layer,
+                            &ai,
+                        );
+
+                        if similarity < 0.5 {
+                            continue; // Not similar enough for Formalizes
+                        }
+
+                        // Create Formalizes edge suggestion
+                        let confidence = similarity * 0.9;
+                        let suggestion = EdgeSuggestion {
+                            source_id: source_node.id.clone(),
+                            target_id: target_node.id.clone(),
+                            kind: crate::EdgeKind::Formalizes,
+                            confidence,
+                            explanation: format!(
+                                "Same concept at different formality levels ({} -> {})",
+                                source_layer, target_layer
+                            ),
+                        };
+
+                        if confidence >= min_confidence {
+                            match self.add_edge(
+                                &suggestion.source_id,
+                                &suggestion.target_id,
+                                suggestion.kind,
+                                HashMap::new(),
+                            ) {
+                                Ok(_) => report.edges_created += 1,
+                                Err(_) => {} // Edge might already exist
+                            }
+                        } else if confidence >= 0.5 {
+                            report.suggestions.push(suggestion);
+                        }
+                    }
+                }
+            }
+        }
+
+        let (cache_size, _) = ai.cache_stats();
+        println!("  Total comparisons: {}", total_comparisons);
+        println!("  AI cache size: {} entries", cache_size);
+        println!("  Formalizes edges created: {}", report.edges_created);
+
+        report
+    }
+
     /// Infer relationships with AI enhancement for cross-layer semantic matching
     pub fn infer_all_relationships_with_ai(&mut self, min_confidence: f32) -> IngestionReport {
         let mut report = IngestionReport {

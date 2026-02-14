@@ -714,7 +714,8 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
         let req = request.into_inner();
         let mut graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
 
-        let report = graph.infer_all_relationships_with_ai(req.min_confidence);
+        // Use optimized cross-layer inference (only compares U0→U1, U0→U3, U1→U3)
+        let report = graph.infer_cross_layer_relationships_with_ai(req.min_confidence);
 
         if let Err(e) = self.store.save(&*graph) {
             eprintln!("Failed to persist after AI relationship inference: {}", e);
