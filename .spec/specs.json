@@ -153,8 +153,8 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Constraint",
         "metadata": {
-          "function": "detect_contradictions",
-          "source_file": "spec-core/src/graph.rs"
+          "source_file": "spec-core/src/graph.rs",
+          "function": "detect_contradictions"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -183,8 +183,8 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "line": "183-192"
+          "line": "183-192",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -228,8 +228,8 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Add"
+          "function": "Commands::Add",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -252,8 +252,8 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Check"
+          "function": "Commands::Check",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -264,8 +264,8 @@
         "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
         "kind": "Constraint",
         "metadata": {
-          "line": "18,162-169",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "line": "18,162-169"
         },
         "created_at": 1771062014,
         "modified_at": 1771062014,
@@ -300,8 +300,8 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Trace"
+          "function": "Commands::Trace",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -318,7 +318,7 @@
       },
       {
         "id": "fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2",
-        "content": "All high-priority features now have complete U0\u2192U2\u2192U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
+        "content": "All high-priority features now have complete U0→U2→U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771062281,
@@ -426,7 +426,7 @@
       },
       {
         "id": "8772404d-59f0-44da-970c-9347eceaaf42",
-        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f\u2080\u2081\u207b\u00b9(U1) \u222a f\u2080\u2082\u207b\u00b9(U2) \u222a ... \u222a f\u2080\u2099\u207b\u00b9(UN)",
+        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771064470,
@@ -579,7 +579,7 @@
       },
       {
         "id": "ac7787f6-2eaf-46a0-bc5b-7017d3282886",
-        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: \u2203x. (x \u2208 A1 \u2227 x \u2208 A2)",
+        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -588,7 +588,7 @@
       },
       {
         "id": "0154a181-1962-4aa1-aee2-236d2078caf6",
-        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: \u2203x. x \u2208 A",
+        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: ∃x. x ∈ A",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -624,7 +624,7 @@
       },
       {
         "id": "239316dd-4d2e-4ab2-b172-5fdd015fb5e1",
-        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (\u2203x. x \u2208 A)",
+        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (∃x. x ∈ A)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771066871,
@@ -822,7 +822,7 @@
       },
       {
         "id": "d79603df-d239-4d3f-af09-868ed2935374",
-        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings\u2014transcending the fundamental DSL limitation identified in conversation.md",
+        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings—transcending the fundamental DSL limitation identified in conversation.md",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070409,
@@ -831,7 +831,7 @@
       },
       {
         "id": "ce999406-30cc-424e-8bac-8efe06025a3f",
-        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations\u2014representing the first practical realization of the beyond-DSL specification paradigm",
+        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations—representing the first practical realization of the beyond-DSL specification paradigm",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070419,
@@ -843,10 +843,10 @@
         "content": "Session 57 verified goal achievement through comprehensive implementation audit: prover module with Z3 SMT solver integration (spec-core/src/prover/), complete U/D/A/f model implementation (spec-core/src/udaf.rs), and beyond-DSL paradigm realization. All three critical PROBLEM.md issues resolved. The project goal 'create an open-source specification description tool for a new era' is confirmed achieved.",
         "kind": "Assertion",
         "metadata": {
-          "session": "57",
+          "verified_modules": "prover, udaf",
           "date": "2026-02-14",
           "resolved_issues": "3 critical",
-          "verified_modules": "prover, udaf"
+          "session": "57"
         },
         "created_at": 1771070800,
         "modified_at": 1771070800,
@@ -1133,7 +1133,7 @@
       },
       {
         "id": "19d08ce6-8cba-4713-9999-a26d373ce7fa",
-        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f\u2080\u2082 transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
+        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f₀₂ transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771073305,
@@ -1190,10 +1190,10 @@
         "content": "Scenario: detect inter universe inconsistencies with transform",
         "kind": "Scenario",
         "metadata": {
-          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
           "confidence": "0.9",
           "test_function": "detect_inter_universe_inconsistencies_with_transform",
-          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test",
           "inferred": "true",
           "source_line": "2269"
         },
@@ -1206,12 +1206,12 @@
         "content": "Scenario: generate contract template returns none for non testable",
         "kind": "Scenario",
         "metadata": {
+          "inferred": "true",
+          "source_line": "1912",
           "extractor": "test",
           "confidence": "0.9",
-          "source_line": "1912",
-          "source_file": "spec-core/src/graph.rs",
           "test_function": "generate_contract_template_returns_none_for_non_testable",
-          "inferred": "true"
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1222,12 +1222,12 @@
         "content": "Scenario: detect inter universe inconsistencies empty",
         "kind": "Scenario",
         "metadata": {
+          "test_function": "detect_inter_universe_inconsistencies_empty",
           "source_line": "2262",
+          "inferred": "true",
           "source_file": "spec-core/src/graph.rs",
           "extractor": "test",
-          "confidence": "0.9",
-          "test_function": "detect_inter_universe_inconsistencies_empty",
-          "inferred": "true"
+          "confidence": "0.9"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1238,10 +1238,10 @@
         "content": "Scenario: coverage with tests",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "test_coverage_with_tests",
           "source_line": "1948",
-          "source_file": "spec-core/src/graph.rs",
           "confidence": "0.9",
+          "test_function": "test_coverage_with_tests",
+          "source_file": "spec-core/src/graph.rs",
           "extractor": "test",
           "inferred": "true"
         },
@@ -1254,12 +1254,12 @@
         "content": "Scenario: diff timestamps detects added nodes",
         "kind": "Scenario",
         "metadata": {
+          "extractor": "test",
           "inferred": "true",
           "source_line": "2128",
-          "test_function": "diff_timestamps_detects_added_nodes",
-          "confidence": "0.9",
           "source_file": "spec-core/src/graph.rs",
-          "extractor": "test"
+          "test_function": "diff_timestamps_detects_added_nodes",
+          "confidence": "0.9"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1270,12 +1270,12 @@
         "content": "AI-powered relationship inference (cross-layer semantic matching)",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "source_line": "56",
+          "extractor": "proto_rpc",
           "inferred": "true",
           "rpc_name": "InferAllRelationshipsWithAi",
-          "extractor": "proto_rpc"
+          "source_line": "56",
+          "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1286,12 +1286,12 @@
         "content": "Automatic relationship inference",
         "kind": "Assertion",
         "metadata": {
-          "inferred": "true",
-          "confidence": "0.95",
           "source_file": "proto/spec_oracle.proto",
-          "source_line": "53",
           "rpc_name": "InferAllRelationships",
-          "extractor": "proto_rpc"
+          "confidence": "0.95",
+          "inferred": "true",
+          "extractor": "proto_rpc",
+          "source_line": "53"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1303,11 +1303,11 @@
         "kind": "Assertion",
         "metadata": {
           "extractor": "proto_rpc",
-          "rpc_name": "SetNodeUniverse",
+          "source_file": "proto/spec_oracle.proto",
+          "confidence": "0.95",
           "inferred": "true",
           "source_line": "50",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95"
+          "rpc_name": "SetNodeUniverse"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1318,9 +1318,9 @@
         "content": "Inter-universe consistency (conversation.md U, D, A, f implementation)",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
           "inferred": "true",
           "source_file": "proto/spec_oracle.proto",
+          "extractor": "proto_rpc",
           "source_line": "49",
           "confidence": "0.95",
           "rpc_name": "DetectInterUniverseInconsistencies"
@@ -1334,12 +1334,12 @@
         "content": "RPC: Get compliance trend",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto",
+          "extractor": "proto_rpc",
           "source_line": "46",
-          "inferred": "true",
+          "confidence": "0.95",
           "rpc_name": "GetComplianceTrend",
-          "extractor": "proto_rpc"
+          "source_file": "proto/spec_oracle.proto",
+          "inferred": "true"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1350,12 +1350,12 @@
         "content": "RPC: Get node history",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "source_line": "45",
           "source_file": "proto/spec_oracle.proto",
+          "source_line": "45",
           "rpc_name": "GetNodeHistory",
-          "confidence": "0.95",
-          "inferred": "true"
+          "extractor": "proto_rpc",
+          "inferred": "true",
+          "confidence": "0.95"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1366,12 +1366,12 @@
         "content": "RPC: Diff timestamps",
         "kind": "Assertion",
         "metadata": {
-          "inferred": "true",
-          "extractor": "proto_rpc",
           "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "DiffTimestamps",
+          "inferred": "true",
           "confidence": "0.95",
-          "source_line": "44"
+          "source_line": "44",
+          "extractor": "proto_rpc",
+          "rpc_name": "DiffTimestamps"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1382,12 +1382,12 @@
         "content": "Temporal queries",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
           "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "43",
+          "confidence": "0.95",
           "inferred": "true",
-          "rpc_name": "QueryAtTimestamp"
+          "rpc_name": "QueryAtTimestamp",
+          "source_line": "43",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1398,11 +1398,11 @@
         "content": "RPC: Get compliance report",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
           "inferred": "true",
+          "source_file": "proto/spec_oracle.proto",
+          "extractor": "proto_rpc",
           "rpc_name": "GetComplianceReport",
+          "confidence": "0.95",
           "source_line": "40"
         },
         "created_at": 1771078430,
@@ -1414,12 +1414,12 @@
         "content": "Graded compliance",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
+          "extractor": "proto_rpc",
           "inferred": "true",
           "rpc_name": "CalculateCompliance",
-          "source_file": "proto/spec_oracle.proto",
           "source_line": "39",
-          "extractor": "proto_rpc"
+          "source_file": "proto/spec_oracle.proto",
+          "confidence": "0.95"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1431,11 +1431,11 @@
         "kind": "Assertion",
         "metadata": {
           "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "source_line": "36",
-          "rpc_name": "GetTestCoverage",
           "extractor": "proto_rpc",
-          "inferred": "true"
+          "inferred": "true",
+          "confidence": "0.95",
+          "rpc_name": "GetTestCoverage",
+          "source_line": "36"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1446,12 +1446,12 @@
         "content": "Executable contracts",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "35",
           "confidence": "0.95",
+          "inferred": "true",
+          "source_line": "35",
+          "source_file": "proto/spec_oracle.proto",
           "extractor": "proto_rpc",
-          "rpc_name": "GenerateContractTemplate",
-          "inferred": "true"
+          "rpc_name": "GenerateContractTemplate"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1462,12 +1462,12 @@
         "content": "RPC: Detect potential synonyms",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "inferred": "true",
           "confidence": "0.95",
+          "source_line": "32",
+          "inferred": "true",
           "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "DetectPotentialSynonyms",
-          "source_line": "32"
+          "extractor": "proto_rpc",
+          "rpc_name": "DetectPotentialSynonyms"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1478,12 +1478,12 @@
         "content": "Semantic normalization",
         "kind": "Assertion",
         "metadata": {
-          "rpc_name": "FindRelatedTerms",
-          "source_line": "31",
-          "inferred": "true",
           "confidence": "0.95",
+          "extractor": "proto_rpc",
+          "rpc_name": "FindRelatedTerms",
           "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc"
+          "source_line": "31",
+          "inferred": "true"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1494,12 +1494,12 @@
         "content": "RPC: Find formalizations",
         "kind": "Assertion",
         "metadata": {
-          "inferred": "true",
           "confidence": "0.95",
-          "source_line": "28",
-          "rpc_name": "FindFormalizations",
+          "extractor": "proto_rpc",
           "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc"
+          "inferred": "true",
+          "source_line": "28",
+          "rpc_name": "FindFormalizations"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1510,11 +1510,11 @@
         "content": "Layer-aware operations",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
-          "inferred": "true",
           "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "FilterByLayer",
+          "inferred": "true",
           "source_line": "27",
+          "confidence": "0.95",
+          "rpc_name": "FilterByLayer",
           "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
@@ -1526,12 +1526,12 @@
         "content": "Terminology resolution",
         "kind": "Assertion",
         "metadata": {
+          "source_line": "24",
+          "source_file": "proto/spec_oracle.proto",
+          "confidence": "0.95",
           "rpc_name": "ResolveTerminology",
           "inferred": "true",
-          "source_line": "24",
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto"
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1542,9 +1542,9 @@
         "content": "RPC: Detect layer inconsistencies",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
           "inferred": "true",
+          "extractor": "proto_rpc",
+          "confidence": "0.95",
           "rpc_name": "DetectLayerInconsistencies",
           "source_file": "proto/spec_oracle.proto",
           "source_line": "21"
@@ -1558,12 +1558,12 @@
         "content": "RPC: Detect omissions",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "confidence": "0.95",
           "rpc_name": "DetectOmissions",
           "inferred": "true",
+          "source_line": "20",
+          "confidence": "0.95",
           "source_file": "proto/spec_oracle.proto",
-          "source_line": "20"
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1575,9 +1575,9 @@
         "kind": "Assertion",
         "metadata": {
           "rpc_name": "DetectContradictions",
-          "source_line": "19",
-          "source_file": "proto/spec_oracle.proto",
           "inferred": "true",
+          "source_file": "proto/spec_oracle.proto",
+          "source_line": "19",
           "confidence": "0.95",
           "extractor": "proto_rpc"
         },
@@ -1590,12 +1590,12 @@
         "content": "Query and analysis",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
-          "inferred": "true",
           "confidence": "0.95",
+          "inferred": "true",
           "rpc_name": "Query",
-          "source_line": "18"
+          "source_file": "proto/spec_oracle.proto",
+          "source_line": "18",
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1606,12 +1606,12 @@
         "content": "RPC: Remove edge",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "15",
-          "inferred": "true",
           "extractor": "proto_rpc",
           "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
           "rpc_name": "RemoveEdge",
-          "source_file": "proto/spec_oracle.proto"
+          "inferred": "true",
+          "source_line": "15"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1622,9 +1622,9 @@
         "content": "RPC: List edges",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "proto/spec_oracle.proto",
           "source_line": "14",
           "rpc_name": "ListEdges",
-          "source_file": "proto/spec_oracle.proto",
           "extractor": "proto_rpc",
           "inferred": "true",
           "confidence": "0.95"
@@ -1638,12 +1638,12 @@
         "content": "Edge operations",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "13",
-          "rpc_name": "AddEdge",
-          "extractor": "proto_rpc",
           "inferred": "true",
+          "rpc_name": "AddEdge",
           "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95"
+          "confidence": "0.95",
+          "source_line": "13",
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1654,12 +1654,12 @@
         "content": "Scenario: detect explicit contradiction",
         "kind": "Scenario",
         "metadata": {
-          "inferred": "true",
-          "source_line": "1604",
-          "test_function": "detect_explicit_contradiction",
           "extractor": "test",
           "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs"
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "test_function": "detect_explicit_contradiction",
+          "source_line": "1604"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1670,11 +1670,11 @@
         "content": "Scenario: detect duplicate specifications",
         "kind": "Scenario",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
           "source_line": "1616",
+          "source_file": "spec-core/src/graph.rs",
           "test_function": "detect_duplicate_specifications",
-          "confidence": "0.9",
           "inferred": "true",
+          "confidence": "0.9",
           "extractor": "test"
         },
         "created_at": 1771077123,
@@ -1686,10 +1686,10 @@
         "content": "Scenario: detect semantic contradiction password length",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "detect_semantic_contradiction_password_length",
-          "source_file": "spec-core/src/graph.rs",
           "source_line": "1627",
+          "test_function": "detect_semantic_contradiction_password_length",
           "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
           "confidence": "0.9",
           "extractor": "test"
         },
@@ -1702,11 +1702,11 @@
         "content": "Scenario: no duplicate detection for synonym edges",
         "kind": "Scenario",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1644",
-          "extractor": "test",
           "test_function": "no_duplicate_detection_for_synonym_edges",
           "confidence": "0.9",
+          "source_line": "1644",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test",
           "inferred": "true"
         },
         "created_at": 1771077123,
@@ -1718,11 +1718,11 @@
         "content": "Scenario: detect omission isolated node",
         "kind": "Scenario",
         "metadata": {
+          "extractor": "test",
+          "inferred": "true",
           "confidence": "0.9",
           "test_function": "detect_omission_isolated_node",
-          "inferred": "true",
           "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
           "source_line": "1657"
         },
         "created_at": 1771077123,
@@ -1736,9 +1736,9 @@
         "metadata": {
           "test_function": "detect_omission_domain_without_refinements",
           "confidence": "0.9",
+          "source_line": "1666",
           "source_file": "spec-core/src/graph.rs",
           "inferred": "true",
-          "source_line": "1666",
           "extractor": "test"
         },
         "created_at": 1771077123,
@@ -1750,11 +1750,11 @@
         "content": "Scenario: detect omission scenario without assertions",
         "kind": "Scenario",
         "metadata": {
-          "confidence": "0.9",
-          "inferred": "true",
           "extractor": "test",
           "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
           "source_line": "1678",
+          "inferred": "true",
           "test_function": "detect_omission_scenario_without_assertions"
         },
         "created_at": 1771077123,
@@ -1766,12 +1766,12 @@
         "content": "RPC: Remove node",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "source_line": "10",
-          "inferred": "true",
-          "rpc_name": "RemoveNode",
           "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95"
+          "extractor": "proto_rpc",
+          "rpc_name": "RemoveNode",
+          "inferred": "true",
+          "confidence": "0.95",
+          "source_line": "10"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -1782,10 +1782,10 @@
         "content": "RPC: List nodes",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "9",
           "rpc_name": "ListNodes",
+          "source_line": "9",
           "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
           "extractor": "proto_rpc",
           "inferred": "true"
         },
@@ -1798,11 +1798,11 @@
         "content": "RPC: Get node",
         "kind": "Assertion",
         "metadata": {
-          "rpc_name": "GetNode",
           "inferred": "true",
-          "extractor": "proto_rpc",
-          "source_line": "8",
           "confidence": "0.95",
+          "source_line": "8",
+          "extractor": "proto_rpc",
+          "rpc_name": "GetNode",
           "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
@@ -1814,11 +1814,11 @@
         "content": "Node operations",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
           "source_line": "7",
           "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
+          "extractor": "proto_rpc",
           "rpc_name": "AddNode",
+          "inferred": "true",
           "confidence": "0.95"
         },
         "created_at": 1771078430,
@@ -1846,12 +1846,12 @@
         "content": "Scenario: detect no layer inconsistency correct direction",
         "kind": "Scenario",
         "metadata": {
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9",
           "test_function": "detect_no_layer_inconsistency_correct_direction",
           "source_line": "1781",
-          "extractor": "test"
+          "extractor": "test",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1862,10 +1862,10 @@
         "content": "where the source has higher formality than target (should be reversed).",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "doc",
-          "confidence": "0.7",
           "inferred": "true",
           "source_file": "spec-core/src/graph.rs",
+          "extractor": "doc",
+          "confidence": "0.7",
           "doc_comment": "true",
           "source_line": "520"
         },
@@ -1878,12 +1878,12 @@
         "content": "Scenario: detect potential synonyms by structure",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "1834",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "detect_potential_synonyms_by_structure",
           "extractor": "test",
           "confidence": "0.9",
-          "inferred": "true"
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "detect_potential_synonyms_by_structure",
+          "source_line": "1834"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1894,11 +1894,11 @@
         "content": "Scenario: no synonyms when already marked",
         "kind": "Scenario",
         "metadata": {
+          "test_function": "no_synonyms_when_already_marked",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
           "inferred": "true",
           "source_line": "1852",
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "no_synonyms_when_already_marked",
           "extractor": "test"
         },
         "created_at": 1771077123,
@@ -1910,12 +1910,12 @@
         "content": "Scenario: generate contract template for constraint",
         "kind": "Scenario",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "test_function": "generate_contract_template_for_constraint",
           "source_line": "1867",
+          "source_file": "spec-core/src/graph.rs",
           "extractor": "test",
-          "confidence": "0.9"
+          "test_function": "generate_contract_template_for_constraint",
+          "confidence": "0.9",
+          "inferred": "true"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -1928,9 +1928,9 @@
         "metadata": {
           "confidence": "0.9",
           "source_file": "spec-core/src/graph.rs",
-          "test_function": "detect_inter_universe_inconsistencies_missing_transform",
           "inferred": "true",
           "source_line": "2308",
+          "test_function": "detect_inter_universe_inconsistencies_missing_transform",
           "extractor": "test"
         },
         "created_at": 1771077123,
@@ -1942,12 +1942,12 @@
         "content": "Scenario: list nodes with filter",
         "kind": "Scenario",
         "metadata": {
+          "inferred": "true",
+          "extractor": "test",
+          "confidence": "0.9",
           "test_function": "list_nodes_with_filter",
           "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "inferred": "true",
-          "source_line": "1786",
-          "confidence": "0.9"
+          "source_line": "1786"
         },
         "created_at": 1771087004,
         "modified_at": 1771087004,
@@ -1960,10 +1960,10 @@
         "metadata": {
           "confidence": "0.9",
           "test_function": "compliance_report_with_linked_code",
-          "source_file": "spec-core/src/graph.rs",
           "source_line": "2280",
-          "inferred": "true",
-          "extractor": "test"
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true"
         },
         "created_at": 1771087004,
         "modified_at": 1771087004,
@@ -1974,10 +1974,10 @@
         "content": "Scenario: diff timestamps shows no changes for stable graph",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "2368",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "diff_timestamps_shows_no_changes_for_stable_graph",
           "extractor": "test",
+          "source_line": "2368",
+          "test_function": "diff_timestamps_shows_no_changes_for_stable_graph",
+          "source_file": "spec-core/src/graph.rs",
           "inferred": "true",
           "confidence": "0.9"
         },
@@ -1990,9 +1990,9 @@
         "content": "Scenario: get node history nonexistent returns none",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "2418",
-          "source_file": "spec-core/src/graph.rs",
           "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2418",
           "confidence": "0.9",
           "extractor": "test",
           "test_function": "get_node_history_nonexistent_returns_none"
@@ -2006,11 +2006,11 @@
         "content": "Scenario: get compliance trend with data",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "2434",
-          "extractor": "test",
+          "confidence": "0.9",
           "source_file": "spec-core/src/graph.rs",
           "test_function": "get_compliance_trend_with_data",
-          "confidence": "0.9",
+          "source_line": "2434",
+          "extractor": "test",
           "inferred": "true"
         },
         "created_at": 1771087004,
@@ -2019,7 +2019,7 @@
       },
       {
         "id": "ac78bcec-f784-49aa-a201-30f4641fdc16",
-        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f\u2080\u2083\u207b\u00b9(U3) = f\u2080\u2083\u207b\u00b9(f\u2080\u2083\u207b\u00b9(U3)) for the reverse mapping function.",
+        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f₀₃⁻¹(U3) = f₀₃⁻¹(f₀₃⁻¹(U3)) for the reverse mapping function.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771087179,
@@ -2046,7 +2046,7 @@
       },
       {
         "id": "98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5",
-        "content": "Cross-layer edge inference uses layer-aware similarity threshold: 0.15 for cross-layer connections (U0\u2194U2, U0\u2194U3), 0.3 for same-layer connections. This enables automatic U0-U2-U3 relationship creation for the reverse mapping engine.",
+        "content": "Cross-layer edge inference uses layer-aware similarity threshold: 0.15 for cross-layer connections (U0↔U2, U0↔U3), 0.3 for same-layer connections. This enables automatic U0-U2-U3 relationship creation for the reverse mapping engine.",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771088204,
@@ -2130,8 +2130,8 @@
         "content": "Session 103 verified that Z3 formal verification is fully integrated and working by testing contradictory password constraints (at least 12 vs at most 10) which Z3 correctly detected as formally proven inconsistent",
         "kind": "Definition",
         "metadata": {
-          "meta_specification": "true",
-          "describes": "session_103_z3_verification_test"
+          "describes": "session_103_z3_verification_test",
+          "meta_specification": "true"
         },
         "created_at": 1771093376,
         "modified_at": 1771093376,
@@ -2139,7 +2139,7 @@
       },
       {
         "id": "e33e97b5-f089-4146-b8c1-4d3a9a97f613",
-        "content": "The reverse mapping engine is verified as functional: f\u2080\u2082\u207b\u00b9(U2) extracts from proto, f\u2080\u2083\u207b\u00b9(U3) extracts from code, Z3 formal verification detects contradictions with mathematical proof, and idempotent extraction prevents duplicates",
+        "content": "The reverse mapping engine is verified as functional: f₀₂⁻¹(U2) extracts from proto, f₀₃⁻¹(U3) extracts from code, Z3 formal verification detects contradictions with mathematical proof, and idempotent extraction prevents duplicates",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771093376,
@@ -2160,10 +2160,10 @@
         "content": "Represents a condition that an implementation must satisfy to be in the admissible set.",
         "kind": "Constraint",
         "metadata": {
+          "extractor": "doc",
           "inferred": "true",
           "confidence": "0.8",
           "source_line": "180",
-          "extractor": "doc",
           "source_file": "spec-core/src/udaf.rs",
           "doc_comment": "true"
         },
@@ -2176,12 +2176,12 @@
         "content": "Returns the newly extracted InferredSpecification objects that should be ingested into the graph.",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.7",
-          "source_file": "spec-core/src/udaf.rs",
-          "source_line": "404",
-          "inferred": "true",
           "doc_comment": "true",
-          "extractor": "doc"
+          "source_file": "spec-core/src/udaf.rs",
+          "extractor": "doc",
+          "source_line": "404",
+          "confidence": "0.7",
+          "inferred": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2189,15 +2189,15 @@
       },
       {
         "id": "69af9728-29c3-4294-ba84-78799a10cad6",
-        "content": "- \"must be\" / \"must not be\" \u2192 boolean constraints",
+        "content": "- \"must be\" / \"must not be\" → boolean constraints",
         "kind": "Constraint",
         "metadata": {
-          "doc_comment": "true",
-          "source_line": "576",
+          "extractor": "doc",
           "source_file": "spec-core/src/udaf.rs",
-          "confidence": "0.8",
           "inferred": "true",
-          "extractor": "doc"
+          "source_line": "576",
+          "confidence": "0.8",
+          "doc_comment": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2208,13 +2208,13 @@
         "content": "Invariant: fetched.content, \"User must authenticate\"",
         "kind": "Definition",
         "metadata": {
-          "example_purpose": "test_data",
-          "inferred": "true",
-          "source_line": "1780",
-          "is_example": "true",
-          "assertion": "fetched.content, \"User must authenticate\"",
           "confidence": "0.95",
+          "inferred": "true",
+          "example_purpose": "test_data",
+          "assertion": "fetched.content, \"User must authenticate\"",
           "extractor": "assertion",
+          "is_example": "true",
+          "source_line": "1780",
           "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771093752,
@@ -2226,14 +2226,14 @@
         "content": "Invariant: user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
         "kind": "Definition",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.95",
-          "inferred": "true",
-          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
           "is_example": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "example_purpose": "test_data",
           "extractor": "assertion",
+          "confidence": "0.95",
           "source_line": "2034",
-          "example_purpose": "test_data"
+          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
+          "inferred": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2244,14 +2244,14 @@
         "content": "- \"Password must be >= 8 chars\" (natural language)",
         "kind": "Definition",
         "metadata": {
-          "example_purpose": "test_data",
-          "is_example": "true",
-          "confidence": "0.8",
-          "source_file": "spec-core/src/ai_semantic.rs",
-          "extractor": "doc",
-          "doc_comment": "true",
           "source_line": "5",
-          "inferred": "true"
+          "doc_comment": "true",
+          "inferred": "true",
+          "is_example": "true",
+          "source_file": "spec-core/src/ai_semantic.rs",
+          "example_purpose": "test_data",
+          "extractor": "doc",
+          "confidence": "0.8"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2262,12 +2262,12 @@
         "content": "Scenario: load nonexistent returns empty",
         "kind": "Scenario",
         "metadata": {
-          "confidence": "0.9",
-          "test_function": "load_nonexistent_returns_empty",
-          "source_line": "65",
-          "source_file": "spec-core/src/store.rs",
           "inferred": "true",
-          "extractor": "test"
+          "extractor": "test",
+          "test_function": "load_nonexistent_returns_empty",
+          "confidence": "0.9",
+          "source_line": "65",
+          "source_file": "spec-core/src/store.rs"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2279,13 +2279,13 @@
         "kind": "Definition",
         "metadata": {
           "confidence": "0.95",
-          "extractor": "assertion",
           "source_file": "spec-core/src/extract.rs",
-          "assertion": "user.is_authenticated()",
           "is_example": "true",
-          "example_purpose": "test_data",
+          "extractor": "assertion",
           "inferred": "true",
-          "source_line": "973"
+          "source_line": "973",
+          "example_purpose": "test_data",
+          "assertion": "user.is_authenticated()"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2296,12 +2296,12 @@
         "content": "Invariant: !validate_user_authentication(&user)",
         "kind": "Constraint",
         "metadata": {
-          "source_line": "980",
-          "assertion": "!validate_user_authentication(&user)",
-          "source_file": "spec-core/src/extract.rs",
-          "confidence": "0.95",
           "extractor": "assertion",
-          "inferred": "true"
+          "source_line": "980",
+          "inferred": "true",
+          "assertion": "!validate_user_authentication(&user)",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/extract.rs"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2312,12 +2312,12 @@
         "content": "Invariant: report.nodes_created, 2, \"Should create 2 high-confidence nodes\"",
         "kind": "Constraint",
         "metadata": {
-          "assertion": "report.nodes_created, 2, \"Should create 2 high-confidence nodes\"",
-          "source_file": "spec-core/src/extract.rs",
           "confidence": "0.95",
-          "extractor": "assertion",
+          "source_file": "spec-core/src/extract.rs",
+          "assertion": "report.nodes_created, 2, \"Should create 2 high-confidence nodes\"",
+          "inferred": "true",
           "source_line": "1064",
-          "inferred": "true"
+          "extractor": "assertion"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2329,11 +2329,11 @@
         "kind": "Constraint",
         "metadata": {
           "inferred": "true",
-          "confidence": "0.95",
           "extractor": "assertion",
+          "confidence": "0.95",
           "source_file": "spec-core/src/extract.rs",
-          "source_line": "1065",
-          "assertion": "report.nodes_skipped, 1, \"Should skip 1 low-confidence node\""
+          "assertion": "report.nodes_skipped, 1, \"Should skip 1 low-confidence node\"",
+          "source_line": "1065"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2344,12 +2344,12 @@
         "content": "Invariant: detect.content, \"Detect contradictions between specifications\"",
         "kind": "Constraint",
         "metadata": {
+          "source_line": "1209",
+          "confidence": "0.95",
           "assertion": "detect.content, \"Detect contradictions between specifications\"",
           "source_file": "spec-core/src/extract.rs",
-          "extractor": "assertion",
           "inferred": "true",
-          "source_line": "1209",
-          "confidence": "0.95"
+          "extractor": "assertion"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2360,12 +2360,12 @@
         "content": "Scenario: validate user authentication",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "validate_user_authentication",
-          "confidence": "0.9",
-          "inferred": "true",
           "source_file": "spec-core/src/extract.rs",
           "source_line": "963",
-          "extractor": "test"
+          "extractor": "test",
+          "confidence": "0.9",
+          "test_function": "validate_user_authentication",
+          "inferred": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2376,12 +2376,12 @@
         "content": "Scenario: authentication required",
         "kind": "Scenario",
         "metadata": {
-          "extractor": "test",
-          "test_function": "test_authentication_required",
-          "source_file": "spec-core/src/extract.rs",
+          "inferred": "true",
           "source_line": "977",
+          "source_file": "spec-core/src/extract.rs",
           "confidence": "0.9",
-          "inferred": "true"
+          "test_function": "test_authentication_required",
+          "extractor": "test"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2393,11 +2393,11 @@
         "kind": "Constraint",
         "metadata": {
           "extractor": "doc",
-          "doc_comment": "true",
+          "source_file": "spec-core/src/extract.rs",
           "inferred": "true",
           "source_line": "971",
-          "source_file": "spec-core/src/extract.rs",
-          "confidence": "0.8"
+          "confidence": "0.8",
+          "doc_comment": "true"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2408,14 +2408,14 @@
         "content": "Violation: Amount must be greater than zero",
         "kind": "Definition",
         "metadata": {
-          "source_file": "spec-core/src/extract.rs",
-          "example_purpose": "test_data",
-          "inferred": "true",
-          "confidence": "0.85",
           "is_example": "true",
-          "panic": "Amount must be greater than zero",
+          "inferred": "true",
+          "example_purpose": "test_data",
+          "source_line": "985",
           "extractor": "panic",
-          "source_line": "985"
+          "source_file": "spec-core/src/extract.rs",
+          "confidence": "0.85",
+          "panic": "Amount must be greater than zero"
         },
         "created_at": 1771093752,
         "modified_at": 1771093752,
@@ -2426,14 +2426,14 @@
         "content": "Invariant: validate_password(short_password).is_err()",
         "kind": "Definition",
         "metadata": {
-          "source_line": "4",
-          "source_file": "/tmp/test_extract.rs",
-          "extractor": "assertion",
-          "example_purpose": "test_data",
-          "is_example": "true",
-          "assertion": "validate_password(short_password).is_err()",
           "inferred": "true",
-          "confidence": "0.95"
+          "extractor": "assertion",
+          "assertion": "validate_password(short_password).is_err()",
+          "confidence": "0.95",
+          "source_line": "4",
+          "example_purpose": "test_data",
+          "source_file": "/tmp/test_extract.rs",
+          "is_example": "true"
         },
         "created_at": 1771094226,
         "modified_at": 1771094226,
@@ -2444,14 +2444,14 @@
         "content": "Invariant: validate_password(long_password).is_ok()",
         "kind": "Definition",
         "metadata": {
-          "assertion": "validate_password(long_password).is_ok()",
           "example_purpose": "test_data",
-          "is_example": "true",
           "source_line": "7",
           "source_file": "/tmp/test_extract.rs",
+          "assertion": "validate_password(long_password).is_ok()",
+          "is_example": "true",
           "confidence": "0.95",
-          "extractor": "assertion",
-          "inferred": "true"
+          "inferred": "true",
+          "extractor": "assertion"
         },
         "created_at": 1771094226,
         "modified_at": 1771094226,
@@ -2462,14 +2462,14 @@
         "content": "Invariant: login(user, \"correct_password\").is_ok()",
         "kind": "Definition",
         "metadata": {
-          "inferred": "true",
-          "confidence": "0.95",
-          "source_line": "13",
-          "extractor": "assertion",
           "source_file": "/tmp/test_extract.rs",
-          "is_example": "true",
           "example_purpose": "test_data",
-          "assertion": "login(user, \"correct_password\").is_ok()"
+          "inferred": "true",
+          "assertion": "login(user, \"correct_password\").is_ok()",
+          "confidence": "0.95",
+          "extractor": "assertion",
+          "source_line": "13",
+          "is_example": "true"
         },
         "created_at": 1771094226,
         "modified_at": 1771094226,
@@ -2480,14 +2480,14 @@
         "content": "Invariant: login(user, \"wrong_password\").is_err()",
         "kind": "Definition",
         "metadata": {
-          "assertion": "login(user, \"wrong_password\").is_err()",
-          "confidence": "0.95",
+          "source_line": "14",
           "source_file": "/tmp/test_extract.rs",
           "example_purpose": "test_data",
+          "confidence": "0.95",
           "inferred": "true",
-          "is_example": "true",
-          "source_line": "14",
-          "extractor": "assertion"
+          "extractor": "assertion",
+          "assertion": "login(user, \"wrong_password\").is_err()",
+          "is_example": "true"
         },
         "created_at": 1771094226,
         "modified_at": 1771094226,
@@ -2495,7 +2495,7 @@
       },
       {
         "id": "b549f3a8-d094-4f57-b67e-6048b3a09704",
-        "content": "The extraction engine must use AI to extract intent from test functions, generating U0 root specifications through reverse mapping f\u2080\u2083\u207b\u00b9",
+        "content": "The extraction engine must use AI to extract intent from test functions, generating U0 root specifications through reverse mapping f₀₃⁻¹",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771094270,
@@ -2554,6 +2554,696 @@
         "metadata": {},
         "created_at": 1771094771,
         "modified_at": 1771094771,
+        "formality_layer": 0
+      },
+      {
+        "id": "176108f4-e7e9-4d3f-b435-f3ec7fad61fd",
+        "content": "✅ 制約抽出機能 - `extractconstraintsfromcontent()` でパターンベース抽出",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.85",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "inferred": "true",
+          "source_line": "40"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "045c00a3-2970-40b8-b8f2-51c6b85fe082",
+        "content": "A: [a1087af9] Password must be at least 12 characters",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "documentation",
+          "confidence": "0.85",
+          "source_file": "PROBLEM.md",
+          "inferred": "true",
+          "source_line": "48"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "82358da8-c1ca-4350-a511-d117404cc79f",
+        "content": "B: [334ebd1d] Password must be at most 10 characters",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "documentation",
+          "inferred": "true",
+          "source_file": "PROBLEM.md",
+          "confidence": "0.85",
+          "source_line": "49"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "a8968ff5-a43a-4b78-aaaa-a5938752f8a5",
+        "content": "対応パターン: password length (min/max), generic numeric constraints",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "extractor": "documentation",
+          "confidence": "0.85",
+          "inferred": "true",
+          "source_line": "67"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "1cd830f8-78ec-485e-8ec3-19c0ed997a79",
+        "content": "Requirement: \"The system must detect omissions when nodes are isolated\"",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "documentation",
+          "source_line": "109",
+          "confidence": "0.95",
+          "source_file": "PROBLEM.md",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "6238b37c-bfbc-484e-8c03-5d040a5fd69a",
+        "content": "→ 単語集合: {the, system, must, detect, omissions, when, nodes, are, isolated}",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "documentation",
+          "source_line": "110",
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_file": "PROBLEM.md"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "155edfba-78e1-437d-b5f5-e7a597d8ef36",
+        "content": "\"Scenario: detect inter universe inconsistencies empty\"",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.7",
+          "source_file": "PROBLEM.md",
+          "inferred": "true",
+          "extractor": "documentation",
+          "source_line": "164"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "769c7c84-bffe-469b-a0b6-1bba5c84d734",
+        "content": "✅ キーワードベースのヒューリスティック検証（\"must\" vs \"forbidden\"）",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "source_line": "248",
+          "confidence": "0.85"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "92c797eb-ab9a-4ab6-95a5-1c66f21988b4",
+        "content": "ProofMethod: SMTSolver (Z3), ConstraintSolving, TheoremProver, PropertyTesting, Manual",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.85",
+          "source_line": "258",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 1
+      },
+      {
+        "id": "c740fe2d-996a-4805-bcac-42fda3fe7e7e",
+        "content": "Z3統合: SMT formulas生成、constraint solving、counterexample detection",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "confidence": "0.85",
+          "inferred": "true",
+          "extractor": "documentation",
+          "source_line": "260"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "9aa37210-4db9-474e-945e-79ffd12c9dbe",
+        "content": "node 76: \"Z3 SMT solver provides complete formal verification\"",
+        "kind": "Assertion",
+        "metadata": {
+          "inferred": "true",
+          "confidence": "0.75",
+          "source_file": "PROBLEM.md",
+          "source_line": "266",
+          "extractor": "documentation"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "16f3aec0-ade7-46e3-87be-5f7dc902879a",
+        "content": "`AdmissibleSet` struct with specid, universeid, constraints",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "confidence": "0.85",
+          "source_line": "281",
+          "inferred": "true",
+          "extractor": "documentation"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "2c009eb7-f42d-41d5-9574-149b3fa72181",
+        "content": "Constraint追加・検証機能",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "source_line": "282",
+          "inferred": "true",
+          "extractor": "documentation",
+          "confidence": "0.85"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "b4d4dadc-030b-41e1-9abd-3a95458e54fa",
+        "content": "Constraint extraction: 8種類のパターンマッチャー",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "source_line": "370",
+          "confidence": "0.85",
+          "inferred": "true",
+          "extractor": "documentation"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "bcd05c78-f0f4-4ffe-b63f-5838a44d7c88",
+        "content": "`ConstraintKind`: Universal (∀), Existential (∃)",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "inferred": "true",
+          "confidence": "0.85",
+          "source_line": "373"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "45b6369b-27d4-4fe6-9bd7-5558259cb7e8",
+        "content": "Constraint = ∀（普遍制約）- conversation.mdの理論通り",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "documentation",
+          "confidence": "0.85",
+          "source_line": "378",
+          "source_file": "PROBLEM.md"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "df42caf9-321b-4d33-b6cb-f86f3883a0de",
+        "content": "Constraint → SMT formula変換",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_file": "PROBLEM.md",
+          "source_line": "384",
+          "confidence": "0.85",
+          "extractor": "documentation"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "f4822d1a-af51-4bd7-8da8-de6882b07e76",
+        "content": "AI-powered constraint extraction - 自然言語から形式制約抽出",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "391",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "inferred": "true",
+          "confidence": "0.85"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "a0a367e8-b450-41f7-950b-d758dc247fbf",
+        "content": "Constraint extraction: 8 pattern matchers (node 72)",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "inferred": "true",
+          "extractor": "documentation",
+          "confidence": "0.85",
+          "source_line": "397"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "54a9f32d-4d80-4929-8d64-79a50fbcdc77",
+        "content": "node 72: \"Constraint extraction extracts formal constraints from natural language\"",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "documentation",
+          "inferred": "true",
+          "source_file": "PROBLEM.md",
+          "confidence": "0.85",
+          "source_line": "400"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "705a3787-e362-40af-b785-bc7d778485a3",
+        "content": "自動kind推論 (constraint, assertion, scenario, definition, domain)",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "inferred": "true",
+          "source_line": "421",
+          "extractor": "documentation",
+          "confidence": "0.85"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "3cd8ee65-c74e-4c77-af73-12deccea7d35",
+        "content": "仕様ごとに個別ファイルで管理（例：`.spec/nodes/constraint-001.yaml`）",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "documentation",
+          "inferred": "true",
+          "source_file": "PROBLEM.md",
+          "source_line": "486",
+          "confidence": "0.85"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "40d5b1c3-fe7c-4a4c-9a8b-a0ef9b6cc537",
+        "content": "+        \"content\": \"Password must be at least 8 characters\",",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "source_line": "500",
+          "extractor": "documentation",
+          "confidence": "0.85",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "0ad4230e-46d9-4b8f-bb43-ee86449523fd",
+        "content": "+        \"kind\": \"Constraint\",",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "501",
+          "confidence": "0.85",
+          "source_file": "PROBLEM.md",
+          "extractor": "documentation",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "27cde272-f061-416c-8a36-cd8d2af3eb3a",
+        "content": "~~`spec add-node \"パスワードは8文字以上\" --kind constraint` ← ユーザーはkindを理解する必要がある~~ ✅ 解決済み",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "545",
+          "source_file": "PROBLEM.md",
+          "inferred": "true",
+          "confidence": "0.85",
+          "extractor": "documentation"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "ec0c18bd-64dc-4294-9a57-35715d294de1",
+        "content": "🚀 Running in standalone mode (no server required)",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_file": "PROBLEM.md",
+          "confidence": "0.85",
+          "extractor": "documentation",
+          "source_line": "594"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "d3693f98-770f-4467-916a-96ba85bc90e5",
+        "content": "constraint: 「普遍的な不変条件」？",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "source_line": "743",
+          "confidence": "0.85",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "95915909-6e2d-4b03-97c0-6ce87008b028",
+        "content": "「パスワードは8文字以上」は constraint？ assertion？",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.85",
+          "inferred": "true",
+          "source_line": "748",
+          "source_file": "PROBLEM.md",
+          "extractor": "documentation"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "e5014827-4916-47b8-8294-7db46b3fea69",
+        "content": "「レスポンスタイムは1秒以内」は constraint？ assertion？",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "source_line": "750",
+          "extractor": "documentation",
+          "confidence": "0.85",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "0e47a86a-4072-4f77-88c2-db21e38bf379",
+        "content": "「これは〜という意味なので、constraintが適切です」と説明",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "documentation",
+          "source_line": "756",
+          "inferred": "true",
+          "confidence": "0.85",
+          "source_file": "PROBLEM.md"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "0be3d4b9-4c67-4f5e-9f4a-d19270a9b3aa",
+        "content": "$ spec list-nodes --kind Constraint | head -5",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "964",
+          "extractor": "documentation",
+          "inferred": "true",
+          "confidence": "0.85",
+          "source_file": "PROBLEM.md"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "fc1a5bc8-cf68-4849-8925-c7dd86a9b289",
+        "content": "[U0] [81afa3f5] constraint - The system must detect contradictions...",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "965",
+          "confidence": "0.95",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "4f5f3e12-e66c-417a-87a4-8c015d1c8f66",
+        "content": "[U2] [141cf3b5] constraint - DetectContradictions RPC returns...",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "confidence": "0.85",
+          "inferred": "true",
+          "source_line": "966",
+          "extractor": "documentation"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "fbb9d189-6c2e-4a7f-b450-d051dd7ed22c",
+        "content": "[U3] [386b1821] constraint - The detectcontradictions function...",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "967",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "confidence": "0.85",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "23fe6ceb-018d-4ff0-980b-89f4146b6dca",
+        "content": "`[scenario] System identifies isolated nodes --[refines]--> [constraint] Server must detect omissions`",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "source_line": "992",
+          "inferred": "true",
+          "confidence": "0.85",
+          "extractor": "documentation"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "7c26ac77-73ca-4a10-8c36-305c3c1a9e9d",
+        "content": "[81afa3f5] constraint: The system must detect contradictions...",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "confidence": "0.95",
+          "source_line": "1014",
+          "source_file": "PROBLEM.md",
+          "extractor": "documentation"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "514f560c-8639-457b-a36f-ca8544c0d2dc",
+        "content": "→ refines [f6953636] scenario: Specifications can be refined...",
+        "kind": "Assertion",
+        "metadata": {
+          "source_line": "1019",
+          "inferred": "true",
+          "source_file": "PROBLEM.md",
+          "extractor": "documentation",
+          "confidence": "0.75"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "4b0d1170-0d16-4f38-97cb-1faa05ec0e1f",
+        "content": "`spec add-node \"Passwords must contain alphanumeric characters\" --kind constraint`",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1027",
+          "confidence": "0.85",
+          "inferred": "true",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "17d7541d-80c3-4e7d-8452-cce26d6ab7e0",
+        "content": "\"Password must be at least 8 characters\" (77ad7450...)",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "documentation",
+          "confidence": "0.85",
+          "source_line": "1061",
+          "source_file": "PROBLEM.md"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "247d9f31-d22e-4235-aabd-2db7b23dc94c",
+        "content": "\"Password must be at least 8 characters\" (34bf0b12...)",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "PROBLEM.md",
+          "confidence": "0.85",
+          "source_line": "1062",
+          "extractor": "documentation",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "3b967bd7-57df-4aaa-89f7-16623aca7a7b",
+        "content": "\"Password must be minimum 10 characters\" (5237d0e8...)",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.85",
+          "source_line": "1063",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "inferred": "true"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "5c685387-6a8f-4f2a-aee3-1b08bd5dd7a0",
+        "content": "\"Password must be at least 8 characters long\" (5fdeafb2...)",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.85",
+          "source_line": "1064",
+          "extractor": "documentation",
+          "inferred": "true",
+          "source_file": "PROBLEM.md"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "fcb22d04-27ab-4464-b197-fac27c472d92",
+        "content": "kind別グルーピング（Assertion, Constraint, Scenario）",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_file": "PROBLEM.md",
+          "extractor": "documentation",
+          "source_line": "1083",
+          "confidence": "0.85"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "558cf3f4-9f26-43fb-825b-820dedc09a05",
+        "content": "kind フィルタリング (`--kind constraint`)",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.85",
+          "inferred": "true",
+          "extractor": "documentation",
+          "source_line": "1086",
+          "source_file": "PROBLEM.md"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "97713d71-9aed-47be-8f36-1b51758b736f",
+        "content": "`spec find --layer 0 --domain authentication --kind constraint`",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_line": "1126",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "confidence": "0.85"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
+        "formality_layer": 0
+      },
+      {
+        "id": "8a40ecae-7b2e-45a3-a2b2-b5d46b68e854",
+        "content": "詳細: `spec detect-omissions`が169個の漏れを報告するが、多すぎて対処できない。また、明らかに関連している仕様（\"Passwords must be at least 8 characters\"と\"Invariant: password.len() >= 8\"）が孤立として報告される。",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.85",
+          "inferred": "true",
+          "extractor": "documentation",
+          "source_file": "PROBLEM.md",
+          "source_line": "1133"
+        },
+        "created_at": 1771095287,
+        "modified_at": 1771095287,
         "formality_layer": 0
       }
     ],
@@ -3799,8 +4489,8 @@
           "id": "f0a1e3a4-9dcc-404d-bdf1-f5a426dbefd2",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.6636363636363636",
             "auto_inferred": "true",
+            "confidence": "0.6636363636363636",
             "method": "semantic_keyword_match"
           },
           "created_at": 1771077954
@@ -3813,9 +4503,9 @@
           "id": "9a267acc-43c4-4481-827b-028d12e194e8",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.62",
             "auto_inferred": "true",
-            "method": "semantic_keyword_match"
+            "method": "semantic_keyword_match",
+            "confidence": "0.62"
           },
           "created_at": 1771077954
         }
@@ -3827,9 +4517,9 @@
           "id": "5fa64f56-f9d4-4299-a658-900d53eaae9d",
           "kind": "Formalizes",
           "metadata": {
+            "method": "semantic_keyword_match",
             "confidence": "0.5904761904761905",
-            "auto_inferred": "true",
-            "method": "semantic_keyword_match"
+            "auto_inferred": "true"
           },
           "created_at": 1771077970
         }
@@ -3842,8 +4532,8 @@
           "kind": "Formalizes",
           "metadata": {
             "method": "semantic_keyword_match",
-            "auto_inferred": "true",
-            "confidence": "0.5818181818181818"
+            "confidence": "0.5818181818181818",
+            "auto_inferred": "true"
           },
           "created_at": 1771077970
         }
@@ -3855,9 +4545,9 @@
           "id": "980c9534-96b0-40e5-8f5f-a30d949b4d85",
           "kind": "Formalizes",
           "metadata": {
-            "method": "semantic_keyword_match",
+            "auto_inferred": "true",
             "confidence": "0.5739130434782609",
-            "auto_inferred": "true"
+            "method": "semantic_keyword_match"
           },
           "created_at": 1771077970
         }
@@ -3883,8 +4573,8 @@
           "id": "3c49520d-bae0-4476-a6c8-5cf8891367e1",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.5173913043478261",
             "method": "semantic_keyword_match",
+            "confidence": "0.5173913043478261",
             "auto_inferred": "true"
           },
           "created_at": 1771077970
@@ -3897,8 +4587,8 @@
           "id": "2bffc506-574e-4f08-b658-114053856745",
           "kind": "Refines",
           "metadata": {
-            "session": "96",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "session": "96"
           },
           "created_at": 1771079949
         }
@@ -3962,8 +4652,8 @@
           "id": "ec9cb364-b7ee-4273-9f0b-9a8da8d466bf",
           "kind": "Refines",
           "metadata": {
-            "auto_connected": "true",
-            "session": "96"
+            "session": "96",
+            "auto_connected": "true"
           },
           "created_at": 1771080017
         }
@@ -3988,8 +4678,8 @@
           "id": "81afa3f5-e29eda14-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.50"
+            "confidence": "0.50",
+            "auto_inferred": "true"
           },
           "created_at": 1771084159
         }
@@ -4001,8 +4691,8 @@
           "id": "81afa3f5-b6face50-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.75"
           },
           "created_at": 1771084159
         }
@@ -4092,8 +4782,8 @@
           "id": "81afa3f5-4d8465c2-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.50",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.50"
           },
           "created_at": 1771084159
         }
@@ -4118,8 +4808,8 @@
           "id": "9e1a2dce-ba2882a1-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
-            "confidence": "1.00"
+            "confidence": "1.00",
+            "auto_inferred": "true"
           },
           "created_at": 1771084159
         }
@@ -4144,8 +4834,8 @@
           "id": "724bc4c0-83d7d395-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
-            "confidence": "1.00"
+            "confidence": "1.00",
+            "auto_inferred": "true"
           },
           "created_at": 1771084159
         }
@@ -4170,8 +4860,8 @@
           "id": "257745aa-f432d0e9-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.50",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.50"
           },
           "created_at": 1771084159
         }
@@ -4183,8 +4873,8 @@
           "id": "e009137a-835ce953-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.75"
           },
           "created_at": 1771084159
         }
@@ -4224,9 +4914,9 @@
           "id": "2b68b299-cdd049cc-formalizes",
           "kind": "Formalizes",
           "metadata": {
+            "manual_connection": "true",
             "auto_inferred": "true",
-            "confidence": "0.80",
-            "manual_connection": "true"
+            "confidence": "0.80"
           },
           "created_at": 1771084396
         }
@@ -4239,9 +4929,9 @@
           "kind": "DerivesFrom",
           "metadata": {
             "date": "2026-02-15",
-            "similarity": "0.16666666666666666",
+            "reconnection": "true",
             "auto_generated": "true",
-            "reconnection": "true"
+            "similarity": "0.16666666666666666"
           },
           "created_at": 1771087906
         }
@@ -4253,9 +4943,9 @@
           "id": "30caeedd-6e95-42ab-84f1-063d55a15e94",
           "kind": "DerivesFrom",
           "metadata": {
+            "date": "2026-02-15",
             "auto_generated": "true",
             "reconnection": "true",
-            "date": "2026-02-15",
             "similarity": "0.15384615384615385"
           },
           "created_at": 1771087906
@@ -4268,9 +4958,9 @@
           "id": "84bc35da-72fb-4018-8ad5-a98b1fc7c8ac",
           "kind": "DerivesFrom",
           "metadata": {
+            "auto_generated": "true",
             "reconnection": "true",
             "similarity": "0.15384615384615385",
-            "auto_generated": "true",
             "date": "2026-02-15"
           },
           "created_at": 1771087906
@@ -4283,9 +4973,9 @@
           "id": "3ca0b77b-27c1-4117-b2b5-05c326529738",
           "kind": "DerivesFrom",
           "metadata": {
+            "reconnection": "true",
             "similarity": "0.16666666666666666",
             "auto_generated": "true",
-            "reconnection": "true",
             "date": "2026-02-15"
           },
           "created_at": 1771087906
@@ -4298,10 +4988,10 @@
           "id": "0f8710a5-027b-4a19-95dc-e8286c257310",
           "kind": "DerivesFrom",
           "metadata": {
-            "date": "2026-02-15",
+            "auto_generated": "true",
             "similarity": "0.16666666666666666",
-            "reconnection": "true",
-            "auto_generated": "true"
+            "date": "2026-02-15",
+            "reconnection": "true"
           },
           "created_at": 1771087906
         }
@@ -4313,10 +5003,10 @@
           "id": "e498c612-69cb-4ca2-8de3-c1e4bbe0ed35",
           "kind": "DerivesFrom",
           "metadata": {
-            "auto_generated": "true",
+            "date": "2026-02-15",
             "reconnection": "true",
-            "similarity": "0.16666666666666666",
-            "date": "2026-02-15"
+            "auto_generated": "true",
+            "similarity": "0.16666666666666666"
           },
           "created_at": 1771087906
         }
@@ -4328,10 +5018,10 @@
           "id": "41e95467-ceb4-41fa-9fc0-ef82973bd6d4",
           "kind": "DerivesFrom",
           "metadata": {
+            "reconnection": "true",
             "auto_generated": "true",
-            "date": "2026-02-15",
             "similarity": "0.17647058823529413",
-            "reconnection": "true"
+            "date": "2026-02-15"
           },
           "created_at": 1771087906
         }
@@ -4343,10 +5033,10 @@
           "id": "61ae293b-cdf2-4190-8184-23a984399394",
           "kind": "DerivesFrom",
           "metadata": {
-            "similarity": "0.15",
             "auto_generated": "true",
+            "date": "2026-02-15",
             "reconnection": "true",
-            "date": "2026-02-15"
+            "similarity": "0.15"
           },
           "created_at": 1771087906
         }
@@ -4386,8 +5076,8 @@
           "id": "4fdd8f08-3d23-4e2b-9566-28ab6ddbdabf",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Automatic relationship inference' to U0 'Cross-layer edge inference'"
+            "reason": "Connect proto_rpc 'Automatic relationship inference' to U0 'Cross-layer edge inference'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4412,8 +5102,8 @@
           "id": "15bff7fd-59c3-493e-b821-69ca56a728f1",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'"
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4425,8 +5115,8 @@
           "id": "2e8e2a25-ef99-4a74-93ad-7a45192aa85e",
           "kind": "DerivesFrom",
           "metadata": {
-            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'",
-            "created_by": "connect_isolated_proto_rpc.py"
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'"
           },
           "created_at": 1771090244
         }
@@ -4503,8 +5193,8 @@
           "id": "1829bed3-77a6-4816-9027-94b250a08e90",
           "kind": "DerivesFrom",
           "metadata": {
-            "reason": "Connect proto_rpc 'Set node universe' to U0 'Universe struct represents the space'",
-            "created_by": "connect_isolated_proto_rpc.py"
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Set node universe' to U0 'Universe struct represents the space'"
           },
           "created_at": 1771090244
         }
@@ -4529,8 +5219,8 @@
           "id": "c2a2e8cc-f15b-4f2e-81bf-dad60ef927cc",
           "kind": "DerivesFrom",
           "metadata": {
-            "reason": "Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'",
-            "created_by": "connect_isolated_proto_rpc.py"
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'"
           },
           "created_at": 1771090244
         }
@@ -4555,8 +5245,8 @@
           "id": "f72ff793-e101-4597-8d06-5c5e1113e314",
           "kind": "Refines",
           "metadata": {
-            "reason": "Connect proto_rpc 'Temporal queries' to U0 'Query'",
-            "created_by": "connect_isolated_proto_rpc.py"
+            "created_by": "connect_isolated_proto_rpc.py",
+            "reason": "Connect proto_rpc 'Temporal queries' to U0 'Query'"
           },
           "created_at": 1771090244
         }
@@ -4594,8 +5284,8 @@
           "id": "f31edbf8-3b70-4946-92c8-97c327a6d6e0",
           "kind": "Refines",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'node history' to U0 'Query'"
+            "reason": "Connect proto_rpc 'node history' to U0 'Query'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4620,8 +5310,8 @@
           "id": "3504af01-4377-47cc-aab5-f4bae6991451",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Executable contracts' to U0 'AdmissibleSet struct symbolically represents'"
+            "reason": "Connect proto_rpc 'Executable contracts' to U0 'AdmissibleSet struct symbolically represents'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4659,8 +5349,8 @@
           "id": "e0acbf6a-725d-47d3-80d4-4a7d5572ae6d",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'"
+            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4672,8 +5362,8 @@
           "id": "12b3f5c5-2bf9-43cd-8b42-e23f5317c0b5",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_isolated_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'"
+            "reason": "Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'",
+            "created_by": "connect_isolated_proto_rpc.py"
           },
           "created_at": 1771090244
         }
@@ -4724,8 +5414,8 @@
           "id": "a8c3e77b-f813-4c72-89db-d37c36085009",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_remaining_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Semantic normalization' to U0 'AI-powered'"
+            "reason": "Connect proto_rpc 'Semantic normalization' to U0 'AI-powered'",
+            "created_by": "connect_remaining_proto_rpc.py"
           },
           "created_at": 1771090327
         }
@@ -4737,8 +5427,8 @@
           "id": "15cdba5c-bbb9-4d0e-823e-ecbdacc39c5c",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_remaining_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'",
+            "created_by": "connect_remaining_proto_rpc.py"
           },
           "created_at": 1771090327
         }
@@ -4750,8 +5440,8 @@
           "id": "29a837cf-cecf-4e26-915e-36101641af35",
           "kind": "DerivesFrom",
           "metadata": {
-            "created_by": "connect_remaining_proto_rpc.py",
-            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'"
+            "reason": "Connect proto_rpc 'Terminology resolution' to U0 'semantic'",
+            "created_by": "connect_remaining_proto_rpc.py"
           },
           "created_at": 1771090327
         }
@@ -4841,8 +5531,8 @@
           "id": "ce8b98cf-f96c-4b4f-a68b-5c28b52116c5",
           "kind": "Refines",
           "metadata": {
-            "script": "connect_isolated_proto_rpcs.py",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "script": "connect_isolated_proto_rpcs.py"
           },
           "created_at": 1771086000
         }
@@ -4880,8 +5570,8 @@
           "id": "f53add65-e2aa-4a90-bca8-553af1f0d7d3",
           "kind": "Refines",
           "metadata": {
-            "auto_connected": "true",
-            "script": "connect_isolated_proto_rpcs.py"
+            "script": "connect_isolated_proto_rpcs.py",
+            "auto_connected": "true"
           },
           "created_at": 1771086000
         }
@@ -4893,8 +5583,8 @@
           "id": "a7004aa8-8f74-4023-9658-2d8ecd321550",
           "kind": "Refines",
           "metadata": {
-            "script": "connect_isolated_proto_rpcs.py",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "script": "connect_isolated_proto_rpcs.py"
           },
           "created_at": 1771086000
         }
@@ -4906,8 +5596,8 @@
           "id": "5a7f4dba-078c-45d3-98b9-b2be1b940d8b",
           "kind": "Refines",
           "metadata": {
-            "script": "connect_remaining_isolated.py",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "script": "connect_remaining_isolated.py"
           },
           "created_at": 1771086100
         }
@@ -4919,8 +5609,8 @@
           "id": "462eb0fe-2340-4d33-b776-303fcbf5033f",
           "kind": "Formalizes",
           "metadata": {
-            "script": "connect_remaining_isolated.py",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "script": "connect_remaining_isolated.py"
           },
           "created_at": 1771086100
         }

@@ -1263,6 +1263,119 @@ impl ProtoExtractor {
     }
 }
 
+/// Extract specifications from documentation files (Markdown)
+pub struct DocExtractor;
+
+impl DocExtractor {
+    /// Extract specifications from Markdown documentation
+    pub fn extract(file_path: &Path) -> Result<Vec<InferredSpecification>, String> {
+        let content = std::fs::read_to_string(file_path)
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+
+        let mut specs = Vec::new();
+        let file_name = file_path.to_string_lossy().to_string();
+
+        // Process line by line
+        for (line_num, line) in content.lines().enumerate() {
+            let trimmed = line.trim();
+
+            // Skip empty lines, headings, and code blocks
+            if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with("```") {
+                continue;
+            }
+
+            // Look for specification patterns
+            if let Some(spec) = Self::extract_specification(trimmed, &file_name, line_num + 1) {
+                specs.push(spec);
+            }
+        }
+
+        Ok(specs)
+    }
+
+    fn extract_specification(line: &str, file_name: &str, line_num: usize) -> Option<InferredSpecification> {
+        // Specification markers indicating requirements/constraints
+        let constraint_markers = ["must", "shall", "required", "constraint"];
+        let assertion_markers = ["should", "can", "will", "provides", "supports"];
+        let scenario_markers = ["when", "given", "example", "scenario"];
+
+        let lower = line.to_lowercase();
+
+        // Determine kind based on markers
+        let (kind, confidence_base) = if constraint_markers.iter().any(|m| lower.contains(m)) {
+            (NodeKind::Constraint, 0.85)
+        } else if assertion_markers.iter().any(|m| lower.contains(m)) {
+            (NodeKind::Assertion, 0.75)
+        } else if scenario_markers.iter().any(|m| lower.contains(m)) {
+            (NodeKind::Scenario, 0.70)
+        } else {
+            return None; // Not a specification
+        };
+
+        // Skip if line is too short (likely not a complete specification)
+        if line.len() < 20 {
+            return None;
+        }
+
+        // Clean up markdown formatting
+        let content = Self::clean_markdown(line);
+
+        // Adjust confidence based on content quality
+        let confidence: f32 = if content.len() > 50 && content.contains("system") {
+            confidence_base + 0.1
+        } else {
+            confidence_base
+        };
+
+        // Determine formality layer based on content
+        let formality_layer = if lower.contains("formally") || lower.contains("proof") {
+            1 // U1: More formal specification
+        } else {
+            0 // U0: Natural language requirement
+        };
+
+        Some(InferredSpecification {
+            content,
+            kind,
+            confidence: confidence.min(0.95),
+            source_file: file_name.to_string(),
+            source_line: line_num,
+            formality_layer,
+            metadata: HashMap::from([
+                ("extractor".to_string(), "documentation".to_string()),
+            ]),
+        })
+    }
+
+    fn clean_markdown(text: &str) -> String {
+        // Remove common markdown formatting
+        let mut cleaned = text.to_string();
+
+        // Remove bold/italic markers
+        cleaned = cleaned.replace("**", "");
+        cleaned = cleaned.replace("__", "");
+        cleaned = cleaned.replace("*", "");
+        cleaned = cleaned.replace("_", "");
+
+        // Remove list markers
+        if let Some(stripped) = cleaned.strip_prefix("- ") {
+            cleaned = stripped.to_string();
+        }
+        if let Some(stripped) = cleaned.strip_prefix("* ") {
+            cleaned = stripped.to_string();
+        }
+
+        // Remove numbered list markers (e.g., "1. ")
+        if let Some(pos) = cleaned.find(". ") {
+            if cleaned[..pos].chars().all(|c| c.is_numeric()) {
+                cleaned = cleaned[pos + 2..].to_string();
+            }
+        }
+
+        cleaned.trim().to_string()
+    }
+}
+
 #[cfg(test)]
 mod proto_extractor_tests {
     use super::*;

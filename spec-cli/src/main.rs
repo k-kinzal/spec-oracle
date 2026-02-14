@@ -2235,7 +2235,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
         }
         Commands::Extract { source, language, min_confidence } => {
             // Extract specifications from source code and save to graph
-            use spec_core::{RustExtractor, ProtoExtractor, InferredSpecification};
+            use spec_core::{RustExtractor, ProtoExtractor, DocExtractor, InferredSpecification};
             use std::path::Path;
 
             let path = Path::new(&source);
@@ -2248,6 +2248,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                 match path.extension().and_then(|s| s.to_str()) {
                     Some("rs") => "rust",
                     Some("proto") => "proto",
+                    Some("md") => "markdown",
                     _ => &language,
                 }
             } else {
@@ -2259,8 +2260,9 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                 match detected_language {
                     "rust" => RustExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
                     "proto" => ProtoExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
+                    "markdown" => DocExtractor::extract(path).map_err(|e| format!("Extraction failed: {}", e))?,
                     _ => {
-                        eprintln!("Unsupported language: {}. Supported: rust, proto", language);
+                        eprintln!("Unsupported language: {}. Supported: rust, proto, markdown", language);
                         return Ok(());
                     }
                 }
@@ -2280,6 +2282,12 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                         }
                         Some("proto") if detected_language == "proto" || detected_language == "auto" => {
                             match ProtoExtractor::extract(&entry_path) {
+                                Ok(specs) => all_specs.extend(specs),
+                                Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
+                            }
+                        }
+                        Some("md") if detected_language == "markdown" || detected_language == "auto" => {
+                            match DocExtractor::extract(&entry_path) {
                                 Ok(specs) => all_specs.extend(specs),
                                 Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
                             }
@@ -3870,7 +3878,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Extract { source, language, min_confidence } => {
             // Extract specifications locally (doesn't need server for extraction)
-            use spec_core::{RustExtractor, ProtoExtractor, InferredSpecification};
+            use spec_core::{RustExtractor, ProtoExtractor, DocExtractor, InferredSpecification};
             use std::path::Path;
 
             let path = Path::new(&source);
@@ -3921,6 +3929,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         Some("proto") if detected_language == "proto" || detected_language == "auto" => {
                             match ProtoExtractor::extract(&entry_path) {
+                                Ok(specs) => all_specs.extend(specs),
+                                Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
+                            }
+                        }
+                        Some("md") if detected_language == "markdown" || detected_language == "auto" => {
+                            match DocExtractor::extract(&entry_path) {
                                 Ok(specs) => all_specs.extend(specs),
                                 Err(e) => eprintln!("⚠️  Failed to extract from {:?}: {}", entry_path, e),
                             }
