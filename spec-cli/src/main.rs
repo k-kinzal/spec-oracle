@@ -1609,7 +1609,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             use std::path::Path;
 
             let path = Path::new(&source);
-            let mut graph = store.load_graph().map_err(|e| format!("Failed to load graph: {}", e))?;
+            let mut graph = store.load().map_err(|e| format!("Failed to load graph: {}", e))?;
 
             println!("🔍 Extracting specifications from: {}\n", source);
 
@@ -1656,7 +1656,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             let report = graph.ingest(filtered.clone());
 
             // Save updated graph
-            store.save_graph(&graph).map_err(|e| format!("Failed to save graph: {}", e))?;
+            store.save(&graph).map_err(|e| format!("Failed to save graph: {}", e))?;
 
             println!("✅ Ingestion complete:");
             println!("   Nodes created: {}", report.nodes_created);

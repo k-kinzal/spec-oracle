@@ -216,8 +216,8 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "line": "7,105-113"
+          "line": "7,105-113",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061822,
         "modified_at": 1771061822,
@@ -228,8 +228,8 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Constraint",
         "metadata": {
-          "function": "Commands::Add",
-          "source_file": "spec-cli/src/main.rs"
+          "source_file": "spec-cli/src/main.rs",
+          "function": "Commands::Add"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -252,8 +252,8 @@
         "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Check"
+          "function": "Commands::Check",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -264,8 +264,8 @@
         "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "line": "18,162-169"
+          "line": "18,162-169",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771062014,
         "modified_at": 1771062014,
@@ -276,8 +276,8 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Find"
+          "function": "Commands::Find",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771062016,
         "modified_at": 1771062016,
@@ -288,8 +288,8 @@
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
         "kind": "Constraint",
         "metadata": {
-          "line": "14,148-153",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "line": "14,148-153"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -300,8 +300,8 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Constraint",
         "metadata": {
-          "function": "Commands::Trace",
-          "source_file": "spec-cli/src/main.rs"
+          "source_file": "spec-cli/src/main.rs",
+          "function": "Commands::Trace"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -318,7 +318,7 @@
       },
       {
         "id": "fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2",
-        "content": "All high-priority features now have complete U0\u2192U2\u2192U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
+        "content": "All high-priority features now have complete U0→U2→U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771062281,
@@ -426,7 +426,7 @@
       },
       {
         "id": "8772404d-59f0-44da-970c-9347eceaaf42",
-        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f\u2080\u2081\u207b\u00b9(U1) \u222a f\u2080\u2082\u207b\u00b9(U2) \u222a ... \u222a f\u2080\u2099\u207b\u00b9(UN)",
+        "content": "U0 is constructed from inverse mappings of all projection universes: U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771064470,
@@ -579,7 +579,7 @@
       },
       {
         "id": "ac7787f6-2eaf-46a0-bc5b-7017d3282886",
-        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: \u2203x. (x \u2208 A1 \u2227 x \u2208 A2)",
+        "content": "Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -588,7 +588,7 @@
       },
       {
         "id": "0154a181-1962-4aa1-aee2-236d2078caf6",
-        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: \u2203x. x \u2208 A",
+        "content": "Prover.prove_satisfiability() proves that a specification's admissible set is non-empty: ∃x. x ∈ A",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771065633,
@@ -624,7 +624,7 @@
       },
       {
         "id": "239316dd-4d2e-4ab2-b172-5fdd015fb5e1",
-        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (\u2203x. x \u2208 A)",
+        "content": "prove-satisfiability CLI command proves that a specification is satisfiable (∃x. x ∈ A)",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771066871,
@@ -822,7 +822,7 @@
       },
       {
         "id": "d79603df-d239-4d3f-af09-868ed2935374",
-        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings\u2014transcending the fundamental DSL limitation identified in conversation.md",
+        "content": "specORACLE achieves beyond-DSL paradigm through observation-based extraction (RustExtractor), AI-native semantic understanding, category-theoretic foundation (UDAF transform functions), and emergent U0 construction via inverse mappings—transcending the fundamental DSL limitation identified in conversation.md",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070409,
@@ -831,7 +831,7 @@
       },
       {
         "id": "ce999406-30cc-424e-8bac-8efe06025a3f",
-        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations\u2014representing the first practical realization of the beyond-DSL specification paradigm",
+        "content": "Session 56 discovered that specORACLE's implementation already satisfies the revolutionary goal by integrating observation-based inference, AI-native semantics, and category-theoretic foundations—representing the first practical realization of the beyond-DSL specification paradigm",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771070419,
@@ -844,8 +844,8 @@
         "kind": "Assertion",
         "metadata": {
           "session": "57",
-          "resolved_issues": "3 critical",
           "date": "2026-02-14",
+          "resolved_issues": "3 critical",
           "verified_modules": "prover, udaf"
         },
         "created_at": 1771070800,
@@ -1133,7 +1133,7 @@
       },
       {
         "id": "19d08ce6-8cba-4713-9999-a26d373ce7fa",
-        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f\u2080\u2082 transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
+        "content": "Session 63 achieved zero isolated specifications by connecting all 28 U2 RPC specifications to U0 natural language requirements via Formalizes edges, implementing the f₀₂ transform function from the U/D/A/f model and enabling complete multi-layer traceability across U0-U2 layers",
         "kind": "Assertion",
         "metadata": {},
         "created_at": 1771073305,
@@ -1183,6 +1183,2854 @@
         "metadata": {},
         "created_at": 1771076329,
         "modified_at": 1771076329,
+        "formality_layer": 0
+      },
+      {
+        "id": "f5b19310-871e-44e0-acc5-239f4630fb7f",
+        "content": "scenario {}",
+        "kind": "Scenario",
+        "metadata": {
+          "extractor": "function_name",
+          "source_line": "1035",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "function": "test_scenario_{}"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 1
+      },
+      {
+        "id": "104537a8-2883-4c3b-ae5d-7f029f85b62c",
+        "content": "coverage empty graph",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "function": "test_coverage_empty_graph",
+          "inferred": "true",
+          "extractor": "function_name",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1925"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 1
+      },
+      {
+        "id": "9a5e5a82-7f17-4936-86a7-34361f23c14b",
+        "content": "coverage no tests",
+        "kind": "Scenario",
+        "metadata": {
+          "function": "test_coverage_no_tests",
+          "extractor": "function_name",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "source_line": "1935"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 1
+      },
+      {
+        "id": "64d6cf39-6427-469c-87df-0f4be277c6c3",
+        "content": "coverage with tests",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "confidence": "0.9",
+          "extractor": "function_name",
+          "function": "test_coverage_with_tests",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1949"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 1
+      },
+      {
+        "id": "862a1562-78c6-4da7-a5a5-13dcd0be1fca",
+        "content": "coverage ignores non testable nodes",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "source_line": "1967",
+          "extractor": "function_name",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "function": "test_coverage_ignores_non_testable_nodes"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 1
+      },
+      {
+        "id": "31fcc375-46cc-48b1-9d12-4c0ab1e1f717",
+        "content": "response time",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "extractor": "function_name",
+          "function": "test_response_time",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "source_line": "1996"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 1
+      },
+      {
+        "id": "1225dfd2-e84f-4bb2-8885-bb7b3175f80d",
+        "content": "user login",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "2018",
+          "confidence": "0.9",
+          "inferred": "true",
+          "function": "test_user_login",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "function_name"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 1
+      },
+      {
+        "id": "870b741d-a927-44d7-b385-2ffa6ea1c119",
+        "content": "Invariant: fetched.content, \"User must authenticate\"",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "fetched.content, \"User must authenticate\"",
+          "source_line": "1553",
+          "confidence": "0.95",
+          "inferred": "true",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "275e0821-5caa-432a-8a38-28a2cc4cbb16",
+        "content": "Invariant: fetched.kind, NodeKind::Assertion",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "source_line": "1554",
+          "assertion": "fetched.kind, NodeKind::Assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "56fc1bb9-1d83-4541-b5ab-717760c7e2c2",
+        "content": "Invariant: g.node_count(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "g.node_count(), 1",
+          "extractor": "assertion",
+          "source_line": "1561",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "1554f4e8-cacb-4fa3-8cc6-356f44f94603",
+        "content": "Invariant: removed.content, \"temp\"",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "removed.content, \"temp\"",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1564"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "9821c128-20c5-4e23-b4eb-0bb90dadfccf",
+        "content": "Invariant: g.node_count(), 0",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "source_line": "1565",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "assertion": "g.node_count(), 0",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "7ff006bb-b488-4155-bbac-1b642895c4cd",
+        "content": "Invariant: all.len(), 3",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_line": "1576",
+          "assertion": "all.len(), 3",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "7d04d24f-4099-47fd-a6e2-153141bf4be4",
+        "content": "Invariant: assertions.len(), 2",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "assertion": "assertions.len(), 2",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1579",
+          "extractor": "assertion",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "84374d65-c11c-4cc5-85e6-36352811d9c5",
+        "content": "Invariant: g.edge_count(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1589",
+          "confidence": "0.95",
+          "assertion": "g.edge_count(), 1"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "37a929e8-79ca-4c69-b34e-2ec1007f0249",
+        "content": "Invariant: edges.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1592",
+          "confidence": "0.95",
+          "assertion": "edges.len(), 1",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "8d869bf9-dff5-4e54-835e-6f86878ec74b",
+        "content": "Invariant: edges[0].0.kind, EdgeKind::Refines",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_line": "1593",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "assertion": "edges[0].0.kind, EdgeKind::Refines",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "864b8d04-6100-447b-a156-35122f2cfda8",
+        "content": "Invariant: result.is_err()",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "extractor": "assertion",
+          "source_line": "1601",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "assertion": "result.is_err()"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "50acf4b7-82a9-4f3c-a4be-77c4c0779b97",
+        "content": "Invariant: contradictions.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "inferred": "true",
+          "assertion": "contradictions.len(), 1",
+          "source_line": "1612",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "59ec9c22-39fc-4e8c-89f2-2ec67d6c2756",
+        "content": "Invariant: contradictions[0].explanation.contains(\"Explicit contradiction\")",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "contradictions[0].explanation.contains(\"Explicit contradiction\")",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "source_line": "1613",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "0ab6853c-256f-4eab-b73d-f6fedc3185b9",
+        "content": "Invariant: contradictions.iter().any(|c| c.explanation.contains(\"Duplicate specification\")",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1623",
+          "assertion": "contradictions.iter().any(|c| c.explanation.contains(\"Duplicate specification\")",
+          "inferred": "true",
+          "confidence": "0.95",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "cb2d1127-fd99-43b6-90e5-380bb67b6edf",
+        "content": "Invariant: contradictions.iter().any(|c| c.explanation.contains(\"password length\"",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "assertion": "contradictions.iter().any(|c| c.explanation.contains(\"password length\"",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "source_line": "1639",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "9db60408-b084-43d8-91dd-3853da4daefd",
+        "content": "Invariant: !contradictions.iter().any(|c| c.explanation.contains(\"Duplicate\")",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_line": "1653",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "!contradictions.iter().any(|c| c.explanation.contains(\"Duplicate\")"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "5c533720-858f-4110-a71f-61189bd007b6",
+        "content": "Invariant: omissions.iter().any(|o| o.description.contains(\"Isolated\"))",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1663",
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "omissions.iter().any(|o| o.description.contains(\"Isolated\"))",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "edf08e9b-5aa3-407a-850e-c5b2ff01fa71",
+        "content": "Invariant: omissions.iter().any(|o| o.description.contains(\"no refinements\"))",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "source_line": "1675",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "inferred": "true",
+          "assertion": "omissions.iter().any(|o| o.description.contains(\"no refinements\"))"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "7ead5420-2a25-450f-8971-a17334115bc9",
+        "content": "Invariant: omissions.iter().any(|o| o.description.contains(\"no supporting assertions\"))",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "omissions.iter().any(|o| o.description.contains(\"no supporting assertions\"))",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_line": "1686",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "263e9b5d-9197-42b5-b741-8fc3705dee27",
+        "content": "Invariant: results.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1696",
+          "confidence": "0.95",
+          "assertion": "results.len(), 1"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "9b14e96b-f553-4ff1-b41f-d57d7de26dea",
+        "content": "Invariant: results[0].content.contains(\"authentication\")",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "results[0].content.contains(\"authentication\")",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "source_line": "1697",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "015194ec-c63e-4253-a440-831de4c15ada",
+        "content": "Invariant: defs.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "defs.len(), 1",
+          "source_line": "1708"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "b578f812-b3a5-4af0-9813-408cd7d4067b",
+        "content": "Invariant: syns.contains(&\"Login\".to_string())",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1709",
+          "confidence": "0.95",
+          "assertion": "syns.contains(&\"Login\".to_string())"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "d3cd0f7b-0ad7-414d-8709-6d8d1c633a75",
+        "content": "Invariant: g2.node_count(), 2",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "source_line": "1723",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "g2.node_count(), 2"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "8b48975c-2317-4e3d-a0b1-0922b01e02b7",
+        "content": "Invariant: g2.edge_count(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "g2.edge_count(), 1",
+          "source_line": "1724",
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "7b72c7c4-be55-4c65-92d0-9692a01113e2",
+        "content": "Invariant: g2.get_node(&a).is_some()",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1725",
+          "assertion": "g2.get_node(&a).is_some()",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "dc375b3f-f9ba-425e-89c2-4b625adb2f9e",
+        "content": "Invariant: g2.get_node(&b).is_some()",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "g2.get_node(&b).is_some()",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1726"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "c9dfc6d3-aa96-4ddd-add7-6ad11c73ee4b",
+        "content": "Invariant: layer0.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1748",
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "layer0.len(), 1",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "495a450d-2032-40b8-adc6-b7d8566165f1",
+        "content": "Invariant: layer0[0].formality_layer, 0",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "source_line": "1749",
+          "assertion": "layer0[0].formality_layer, 0",
+          "inferred": "true",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "f1d71e20-b6d6-458e-a4d8-efa452bce9b2",
+        "content": "Invariant: layer2.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1752",
+          "inferred": "true",
+          "confidence": "0.95",
+          "assertion": "layer2.len(), 1",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "918d9dd1-791f-4793-95d3-ac7e8165b9d6",
+        "content": "Invariant: layer2[0].formality_layer, 2",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "assertion": "layer2[0].formality_layer, 2",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "source_line": "1753",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "1a69c8ce-8f6b-4a1e-a3ed-a1dbbea101f6",
+        "content": "Invariant: all.len(), 2",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1756",
+          "assertion": "all.len(), 2",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "44da90cd-cf02-4c61-9c83-fff933420da5",
+        "content": "Invariant: inconsistencies.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "inconsistencies.len(), 1",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_line": "1777"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "9835bae6-6445-4645-8674-bef90fd0c8f4",
+        "content": "Invariant: inconsistencies[0].explanation.contains(\"should increase\")",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "source_line": "1778",
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "inconsistencies[0].explanation.contains(\"should increase\")",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "fb3e3025-db8e-4bb0-b6b9-d54edd4528eb",
+        "content": "Invariant: inconsistencies.len(), 0",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "inconsistencies.len(), 0",
+          "source_line": "1799",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "11c8f52c-2f8a-47e4-801f-e83c66b974af",
+        "content": "Invariant: user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1807",
+          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
+          "extractor": "assertion",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "3288280f-97f5-48a6-9119-c87d7d628121",
+        "content": "Invariant: formalizations.len(), 2",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "assertion": "formalizations.len(), 2",
+          "extractor": "assertion",
+          "source_line": "1813"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "9922c1c1-c5ce-4693-b80c-5bd07d50c977",
+        "content": "Invariant: natural_sources.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "natural_sources.len(), 1",
+          "source_line": "1816",
+          "confidence": "0.95",
+          "inferred": "true",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "0753e54b-0bfe-4662-821c-2f533db78d7d",
+        "content": "Invariant: natural_sources[0].id, natural_id",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "source_line": "1817",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "inferred": "true",
+          "assertion": "natural_sources[0].id, natural_id"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "0b29de2b-2e52-4c21-a975-025afd0ecab8",
+        "content": "Invariant: related.len() > 0",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1830",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "assertion": "related.len() > 0",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "6c6763c3-4a4b-4e76-9378-59e98de9551a",
+        "content": "Invariant: related.iter().any(|(n, _)| n.content.contains(\"Login\"))",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "assertion": "related.iter().any(|(n, _)| n.content.contains(\"Login\"))",
+          "inferred": "true",
+          "source_line": "1831",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "ec8a4da1-ffdd-4703-bfa6-349381d5a1bb",
+        "content": "Invariant: synonyms.len() > 0",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "assertion": "synonyms.len() > 0",
+          "source_line": "1849",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "0662f167-f23b-4788-9d70-ab359b08adc9",
+        "content": "Invariant: !synonyms.iter().any(|(n1, n2, _",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1862",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "!synonyms.iter().any(|(n1, n2, _",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "a75373a7-88a3-45b3-b391-10fa44d104f9",
+        "content": "Invariant: template.is_some()",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_line": "1876",
+          "assertion": "template.is_some()",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "f856b549-75e9-4dee-90ad-3eda9e9caa18",
+        "content": "Invariant: template.contains(\"#[quickcheck]\")",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "assertion": "template.contains(\"#[quickcheck]\")",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_line": "1878"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "16dd4ca6-4765-4938-a0bf-acafb41b60fd",
+        "content": "Invariant: template.contains(\"X must be > 0\")",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_line": "1879",
+          "assertion": "template.contains(\"X must be > 0\")",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "2ea34223-849f-4ba7-a16e-f6eff51b3b0d",
+        "content": "Invariant: template.is_some()",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "template.is_some()",
+          "extractor": "assertion",
+          "source_line": "1891",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "6b1f5fb0-5c1f-4336-be2f-f32c0ba0a04f",
+        "content": "Invariant: template.contains(\"#[test]\")",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1893",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "assertion": "template.contains(\"#[test]\")",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "cafcb622-7a76-48be-ab51-6415338e9b19",
+        "content": "Invariant: template.contains(\"User logs in successfully\")",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1894",
+          "inferred": "true",
+          "assertion": "template.contains(\"User logs in successfully\")",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "dbd47f1f-a039-4b08-a1d9-240522b9965f",
+        "content": "Invariant: template.is_some()",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1906",
+          "assertion": "template.is_some()",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "52738c8f-5ca3-41c6-84d6-a1ea926d3d15",
+        "content": "Invariant: template.contains(\"@given\")",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "assertion": "template.contains(\"@given\")",
+          "inferred": "true",
+          "source_line": "1908",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "a63712b5-b54a-416d-bcb7-bae378015250",
+        "content": "Invariant: template.contains(\"List must not be empty\")",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "assertion": "template.contains(\"List must not be empty\")",
+          "source_line": "1909",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "0729428d-54cd-4dd0-869c-b16c860edf6d",
+        "content": "Invariant: template.is_none()",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "inferred": "true",
+          "assertion": "template.is_none()",
+          "source_line": "1921",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "d56bbe4e-8078-49a5-b5ee-d199809458c5",
+        "content": "Invariant: coverage.total_testable, 0",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "source_line": "1929",
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "coverage.total_testable, 0"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "b9342b8d-50ac-4b88-afc6-bd6c4970a62b",
+        "content": "Invariant: coverage.with_tests, 0",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "assertion": "coverage.with_tests, 0",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1930",
+          "extractor": "assertion",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "2495d624-fc42-4dcc-8d37-6b22ad6a9a55",
+        "content": "Invariant: coverage.coverage_ratio, 0.0",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "coverage.coverage_ratio, 0.0",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1931",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "86334607-e499-472a-99d1-0d753d37bdc3",
+        "content": "Invariant: coverage.total_testable, 2",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "assertion": "coverage.total_testable, 2",
+          "source_line": "1942",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "e9167960-053d-463b-a82c-768030aff2c9",
+        "content": "Invariant: coverage.with_tests, 0",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1943",
+          "inferred": "true",
+          "assertion": "coverage.with_tests, 0",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "8dc7dac5-2a6f-47c1-919e-8bbcdea239ae",
+        "content": "Invariant: coverage.coverage_ratio, 0.0",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "coverage.coverage_ratio, 0.0",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_line": "1944",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "a9af1560-4638-4939-be27-472ebb7f7ddd",
+        "content": "Invariant: coverage.nodes_without_tests.len(), 2",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "coverage.nodes_without_tests.len(), 2",
+          "extractor": "assertion",
+          "source_line": "1945",
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "c14e3d6c-b356-402f-a9d0-0bf9ec4e1bf8",
+        "content": "Invariant: coverage.total_testable, 2",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "assertion": "coverage.total_testable, 2",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_line": "1959"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "6efb3944-0f6a-45c1-816b-df86200fa1a4",
+        "content": "Invariant: coverage.with_tests, 1",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1960",
+          "extractor": "assertion",
+          "assertion": "coverage.with_tests, 1",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "61f74ef0-b75e-446d-b055-86ad06668dcd",
+        "content": "Invariant: coverage.coverage_ratio, 0.5",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "coverage.coverage_ratio, 0.5",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1961"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "eebb9eab-3282-495e-a779-8e799121ca01",
+        "content": "Invariant: coverage.nodes_with_tests.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "source_line": "1962",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "coverage.nodes_with_tests.len(), 1"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "aaf48541-887d-46b6-b3a8-0c16c6bc3782",
+        "content": "Invariant: coverage.nodes_without_tests.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "assertion": "coverage.nodes_without_tests.len(), 1",
+          "confidence": "0.95",
+          "source_line": "1963",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "8c11422a-f004-4f84-abb5-cd1f1839f097",
+        "content": "Invariant: coverage.total_testable, 1",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1982",
+          "assertion": "coverage.total_testable, 1",
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "6646ce5f-54be-4353-af9d-322f8c637838",
+        "content": "Invariant: coverage.with_tests, 1",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "1983",
+          "confidence": "0.95",
+          "inferred": "true",
+          "extractor": "assertion",
+          "assertion": "coverage.with_tests, 1",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "a88370a6-cc6e-4791-ad6d-d48638d694ad",
+        "content": "Invariant: coverage.coverage_ratio, 1.0",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "coverage.coverage_ratio, 1.0",
+          "extractor": "assertion",
+          "source_line": "1984",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "8e3b6767-fefd-4b4c-a2c9-4edd91b4a63f",
+        "content": "Invariant: response.time < 100",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "assertion": "response.time < 100",
+          "source_line": "1998"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "06091f73-03e6-46fd-89f6-a18aeff34a77",
+        "content": "Invariant: compliance.score > 0.2, \"Expected detectable compliance, got {}\", compliance.score",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "extractor": "assertion",
+          "assertion": "compliance.score > 0.2, \"Expected detectable compliance, got {}\", compliance.score",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2004",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "91dddd23-93f2-4045-bcc6-25198e85a63b",
+        "content": "Invariant: compliance.keyword_overlap > 0.0",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "2005",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "inferred": "true",
+          "assertion": "compliance.keyword_overlap > 0.0"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "9727c919-62e6-45e8-ab91-a560cb80effa",
+        "content": "Invariant: result.is_ok()",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "result.is_ok()",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "source_line": "2021",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "6c739433-4a8e-4287-b29e-d04252eedea7",
+        "content": "Invariant: compliance.score > 0.2, \"Expected detectable compliance, got {}\", compliance.score",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "compliance.score > 0.2, \"Expected detectable compliance, got {}\", compliance.score",
+          "extractor": "assertion",
+          "source_line": "2027"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "dc906fbc-c8cd-49c7-96c3-884bae2877e3",
+        "content": "Invariant: compliance.score < 0.3, \"Expected low compliance score for unrelated code\"",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "compliance.score < 0.3, \"Expected low compliance score for unrelated code\"",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_line": "2045"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "02b5e65f-e52e-4a76-879f-537bc31b3c39",
+        "content": "Invariant: compliance.is_none()",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "compliance.is_none()",
+          "source_line": "2052",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "917bc93b-fdd3-4349-9ab0-1c61cc8e378c",
+        "content": "Invariant: report.len(), 0",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "assertion": "report.len(), 0",
+          "source_line": "2059",
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "407142d1-f57f-45d1-8ab1-bb43757d8319",
+        "content": "Invariant: x > 0);\".to_string()",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "x > 0);\".to_string()",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2066",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "4b03c871-ab70-4edf-a547-580aae918f21",
+        "content": "Invariant: report.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2071",
+          "extractor": "assertion",
+          "assertion": "report.len(), 1",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "675cfb04-a3d1-4b80-b22e-1bfd26826437",
+        "content": "Invariant: report[0].1.score > 0.0",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "assertion": "report[0].1.score > 0.0",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2072",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "28c2be08-2015-4d00-81b7-6805061b7c38",
+        "content": "Invariant: keywords.contains(\"user\")",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "assertion": "keywords.contains(\"user\")",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2079"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "51b0f8c6-682b-4e80-8f17-2a156ea69ad9",
+        "content": "Invariant: keywords.contains(\"authenticate\")",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "2080",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "keywords.contains(\"authenticate\")",
+          "inferred": "true",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "42f04f08-14cb-4d1b-a28b-0e98a20fc19d",
+        "content": "Invariant: keywords.contains(\"valid\")",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "source_line": "2081",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "keywords.contains(\"valid\")",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "1add9b7d-99ab-4ed3-8842-7b91dc00e20f",
+        "content": "Invariant: keywords.contains(\"credentials\")",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "assertion": "keywords.contains(\"credentials\")",
+          "source_line": "2082",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "605e8082-2f89-452f-8df2-280c8a53d4e6",
+        "content": "Invariant: !keywords.contains(\"the\")",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "2083",
+          "assertion": "!keywords.contains(\"the\")",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "3b370add-82bc-449b-9d87-25e4f0876f89",
+        "content": "Invariant: !keywords.contains(\"with\")",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "!keywords.contains(\"with\")",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2084",
+          "confidence": "0.95",
+          "inferred": "true",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "3aae6bcf-475e-45af-87fc-e3812ef19bb0",
+        "content": "Invariant: !keywords.contains(\"must\")",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "extractor": "assertion",
+          "assertion": "!keywords.contains(\"must\")",
+          "confidence": "0.95",
+          "source_line": "2085"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "41d2e329-c54d-4e9b-ad9b-b70128a041b9",
+        "content": "Invariant: snapshot.node_count, 0",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "inferred": "true",
+          "extractor": "assertion",
+          "source_line": "2093",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "snapshot.node_count, 0"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "8dde37be-915f-486c-af30-eeddeb3b4fdd",
+        "content": "Invariant: snapshot.edge_count, 0",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "assertion": "snapshot.edge_count, 0",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2094"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "e8f129d3-486a-465b-81b6-b87c7b318eea",
+        "content": "Invariant: snapshot.nodes.is_empty()",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "snapshot.nodes.is_empty()",
+          "extractor": "assertion",
+          "inferred": "true",
+          "source_line": "2095",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "aacce4c3-89c4-4565-910b-e5e5b6ee0a80",
+        "content": "Invariant: snapshot.edges.is_empty()",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_line": "2096",
+          "confidence": "0.95",
+          "extractor": "assertion",
+          "assertion": "snapshot.edges.is_empty()",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "84b835f0-a083-4d4b-9339-d218de3509aa",
+        "content": "Invariant: snapshot.node_count, 1",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "source_line": "2124",
+          "confidence": "0.95",
+          "assertion": "snapshot.node_count, 1",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "360df997-4a22-4a06-883f-21a1d1a137f1",
+        "content": "Invariant: snapshot.nodes[0].id, old_id",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_line": "2125",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "snapshot.nodes[0].id, old_id"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "c30fdb5d-e9a0-4dce-a228-d471a1508e34",
+        "content": "Invariant: diff.added_nodes.len(), 1",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "assertion": "diff.added_nodes.len(), 1",
+          "source_line": "2145",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "3a314a78-36f4-4e0c-9356-13b24c9a1a7e",
+        "content": "Invariant: diff.added_nodes[0].id, node_id",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "2146",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "diff.added_nodes[0].id, node_id",
+          "inferred": "true",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "e68a288a-2d5e-41c1-ad9a-b65e02b2d82c",
+        "content": "Invariant: diff.removed_nodes.len(), 0",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "2147",
+          "inferred": "true",
+          "extractor": "assertion",
+          "assertion": "diff.removed_nodes.len(), 0",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "ee1bbc08-ba65-4de6-8224-19e1ce79e3f1",
+        "content": "Invariant: diff.added_nodes.len(), 0",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "assertion": "diff.added_nodes.len(), 0",
+          "confidence": "0.95",
+          "inferred": "true",
+          "source_line": "2169"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "05a40a9e-ba32-4b6f-b0be-25310d07b2e0",
+        "content": "Invariant: diff.removed_nodes.len(), 0",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "diff.removed_nodes.len(), 0",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "source_line": "2170",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "5ca0d1eb-3dab-435f-8d62-e388dae1b474",
+        "content": "Invariant: history.node.id, node_id",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "history.node.id, node_id",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2181"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "1ae72667-33ab-4366-916f-d0d062592736",
+        "content": "Invariant: !history.events.is_empty()",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "!history.events.is_empty()",
+          "source_line": "2182",
+          "confidence": "0.95",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "104e4be4-1ad2-4e4f-94f3-3df794a443f7",
+        "content": "Invariant: history.events[0].event_type, \"created\"",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2183",
+          "inferred": "true",
+          "assertion": "history.events[0].event_type, \"created\""
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "490ca9ca-d9f2-4c0f-81af-73196cfe5fcc",
+        "content": "Invariant: history.events.len() >= 2",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2196",
+          "assertion": "history.events.len() >= 2",
+          "confidence": "0.95",
+          "inferred": "true",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "daa235a5-9135-4a6e-908f-edbe6856a00a",
+        "content": "Invariant: history.events.iter().any(|e| e.event_type == \"edge_added\")",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "assertion": "history.events.iter().any(|e| e.event_type == \"edge_added\")",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "source_line": "2197",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "a4ad5bdd-d9ca-49db-bae3-4d08d8921976",
+        "content": "Invariant: history.is_none()",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "history.is_none()",
+          "source_line": "2204",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "202b3e1c-c628-4f32-95d0-0ba8b6bdfc73",
+        "content": "Invariant: trend.is_none()",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "assertion": "trend.is_none()",
+          "source_line": "2213",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "7f61f67c-b904-41dc-9b48-be0499b8f43f",
+        "content": "Invariant: trend.data_points.len(), 3",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2228",
+          "confidence": "0.95",
+          "extractor": "assertion",
+          "inferred": "true",
+          "assertion": "trend.data_points.len(), 3"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "38c4d300-3e5f-4d7d-8fb7-ecd46ab00db0",
+        "content": "Invariant: trend.data_points[0].timestamp, 1000",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "trend.data_points[0].timestamp, 1000",
+          "source_line": "2229",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "ccf159d5-33db-4541-8938-161a5f8fd2ad",
+        "content": "Invariant: trend.data_points[0].score, 0.5",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "assertion",
+          "source_line": "2230",
+          "inferred": "true",
+          "assertion": "trend.data_points[0].score, 0.5",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "2e1574aa-4f75-40d8-b82a-b0459be5952a",
+        "content": "Invariant: trend.trend_direction, \"improving\"",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "2231",
+          "extractor": "assertion",
+          "inferred": "true",
+          "assertion": "trend.trend_direction, \"improving\"",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "dc78ee91-04ed-4f69-bc9b-3bba33b9ee18",
+        "content": "Invariant: trend.trend_direction, \"degrading\"",
+        "kind": "Constraint",
+        "metadata": {
+          "confidence": "0.95",
+          "inferred": "true",
+          "assertion": "trend.trend_direction, \"degrading\"",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2245",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "67c27175-bc78-47a5-9b55-ffaf4544b840",
+        "content": "Invariant: trend.trend_direction, \"stable\"",
+        "kind": "Constraint",
+        "metadata": {
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "assertion": "trend.trend_direction, \"stable\"",
+          "source_line": "2259",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "d5ed9a82-7ca3-435b-8d4d-6486f1018f62",
+        "content": "Invariant: inconsistencies.is_empty()",
+        "kind": "Constraint",
+        "metadata": {
+          "assertion": "inconsistencies.is_empty()",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2266",
+          "confidence": "0.95",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "09ec1bfb-e7d4-4198-93cd-b26e47afc58f",
+        "content": "Invariant: !inconsistencies.is_empty()",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2303",
+          "assertion": "!inconsistencies.is_empty()"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "ba5d07af-8387-43e4-8c95-f3ed1d88014a",
+        "content": "Invariant: inconsistencies[0].universe_a, \"ui\"",
+        "kind": "Constraint",
+        "metadata": {
+          "source_line": "2304",
+          "extractor": "assertion",
+          "assertion": "inconsistencies[0].universe_a, \"ui\"",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "40895014-0144-48e9-8c2e-6d3a57198c80",
+        "content": "Invariant: inconsistencies[0].universe_b, \"api\"",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95",
+          "source_line": "2305",
+          "inferred": "true",
+          "extractor": "assertion",
+          "assertion": "inconsistencies[0].universe_b, \"api\""
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "b596e63a-71e2-4a08-a7a2-3d227f8d1af9",
+        "content": "Invariant: missing_transform",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2336",
+          "extractor": "assertion",
+          "confidence": "0.95",
+          "assertion": "missing_transform",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "f5a556a5-a13a-4c93-ba0f-1168a12805de",
+        "content": "Invariant: updated.is_some()",
+        "kind": "Constraint",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "assertion": "updated.is_some()",
+          "source_line": "2346",
+          "confidence": "0.95",
+          "extractor": "assertion"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "3033de98-a5df-47ab-9e8f-045f6d3ec4e6",
+        "content": "Invariant: retrieved.metadata.get(\"universe\"), Some(&\"test\".to_string())",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "extractor": "assertion",
+          "assertion": "retrieved.metadata.get(\"universe\"), Some(&\"test\".to_string())",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2349",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "a3f348cb-743c-408e-924a-593efc9c3f7d",
+        "content": "Scenario: scenario {}",
+        "kind": "Scenario",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "test_scenario_{}",
+          "source_line": "1034",
+          "confidence": "0.9",
+          "inferred": "true",
+          "extractor": "test"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "ab11000d-8f6b-4c47-b6a5-5d8b25db21e6",
+        "content": "Scenario: add and get node",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "add_and_get_node",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test",
+          "confidence": "0.9",
+          "source_line": "1546",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "3fafea9b-df6b-4057-b8c9-b224e9967f1f",
+        "content": "Scenario: remove node",
+        "kind": "Scenario",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
+          "source_line": "1557",
+          "test_function": "remove_node",
+          "extractor": "test",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "bde3dbe3-1dbb-4b92-bcab-1b09e03678e6",
+        "content": "Scenario: list nodes with filter",
+        "kind": "Scenario",
+        "metadata": {
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1568",
+          "test_function": "list_nodes_with_filter",
+          "confidence": "0.9",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "73a9044f-03a3-4da6-b304-b331b66ff38c",
+        "content": "Scenario: add and list edges",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "1582",
+          "confidence": "0.9",
+          "test_function": "add_and_list_edges",
+          "extractor": "test",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "c0a6b2fd-1386-4119-a561-6acaab39748b",
+        "content": "Scenario: add edge node not found",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "1596",
+          "extractor": "test",
+          "test_function": "add_edge_node_not_found",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "e901ead6-a9af-4d96-bf6c-6bdd8e31e021",
+        "content": "Scenario: detect explicit contradiction",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "source_line": "1604",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "detect_explicit_contradiction",
+          "confidence": "0.9"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "e29eda14-0925-4ff4-a139-51d5937c0593",
+        "content": "Scenario: detect duplicate specifications",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "1616",
+          "confidence": "0.9",
+          "inferred": "true",
+          "extractor": "test",
+          "test_function": "detect_duplicate_specifications",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "b6face50-4f4f-4c5e-9380-e839f42b24cc",
+        "content": "Scenario: detect semantic contradiction password length",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "detect_semantic_contradiction_password_length",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "extractor": "test",
+          "confidence": "0.9",
+          "source_line": "1627"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "0eb92ed0-0e0d-4309-8b6b-b5b9754c48e5",
+        "content": "Scenario: no duplicate detection for synonym edges",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "test_function": "no_duplicate_detection_for_synonym_edges",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1644",
+          "extractor": "test",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "0d5c15ec-fb7e-41c5-8e1a-2f284b9e226e",
+        "content": "Scenario: detect omission isolated node",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "1657",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "test_function": "detect_omission_isolated_node",
+          "extractor": "test",
+          "confidence": "0.9"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "ca5d9013-4c58-4f08-87a5-59414ee50601",
+        "content": "Scenario: detect omission domain without refinements",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test",
+          "source_line": "1666",
+          "test_function": "detect_omission_domain_without_refinements",
+          "confidence": "0.9"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "c54e4333-50f8-4226-9fc4-80aec5894832",
+        "content": "Scenario: detect omission scenario without assertions",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "detect_omission_scenario_without_assertions",
+          "inferred": "true",
+          "source_line": "1678",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "35e71571-42f0-4ee9-a23b-2dfc258856ff",
+        "content": "Scenario: search nodes",
+        "kind": "Scenario",
+        "metadata": {
+          "extractor": "test",
+          "source_line": "1689",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "search_nodes"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "4c6fd6fc-a2f5-4780-b43f-035a64bed896",
+        "content": "Scenario: resolve terminology",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "resolve_terminology",
+          "extractor": "test",
+          "source_line": "1700",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "d81c4be8-4bc1-4c4e-bf0d-b7d7b1f986df",
+        "content": "Scenario: serialize deserialize roundtrip",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "serialize_deserialize_roundtrip",
+          "extractor": "test",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1712"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "a072f25d-b806-46b7-a58e-60d5562c9640",
+        "content": "Scenario: filter by formality layer",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "test_function": "filter_by_formality_layer",
+          "source_line": "1729",
+          "extractor": "test",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "e784e25b-f0fd-4459-b94a-f6be1fc0f09b",
+        "content": "Scenario: detect layer inconsistency wrong direction",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "1759",
+          "confidence": "0.9",
+          "inferred": "true",
+          "extractor": "test",
+          "test_function": "detect_layer_inconsistency_wrong_direction",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "b1e1d371-3974-468a-b0a8-0bf3108e6165",
+        "content": "Scenario: detect no layer inconsistency correct direction",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "extractor": "test",
+          "source_line": "1781",
+          "test_function": "detect_no_layer_inconsistency_correct_direction"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "727ffc4c-7861-48d5-bb79-2a81986e8a11",
+        "content": "Scenario: find formalizations of node",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "confidence": "0.9",
+          "source_line": "1802",
+          "test_function": "find_formalizations_of_node",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "8c720b43-2520-455b-8a3c-70f54252e5a4",
+        "content": "Scenario: find related terms by context",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "1820",
+          "inferred": "true",
+          "confidence": "0.9",
+          "extractor": "test",
+          "test_function": "find_related_terms_by_context",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "4d8465c2-e1cb-48d9-8be6-aa000da4369d",
+        "content": "Scenario: detect potential synonyms by structure",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "test_function": "detect_potential_synonyms_by_structure",
+          "extractor": "test",
+          "source_line": "1834"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "cdd049cc-cbfd-42e4-af54-80241118fdde",
+        "content": "Scenario: no synonyms when already marked",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "test_function": "no_synonyms_when_already_marked",
+          "extractor": "test",
+          "source_line": "1852",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "df41c4f6-25c3-4ac0-95ae-9655a738c527",
+        "content": "Scenario: generate contract template for constraint",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "test_function": "generate_contract_template_for_constraint",
+          "source_line": "1867",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "02015118-8040-4542-9a35-f11e6c23eccf",
+        "content": "Scenario: generate contract template for scenario",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "generate_contract_template_for_scenario",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_line": "1893",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "fb5294f9-6784-45ac-90a5-85b6484caf7a",
+        "content": "Scenario: generate contract template python",
+        "kind": "Scenario",
+        "metadata": {
+          "extractor": "test",
+          "confidence": "0.9",
+          "inferred": "true",
+          "test_function": "generate_contract_template_python",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1897"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "83d7d395-6223-46e8-90e8-e2b189cbd3db",
+        "content": "Scenario: generate contract template returns none for non testable",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "inferred": "true",
+          "extractor": "test",
+          "test_function": "generate_contract_template_returns_none_for_non_testable",
+          "source_line": "1912",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "f8663791-b99e-47de-9998-465a614187d3",
+        "content": "Scenario: coverage empty graph",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "test_coverage_empty_graph",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1924",
+          "extractor": "test",
+          "confidence": "0.9"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "54c3b57d-5ddd-45c6-aa62-1c2c9767c000",
+        "content": "Scenario: coverage no tests",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "confidence": "0.9",
+          "source_line": "1934",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "test_coverage_no_tests"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "f432d0e9-8076-4df8-a02c-a365a916aadf",
+        "content": "Scenario: coverage with tests",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "1948",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
+          "inferred": "true",
+          "test_function": "test_coverage_with_tests"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "6156d643-1e6b-4d0f-96ce-1aaf86902683",
+        "content": "Scenario: coverage ignores non testable nodes",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "test_coverage_ignores_non_testable_nodes",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "1966",
+          "extractor": "test",
+          "inferred": "true",
+          "confidence": "0.9"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "a6af9468-1788-4065-b3e1-cd2b78668410",
+        "content": "Scenario: response time",
+        "kind": "Scenario",
+        "metadata": {
+          "extractor": "test",
+          "source_line": "1987",
+          "test_function": "test_response_time",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "ecb18ec8-d40e-42fc-9565-87b61061935d",
+        "content": "Scenario: user login",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "test_function": "test_user_login",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2017",
+          "confidence": "0.9"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "b5f558d2-42b0-4646-a9d6-bda03eef0f75",
+        "content": "Scenario: unrelated function",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "2030",
+          "test_function": "unrelated_function",
+          "extractor": "test",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "f6b4cf7e-2de3-400b-8625-ccec5c0c25f9",
+        "content": "Scenario: calculate compliance nonexistent node",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2048",
+          "test_function": "calculate_compliance_nonexistent_node",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "8f6a28b1-4209-49cc-a44e-c0d2702a4752",
+        "content": "Scenario: compliance report empty",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "2055",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test",
+          "test_function": "compliance_report_empty",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "8073e304-11c9-4010-9ebf-c636fa491876",
+        "content": "Scenario: compliance report with linked code",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "compliance_report_with_linked_code",
+          "source_line": "2062",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "ed5dc70e-9f84-49df-a19d-b1a527b07813",
+        "content": "Scenario: extract keywords filters stopwords",
+        "kind": "Scenario",
+        "metadata": {
+          "extractor": "test",
+          "source_line": "2075",
+          "test_function": "extract_keywords_filters_stopwords",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "af6b4e8b-6db8-4220-a8ad-de1604e237e5",
+        "content": "Scenario: query at timestamp empty graph",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "test_function": "query_at_timestamp_empty_graph",
+          "inferred": "true",
+          "source_line": "2088",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "bf036605-80f4-4bdd-a187-b20a7ebf4a1b",
+        "content": "Scenario: query at timestamp filters by time",
+        "kind": "Scenario",
+        "metadata": {
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2099",
+          "confidence": "0.9",
+          "test_function": "query_at_timestamp_filters_by_time",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "835ce953-5c40-4c7d-a778-c904dd88ab4d",
+        "content": "Scenario: diff timestamps detects added nodes",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "diff_timestamps_detects_added_nodes",
+          "inferred": "true",
+          "extractor": "test",
+          "source_line": "2128"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "547fb7b2-6581-43f7-8441-fe263cb1989d",
+        "content": "Scenario: diff timestamps shows no changes for stable graph",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "diff_timestamps_shows_no_changes_for_stable_graph",
+          "source_line": "2150",
+          "confidence": "0.9",
+          "inferred": "true",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "a7d302c7-77c4-4281-a1ac-4c5a1e9aeaf5",
+        "content": "Scenario: get node history shows creation",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "get_node_history_shows_creation",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2173",
+          "extractor": "test",
+          "confidence": "0.9",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "3ffe9c4b-047a-4310-acde-1cbbbd6aa5da",
+        "content": "Scenario: get node history shows edge additions",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "get_node_history_shows_edge_additions",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2186",
+          "extractor": "test",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "5d5e9884-3906-4b89-ac29-be98a5bdfdc8",
+        "content": "Scenario: get node history nonexistent returns none",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "extractor": "test",
+          "inferred": "true",
+          "test_function": "get_node_history_nonexistent_returns_none",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2200"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "dd65d375-5282-42c5-a7bf-1928c6c695c1",
+        "content": "Scenario: get compliance trend no data",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "source_line": "2207",
+          "extractor": "test",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "get_compliance_trend_no_data"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "d8a94401-dec3-4f5e-8a74-20558a63f361",
+        "content": "Scenario: get compliance trend with data",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "get_compliance_trend_with_data",
+          "source_line": "2216",
+          "extractor": "test",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "3104ecfb-9db6-4f4d-89bf-ba2d6759141e",
+        "content": "Scenario: get compliance trend degrading",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "get_compliance_trend_degrading",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test",
+          "source_line": "2234",
+          "confidence": "0.9",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "68f010c0-9d13-40ad-95bd-6769cb3bef04",
+        "content": "Scenario: get compliance trend stable",
+        "kind": "Scenario",
+        "metadata": {
+          "extractor": "test",
+          "source_line": "2248",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
+          "test_function": "get_compliance_trend_stable"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "48b035be-35d3-4103-b7bf-53f5f2e680d3",
+        "content": "Scenario: detect inter universe inconsistencies empty",
+        "kind": "Scenario",
+        "metadata": {
+          "inferred": "true",
+          "source_line": "2262",
+          "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
+          "test_function": "detect_inter_universe_inconsistencies_empty"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "7bcc1eca-271a-4276-bb95-87ce375a8379",
+        "content": "Scenario: detect inter universe inconsistencies with transform",
+        "kind": "Scenario",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2269",
+          "test_function": "detect_inter_universe_inconsistencies_with_transform",
+          "extractor": "test",
+          "confidence": "0.9",
+          "inferred": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "ba2882a1-a8d2-4018-b67c-81330c111736",
+        "content": "Scenario: detect inter universe inconsistencies missing transform",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "test_function": "detect_inter_universe_inconsistencies_missing_transform",
+          "inferred": "true",
+          "source_line": "2308",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "633902f2-c470-42ac-aa09-2884c9056c22",
+        "content": "Scenario: update node metadata works",
+        "kind": "Scenario",
+        "metadata": {
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "source_line": "2339",
+          "extractor": "test",
+          "inferred": "true",
+          "test_function": "update_node_metadata_works"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "94aca6e6-2d47-4b1d-acab-386f59acbd33",
+        "content": "where the source has higher formality than target (should be reversed).",
+        "kind": "Assertion",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.7",
+          "source_line": "520",
+          "inferred": "true",
+          "extractor": "doc",
+          "doc_comment": "true"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
         "formality_layer": 0
       }
     ],
@@ -2367,9 +5215,8 @@
         {
           "id": "feb37a83-06bc-4de1-9ff7-6d4f118fb892",
           "kind": "Refines",
-          "description": "Filtering is a refinement of export capability",
-          "created_at": 1771076416,
-          "metadata": {}
+          "metadata": {},
+          "created_at": 1771076416
         }
       ],
       [
@@ -2378,9 +5225,8 @@
         {
           "id": "11cdd1d2-1abf-45e7-a37f-387f27011814",
           "kind": "Refines",
-          "description": "Visual encoding is a refinement of export",
-          "created_at": 1771076416,
-          "metadata": {}
+          "metadata": {},
+          "created_at": 1771076416
         }
       ],
       [
@@ -2389,9 +5235,8 @@
         {
           "id": "3fc75d7d-1771-4424-9d5c-9a4096902a59",
           "kind": "Refines",
-          "description": "Edge styling is a refinement of export",
-          "created_at": 1771076416,
-          "metadata": {}
+          "metadata": {},
+          "created_at": 1771076416
         }
       ],
       [
@@ -2400,9 +5245,8 @@
         {
           "id": "600c5373-8df3-4c0b-988c-845d9223c73c",
           "kind": "Refines",
-          "description": "Filtering is a refinement of export capability",
-          "created_at": 1771076400,
-          "metadata": {}
+          "metadata": {},
+          "created_at": 1771076400
         }
       ],
       [
@@ -2411,9 +5255,8 @@
         {
           "id": "3b2346d8-3fee-42aa-8ac0-d72b13d5b83c",
           "kind": "Refines",
-          "description": "Visual encoding is a refinement of export",
-          "created_at": 1771076400,
-          "metadata": {}
+          "metadata": {},
+          "created_at": 1771076400
         }
       ],
       [
@@ -2422,9 +5265,188 @@
         {
           "id": "2620baf0-d6ac-4b2f-a851-eb815a9d59e9",
           "kind": "Refines",
-          "description": "Edge styling is a refinement of export",
-          "created_at": 1771076400,
-          "metadata": {}
+          "metadata": {},
+          "created_at": 1771076400
+        }
+      ],
+      [
+        177,
+        180,
+        {
+          "id": "3fde335f-0a06-42e1-b02e-52ce65c9f016",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        177,
+        183,
+        {
+          "id": "8f39ddb3-0e60-4672-b794-204d1a346329",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        180,
+        177,
+        {
+          "id": "980801b4-09d5-45de-96d1-b896a60bce37",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        180,
+        183,
+        {
+          "id": "3c1360f5-d8f8-44ee-b81a-a27cdba4882f",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        183,
+        177,
+        {
+          "id": "a920e816-111a-4f13-a963-c524df0f873e",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        183,
+        180,
+        {
+          "id": "3224856a-2531-48c4-854c-f60f882120f6",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        188,
+        191,
+        {
+          "id": "d20565d7-b8d9-4726-8da3-81154e561858",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        189,
+        192,
+        {
+          "id": "af689bc1-327d-4464-9177-b41186dd7c38",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        190,
+        194,
+        {
+          "id": "f5bff0d3-7fb5-4297-9f9c-5f537f264401",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        191,
+        188,
+        {
+          "id": "61eb3f2d-0029-4d33-90ea-35a38ef23fc6",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        192,
+        189,
+        {
+          "id": "bd134fc0-8471-437a-8573-89fc28f6a289",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        194,
+        190,
+        {
+          "id": "760af298-7c55-43c7-8107-08c8802f0f40",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        195,
+        200,
+        {
+          "id": "623373c9-1cb4-440d-9346-4fb0ee41e4e0",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        200,
+        195,
+        {
+          "id": "5caf6aad-ab8e-4c9f-9048-3b859d2042b3",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        203,
+        206,
+        {
+          "id": "d544eb6b-eaf7-4da5-9fb4-6f4a142ceed3",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        206,
+        203,
+        {
+          "id": "456e3c5e-9eee-4668-83c2-eb5bf0a1148d",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        228,
+        230,
+        {
+          "id": "538ac11c-9e50-40de-b1ea-c29d3d39ae98",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
+        }
+      ],
+      [
+        230,
+        228,
+        {
+          "id": "127fb64e-9d73-4a2b-8ce9-052369178e5c",
+          "kind": "Synonym",
+          "metadata": {},
+          "created_at": 1771077123
         }
       ]
     ]
