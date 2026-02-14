@@ -195,8 +195,8 @@
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
         "kind": "Constraint",
         "metadata": {
-          "function": "detect_omissions",
-          "source_file": "spec-core/src/graph.rs"
+          "source_file": "spec-core/src/graph.rs",
+          "function": "detect_omissions"
         },
         "created_at": 1771061597,
         "modified_at": 1771061597,
@@ -228,8 +228,8 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Add"
+          "function": "Commands::Add",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -240,8 +240,8 @@
         "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "line": "19-20"
+          "line": "19-20",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -264,8 +264,8 @@
         "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "line": "18,162-169"
+          "line": "18,162-169",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771062014,
         "modified_at": 1771062014,
@@ -300,8 +300,8 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Constraint",
         "metadata": {
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Trace"
+          "function": "Commands::Trace",
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -845,8 +845,8 @@
         "metadata": {
           "session": "57",
           "verified_modules": "prover, udaf",
-          "date": "2026-02-14",
-          "resolved_issues": "3 critical"
+          "resolved_issues": "3 critical",
+          "date": "2026-02-14"
         },
         "created_at": 1771070800,
         "modified_at": 1771070800,
@@ -1186,563 +1186,19 @@
         "formality_layer": 0
       },
       {
-        "id": "a25f391e-7cdf-446a-b0db-a4300156bb41",
-        "content": "where the source has higher formality than target (should be reversed).",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "doc_comment": "true",
-          "extractor": "doc",
-          "confidence": "0.7",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "520"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 0
-      },
-      {
-        "id": "a62239dc-041a-4bc7-89e2-acc726dc045c",
-        "content": "Scenario: detect inter universe inconsistencies missing transform",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "2308",
-          "inferred": "true",
-          "confidence": "0.9",
-          "extractor": "test",
-          "test_function": "detect_inter_universe_inconsistencies_missing_transform"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "bb688b93-49a6-48c4-ac44-091d4628e3db",
-        "content": "Scenario: detect inter universe inconsistencies with transform",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "inferred": "true",
-          "test_function": "detect_inter_universe_inconsistencies_with_transform",
-          "extractor": "test",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "2269"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "ea92391a-1a9a-4879-8912-9d2625240a43",
-        "content": "Scenario: detect inter universe inconsistencies empty",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "source_line": "2262",
-          "extractor": "test",
-          "test_function": "detect_inter_universe_inconsistencies_empty"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "0522e73a-de4b-440b-830f-2df03c6c6ed6",
-        "content": "where the source has higher formality than target (should be reversed).",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "doc",
-          "doc_comment": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "source_line": "535",
-          "confidence": "0.7"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 0
-      },
-      {
-        "id": "5f17fbcc-40f9-40ff-823f-e5463779120b",
-        "content": "Scenario: diff timestamps detects added nodes",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "2128",
-          "test_function": "diff_timestamps_detects_added_nodes",
-          "extractor": "test",
-          "inferred": "true"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "bf3a465a-deb9-45e5-80b1-d4f7e9f190d4",
-        "content": "Scenario: detect inter universe inconsistencies missing transform",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "inferred": "true",
-          "source_line": "2519",
-          "confidence": "0.9",
-          "test_function": "detect_inter_universe_inconsistencies_missing_transform"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
         "id": "870b741d-a927-44d7-b385-2ffa6ea1c119",
         "content": "Invariant: fetched.content, \"User must authenticate\"",
         "kind": "Constraint",
         "metadata": {
           "inferred": "true",
-          "source_line": "1553",
-          "confidence": "0.95",
-          "assertion": "fetched.content, \"User must authenticate\"",
           "extractor": "assertion",
-          "source_file": "spec-core/src/graph.rs"
+          "assertion": "fetched.content, \"User must authenticate\"",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95",
+          "source_line": "1553"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
-        "formality_layer": 3
-      },
-      {
-        "id": "7528ebce-8d1e-4349-850c-4f5d3feee223",
-        "content": "Scenario: detect inter universe inconsistencies with transform",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "test_function": "detect_inter_universe_inconsistencies_with_transform",
-          "confidence": "0.9",
-          "source_line": "2480",
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "63c95fd5-8e87-44ef-82a2-3377f7f94c01",
-        "content": "Scenario: coverage with tests",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "inferred": "true",
-          "test_function": "test_coverage_with_tests",
-          "source_line": "1948"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "096523d8-8c39-475b-a3bb-a25c0301dfc3",
-        "content": "Scenario: detect inter universe inconsistencies empty",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "test_function": "detect_inter_universe_inconsistencies_empty",
-          "source_line": "2473",
-          "confidence": "0.9",
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "13609f26-6a2e-4a77-b65a-f3b4e48f0e7c",
-        "content": "Scenario: generate contract template returns none for non testable",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "extractor": "test",
-          "inferred": "true",
-          "test_function": "generate_contract_template_returns_none_for_non_testable",
-          "source_line": "1912",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "fb751e11-7062-40ba-a1ec-6d087f53f5da",
-        "content": "Scenario: generate contract template for constraint",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "source_line": "1867",
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "confidence": "0.9",
-          "test_function": "generate_contract_template_for_constraint"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "371220e1-1ca9-454b-bd43-5f1069f67518",
-        "content": "Scenario: no synonyms when already marked",
-        "kind": "Scenario",
-        "metadata": {
-          "inferred": "true",
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1852",
-          "extractor": "test",
-          "test_function": "no_synonyms_when_already_marked"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "fddfd467-442e-4736-a5ba-ad3068c694df",
-        "content": "Scenario: detect potential synonyms by structure",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "source_line": "1834",
-          "inferred": "true",
-          "test_function": "detect_potential_synonyms_by_structure",
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "f17f74e9-2ceb-4212-80fa-1bb39f16cb3f",
-        "content": "Scenario: detect no layer inconsistency correct direction",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9",
-          "test_function": "detect_no_layer_inconsistency_correct_direction",
-          "extractor": "test",
-          "inferred": "true",
-          "source_line": "1781"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "97f2457e-8221-42dc-b9d2-f5e6dc69eef7",
-        "content": "Scenario: detect layer inconsistency wrong direction",
-        "kind": "Scenario",
-        "metadata": {
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "detect_layer_inconsistency_wrong_direction",
-          "source_line": "1759",
-          "confidence": "0.9",
-          "extractor": "test"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "f7dc233e-3cae-498f-a758-4d99f2e54f8b",
-        "content": "Scenario: detect omission scenario without assertions",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "source_line": "1678",
-          "confidence": "0.9",
-          "test_function": "detect_omission_scenario_without_assertions",
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "57a1f422-de05-4aed-a6b7-3e9510e615df",
-        "content": "Scenario: detect omission domain without refinements",
-        "kind": "Scenario",
-        "metadata": {
-          "source_line": "1666",
-          "confidence": "0.9",
-          "extractor": "test",
-          "inferred": "true",
-          "test_function": "detect_omission_domain_without_refinements",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "9ce8afb4-18c9-4d12-b25a-ce664cf00a83",
-        "content": "Scenario: detect omission isolated node",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "source_line": "1657",
-          "extractor": "test",
-          "test_function": "detect_omission_isolated_node",
-          "confidence": "0.9"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "95e3f255-e5ad-4a81-9f78-dffa5a9be558",
-        "content": "Scenario: detect potential synonyms by structure",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "extractor": "test",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "detect_potential_synonyms_by_structure",
-          "source_line": "2045",
-          "inferred": "true"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "b8941728-aef8-4f4a-83e2-f909edc4f479",
-        "content": "Scenario: no duplicate detection for synonym edges",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "inferred": "true",
-          "source_line": "1644",
-          "confidence": "0.9",
-          "test_function": "no_duplicate_detection_for_synonym_edges",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "3d6d4bbc-4aee-4e40-bc73-1b5e463a0513",
-        "content": "Scenario: detect semantic contradiction password length",
-        "kind": "Scenario",
-        "metadata": {
-          "test_function": "detect_semantic_contradiction_password_length",
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1627",
-          "extractor": "test",
-          "inferred": "true"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "b0e46ffa-8b45-4ca0-8c30-59de4eede08b",
-        "content": "Scenario: detect duplicate specifications",
-        "kind": "Scenario",
-        "metadata": {
-          "test_function": "detect_duplicate_specifications",
-          "source_line": "1616",
-          "inferred": "true",
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "d59145bb-d567-4683-9200-e294ce08371c",
-        "content": "Scenario: detect explicit contradiction",
-        "kind": "Scenario",
-        "metadata": {
-          "test_function": "detect_explicit_contradiction",
-          "inferred": "true",
-          "extractor": "test",
-          "confidence": "0.9",
-          "source_line": "1604",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "33058c41-c1da-46ff-acd4-d4e9d596916c",
-        "content": "Scenario: detect no layer inconsistency correct direction",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "source_line": "1992",
-          "confidence": "0.9",
-          "test_function": "detect_no_layer_inconsistency_correct_direction",
-          "inferred": "true"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "41c1544c-5cfb-43b0-9019-a62c8873d0cc",
-        "content": "Scenario: detect layer inconsistency wrong direction",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9",
-          "inferred": "true",
-          "extractor": "test",
-          "source_line": "1970",
-          "test_function": "detect_layer_inconsistency_wrong_direction"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "e654b261-6400-44f5-bdc5-c3cce9ec312e",
-        "content": "Scenario: detect omission scenario without assertions",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1889",
-          "test_function": "detect_omission_scenario_without_assertions",
-          "extractor": "test"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "7c93aed2-f987-4b32-9c3d-98f29d5f0fd1",
-        "content": "Scenario: detect omission domain without refinements",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "test_function": "detect_omission_domain_without_refinements",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1877",
-          "confidence": "0.9",
-          "inferred": "true"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "9e1836ff-b894-4f9c-813a-32757bdd3c3a",
-        "content": "Scenario: detect omission isolated node",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1868",
-          "inferred": "true",
-          "confidence": "0.9",
-          "test_function": "detect_omission_isolated_node",
-          "extractor": "test"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "0035e23d-89df-4b33-985f-b56352b7fc3c",
-        "content": "Scenario: no duplicate detection for synonym edges",
-        "kind": "Scenario",
-        "metadata": {
-          "test_function": "no_duplicate_detection_for_synonym_edges",
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1855",
-          "confidence": "0.9",
-          "extractor": "test"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "96c79432-ea56-44a0-acf9-abab6ae8338d",
-        "content": "Scenario: detect semantic contradiction password length",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "extractor": "test",
-          "inferred": "true",
-          "source_line": "1838",
-          "test_function": "detect_semantic_contradiction_password_length",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "6c7bde84-8f0c-4ef7-95cb-97ea8c69a515",
-        "content": "Scenario: detect duplicate specifications",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "test_function": "detect_duplicate_specifications",
-          "extractor": "test",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1827",
-          "inferred": "true"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "f089ad6f-77e8-414e-8d32-ca495383f31e",
-        "content": "Invariant: user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-        "kind": "Constraint",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.95",
-          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-          "extractor": "assertion",
-          "source_line": "1807",
-          "inferred": "true"
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "a5866b1f-4f2c-4c4e-aecf-032620ec9970",
-        "content": "Scenario: detect explicit contradiction",
-        "kind": "Scenario",
-        "metadata": {
-          "source_line": "1815",
-          "test_function": "detect_explicit_contradiction",
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "confidence": "0.9",
-          "extractor": "test"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
         "formality_layer": 3
       },
       {
@@ -1750,91 +1206,59 @@
         "content": "Scenario: detect inter universe inconsistencies with transform",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "2269",
-          "confidence": "0.9",
-          "extractor": "test",
           "test_function": "detect_inter_universe_inconsistencies_with_transform",
+          "confidence": "0.9",
           "inferred": "true",
-          "source_file": "spec-core/src/graph.rs"
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test",
+          "source_line": "2269"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
         "formality_layer": 3
-      },
-      {
-        "id": "d9d39b3d-1111-40e8-a49e-4f703a827763",
-        "content": "Invariant: fetched.content, \"User must authenticate\"",
-        "kind": "Constraint",
-        "metadata": {
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.95",
-          "source_line": "1553",
-          "extractor": "assertion",
-          "assertion": "fetched.content, \"User must authenticate\""
-        },
-        "created_at": 1771082309,
-        "modified_at": 1771082309,
-        "formality_layer": 3
-      },
-      {
-        "id": "6f31a5cf-5c9a-4849-bb32-2809590459a0",
-        "content": "Scenario: diff timestamps detects added nodes",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9",
-          "source_line": "2339",
-          "inferred": "true",
-          "test_function": "diff_timestamps_detects_added_nodes"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "ee86e46c-a0f6-4c86-8375-183344d80311",
-        "content": "AI-powered relationship inference (cross-layer semantic matching)",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "InferAllRelationshipsWithAi",
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "source_line": "56"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "09c9b3dc-d5d5-4c4a-8a72-58cab5e87df4",
-        "content": "Automatic relationship inference",
-        "kind": "Assertion",
-        "metadata": {
-          "source_line": "53",
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "rpc_name": "InferAllRelationships"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
       },
       {
         "id": "83d7d395-6223-46e8-90e8-e2b189cbd3db",
         "content": "Scenario: generate contract template returns none for non testable",
         "kind": "Scenario",
         "metadata": {
-          "confidence": "0.9",
-          "inferred": "true",
-          "test_function": "generate_contract_template_returns_none_for_non_testable",
           "extractor": "test",
+          "source_file": "spec-core/src/graph.rs",
           "source_line": "1912",
+          "test_function": "generate_contract_template_returns_none_for_non_testable",
+          "inferred": "true",
+          "confidence": "0.9"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "11c8f52c-2f8a-47e4-801f-e83c66b974af",
+        "content": "Invariant: user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
+        "kind": "Constraint",
+        "metadata": {
+          "inferred": "true",
+          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
+          "source_line": "1807",
+          "extractor": "assertion",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.95"
+        },
+        "created_at": 1771077123,
+        "modified_at": 1771077123,
+        "formality_layer": 3
+      },
+      {
+        "id": "48b035be-35d3-4103-b7bf-53f5f2e680d3",
+        "content": "Scenario: detect inter universe inconsistencies empty",
+        "kind": "Scenario",
+        "metadata": {
+          "test_function": "detect_inter_universe_inconsistencies_empty",
+          "inferred": "true",
+          "source_line": "2262",
+          "extractor": "test",
+          "confidence": "0.9",
           "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771077123,
@@ -1842,239 +1266,15 @@
         "formality_layer": 3
       },
       {
-        "id": "7d8624ed-ec38-4fc7-b5e1-8ccf571e7975",
-        "content": "RPC: Set node universe",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "50",
-          "confidence": "0.95",
-          "rpc_name": "SetNodeUniverse"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "11c8f52c-2f8a-47e4-801f-e83c66b974af",
-        "content": "Invariant: user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-        "kind": "Constraint",
-        "metadata": {
-          "confidence": "0.95",
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1807",
-          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-          "extractor": "assertion"
-        },
-        "created_at": 1771077123,
-        "modified_at": 1771077123,
-        "formality_layer": 3
-      },
-      {
-        "id": "eba68490-5810-4b67-87bf-f6aaad295085",
-        "content": "Inter-universe consistency (conversation.md U, D, A, f implementation)",
-        "kind": "Assertion",
-        "metadata": {
-          "source_line": "49",
-          "rpc_name": "DetectInterUniverseInconsistencies",
-          "extractor": "proto_rpc",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "87a1164a-adca-44d4-ae0b-b6b5e739918f",
-        "content": "RPC: Get compliance trend",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
-          "confidence": "0.95",
-          "rpc_name": "GetComplianceTrend",
-          "extractor": "proto_rpc",
-          "source_line": "46"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "d8268eed-a4f6-4e3f-877b-b0eda3908cf1",
-        "content": "RPC: Get node history",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "GetNodeHistory",
-          "inferred": "true",
-          "source_line": "45",
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "f4fb6b92-c02d-4fbe-91d7-75e8f6c665ed",
-        "content": "RPC: Diff timestamps",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "source_line": "44",
-          "rpc_name": "DiffTimestamps",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "753ddd18-4a2d-490b-922a-f24e3a05330a",
-        "content": "Temporal queries",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "source_line": "43",
-          "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "QueryAtTimestamp",
-          "inferred": "true",
-          "confidence": "0.95"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "36d7b956-be47-4984-91d6-efb4f3168b3f",
-        "content": "RPC: Get compliance report",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "GetComplianceReport",
-          "inferred": "true",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "40",
-          "extractor": "proto_rpc"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "07343dc1-3fc5-4211-8438-27f4bed12ebc",
-        "content": "Graded compliance",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "CalculateCompliance",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "source_line": "39"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "9887bcb3-f27f-4c6a-b0cd-b3534d2d7f9f",
-        "content": "RPC: Get test coverage",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "source_line": "36",
-          "rpc_name": "GetTestCoverage"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "48b035be-35d3-4103-b7bf-53f5f2e680d3",
-        "content": "Scenario: detect inter universe inconsistencies empty",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9",
-          "inferred": "true",
-          "test_function": "detect_inter_universe_inconsistencies_empty",
-          "extractor": "test",
-          "source_line": "2262"
-        },
-        "created_at": 1771077123,
-        "modified_at": 1771077123,
-        "formality_layer": 3
-      },
-      {
-        "id": "83fb158b-8d19-4433-b951-d43ec41d2ea1",
-        "content": "Scenario: generate contract template for constraint",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "inferred": "true",
-          "confidence": "0.9",
-          "source_line": "2078",
-          "test_function": "generate_contract_template_for_constraint"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "78e74acd-9915-498e-b4af-b65558f680b1",
-        "content": "Executable contracts",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "GenerateContractTemplate",
-          "source_line": "35",
-          "extractor": "proto_rpc",
-          "inferred": "true",
-          "confidence": "0.95"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "d289e2c9-8f89-4b00-ac1b-d0dc95624fcf",
-        "content": "RPC: Detect potential synonyms",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "source_line": "32",
-          "inferred": "true",
-          "confidence": "0.95",
-          "rpc_name": "DetectPotentialSynonyms",
-          "source_file": "proto/spec_oracle.proto"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
         "id": "f432d0e9-8076-4df8-a02c-a365a916aadf",
         "content": "Scenario: coverage with tests",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "test_coverage_with_tests",
-          "inferred": "true",
-          "confidence": "0.9",
-          "extractor": "test",
           "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
+          "inferred": "true",
+          "test_function": "test_coverage_with_tests",
+          "extractor": "test",
           "source_line": "1948"
         },
         "created_at": 1771077123,
@@ -2082,784 +1282,32 @@
         "formality_layer": 3
       },
       {
-        "id": "088d73fb-1e8a-4cef-b073-a5683b1ba1ad",
-        "content": "Semantic normalization",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "source_line": "31",
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "rpc_name": "FindRelatedTerms"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "29a16db2-42a4-4cf3-b80a-21b54b633664",
-        "content": "RPC: Find formalizations",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "rpc_name": "FindFormalizations",
-          "source_line": "28"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "da67bed8-1c55-4558-b83b-a2d44620ff18",
-        "content": "Scenario: coverage with tests",
-        "kind": "Scenario",
-        "metadata": {
-          "inferred": "true",
-          "extractor": "test",
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "test_coverage_with_tests",
-          "source_line": "2159"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "d0c487f7-c58b-48e3-abe6-cd98203a6060",
-        "content": "Layer-aware operations",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "27",
-          "rpc_name": "FilterByLayer",
-          "extractor": "proto_rpc",
-          "confidence": "0.95",
-          "inferred": "true"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "9b727631-9893-4cc5-96c3-5dc7f7496be3",
-        "content": "Terminology resolution",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "source_line": "24",
-          "rpc_name": "ResolveTerminology"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "fbc72396-5549-4c77-aaa9-ba1f875726d0",
-        "content": "RPC: Detect layer inconsistencies",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "21",
-          "rpc_name": "DetectLayerInconsistencies",
-          "inferred": "true",
-          "confidence": "0.95"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "61e2bd0c-fcc2-4dc2-b3a9-b243513e154c",
-        "content": "RPC: Detect omissions",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
-          "rpc_name": "DetectOmissions",
-          "source_line": "20",
-          "extractor": "proto_rpc",
-          "confidence": "0.95"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "a0d49323-c67e-46f2-b56d-b346a338d27f",
-        "content": "RPC: Detect contradictions",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "rpc_name": "DetectContradictions",
-          "inferred": "true",
-          "source_line": "19",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "ae384016-81ec-4a1a-af36-0ce5925c9d11",
-        "content": "Query and analysis",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "Query",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "source_line": "18"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "a9c5312d-024f-4bf6-a4a9-46e86b4b6fc1",
-        "content": "RPC: Remove edge",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "confidence": "0.95",
-          "source_line": "15",
-          "rpc_name": "RemoveEdge",
-          "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "3ff234f5-6086-4c17-a69d-78d2ccb540e3",
-        "content": "RPC: List edges",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
-          "rpc_name": "ListEdges",
-          "confidence": "0.95",
-          "inferred": "true",
-          "source_line": "14"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "ab4148d8-5192-4052-8b71-ed64d6a048dc",
-        "content": "Edge operations",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "rpc_name": "AddEdge",
-          "source_line": "13"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "5045318e-0e12-4097-b6ed-b91e3a286f58",
-        "content": "RPC: Remove node",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
-          "source_line": "10",
-          "rpc_name": "RemoveNode"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "2810f65d-f58d-4e47-8b76-067b781fe5fb",
-        "content": "RPC: List nodes",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "ListNodes",
-          "extractor": "proto_rpc",
-          "inferred": "true",
-          "source_line": "9",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "8f80b976-afd7-416a-9f26-ae56041938b3",
-        "content": "RPC: Get node",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "GetNode",
-          "source_line": "8",
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "confidence": "0.95"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "a6e6b260-9927-4f7f-a712-f67aeb374bd5",
-        "content": "Node operations",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "AddNode",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "7",
-          "inferred": "true",
-          "confidence": "0.95"
-        },
-        "created_at": 1771080847,
-        "modified_at": 1771080847,
-        "formality_layer": 2
-      },
-      {
-        "id": "fac937d4-8b07-4de1-b4b6-3c9e1c100a2a",
-        "content": "AI-powered relationship inference (cross-layer semantic matching)",
-        "kind": "Assertion",
-        "metadata": {
-          "source_line": "56",
-          "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "InferAllRelationshipsWithAi",
-          "inferred": "true",
-          "confidence": "0.95",
-          "extractor": "proto_rpc"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "cdc0d3ef-f2a3-407f-adc7-e7814cb5d6f2",
-        "content": "Automatic relationship inference",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "inferred": "true",
-          "rpc_name": "InferAllRelationships",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "53"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
         "id": "835ce953-5c40-4c7d-a778-c904dd88ab4d",
         "content": "Scenario: diff timestamps detects added nodes",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "2128",
           "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
           "confidence": "0.9",
+          "test_function": "diff_timestamps_detects_added_nodes",
+          "inferred": "true",
           "extractor": "test",
-          "test_function": "diff_timestamps_detects_added_nodes"
+          "source_line": "2128"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
         "formality_layer": 3
       },
       {
-        "id": "92ebc03b-75d6-4659-8ecd-d2a747b757a5",
-        "content": "RPC: Set node universe",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "confidence": "0.95",
-          "rpc_name": "SetNodeUniverse",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "50",
-          "extractor": "proto_rpc"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "703ae05c-f10b-489a-8df6-6c93c4994bad",
-        "content": "Inter-universe consistency (conversation.md U, D, A, f implementation)",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "source_line": "49",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "rpc_name": "DetectInterUniverseInconsistencies"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "18f669c8-8075-4896-a624-623504766e09",
-        "content": "Scenario: generate contract template returns none for non testable",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "source_line": "2123",
-          "extractor": "test",
-          "test_function": "generate_contract_template_returns_none_for_non_testable",
-          "confidence": "0.9"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "b2bf8835-a731-4522-ad85-ab68b282c33f",
-        "content": "RPC: Get compliance trend",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
-          "source_line": "46",
-          "rpc_name": "GetComplianceTrend"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "201e7254-b07b-4b6b-9055-ab506ecf3560",
-        "content": "RPC: Get node history",
-        "kind": "Assertion",
-        "metadata": {
-          "confidence": "0.95",
-          "source_line": "45",
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "rpc_name": "GetNodeHistory"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "ffaba996-15ca-4973-b100-b0d1e9df0d5f",
-        "content": "RPC: Diff timestamps",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "rpc_name": "DiffTimestamps",
-          "source_line": "44",
-          "inferred": "true"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "dd911a80-01bd-47b6-9d4e-ad9a2bc605dd",
-        "content": "Temporal queries",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "QueryAtTimestamp",
-          "inferred": "true",
-          "source_line": "43",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "2efee952-9d22-4023-a78b-01a8b3a3118a",
-        "content": "RPC: Get compliance report",
-        "kind": "Assertion",
-        "metadata": {
-          "confidence": "0.95",
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "rpc_name": "GetComplianceReport",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "40"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "4ca9632b-ecaa-4389-9e89-66f8d438b953",
-        "content": "Graded compliance",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "39",
-          "rpc_name": "CalculateCompliance",
-          "inferred": "true",
-          "confidence": "0.95"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "06763eba-a3c9-411e-8688-73954254193b",
-        "content": "Invariant: user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-        "kind": "Constraint",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.95",
-          "source_line": "2018",
-          "extractor": "assertion",
-          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-          "inferred": "true"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "5963b1f3-8bd8-4571-828a-d5d0db2b04bd",
-        "content": "RPC: Get test coverage",
-        "kind": "Assertion",
-        "metadata": {
-          "source_line": "36",
-          "extractor": "proto_rpc",
-          "rpc_name": "GetTestCoverage",
-          "inferred": "true",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "8e977af0-7158-4c64-9e13-1a5e33fe8500",
-        "content": "Executable contracts",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "35",
-          "inferred": "true",
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "rpc_name": "GenerateContractTemplate"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "d0637b0e-6ffa-40f0-aeaf-8283f0f2b429",
-        "content": "RPC: Detect potential synonyms",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "DetectPotentialSynonyms",
-          "inferred": "true",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "32",
-          "extractor": "proto_rpc"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "70df2611-0608-4244-aa46-2b443ecea01e",
-        "content": "Semantic normalization",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "rpc_name": "FindRelatedTerms",
-          "source_line": "31",
-          "inferred": "true",
-          "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "2447cf13-0af2-4c30-be35-60dd83b77c58",
-        "content": "RPC: Find formalizations",
-        "kind": "Assertion",
-        "metadata": {
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "inferred": "true",
-          "source_line": "28",
-          "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "FindFormalizations"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "84ac8002-26dc-4fc0-9385-2e066113de68",
-        "content": "Invariant: fetched.content, \"User must authenticate\"",
-        "kind": "Constraint",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.95",
-          "extractor": "assertion",
-          "inferred": "true",
-          "source_line": "1764",
-          "assertion": "fetched.content, \"User must authenticate\""
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
-        "id": "b9683d76-61f8-4b96-a5f7-0d91259b56df",
-        "content": "Layer-aware operations",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "source_line": "27",
-          "rpc_name": "FilterByLayer",
-          "extractor": "proto_rpc"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "ecbf246a-faf5-4376-8df8-6ba6e9972f96",
-        "content": "Terminology resolution",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "rpc_name": "ResolveTerminology",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "24",
-          "confidence": "0.95"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "7f28c504-b04b-457c-821a-8b89dfb1bab0",
-        "content": "RPC: Detect layer inconsistencies",
-        "kind": "Assertion",
-        "metadata": {
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "rpc_name": "DetectLayerInconsistencies",
-          "source_line": "21",
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "72233ab0-8a8e-40cb-8517-40e6bc587777",
-        "content": "RPC: Detect omissions",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "DetectOmissions",
-          "source_line": "20",
-          "inferred": "true",
-          "confidence": "0.95",
-          "extractor": "proto_rpc"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "7030b108-bf86-4e2d-8f13-b9702ba1a7cc",
-        "content": "RPC: Detect contradictions",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
-          "rpc_name": "DetectContradictions",
-          "source_line": "19",
-          "confidence": "0.95"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "a990259a-bd94-4274-a79a-619213bb796b",
-        "content": "Query and analysis",
-        "kind": "Assertion",
-        "metadata": {
-          "rpc_name": "Query",
-          "confidence": "0.95",
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "18"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "856747ea-64c0-452e-9d25-77e570b63a8d",
-        "content": "RPC: Remove edge",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
-          "rpc_name": "RemoveEdge",
-          "source_line": "15",
-          "confidence": "0.95",
-          "extractor": "proto_rpc"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "c7f7bee7-9963-49c7-ada5-c614f0b3377c",
-        "content": "RPC: List edges",
-        "kind": "Assertion",
-        "metadata": {
-          "extractor": "proto_rpc",
-          "confidence": "0.95",
-          "rpc_name": "ListEdges",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "14",
-          "inferred": "true"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "28decb82-6ed7-4a2b-9c8d-f964d1fcc997",
-        "content": "Edge operations",
-        "kind": "Assertion",
-        "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "AddEdge",
-          "source_line": "13",
-          "extractor": "proto_rpc",
-          "confidence": "0.95",
-          "inferred": "true"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "1f3924ef-46c4-4f82-a28d-d887a5ea0f6d",
-        "content": "RPC: Remove node",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "source_line": "10",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
-          "rpc_name": "RemoveNode",
-          "extractor": "proto_rpc"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "e376be9e-6c85-4169-9458-a2bb55239ea6",
-        "content": "RPC: List nodes",
-        "kind": "Assertion",
-        "metadata": {
-          "confidence": "0.95",
-          "rpc_name": "ListNodes",
-          "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
-          "inferred": "true",
-          "source_line": "9"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "1a41ca2a-b50e-42be-b637-b33c62d2c6d3",
-        "content": "RPC: Get node",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "confidence": "0.95",
-          "source_line": "8",
-          "rpc_name": "GetNode",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
-        "id": "9858943e-6699-4473-ab83-e185178edb17",
-        "content": "Node operations",
-        "kind": "Assertion",
-        "metadata": {
-          "inferred": "true",
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "7",
-          "confidence": "0.95",
-          "rpc_name": "AddNode"
-        },
-        "created_at": 1771078757,
-        "modified_at": 1771078757,
-        "formality_layer": 2
-      },
-      {
         "id": "69e3e6cc-4507-4744-8a50-b93b30a3adc8",
         "content": "AI-powered relationship inference (cross-layer semantic matching)",
         "kind": "Assertion",
         "metadata": {
-          "inferred": "true",
-          "source_line": "56",
           "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
+          "inferred": "true",
+          "confidence": "0.95",
           "rpc_name": "InferAllRelationshipsWithAi",
-          "confidence": "0.95"
+          "source_line": "56",
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -2870,12 +1318,12 @@
         "content": "Automatic relationship inference",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
           "rpc_name": "InferAllRelationships",
-          "inferred": "true",
           "source_line": "53",
+          "source_file": "proto/spec_oracle.proto",
+          "extractor": "proto_rpc",
           "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto"
+          "inferred": "true"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -2886,12 +1334,12 @@
         "content": "RPC: Set node universe",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
-          "inferred": "true",
-          "extractor": "proto_rpc",
+          "rpc_name": "SetNodeUniverse",
           "source_line": "50",
           "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "SetNodeUniverse"
+          "extractor": "proto_rpc",
+          "confidence": "0.95",
+          "inferred": "true"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -2902,12 +1350,12 @@
         "content": "Inter-universe consistency (conversation.md U, D, A, f implementation)",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "49",
-          "rpc_name": "DetectInterUniverseInconsistencies",
           "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
+          "rpc_name": "DetectInterUniverseInconsistencies",
+          "confidence": "0.95",
           "inferred": "true",
-          "confidence": "0.95"
+          "source_line": "49",
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -2918,12 +1366,12 @@
         "content": "RPC: Get compliance trend",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
-          "confidence": "0.95",
           "source_line": "46",
-          "rpc_name": "GetComplianceTrend"
+          "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
+          "inferred": "true",
+          "rpc_name": "GetComplianceTrend",
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -2934,12 +1382,12 @@
         "content": "RPC: Get node history",
         "kind": "Assertion",
         "metadata": {
-          "inferred": "true",
-          "confidence": "0.95",
           "source_line": "45",
           "extractor": "proto_rpc",
+          "inferred": "true",
+          "rpc_name": "GetNodeHistory",
           "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "GetNodeHistory"
+          "confidence": "0.95"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -2950,12 +1398,12 @@
         "content": "RPC: Diff timestamps",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "44",
-          "inferred": "true",
-          "rpc_name": "DiffTimestamps",
           "confidence": "0.95",
+          "source_line": "44",
           "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc"
+          "rpc_name": "DiffTimestamps",
+          "extractor": "proto_rpc",
+          "inferred": "true"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -2967,11 +1415,11 @@
         "kind": "Assertion",
         "metadata": {
           "confidence": "0.95",
-          "rpc_name": "QueryAtTimestamp",
+          "source_line": "43",
           "extractor": "proto_rpc",
           "inferred": "true",
-          "source_line": "43",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "rpc_name": "QueryAtTimestamp"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -2983,11 +1431,11 @@
         "kind": "Assertion",
         "metadata": {
           "confidence": "0.95",
+          "inferred": "true",
+          "rpc_name": "GetComplianceReport",
           "source_file": "proto/spec_oracle.proto",
           "extractor": "proto_rpc",
-          "source_line": "40",
-          "inferred": "true",
-          "rpc_name": "GetComplianceReport"
+          "source_line": "40"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -2998,12 +1446,12 @@
         "content": "Graded compliance",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "39",
-          "rpc_name": "CalculateCompliance",
-          "extractor": "proto_rpc",
           "inferred": "true",
           "confidence": "0.95",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "rpc_name": "CalculateCompliance",
+          "extractor": "proto_rpc",
+          "source_line": "39"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3014,12 +1462,12 @@
         "content": "RPC: Get test coverage",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "inferred": "true",
-          "rpc_name": "GetTestCoverage",
           "source_line": "36",
           "confidence": "0.95",
-          "extractor": "proto_rpc"
+          "extractor": "proto_rpc",
+          "inferred": "true",
+          "source_file": "proto/spec_oracle.proto",
+          "rpc_name": "GetTestCoverage"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3030,12 +1478,12 @@
         "content": "Executable contracts",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "source_line": "35",
+          "confidence": "0.95",
           "rpc_name": "GenerateContractTemplate",
           "extractor": "proto_rpc",
+          "source_file": "proto/spec_oracle.proto",
           "inferred": "true",
-          "confidence": "0.95"
+          "source_line": "35"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3046,12 +1494,12 @@
         "content": "RPC: Detect potential synonyms",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
-          "inferred": "true",
-          "source_line": "32",
           "confidence": "0.95",
-          "rpc_name": "DetectPotentialSynonyms"
+          "source_line": "32",
+          "inferred": "true",
+          "extractor": "proto_rpc",
+          "rpc_name": "DetectPotentialSynonyms",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3063,11 +1511,11 @@
         "kind": "Assertion",
         "metadata": {
           "extractor": "proto_rpc",
+          "inferred": "true",
           "rpc_name": "FindRelatedTerms",
           "source_file": "proto/spec_oracle.proto",
-          "source_line": "31",
-          "inferred": "true",
-          "confidence": "0.95"
+          "confidence": "0.95",
+          "source_line": "31"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3078,11 +1526,11 @@
         "content": "RPC: Find formalizations",
         "kind": "Assertion",
         "metadata": {
-          "source_line": "28",
+          "rpc_name": "FindFormalizations",
           "confidence": "0.95",
           "source_file": "proto/spec_oracle.proto",
+          "source_line": "28",
           "inferred": "true",
-          "rpc_name": "FindFormalizations",
           "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
@@ -3094,12 +1542,12 @@
         "content": "Layer-aware operations",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
           "rpc_name": "FilterByLayer",
-          "inferred": "true",
-          "extractor": "proto_rpc",
           "source_line": "27",
-          "source_file": "proto/spec_oracle.proto"
+          "inferred": "true",
+          "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3110,12 +1558,12 @@
         "content": "Terminology resolution",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
-          "extractor": "proto_rpc",
-          "inferred": "true",
           "confidence": "0.95",
+          "inferred": "true",
           "rpc_name": "ResolveTerminology",
-          "source_line": "24"
+          "source_line": "24",
+          "source_file": "proto/spec_oracle.proto",
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3126,12 +1574,12 @@
         "content": "RPC: Detect layer inconsistencies",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
           "source_line": "21",
+          "confidence": "0.95",
           "extractor": "proto_rpc",
-          "rpc_name": "DetectLayerInconsistencies",
           "source_file": "proto/spec_oracle.proto",
-          "inferred": "true"
+          "inferred": "true",
+          "rpc_name": "DetectLayerInconsistencies"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3143,10 +1591,10 @@
         "kind": "Assertion",
         "metadata": {
           "rpc_name": "DetectOmissions",
+          "source_line": "20",
           "inferred": "true",
           "extractor": "proto_rpc",
           "confidence": "0.95",
-          "source_line": "20",
           "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
@@ -3159,11 +1607,11 @@
         "kind": "Assertion",
         "metadata": {
           "source_line": "19",
-          "source_file": "proto/spec_oracle.proto",
           "extractor": "proto_rpc",
-          "confidence": "0.95",
+          "source_file": "proto/spec_oracle.proto",
+          "rpc_name": "DetectContradictions",
           "inferred": "true",
-          "rpc_name": "DetectContradictions"
+          "confidence": "0.95"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3174,12 +1622,12 @@
         "content": "Query and analysis",
         "kind": "Assertion",
         "metadata": {
-          "confidence": "0.95",
           "source_line": "18",
-          "source_file": "proto/spec_oracle.proto",
           "inferred": "true",
-          "rpc_name": "Query",
-          "extractor": "proto_rpc"
+          "source_file": "proto/spec_oracle.proto",
+          "extractor": "proto_rpc",
+          "confidence": "0.95",
+          "rpc_name": "Query"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3190,12 +1638,12 @@
         "content": "RPC: Remove edge",
         "kind": "Assertion",
         "metadata": {
+          "source_line": "15",
           "confidence": "0.95",
           "source_file": "proto/spec_oracle.proto",
           "rpc_name": "RemoveEdge",
-          "extractor": "proto_rpc",
           "inferred": "true",
-          "source_line": "15"
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3207,11 +1655,11 @@
         "kind": "Assertion",
         "metadata": {
           "rpc_name": "ListEdges",
-          "confidence": "0.95",
-          "source_line": "14",
-          "source_file": "proto/spec_oracle.proto",
           "inferred": "true",
-          "extractor": "proto_rpc"
+          "confidence": "0.95",
+          "extractor": "proto_rpc",
+          "source_line": "14",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3222,12 +1670,12 @@
         "content": "Edge operations",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
           "rpc_name": "AddEdge",
           "confidence": "0.95",
+          "inferred": "true",
+          "source_file": "proto/spec_oracle.proto",
           "source_line": "13",
-          "extractor": "proto_rpc",
-          "inferred": "true"
+          "extractor": "proto_rpc"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3238,11 +1686,11 @@
         "content": "Scenario: detect explicit contradiction",
         "kind": "Scenario",
         "metadata": {
-          "confidence": "0.9",
-          "inferred": "true",
-          "test_function": "detect_explicit_contradiction",
-          "source_file": "spec-core/src/graph.rs",
           "extractor": "test",
+          "test_function": "detect_explicit_contradiction",
+          "inferred": "true",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
           "source_line": "1604"
         },
         "created_at": 1771077123,
@@ -3254,12 +1702,12 @@
         "content": "Scenario: detect duplicate specifications",
         "kind": "Scenario",
         "metadata": {
-          "confidence": "0.9",
-          "source_line": "1616",
           "inferred": "true",
+          "test_function": "detect_duplicate_specifications",
           "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "test_function": "detect_duplicate_specifications"
+          "source_line": "1616",
+          "confidence": "0.9",
+          "extractor": "test"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3270,12 +1718,12 @@
         "content": "Scenario: detect semantic contradiction password length",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "detect_semantic_contradiction_password_length",
-          "confidence": "0.9",
-          "inferred": "true",
           "source_line": "1627",
           "extractor": "test",
-          "source_file": "spec-core/src/graph.rs"
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "detect_semantic_contradiction_password_length",
+          "inferred": "true"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3286,9 +1734,9 @@
         "content": "Scenario: no duplicate detection for synonym edges",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "1644",
-          "inferred": "true",
           "extractor": "test",
+          "inferred": "true",
+          "source_line": "1644",
           "source_file": "spec-core/src/graph.rs",
           "confidence": "0.9",
           "test_function": "no_duplicate_detection_for_synonym_edges"
@@ -3302,12 +1750,12 @@
         "content": "Scenario: detect omission isolated node",
         "kind": "Scenario",
         "metadata": {
-          "source_line": "1657",
-          "confidence": "0.9",
-          "extractor": "test",
-          "inferred": "true",
           "source_file": "spec-core/src/graph.rs",
-          "test_function": "detect_omission_isolated_node"
+          "test_function": "detect_omission_isolated_node",
+          "confidence": "0.9",
+          "source_line": "1657",
+          "inferred": "true",
+          "extractor": "test"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3319,11 +1767,11 @@
         "kind": "Scenario",
         "metadata": {
           "extractor": "test",
+          "inferred": "true",
           "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9",
           "test_function": "detect_omission_domain_without_refinements",
-          "source_line": "1666",
-          "inferred": "true"
+          "confidence": "0.9",
+          "source_line": "1666"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3334,12 +1782,12 @@
         "content": "Scenario: detect omission scenario without assertions",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "detect_omission_scenario_without_assertions",
-          "inferred": "true",
-          "extractor": "test",
-          "confidence": "0.9",
           "source_line": "1678",
-          "source_file": "spec-core/src/graph.rs"
+          "inferred": "true",
+          "test_function": "detect_omission_scenario_without_assertions",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3350,12 +1798,12 @@
         "content": "RPC: Remove node",
         "kind": "Assertion",
         "metadata": {
+          "inferred": "true",
+          "confidence": "0.95",
           "source_line": "10",
           "rpc_name": "RemoveNode",
-          "inferred": "true",
-          "source_file": "proto/spec_oracle.proto",
           "extractor": "proto_rpc",
-          "confidence": "0.95"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3366,12 +1814,12 @@
         "content": "RPC: List nodes",
         "kind": "Assertion",
         "metadata": {
-          "extractor": "proto_rpc",
-          "source_file": "proto/spec_oracle.proto",
           "confidence": "0.95",
+          "extractor": "proto_rpc",
           "source_line": "9",
+          "inferred": "true",
           "rpc_name": "ListNodes",
-          "inferred": "true"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3382,12 +1830,12 @@
         "content": "RPC: Get node",
         "kind": "Assertion",
         "metadata": {
-          "rpc_name": "GetNode",
-          "confidence": "0.95",
-          "extractor": "proto_rpc",
-          "source_line": "8",
+          "inferred": "true",
           "source_file": "proto/spec_oracle.proto",
-          "inferred": "true"
+          "source_line": "8",
+          "extractor": "proto_rpc",
+          "rpc_name": "GetNode",
+          "confidence": "0.95"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3399,11 +1847,11 @@
         "kind": "Assertion",
         "metadata": {
           "source_line": "7",
-          "source_file": "proto/spec_oracle.proto",
-          "rpc_name": "AddNode",
           "extractor": "proto_rpc",
           "confidence": "0.95",
-          "inferred": "true"
+          "inferred": "true",
+          "source_file": "proto/spec_oracle.proto",
+          "rpc_name": "AddNode"
         },
         "created_at": 1771078430,
         "modified_at": 1771078430,
@@ -3414,12 +1862,12 @@
         "content": "Scenario: detect layer inconsistency wrong direction",
         "kind": "Scenario",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "inferred": "true",
           "test_function": "detect_layer_inconsistency_wrong_direction",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
           "source_line": "1759",
-          "confidence": "0.9"
+          "inferred": "true",
+          "extractor": "test"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3430,12 +1878,12 @@
         "content": "Scenario: detect no layer inconsistency correct direction",
         "kind": "Scenario",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9",
+          "extractor": "test",
           "inferred": "true",
-          "test_function": "detect_no_layer_inconsistency_correct_direction",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
           "source_line": "1781",
-          "extractor": "test"
+          "test_function": "detect_no_layer_inconsistency_correct_direction"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3446,44 +1894,28 @@
         "content": "where the source has higher formality than target (should be reversed).",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "doc_comment": "true",
-          "inferred": "true",
-          "source_line": "520",
+          "confidence": "0.7",
           "extractor": "doc",
-          "confidence": "0.7"
+          "source_line": "520",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "doc_comment": "true"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
         "formality_layer": 0
       },
       {
-        "id": "89f83ef6-c997-46ee-9bbb-b08e2a2afc43",
-        "content": "Scenario: no synonyms when already marked",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "inferred": "true",
-          "test_function": "no_synonyms_when_already_marked",
-          "source_line": "2063",
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test"
-        },
-        "created_at": 1771085170,
-        "modified_at": 1771085170,
-        "formality_layer": 3
-      },
-      {
         "id": "4d8465c2-e1cb-48d9-8be6-aa000da4369d",
         "content": "Scenario: detect potential synonyms by structure",
         "kind": "Scenario",
         "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
           "test_function": "detect_potential_synonyms_by_structure",
           "inferred": "true",
           "source_line": "1834",
-          "confidence": "0.9"
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "extractor": "test"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3494,12 +1926,12 @@
         "content": "Scenario: no synonyms when already marked",
         "kind": "Scenario",
         "metadata": {
-          "test_function": "no_synonyms_when_already_marked",
           "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
+          "test_function": "no_synonyms_when_already_marked",
           "inferred": "true",
-          "source_line": "1852",
           "extractor": "test",
-          "confidence": "0.9"
+          "source_line": "1852"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3511,11 +1943,11 @@
         "kind": "Scenario",
         "metadata": {
           "extractor": "test",
+          "source_line": "1867",
+          "test_function": "generate_contract_template_for_constraint",
           "confidence": "0.9",
           "inferred": "true",
-          "source_line": "1867",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "generate_contract_template_for_constraint"
+          "source_file": "spec-core/src/graph.rs"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
@@ -3526,352 +1958,123 @@
         "content": "Scenario: detect inter universe inconsistencies missing transform",
         "kind": "Scenario",
         "metadata": {
-          "inferred": "true",
+          "extractor": "test",
           "confidence": "0.9",
           "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
+          "source_line": "2308",
           "test_function": "detect_inter_universe_inconsistencies_missing_transform",
-          "source_line": "2308"
+          "inferred": "true"
         },
         "created_at": 1771077123,
         "modified_at": 1771077123,
         "formality_layer": 3
       },
       {
-        "id": "c6cd3b9e-5abe-484e-98b2-853bc0b07a8e",
-        "content": "where the source has higher formality than target (should be reversed).",
-        "kind": "Assertion",
+        "id": "ccc0d2d0-877a-4af8-b30d-a8e46e7987df",
+        "content": "Scenario: list nodes with filter",
+        "kind": "Scenario",
         "metadata": {
-          "source_line": "535",
-          "doc_comment": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "doc",
           "inferred": "true",
-          "confidence": "0.7"
+          "extractor": "test",
+          "confidence": "0.9",
+          "source_file": "spec-core/src/graph.rs",
+          "test_function": "list_nodes_with_filter",
+          "source_line": "1786"
         },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
+        "created_at": 1771087004,
+        "modified_at": 1771087004,
+        "formality_layer": 3
+      },
+      {
+        "id": "394bac8d-966a-4861-a1b2-0856785d5e16",
+        "content": "Scenario: compliance report with linked code",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "2280",
+          "extractor": "test",
+          "test_function": "compliance_report_with_linked_code",
+          "confidence": "0.9",
+          "inferred": "true",
+          "source_file": "spec-core/src/graph.rs"
+        },
+        "created_at": 1771087004,
+        "modified_at": 1771087004,
+        "formality_layer": 3
+      },
+      {
+        "id": "a9ed83fe-5c0c-405b-aa92-ebdc89c80e96",
+        "content": "Scenario: diff timestamps shows no changes for stable graph",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "2368",
+          "source_file": "spec-core/src/graph.rs",
+          "confidence": "0.9",
+          "test_function": "diff_timestamps_shows_no_changes_for_stable_graph",
+          "inferred": "true",
+          "extractor": "test"
+        },
+        "created_at": 1771087004,
+        "modified_at": 1771087004,
+        "formality_layer": 3
+      },
+      {
+        "id": "531cc76e-8c2d-4e8e-922b-bd47a32e3307",
+        "content": "Scenario: get node history nonexistent returns none",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "2418",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "extractor": "test",
+          "test_function": "get_node_history_nonexistent_returns_none",
+          "confidence": "0.9"
+        },
+        "created_at": 1771087004,
+        "modified_at": 1771087004,
+        "formality_layer": 3
+      },
+      {
+        "id": "bd0b8011-478c-4258-8326-b027364722b9",
+        "content": "Scenario: get compliance trend with data",
+        "kind": "Scenario",
+        "metadata": {
+          "source_line": "2434",
+          "source_file": "spec-core/src/graph.rs",
+          "inferred": "true",
+          "confidence": "0.9",
+          "extractor": "test",
+          "test_function": "get_compliance_trend_with_data"
+        },
+        "created_at": 1771087004,
+        "modified_at": 1771087004,
+        "formality_layer": 3
+      },
+      {
+        "id": "ac78bcec-f784-49aa-a201-30f4641fdc16",
+        "content": "The extraction engine must maintain idempotency: running extraction multiple times on the same source must not create duplicate specifications. This ensures f₀₃⁻¹(U3) = f₀₃⁻¹(f₀₃⁻¹(U3)) for the reverse mapping function.",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771087179,
+        "modified_at": 1771087179,
         "formality_layer": 0
       },
       {
-        "id": "6bbe630a-dc19-4b84-9b82-adeef04ff630",
-        "content": "Invariant: fetched.content, \"User must authenticate\"",
-        "kind": "Constraint",
-        "metadata": {
-          "confidence": "0.95",
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1764",
-          "assertion": "fetched.content, \"User must authenticate\"",
-          "extractor": "assertion"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
+        "id": "ca9f0b06-8a5a-4097-bd47-d787ce7c381c",
+        "content": "SpecGraph provides find_node_by_content() method to check for duplicate specifications before creating new nodes, preventing duplicate creation during extraction.",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771087189,
+        "modified_at": 1771087189,
+        "formality_layer": 0
       },
       {
-        "id": "d3042185-a8dd-41cb-a1cc-0b5fc3c24c8c",
-        "content": "Scenario: detect inter universe inconsistencies missing transform",
-        "kind": "Scenario",
-        "metadata": {
-          "test_function": "detect_inter_universe_inconsistencies_missing_transform",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "2519",
-          "extractor": "test",
-          "inferred": "true",
-          "confidence": "0.9"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "ea06e710-f70a-43a7-aa34-c5d51ec19478",
-        "content": "Scenario: detect inter universe inconsistencies with transform",
-        "kind": "Scenario",
-        "metadata": {
-          "inferred": "true",
-          "confidence": "0.9",
-          "source_line": "2480",
-          "test_function": "detect_inter_universe_inconsistencies_with_transform",
-          "extractor": "test",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "08231690-edcc-4b07-b57a-b8704318634e",
-        "content": "Scenario: detect inter universe inconsistencies empty",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "detect_inter_universe_inconsistencies_empty",
-          "extractor": "test",
-          "source_line": "2473",
-          "confidence": "0.9",
-          "inferred": "true"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "d08973bd-a6f8-4f47-9123-c6a276c34593",
-        "content": "Invariant: user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-        "kind": "Constraint",
-        "metadata": {
-          "assertion": "user.is_authenticated())\".into(), NodeKind::Assertion, HashMap::new()).id.clone(",
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "extractor": "assertion",
-          "confidence": "0.95",
-          "source_line": "2018"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "c66bdbcb-6e69-45f7-9feb-437999e508a1",
-        "content": "Scenario: diff timestamps detects added nodes",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "test_function": "diff_timestamps_detects_added_nodes",
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "source_line": "2339"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "a2456122-7134-4e80-8bed-a05cd3d58b8a",
-        "content": "Scenario: detect layer inconsistency wrong direction",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "inferred": "true",
-          "confidence": "0.9",
-          "test_function": "detect_layer_inconsistency_wrong_direction",
-          "source_file": "spec-core/src/graph.rs",
-          "source_line": "1970"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "ed1416bd-a5cb-4161-9013-99f9ec8acddf",
-        "content": "Scenario: detect no layer inconsistency correct direction",
-        "kind": "Scenario",
-        "metadata": {
-          "source_line": "1992",
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "detect_no_layer_inconsistency_correct_direction",
-          "extractor": "test",
-          "inferred": "true"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "de7ab59b-51b5-45b1-ba41-f46d4df0e3a3",
-        "content": "Scenario: coverage with tests",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "source_line": "2159",
-          "inferred": "true",
-          "confidence": "0.9",
-          "test_function": "test_coverage_with_tests"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "2d7eae3d-aa37-42dd-a47a-e9001d919a36",
-        "content": "Scenario: detect potential synonyms by structure",
-        "kind": "Scenario",
-        "metadata": {
-          "confidence": "0.9",
-          "source_line": "2045",
-          "inferred": "true",
-          "test_function": "detect_potential_synonyms_by_structure",
-          "extractor": "test",
-          "source_file": "spec-core/src/graph.rs"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "a636aeef-876d-4f24-b634-5a15aca22e6e",
-        "content": "Scenario: generate contract template returns none for non testable",
-        "kind": "Scenario",
-        "metadata": {
-          "test_function": "generate_contract_template_returns_none_for_non_testable",
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "inferred": "true",
-          "source_line": "2123",
-          "confidence": "0.9"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "2d3db8d0-c4de-4c7b-92a3-79fc2b7853a8",
-        "content": "Scenario: generate contract template for constraint",
-        "kind": "Scenario",
-        "metadata": {
-          "test_function": "generate_contract_template_for_constraint",
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test",
-          "source_line": "2078",
-          "confidence": "0.9",
-          "inferred": "true"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "8c2d6406-569b-4c44-95e8-69b3a003a64f",
-        "content": "Scenario: no synonyms when already marked",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "source_line": "2063",
-          "extractor": "test",
-          "test_function": "no_synonyms_when_already_marked",
-          "confidence": "0.9"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "c86a82c6-3a69-4a52-b3f3-b1ab25664ec1",
-        "content": "Scenario: detect explicit contradiction",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "extractor": "test",
-          "test_function": "detect_explicit_contradiction",
-          "confidence": "0.9",
-          "source_line": "1815"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "17fc46a8-be62-4d3c-8aaa-8c2e6924cb5c",
-        "content": "Scenario: detect duplicate specifications",
-        "kind": "Scenario",
-        "metadata": {
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "confidence": "0.9",
-          "source_line": "1827",
-          "test_function": "detect_duplicate_specifications",
-          "extractor": "test"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "4929e3b5-1d9f-495e-8f69-6863525fa131",
-        "content": "Scenario: detect semantic contradiction password length",
-        "kind": "Scenario",
-        "metadata": {
-          "inferred": "true",
-          "confidence": "0.9",
-          "test_function": "detect_semantic_contradiction_password_length",
-          "source_line": "1838",
-          "source_file": "spec-core/src/graph.rs",
-          "extractor": "test"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "98cf4e24-4fcc-406b-9475-989dc77a9f57",
-        "content": "Scenario: no duplicate detection for synonym edges",
-        "kind": "Scenario",
-        "metadata": {
-          "source_line": "1855",
-          "extractor": "test",
-          "confidence": "0.9",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "no_duplicate_detection_for_synonym_edges",
-          "inferred": "true"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "12ca1a93-62b7-48a8-b2c2-af2f767c2b84",
-        "content": "Scenario: detect omission isolated node",
-        "kind": "Scenario",
-        "metadata": {
-          "inferred": "true",
-          "test_function": "detect_omission_isolated_node",
-          "extractor": "test",
-          "source_line": "1868",
-          "source_file": "spec-core/src/graph.rs",
-          "confidence": "0.9"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "11ad6950-197b-47fb-bd2c-fb5d1f82f38f",
-        "content": "Scenario: detect omission domain without refinements",
-        "kind": "Scenario",
-        "metadata": {
-          "source_line": "1877",
-          "confidence": "0.9",
-          "extractor": "test",
-          "inferred": "true",
-          "source_file": "spec-core/src/graph.rs",
-          "test_function": "detect_omission_domain_without_refinements"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
-      },
-      {
-        "id": "55b9dffe-1637-4a91-bc38-849ed885d3cd",
-        "content": "Scenario: detect omission scenario without assertions",
-        "kind": "Scenario",
-        "metadata": {
-          "extractor": "test",
-          "source_file": "spec-core/src/graph.rs",
-          "inferred": "true",
-          "test_function": "detect_omission_scenario_without_assertions",
-          "source_line": "1889",
-          "confidence": "0.9"
-        },
-        "created_at": 1771086267,
-        "modified_at": 1771086267,
-        "formality_layer": 3
+        "id": "554cd460-aae3-42c6-b973-439dded5c647",
+        "content": "The ingest() method checks for existing specifications using find_node_by_content() before creating nodes, ensuring idempotent extraction behavior.",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771087189,
+        "modified_at": 1771087189,
+        "formality_layer": 0
       }
     ],
     "node_holes": [],
@@ -5110,195 +3313,15 @@
         }
       ],
       [
-        143,
-        266,
-        {
-          "id": "a519b6ef-7c34-47ef-a5e1-bd8815602379",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        142,
-        267,
-        {
-          "id": "fa16ac06-b3c1-473d-9d5a-a3c5eefd5f72",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        145,
-        260,
-        {
-          "id": "5d59750a-517c-4667-96c7-83e3c7fbce5c",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        146,
-        259,
-        {
-          "id": "39bc421a-95e3-48cd-8756-b3e0cb81da8c",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        144,
-        261,
-        {
-          "id": "27b64b7d-956d-4cf1-8a1c-dbe3bfb05774",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        148,
-        258,
-        {
-          "id": "c3a793e3-014d-40c5-8f13-1a200db40978",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        149,
-        257,
-        {
-          "id": "e6280fa4-d6a3-4e34-849f-c98111093c43",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        151,
-        255,
-        {
-          "id": "cb4d8617-d6c8-4bb5-96f6-d7e0c4601ade",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        269,
-        271,
-        {
-          "id": "0c54c4d9-33c5-452a-ab18-df77ea5b3b65",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        150,
-        256,
-        {
-          "id": "d8085a0d-7600-45b4-aa06-38ef4835cf39",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        179,
-        272,
-        {
-          "id": "ee117fd8-d43d-4c6c-a7ed-7e72b400f3aa",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        152,
-        267,
-        {
-          "id": "ddd822b4-56cb-4b83-bde1-011e740e9332",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        147,
-        141,
-        {
-          "id": "0302c854-4aca-4498-abda-66eda3bf8349",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        147,
-        270,
-        {
-          "id": "61a3a2b0-2334-443d-b46f-3c86f9962a16",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        155,
-        260,
-        {
-          "id": "b4f85c27-7e60-400c-9721-7ec7680b3ed3",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        152,
-        142,
-        {
-          "id": "6958e825-8e0b-4bce-802c-5f6b3edab8dd",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        153,
-        143,
-        {
-          "id": "49221468-e2b5-4caf-9992-fc25f8de7c7b",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        154,
-        144,
-        {
-          "id": "772e8d93-07a7-4146-a5f0-0b5a23e9ca12",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
         13,
         29,
         {
           "id": "f0a1e3a4-9dcc-404d-bdf1-f5a426dbefd2",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.6636363636363636",
             "auto_inferred": "true",
-            "method": "semantic_keyword_match"
+            "method": "semantic_keyword_match",
+            "confidence": "0.6636363636363636"
           },
           "created_at": 1771077954
         }
@@ -5311,8 +3334,8 @@
           "kind": "Formalizes",
           "metadata": {
             "auto_inferred": "true",
-            "method": "semantic_keyword_match",
-            "confidence": "0.62"
+            "confidence": "0.62",
+            "method": "semantic_keyword_match"
           },
           "created_at": 1771077954
         }
@@ -5324,9 +3347,9 @@
           "id": "5fa64f56-f9d4-4299-a658-900d53eaae9d",
           "kind": "Formalizes",
           "metadata": {
+            "method": "semantic_keyword_match",
             "confidence": "0.5904761904761905",
-            "auto_inferred": "true",
-            "method": "semantic_keyword_match"
+            "auto_inferred": "true"
           },
           "created_at": 1771077970
         }
@@ -5339,8 +3362,8 @@
           "kind": "Formalizes",
           "metadata": {
             "method": "semantic_keyword_match",
-            "auto_inferred": "true",
-            "confidence": "0.5818181818181818"
+            "confidence": "0.5818181818181818",
+            "auto_inferred": "true"
           },
           "created_at": 1771077970
         }
@@ -5352,9 +3375,9 @@
           "id": "980c9534-96b0-40e5-8f5f-a30d949b4d85",
           "kind": "Formalizes",
           "metadata": {
+            "auto_inferred": "true",
             "method": "semantic_keyword_match",
-            "confidence": "0.5739130434782609",
-            "auto_inferred": "true"
+            "confidence": "0.5739130434782609"
           },
           "created_at": 1771077970
         }
@@ -5366,9 +3389,9 @@
           "id": "545419c5-00f0-488e-9d99-438f7a1d075f",
           "kind": "Formalizes",
           "metadata": {
-            "method": "semantic_keyword_match",
+            "confidence": "0.5599999999999999",
             "auto_inferred": "true",
-            "confidence": "0.5599999999999999"
+            "method": "semantic_keyword_match"
           },
           "created_at": 1771077970
         }
@@ -5380,415 +3403,15 @@
           "id": "3c49520d-bae0-4476-a6c8-5cf8891367e1",
           "kind": "Formalizes",
           "metadata": {
-            "method": "semantic_keyword_match",
+            "confidence": "0.5173913043478261",
             "auto_inferred": "true",
-            "confidence": "0.5173913043478261"
+            "method": "semantic_keyword_match"
           },
           "created_at": 1771077970
         }
       ],
       [
-        230,
-        265,
-        {
-          "id": "dc551114-e099-4b4c-9375-4541a683256e",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        229,
-        264,
-        {
-          "id": "7de9d3c0-85ff-452d-a285-06d44afa2272",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        228,
-        263,
-        {
-          "id": "bcc34356-a326-4176-97fd-6ff0fc34eef5",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        227,
-        262,
-        {
-          "id": "7de2446d-1578-4470-a5e7-642e38714d62",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        226,
-        254,
-        {
-          "id": "de1bf1b9-9069-4f79-a941-116e701a755c",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        225,
-        253,
-        {
-          "id": "9931cd38-24c5-4174-a451-cf5243aac4cf",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        224,
-        252,
-        {
-          "id": "682bbf26-4287-4797-bb3e-5e5b8aad48f5",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        223,
-        251,
-        {
-          "id": "fd5667bc-4ff2-42c6-a5dd-f180e5f9c76c",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        222,
-        250,
-        {
-          "id": "d84d591f-b56c-4867-9173-abff4196f815",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        221,
-        249,
-        {
-          "id": "59c3e23e-2cae-4abc-a015-391d221d12ad",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        220,
-        248,
-        {
-          "id": "83c04bf5-3db7-4940-9e71-0314ec8778be",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        219,
-        247,
-        {
-          "id": "2b6794f7-dd0c-4a3f-9baf-2f70142c884f",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        218,
-        246,
-        {
-          "id": "ae89bbe1-2f47-40d3-bff8-56bf8756ccc8",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        216,
-        245,
-        {
-          "id": "f2c03767-0355-4f31-a704-fa32553c38e9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        215,
-        244,
-        {
-          "id": "916aa72e-5ebd-47d4-8537-be59f9959241",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        214,
-        243,
-        {
-          "id": "f1e09bb5-e989-4d3d-96de-e15e0e950ee6",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        213,
-        242,
-        {
-          "id": "4ae989ec-51ad-435c-98cd-517f5addb906",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        212,
-        241,
-        {
-          "id": "831e960f-7a08-4b8b-8634-1cca2332e851",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        210,
-        240,
-        {
-          "id": "3ef95441-cb63-499d-9890-56e849bafbb1",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        209,
-        239,
-        {
-          "id": "420ad5c5-bfd1-4a5c-a200-e74f37e66467",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        208,
-        238,
-        {
-          "id": "16c04df2-2609-4bac-a7e3-c2f8e17284a8",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        207,
-        237,
-        {
-          "id": "094ec38f-3ae7-4c65-bfe1-50a6848a9db4",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        206,
-        236,
-        {
-          "id": "04d40319-9de3-4426-ac5b-931577104e1b",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        205,
-        235,
-        {
-          "id": "4d87f0e0-2cf1-4487-8ea5-9d7275545f56",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        203,
-        234,
-        {
-          "id": "49833046-072d-491c-8ad1-19d88b2b9cbd",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        202,
-        233,
-        {
-          "id": "d2521f0a-c2b0-46f9-ac2a-c2dbbf7884dc",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        200,
-        232,
-        {
-          "id": "164175b9-ef5b-4ba2-af21-3490a901923a",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        199,
-        231,
-        {
-          "id": "98b7445d-2ba5-4772-b14f-2ef94baf821d",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771078757
-        }
-      ],
-      [
-        127,
-        268,
-        {
-          "id": "341fd674-32a3-457f-9304-ca571f8cf916",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        128,
-        273,
-        {
-          "id": "f7dbd1e8-b724-4abf-a9b0-4d72e9bdf06a",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        129,
-        162,
-        {
-          "id": "6acac1ee-ed8e-419e-abc2-31a512bf4e86",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        130,
-        178,
-        {
-          "id": "4257713b-61c3-4b29-a457-9d78df9d45ab",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        131,
-        268,
-        {
-          "id": "0221d846-f5cc-449d-81c4-67460d850968",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        132,
-        201,
-        {
-          "id": "4eb56751-9804-44bb-844f-b67df81df68a",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        133,
-        128,
-        {
-          "id": "aa8e0d37-5177-44ae-966d-e56c7dfd6bd2",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        135,
-        129,
-        {
-          "id": "dcd39596-1575-4ac0-8787-93363aabcdd6",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        136,
-        182,
-        {
-          "id": "e433379f-11ea-4fd1-9904-06c9a230e4a1",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        164,
-        132,
-        {
-          "id": "1a252ba2-9d56-4755-b6bb-60bd3ddda237",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        164,
-        201,
-        {
-          "id": "06e81c45-f71a-4546-b60e-f44443e4adc3",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        138,
-        167,
-        {
-          "id": "16830607-451c-4e30-b6ad-64124e2e5043",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        255,
+        158,
         16,
         {
           "id": "2bffc506-574e-4f08-b658-114053856745",
@@ -5801,7 +3424,7 @@
         }
       ],
       [
-        257,
+        160,
         16,
         {
           "id": "33e3d61e-ddf6-491d-bbd1-fda9be86dcfb",
@@ -5814,50 +3437,20 @@
         }
       ],
       [
-        139,
-        272,
-        {
-          "id": "e2ef32e0-d5e2-4276-b949-bbb9670b36c9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        140,
-        271,
-        {
-          "id": "43ea8eca-edfe-4d60-8422-2fc976452641",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        141,
-        270,
-        {
-          "id": "84638cf0-3243-4fc8-ac87-2c5ec4856b6e",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        259,
+        162,
         20,
         {
           "id": "caa78b87-bf75-45db-b870-2058908e69d3",
           "kind": "Refines",
           "metadata": {
-            "auto_connected": "true",
-            "session": "96"
+            "session": "96",
+            "auto_connected": "true"
           },
           "created_at": 1771079949
         }
       ],
       [
-        260,
+        163,
         20,
         {
           "id": "8ffdb4dd-9acb-400a-a5a1-ebc77c1dbcda",
@@ -5870,935 +3463,34 @@
         }
       ],
       [
-        261,
+        164,
         20,
         {
           "id": "acbff1a3-43fd-4db9-a06a-f32a122ae472",
           "kind": "Refines",
           "metadata": {
-            "session": "96",
-            "auto_connected": "true"
+            "auto_connected": "true",
+            "session": "96"
           },
           "created_at": 1771079949
         }
       ],
       [
-        154,
-        261,
-        {
-          "id": "1a54b844-0eab-4bcb-bb09-309524cc7582",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        156,
-        259,
-        {
-          "id": "2cabd144-5700-4fc3-a36d-1d05388ecae9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        157,
-        258,
-        {
-          "id": "46d595d5-9049-460a-adf3-e0feabf011b5",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        158,
-        257,
-        {
-          "id": "d577a32f-c9b5-478a-bb8b-dd32f9fceef9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        201,
+        133,
         22,
         {
           "id": "ec9cb364-b7ee-4273-9f0b-9a8da8d466bf",
           "kind": "Refines",
           "metadata": {
-            "auto_connected": "true",
-            "session": "96"
+            "session": "96",
+            "auto_connected": "true"
           },
           "created_at": 1771080017
         }
       ],
       [
-        159,
-        256,
-        {
-          "id": "83bcbcfd-7558-44f9-9c43-f84eeb695bbf",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        160,
-        169,
-        {
-          "id": "e9cc3af3-2d50-49bd-b2b9-6d05b2f18db5",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        161,
-        255,
-        {
-          "id": "9e4bca57-46b9-4707-91d9-954b382756c6",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        198,
-        265,
-        {
-          "id": "d3ece9ce-4267-4767-8395-3dd8ce962c62",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        198,
-        230,
-        {
-          "id": "f8b85bed-e917-45c3-bb1c-83b367f30182",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        197,
-        264,
-        {
-          "id": "37ca4879-8f76-4233-94fe-5cf5f91f0dad",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        197,
-        229,
-        {
-          "id": "52a5b7d5-2e12-4747-9b50-008473171544",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        196,
-        263,
-        {
-          "id": "3c14139a-d09e-4fbe-9bc5-e26977c83d71",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        196,
-        228,
-        {
-          "id": "0f5b1abc-5b7d-4015-90c7-cc27c0498dce",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        195,
-        262,
-        {
-          "id": "c732e10a-365c-49a3-b158-da42ffe1c80f",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        195,
-        227,
-        {
-          "id": "5d36ff39-c2d6-49fa-8e14-9d2a58967d76",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        194,
-        254,
-        {
-          "id": "c163e9b2-b6f3-4102-9be3-934980f389db",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        194,
-        226,
-        {
-          "id": "8f2a7d4b-4917-43fa-a19f-ef6106f995db",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        193,
-        253,
-        {
-          "id": "9d8107d0-f9bb-48e6-ba72-e2f89804f3ca",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        193,
-        225,
-        {
-          "id": "71eaf54f-900f-4b72-83c4-283cecbd66a4",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        192,
-        252,
-        {
-          "id": "6fa88b6d-ff72-42da-bf67-64127347ab0d",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        192,
-        224,
-        {
-          "id": "0f95abdd-ca15-4e2a-a5ab-a1fa2b6938dc",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        191,
-        251,
-        {
-          "id": "a8c8625e-ad41-45de-a660-e166b0bd626c",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        191,
-        223,
-        {
-          "id": "5fb22adb-3fc3-4422-b459-084e0c8fc0fd",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        190,
-        250,
-        {
-          "id": "b8544d3d-4c41-4ba1-ae87-1f484e03e4f4",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        190,
-        222,
-        {
-          "id": "4ada3d2d-dc08-4d44-85e5-00e05619b6ee",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        189,
-        249,
-        {
-          "id": "f9618a3c-06bf-4584-8c75-94e68b488f48",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        189,
-        221,
-        {
-          "id": "27fc04d8-f1c0-4a63-8133-e06f105b11e1",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        188,
-        248,
-        {
-          "id": "672a3904-739f-45bf-abc8-b261d086ffb1",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        188,
-        220,
-        {
-          "id": "a62cab22-4190-4943-a5f1-07ad99f5bcc3",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        187,
-        247,
-        {
-          "id": "2d3a7be3-3a75-4730-845c-e64e56470f9b",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        187,
-        219,
-        {
-          "id": "2b7d94db-6092-46e1-a3a6-b6ca6b683447",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        186,
-        246,
-        {
-          "id": "22e6eac7-52e9-4f62-b626-00c91d4c4f94",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        186,
-        218,
-        {
-          "id": "5c423670-f308-40f1-a70d-7407ac3d0853",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        184,
-        245,
-        {
-          "id": "c59f2c56-72d1-450a-8e46-b2150ac98728",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        184,
-        216,
-        {
-          "id": "024f90a1-892d-41e4-beeb-6ca63a8ce737",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        183,
-        244,
-        {
-          "id": "b880c00e-8faf-4b82-8fb3-b46a95d639bc",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        183,
-        215,
-        {
-          "id": "dbbc1d86-4503-4bb4-a953-bacf4529992c",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        181,
-        243,
-        {
-          "id": "d6ac1fe9-afa7-4f54-b67a-989f7b5380c4",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        181,
-        214,
-        {
-          "id": "17eb883f-fc8e-4c20-8424-992fd5f52203",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        180,
-        242,
-        {
-          "id": "23f9e2f8-1bdd-4e9c-9a7a-6074d8f9e295",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        180,
-        213,
-        {
-          "id": "827611b9-1a16-4e04-9648-ffe8ea06ddd7",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        177,
-        241,
-        {
-          "id": "533ffae3-3222-458a-9f71-b3ec5b699c34",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        177,
-        212,
-        {
-          "id": "66909669-9c17-4d05-8156-836a751435b1",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        176,
-        240,
-        {
-          "id": "f6874849-7de2-4654-b6ac-741208034ffd",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        176,
-        210,
-        {
-          "id": "d3edd678-bb3b-4866-8594-3f74f919dc53",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        175,
-        239,
-        {
-          "id": "6ff45d1c-6c6c-4668-a1a0-63e48e070c55",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        175,
-        209,
-        {
-          "id": "a90ec687-14fe-4776-98ca-4a4a9d5ce51e",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        174,
-        238,
-        {
-          "id": "f0294bc9-0ab5-4594-8bf3-c4a9d9e2787c",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        174,
-        208,
-        {
-          "id": "cd49221d-d3cf-4006-8792-dfda214c76f9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        173,
-        237,
-        {
-          "id": "6e49f4eb-5496-41cc-b53b-b185030066e7",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        173,
-        207,
-        {
-          "id": "7aed3947-96bc-4f5b-9fd4-d896f2c7997e",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        172,
-        236,
-        {
-          "id": "671b0b2b-d64f-4fd1-8c68-d07a3c4d9203",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        172,
-        206,
-        {
-          "id": "c724b011-3aa1-476c-ade8-665974efc339",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        171,
-        235,
-        {
-          "id": "59496578-1e2e-4fd0-a9fa-9e75f7193dcf",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        171,
-        205,
-        {
-          "id": "6f8c572c-954a-440a-ae41-65b8eac2fc65",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        170,
-        234,
-        {
-          "id": "e2a4ab40-fd9e-4d89-a5a1-ff6a3003962f",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        170,
-        203,
-        {
-          "id": "48ae3c5b-caf5-456c-a0c7-4d7cfe54fe49",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        168,
-        233,
-        {
-          "id": "b8c3aefe-9f64-4a60-a575-eed331a26519",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        168,
-        202,
-        {
-          "id": "0e5f29fd-6187-4588-9075-b7feb675e8af",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        166,
-        232,
-        {
-          "id": "df7fdfc8-e13c-43be-aad4-14e86ad4e997",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        166,
-        200,
-        {
-          "id": "663e6f49-c88f-4d32-8cf1-bb81804f3800",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        165,
-        231,
-        {
-          "id": "51474396-a80d-4ec2-b52b-8df5ff8fb583",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        165,
-        199,
-        {
-          "id": "6c2520dc-8e28-4123-a87a-23dc73129bf8",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771080847
-        }
-      ],
-      [
-        133,
-        273,
-        {
-          "id": "62244dc9-fe9a-4104-ba8e-2c23c7b5572b",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        163,
-        134,
-        {
-          "id": "b53d5001-8af4-4620-bf29-a363d57d44a0",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771082309
-        }
-      ],
-      [
-        204,
-        138,
-        {
-          "id": "a70739e6-6de4-4036-a2f4-70de7fb89d54",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        1,
-        128,
-        {
-          "id": "9e1a2dce-a62239dc-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "confidence": "1.00",
-            "auto_inferred": "true"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        1,
-        129,
-        {
-          "id": "9e1a2dce-bb688b93-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "1.00"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        1,
-        130,
-        {
-          "id": "9e1a2dce-ea92391a-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "1.00"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        18,
-        132,
-        {
-          "id": "e009137a-5f17fbcc-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.75"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        137,
-        130,
-        {
-          "id": "aef44886-9bbb-4321-bffc-3d027b46ce84",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        0,
-        136,
-        {
-          "id": "257745aa-63c95fd5-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "confidence": "0.50",
-            "auto_inferred": "true"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        185,
-        136,
-        {
-          "id": "a28624f9-2dda-432d-95bc-b67dfd4a5c17",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        78,
-        138,
-        {
-          "id": "724bc4c0-13609f26-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "confidence": "1.00",
-            "auto_inferred": "true"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        78,
-        139,
-        {
-          "id": "724bc4c0-fb751e11-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "1.00"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
         2,
-        141,
-        {
-          "id": "81afa3f5-fddfd467-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.50"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        2,
-        142,
-        {
-          "id": "81afa3f5-f17f74e9-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "confidence": "0.50",
-            "auto_inferred": "true"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        2,
-        143,
-        {
-          "id": "81afa3f5-97f2457e-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.50"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        3,
-        144,
-        {
-          "id": "c8f23449-f7dc233e-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.75"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        3,
-        145,
-        {
-          "id": "c8f23449-57a1f422-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        3,
-        146,
-        {
-          "id": "c8f23449-9ce8afb4-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        2,
-        148,
-        {
-          "id": "81afa3f5-b8941728-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.50"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        2,
-        149,
-        {
-          "id": "81afa3f5-3d6d4bbc-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.75"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        2,
-        150,
-        {
-          "id": "81afa3f5-b0e46ffa-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.50"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        2,
-        151,
-        {
-          "id": "81afa3f5-d59145bb-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        2,
-        255,
+        158,
         {
           "id": "81afa3f5-e901ead6-formalizes",
           "kind": "Formalizes",
@@ -6811,20 +3503,20 @@
       ],
       [
         2,
-        256,
+        159,
         {
           "id": "81afa3f5-e29eda14-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.50",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.50"
           },
           "created_at": 1771084159
         }
       ],
       [
         2,
-        257,
+        160,
         {
           "id": "81afa3f5-b6face50-formalizes",
           "kind": "Formalizes",
@@ -6837,7 +3529,7 @@
       ],
       [
         2,
-        258,
+        161,
         {
           "id": "81afa3f5-0eb92ed0-formalizes",
           "kind": "Formalizes",
@@ -6850,33 +3542,33 @@
       ],
       [
         3,
-        259,
+        162,
         {
           "id": "c8f23449-0d5c15ec-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.75"
           },
           "created_at": 1771084159
         }
       ],
       [
         3,
-        260,
+        163,
         {
           "id": "c8f23449-ca5d9013-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.75"
           },
           "created_at": 1771084159
         }
       ],
       [
         3,
-        261,
+        164,
         {
           "id": "c8f23449-c54e4333-formalizes",
           "kind": "Formalizes",
@@ -6889,20 +3581,20 @@
       ],
       [
         2,
-        266,
+        169,
         {
           "id": "81afa3f5-e784e25b-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.50",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.50"
           },
           "created_at": 1771084159
         }
       ],
       [
         2,
-        267,
+        170,
         {
           "id": "81afa3f5-b1e1d371-formalizes",
           "kind": "Formalizes",
@@ -6915,37 +3607,24 @@
       ],
       [
         2,
-        270,
+        172,
         {
           "id": "81afa3f5-4d8465c2-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.50"
+            "confidence": "0.50",
+            "auto_inferred": "true"
           },
           "created_at": 1771084159
         }
       ],
       [
         78,
-        272,
+        174,
         {
           "id": "724bc4c0-df41c4f6-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "1.00",
-            "auto_inferred": "true"
-          },
-          "created_at": 1771084159
-        }
-      ],
-      [
-        1,
-        273,
-        {
-          "id": "9e1a2dce-ba2882a1-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
             "auto_inferred": "true",
             "confidence": "1.00"
           },
@@ -6954,33 +3633,46 @@
       ],
       [
         1,
-        162,
+        175,
         {
-          "id": "9e1a2dce-7bcc1eca-formalizes",
+          "id": "9e1a2dce-ba2882a1-formalizes",
           "kind": "Formalizes",
           "metadata": {
             "confidence": "1.00",
             "auto_inferred": "true"
+          },
+          "created_at": 1771084159
+        }
+      ],
+      [
+        1,
+        128,
+        {
+          "id": "9e1a2dce-7bcc1eca-formalizes",
+          "kind": "Formalizes",
+          "metadata": {
+            "auto_inferred": "true",
+            "confidence": "1.00"
           },
           "created_at": 1771084159
         }
       ],
       [
         78,
-        167,
+        129,
         {
           "id": "724bc4c0-83d7d395-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
-            "confidence": "1.00"
+            "confidence": "1.00",
+            "auto_inferred": "true"
           },
           "created_at": 1771084159
         }
       ],
       [
         1,
-        178,
+        131,
         {
           "id": "9e1a2dce-48b035be-formalizes",
           "kind": "Formalizes",
@@ -6992,124 +3684,62 @@
         }
       ],
       [
-        185,
-        182,
-        {
-          "id": "7e9bff77-ad52-40e1-b369-9aeda075d1fd",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
         0,
-        182,
+        132,
         {
           "id": "257745aa-f432d0e9-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "auto_inferred": "true",
-            "confidence": "0.50"
+            "confidence": "0.50",
+            "auto_inferred": "true"
           },
           "created_at": 1771084159
-        }
-      ],
-      [
-        137,
-        178,
-        {
-          "id": "8b357ac9-c1d0-4de8-b553-276005964cb6",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
         }
       ],
       [
         18,
-        201,
+        133,
         {
           "id": "e009137a-835ce953-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.75",
-            "auto_inferred": "true"
+            "auto_inferred": "true",
+            "confidence": "0.75"
           },
           "created_at": 1771084159
         }
       ],
       [
         85,
-        140,
-        {
-          "id": "2b68b299-371220e1-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "manual_connection": "true",
-            "confidence": "0.80"
-          },
-          "created_at": 1771084396
-        }
-      ],
-      [
-        85,
-        141,
-        {
-          "id": "2b68b299-fddfd467-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "auto_inferred": "true",
-            "manual_connection": "true",
-            "confidence": "0.80"
-          },
-          "created_at": 1771084396
-        }
-      ],
-      [
-        85,
-        148,
-        {
-          "id": "2b68b299-b8941728-formalizes",
-          "kind": "Formalizes",
-          "metadata": {
-            "manual_connection": "true",
-            "confidence": "0.80",
-            "auto_inferred": "true"
-          },
-          "created_at": 1771084396
-        }
-      ],
-      [
-        85,
-        258,
+        161,
         {
           "id": "2b68b299-0eb92ed0-formalizes",
           "kind": "Formalizes",
           "metadata": {
+            "manual_connection": "true",
             "auto_inferred": "true",
-            "confidence": "0.80",
-            "manual_connection": "true"
+            "confidence": "0.80"
           },
           "created_at": 1771084396
         }
       ],
       [
         85,
-        270,
+        172,
         {
           "id": "2b68b299-4d8465c2-formalizes",
           "kind": "Formalizes",
           "metadata": {
-            "confidence": "0.80",
+            "auto_inferred": "true",
             "manual_connection": "true",
-            "auto_inferred": "true"
+            "confidence": "0.80"
           },
           "created_at": 1771084396
         }
       ],
       [
         85,
-        271,
+        173,
         {
           "id": "2b68b299-cdd049cc-formalizes",
           "kind": "Formalizes",
@@ -7119,796 +3749,6 @@
             "manual_connection": "true"
           },
           "created_at": 1771084396
-        }
-      ],
-      [
-        131,
-        127,
-        {
-          "id": "bc7162ff-23ae-4e8c-b91c-e9f339d0fe04",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        135,
-        162,
-        {
-          "id": "3a09c122-2e05-482f-ab0e-e58cac209d58",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        217,
-        134,
-        {
-          "id": "f263a1ad-9a28-435a-813a-d6350871099f",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        217,
-        163,
-        {
-          "id": "75074ce8-ea23-4f8a-bbd8-2e593d1e08a9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        204,
-        167,
-        {
-          "id": "1c80f9fc-dc65-487d-9ea2-1732960a7a66",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        153,
-        266,
-        {
-          "id": "6b466c0d-c03c-4bde-b19d-9f190ebe0707",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        161,
-        151,
-        {
-          "id": "a8c1754e-6709-4833-81f3-6f73960106c7",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        179,
-        139,
-        {
-          "id": "c209ca3a-b4c1-49b2-abb8-2dd8ae86665e",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        211,
-        160,
-        {
-          "id": "8a82fef6-313a-40ec-9eb7-6a1a8f9ea6e3",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        211,
-        169,
-        {
-          "id": "e2515d82-f10b-41b0-97df-024f56f2d07d",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        159,
-        150,
-        {
-          "id": "f2760bb0-b1f1-41a9-8f1e-f580bf484704",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        155,
-        145,
-        {
-          "id": "b4645329-fc60-4855-82b7-276c4179932c",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        158,
-        149,
-        {
-          "id": "b0f66581-84df-4b37-8309-d299de95c786",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        269,
-        140,
-        {
-          "id": "2a89964a-fd86-4284-8413-cb8a779dead4",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        157,
-        148,
-        {
-          "id": "8f57a5ea-7bd9-4de5-8631-5564aeaf923a",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        156,
-        146,
-        {
-          "id": "c09bcde5-ff83-432f-ae43-6bcb28ac5155",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771085170
-        }
-      ],
-      [
-        275,
-        134,
-        {
-          "id": "32f2be6d-3614-42c7-ab4f-9b57d5aea41a",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        275,
-        163,
-        {
-          "id": "7a9aed74-9708-45ff-8829-196c3fec6fe2",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        275,
-        217,
-        {
-          "id": "7586e483-69e2-4f53-99d2-62dba720d575",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        279,
-        160,
-        {
-          "id": "369fc7e5-bfb5-45df-8180-21526991a412",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        279,
-        169,
-        {
-          "id": "5aeeaef1-4ad4-4e0b-9ceb-6beed2bff7b0",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        279,
-        211,
-        {
-          "id": "e8227f77-37e1-41a2-ac9d-1d7f4368b218",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        274,
-        268,
-        {
-          "id": "c2069044-554c-477d-8765-cb0e8e44d7c8",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        274,
-        131,
-        {
-          "id": "75df5f21-00f5-4281-bf80-9aec8a548bcf",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        288,
-        151,
-        {
-          "id": "29ddc022-8f12-4372-9895-a488690b0758",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        288,
-        161,
-        {
-          "id": "903f7500-5831-4bf8-9a5d-252ee5462bb2",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        288,
-        255,
-        {
-          "id": "f5142599-dd4d-4de5-9a90-c8360d9b7fd1",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        289,
-        150,
-        {
-          "id": "73cccda4-c3e4-4d43-b247-0ee31b3eedfa",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        289,
-        159,
-        {
-          "id": "4ee28b7a-f349-4064-bd2d-5193e56dae7e",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        289,
-        256,
-        {
-          "id": "28705063-881f-41ea-8173-77cc1f204321",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        290,
-        149,
-        {
-          "id": "55d6d574-8a6c-4d0a-a75e-cc901e45a731",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        290,
-        158,
-        {
-          "id": "9ef8ada0-cbe7-4c7c-b243-6b4fd12850bc",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        290,
-        257,
-        {
-          "id": "74c3e8c4-af24-41c1-a466-64f231432587",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        291,
-        148,
-        {
-          "id": "6d58bf33-1dc0-40b0-8365-e510e2ba5e57",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        291,
-        157,
-        {
-          "id": "a0f2be50-d123-40a2-a31a-ac7b7d7bd941",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        291,
-        258,
-        {
-          "id": "264d268d-bbed-426a-8517-afb0b79124da",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        292,
-        146,
-        {
-          "id": "976faf28-efd8-4b7c-b8b3-b4646fd6c22f",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        292,
-        156,
-        {
-          "id": "52797383-4e9e-4649-bb12-6408bd38d7d9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        292,
-        259,
-        {
-          "id": "274c5b03-c7ea-48ce-8014-22b8b995a4b9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        293,
-        145,
-        {
-          "id": "88639d32-504f-4fed-81e8-642bc9984bc5",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        293,
-        155,
-        {
-          "id": "a5cfdcee-9c61-457e-b4d0-edb515db50b3",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        293,
-        260,
-        {
-          "id": "aa920a94-6178-4989-9190-ae24b6bc03ae",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        294,
-        144,
-        {
-          "id": "1bc4468d-6594-4701-80bc-211caebfe091",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        294,
-        154,
-        {
-          "id": "28dce9d4-24b1-40ba-909f-2f811440c487",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        294,
-        261,
-        {
-          "id": "bf5088fe-16e2-43bc-9fbe-8342eb4365d5",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        281,
-        143,
-        {
-          "id": "32261d97-5671-4f20-bb22-38241b73d675",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        281,
-        153,
-        {
-          "id": "55541633-5ce2-46a4-99c8-0305ce9e64ed",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        281,
-        266,
-        {
-          "id": "e0bbf77d-a60d-4701-b070-46c4de06cdd3",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        282,
-        142,
-        {
-          "id": "9f0103a1-b590-4774-bcfc-0ccaf3d27508",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        282,
-        152,
-        {
-          "id": "2c6fab4e-abf2-486e-bd65-0ab357cfa775",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        282,
-        267,
-        {
-          "id": "cecabeb1-5944-4ba9-a02f-bd5286f2a4a0",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        284,
-        141,
-        {
-          "id": "9b1af453-b6c1-41b1-b66e-18dc241286aa",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        284,
-        147,
-        {
-          "id": "491b996b-d026-4eac-aa49-b1f1fdba71df",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        284,
-        270,
-        {
-          "id": "d1917917-970b-40cf-884d-a09ec0963def",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        287,
-        140,
-        {
-          "id": "2f7f0dfb-a26e-48b0-80b9-19852a7f1af1",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        287,
-        269,
-        {
-          "id": "dc3283e3-d3d3-4566-976e-753da022b284",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        287,
-        271,
-        {
-          "id": "80297660-0d7a-487e-9731-7e736656de8c",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        286,
-        139,
-        {
-          "id": "0816277f-a191-4220-b4fa-aba89986150b",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        286,
-        179,
-        {
-          "id": "e656713b-717b-48ab-9cb6-3d7ac9501dd1",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        286,
-        272,
-        {
-          "id": "9e9e7d2c-f3a3-4bf5-b73d-8b7f4f996f33",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        285,
-        138,
-        {
-          "id": "8ed14ade-e0c8-4df9-9614-7ed5934ac2cb",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        285,
-        167,
-        {
-          "id": "da9b4211-b1ec-4632-be76-950580efe635",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        285,
-        204,
-        {
-          "id": "e793c186-19fe-498a-8691-cb77604bfef6",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        283,
-        136,
-        {
-          "id": "c37c5d44-99bf-4a87-8e9e-e12ba2b9b73f",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        283,
-        182,
-        {
-          "id": "9fbacdba-ecf2-4113-9720-1e3d7c4ec1a5",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        283,
-        185,
-        {
-          "id": "5f1936cc-c8ff-48fd-9411-d57376e6f0ca",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        280,
-        132,
-        {
-          "id": "98178c35-6abc-4422-a5aa-865dfddd5c28",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        280,
-        164,
-        {
-          "id": "6194b9fd-0781-4d67-971e-bab2118e0741",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        280,
-        201,
-        {
-          "id": "096bc927-894e-4f9b-94ce-ba2d4fc1e1f9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        278,
-        130,
-        {
-          "id": "f52db74b-8c4a-427c-825e-5e1c9fd39ae9",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        278,
-        137,
-        {
-          "id": "71cac053-7c5f-4ed4-9fc4-ea67e02c6a18",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        278,
-        178,
-        {
-          "id": "eb63e010-accf-4172-a96b-887654a3c430",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        277,
-        129,
-        {
-          "id": "fc47d44b-27fe-4d9f-bff6-0e19e6f78338",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        277,
-        135,
-        {
-          "id": "787a5b9f-e07d-487c-901a-9887d178e06a",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        277,
-        162,
-        {
-          "id": "09bc8180-31c6-45d7-8683-7da1fc25e268",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        276,
-        128,
-        {
-          "id": "1f355043-890a-4064-b9b7-954182174f76",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        276,
-        133,
-        {
-          "id": "b43353b8-5356-432a-8c27-23ccc4eaac39",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        276,
-        273,
-        {
-          "id": "3d72ed21-2f96-494d-b00e-163e1e2cc8f7",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
-        }
-      ],
-      [
-        274,
-        127,
-        {
-          "id": "7069cf5c-9987-4865-ae7c-3b814dfa667a",
-          "kind": "Synonym",
-          "metadata": {},
-          "created_at": 1771086267
         }
       ]
     ]
