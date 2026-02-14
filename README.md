@@ -22,9 +22,52 @@ A next-generation specification description tool with strict graph-based specifi
 - Terminology resolution and synonym management
 - Temporal queries and compliance tracking
 - File-based persistence (JSON)
-- Comprehensive test coverage (55 tests)
+- **Project-local specification management** (Git-integrated, team-friendly, CI/CD-ready)
+- Comprehensive test coverage (59 tests)
 
 ## Quick Start
+
+### Option 1: Project-Local Specifications (Recommended - Zero Configuration)
+
+Initialize specification management in your project:
+```bash
+cd your-project
+spec init
+```
+
+This creates a `.spec/` directory with specifications storage.
+
+**That's it! No server needed.**
+
+Use specifications immediately (standalone mode - auto-detected):
+```bash
+# Add specifications with auto-inference
+spec add "Password must be at least 8 characters"
+
+# List specifications
+spec list-nodes
+
+# Check for issues
+spec detect-contradictions
+spec detect-omissions
+```
+
+Commit to Git:
+```bash
+git add .spec/
+git commit -m "Add authentication specifications"
+```
+
+Team members (zero configuration):
+```bash
+git clone your-repo
+spec add "New specification"  # Just works! Auto-detects .spec/
+spec list-nodes               # No server setup needed
+```
+
+**How it works**: The CLI automatically detects `.spec/` directory and runs in standalone mode (direct file access, no server required). For advanced features (AI inference, watch mode), server mode is available.
+
+### Option 2: Global Specifications (Quick Testing)
 
 Build the project:
 ```bash
@@ -146,7 +189,16 @@ cargo run --bin spec -- infer-relationships-ai --min-confidence 0.7
 
 ## Commands
 
-### Node Operations
+### High-Level Commands (Recommended for General Use)
+- `init [path]` - Initialize project-local specification management
+- `add <content> [--no-infer]` - Add specification with automatic kind inference and relationship detection
+- `detect-contradictions` - Find conflicting specifications
+- `detect-omissions` - Find incomplete specifications
+- `ask <question>` - Natural language Q&A about specifications
+
+### Low-Level Commands (Advanced Graph Operations)
+
+#### Node Operations
 - `add-node <content> [--kind <type>]` - Create specification node
 - `get-node <id>` - Retrieve node details
 - `list-nodes [--kind <type>]` - List nodes with optional filtering

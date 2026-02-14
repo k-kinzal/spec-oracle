@@ -6,8 +6,10 @@ use clap::{Parser, Subcommand};
 use proto::spec_oracle_client::SpecOracleClient;
 use proto::{SpecNodeKind, SpecEdgeKind};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use tonic::Request;
 use tracing_subscriber::EnvFilter;
+use spec_core::{FileStore, NodeKind as CoreNodeKind, SpecGraph};
 
 #[derive(Parser)]
 #[command(name = "spec")]
@@ -213,6 +215,12 @@ enum Commands {
         #[arg(long, default_value = "2")]
         interval: u64,
     },
+    /// Initialize project-local specification management
+    Init {
+        /// Project root directory (defaults to current directory)
+        #[arg(default_value = ".")]
+        path: String,
+    },
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -237,6 +245,33 @@ fn parse_edge_kind(s: &str) -> SpecEdgeKind {
         "formalizes" => SpecEdgeKind::Formalizes,
         "transform" => SpecEdgeKind::Transform,
         _ => SpecEdgeKind::Refines,
+    }
+}
+
+/// Find .spec/specs.json by walking up from current directory
+fn find_spec_file() -> Option<PathBuf> {
+    let mut current = std::env::current_dir().ok()?;
+    loop {
+        let spec_file = current.join(".spec").join("specs.json");
+        if spec_file.exists() {
+            return Some(spec_file);
+        }
+        if !current.pop() {
+            break;
+        }
+    }
+    None
+}
+
+/// Convert proto NodeKind to core NodeKind
+fn proto_to_core_kind(kind: SpecNodeKind) -> CoreNodeKind {
+    match kind {
+        SpecNodeKind::Assertion => CoreNodeKind::Assertion,
+        SpecNodeKind::Constraint => CoreNodeKind::Constraint,
+        SpecNodeKind::Scenario => CoreNodeKind::Scenario,
+        SpecNodeKind::Definition => CoreNodeKind::Definition,
+        SpecNodeKind::Domain => CoreNodeKind::Domain,
+        _ => CoreNodeKind::Assertion,
     }
 }
 
@@ -409,6 +444,103 @@ async fn handle_ai_query(question: &str, ai_cmd: &str) -> Result<String, Box<dyn
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+/// Run commands in standalone mode (direct file access, no server needed)
+async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    let store = FileStore::new(&spec_path);
+
+    match command {
+        Commands::Init { path } => {
+            // Init command doesn't need existing spec file
+            eprintln!("Error: Init command should not reach standalone mode");
+            return Ok(());
+        }
+        Commands::Add { content, no_infer } => {
+            println!("Adding specification: {}\n", content);
+
+            // Load graph
+            let mut graph = store.load()?;
+
+            // Infer kind
+            let kind = infer_spec_kind(&content);
+            println!("  Inferred kind: {}", kind);
+
+            // Add node
+            let proto_kind = parse_node_kind(&kind);
+            let core_kind = proto_to_core_kind(proto_kind);
+            let node = graph.add_node(content.clone(), core_kind, HashMap::new());
+
+            println!("  ✓ Created specification [{}]", &node.id[..8]);
+
+            // Save
+            store.save(&graph)?;
+
+            if !no_infer {
+                println!("\n  Auto-relationship inference not yet supported in standalone mode");
+                println!("  Use server mode for advanced features");
+            }
+
+            println!("\n✓ Specification added successfully");
+            println!("  To view all: spec list-nodes");
+        }
+        Commands::ListNodes { kind } => {
+            let graph = store.load()?;
+
+            let kind_filter = kind.as_ref().map(|k| proto_to_core_kind(parse_node_kind(k)));
+            let nodes = graph.list_nodes(kind_filter);
+
+            println!("Found {} node(s):", nodes.len());
+            for node in nodes {
+                let kind_str = match node.kind {
+                    CoreNodeKind::Assertion => "assertion",
+                    CoreNodeKind::Constraint => "constraint",
+                    CoreNodeKind::Scenario => "scenario",
+                    CoreNodeKind::Definition => "definition",
+                    CoreNodeKind::Domain => "domain",
+                };
+                println!("  [{}] {} - {}", &node.id[..8], kind_str, node.content);
+            }
+        }
+        Commands::DetectContradictions => {
+            let graph = store.load()?;
+            let contradictions = graph.detect_contradictions();
+
+            if contradictions.is_empty() {
+                println!("✓ No contradictions detected");
+            } else {
+                println!("Found {} contradiction(s):", contradictions.len());
+                for (i, contradiction) in contradictions.iter().enumerate() {
+                    println!("\n{}. {}", i + 1, contradiction.explanation);
+                    println!("   A: [{}] {}", &contradiction.node_a.id[..8], contradiction.node_a.content);
+                    println!("   B: [{}] {}", &contradiction.node_b.id[..8], contradiction.node_b.content);
+                }
+            }
+        }
+        Commands::DetectOmissions => {
+            let graph = store.load()?;
+            let omissions = graph.detect_omissions();
+
+            if omissions.is_empty() {
+                println!("✓ No omissions detected");
+            } else {
+                println!("Found {} omission(s):", omissions.len());
+                for (i, omission) in omissions.iter().enumerate() {
+                    println!("\n{}. {}", i + 1, omission.description);
+                    for node in &omission.related_nodes {
+                        println!("   - [{}] {}", &node.id[..8], node.content);
+                    }
+                }
+            }
+        }
+        _ => {
+            eprintln!("Command not yet supported in standalone mode.");
+            eprintln!("For advanced features, use server mode (start specd first).");
+            return Err("Unsupported command in standalone mode".into());
+        }
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
@@ -416,6 +548,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let cli = Cli::parse();
+
+    // Auto-detect project-local .spec/specs.json
+    let spec_file_path = find_spec_file();
+
+    // Use standalone mode if .spec/ directory is detected
+    if let Some(spec_path) = spec_file_path {
+        eprintln!("📁 Using project-local specifications: {}", spec_path.display());
+        eprintln!("🚀 Running in standalone mode (no server required)");
+        eprintln!();
+        return run_standalone(cli.command, spec_path).await;
+    }
+
+    // Otherwise, connect to server
     let mut client = SpecOracleClient::connect(cli.server).await?;
 
     match cli.command {
@@ -1280,6 +1425,194 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
+        }
+        Commands::Init { path } => {
+            use std::path::Path;
+            use std::fs;
+
+            let project_root = Path::new(&path);
+            let spec_dir = project_root.join(".spec");
+
+            if spec_dir.exists() {
+                eprintln!("✗ Error: .spec/ directory already exists");
+                eprintln!("  This project is already initialized for specification management");
+                return Ok(());
+            }
+
+            println!("Initializing specification management in {}", project_root.display());
+
+            // Create .spec directory structure
+            fs::create_dir_all(&spec_dir)?;
+            fs::create_dir_all(spec_dir.join("scripts"))?;
+
+            // Create empty specs.json with proper SpecGraph structure
+            let specs_file = spec_dir.join("specs.json");
+            let empty_graph = spec_core::SpecGraph::new();
+            let store = FileStore::new(&specs_file);
+            store.save(&empty_graph)?;
+            println!("  ✓ Created .spec/specs.json");
+
+            // Create README.md
+            let readme = spec_dir.join("README.md");
+            fs::write(&readme, r#"# Specification Management
+
+This directory contains specifications managed by specORACLE.
+
+## Structure
+
+- `specs.json` - Specification graph storage
+- `scripts/` - Project-local specd server scripts
+
+## Usage
+
+### Option 1: Project-Local Server (Recommended for team projects)
+
+Start project-local specification server:
+```bash
+.spec/scripts/start-specd.sh
+```
+
+Use spec commands (they will connect to project-local server):
+```bash
+spec add "Password must be at least 8 characters"
+spec detect-contradictions
+```
+
+Stop the server:
+```bash
+.spec/scripts/stop-specd.sh
+```
+
+### Option 2: Direct File Access (Simple, no server needed)
+
+Set environment variable to use this project's specs:
+```bash
+export SPECD_STORE_PATH="$(pwd)/.spec/specs.json"
+specd &  # Start server with project-local storage
+```
+
+## Team Workflow
+
+1. Add `.spec/` to Git: `git add .spec/`
+2. Team members clone the repository (includes specs)
+3. Each developer runs project-local specd
+4. Specifications are version-controlled alongside code
+
+## CI/CD Integration
+
+Add to your CI pipeline:
+```yaml
+- name: Check specifications
+  run: |
+    export SPECD_STORE_PATH="${PWD}/.spec/specs.json"
+    specd &
+    sleep 2
+    spec detect-contradictions
+    spec detect-omissions
+```
+"#)?;
+            println!("  ✓ Created .spec/README.md");
+
+            // Create start script
+            let start_script = spec_dir.join("scripts/start-specd.sh");
+            fs::write(&start_script, r#"#!/bin/bash
+# Start project-local specification server
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SPEC_DIR="$PROJECT_ROOT/.spec"
+PID_FILE="$SPEC_DIR/specd.pid"
+LOG_FILE="$SPEC_DIR/specd.log"
+
+if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+        echo "✗ specd is already running (PID: $PID)"
+        exit 1
+    fi
+    rm "$PID_FILE"
+fi
+
+export SPECD_STORE_PATH="$SPEC_DIR/specs.json"
+
+echo "Starting project-local specd..."
+echo "  Store: $SPECD_STORE_PATH"
+echo "  Log: $LOG_FILE"
+
+specd > "$LOG_FILE" 2>&1 &
+echo $! > "$PID_FILE"
+
+sleep 1
+
+if kill -0 $(cat "$PID_FILE") 2>/dev/null; then
+    echo "✓ specd started (PID: $(cat "$PID_FILE"))"
+else
+    echo "✗ Failed to start specd. Check $LOG_FILE"
+    rm "$PID_FILE"
+    exit 1
+fi
+"#)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = fs::metadata(&start_script)?.permissions();
+                perms.set_mode(0o755);
+                fs::set_permissions(&start_script, perms)?;
+            }
+            println!("  ✓ Created .spec/scripts/start-specd.sh");
+
+            // Create stop script
+            let stop_script = spec_dir.join("scripts/stop-specd.sh");
+            fs::write(&stop_script, r#"#!/bin/bash
+# Stop project-local specification server
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SPEC_DIR="$PROJECT_ROOT/.spec"
+PID_FILE="$SPEC_DIR/specd.pid"
+
+if [ ! -f "$PID_FILE" ]; then
+    echo "✗ specd is not running (no PID file)"
+    exit 1
+fi
+
+PID=$(cat "$PID_FILE")
+if ! kill -0 "$PID" 2>/dev/null; then
+    echo "✗ specd is not running (stale PID file)"
+    rm "$PID_FILE"
+    exit 1
+fi
+
+echo "Stopping specd (PID: $PID)..."
+kill "$PID"
+rm "$PID_FILE"
+
+echo "✓ specd stopped"
+"#)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = fs::metadata(&stop_script)?.permissions();
+                perms.set_mode(0o755);
+                fs::set_permissions(&stop_script, perms)?;
+            }
+            println!("  ✓ Created .spec/scripts/stop-specd.sh");
+
+            // Create .gitignore
+            let gitignore = spec_dir.join(".gitignore");
+            fs::write(&gitignore, "specd.pid\nspecd.log\n")?;
+            println!("  ✓ Created .spec/.gitignore");
+
+            println!("\n✓ Specification management initialized successfully!");
+            println!("\nNext steps:");
+            println!("  1. Start project-local server: .spec/scripts/start-specd.sh");
+            println!("  2. Add specifications: spec add \"Your specification here\"");
+            println!("  3. Add .spec/ to Git: git add .spec/");
+            println!("\nFor team collaboration:");
+            println!("  - Team members clone this repo (includes .spec/)");
+            println!("  - Each developer runs: .spec/scripts/start-specd.sh");
+            println!("  - Specifications are automatically version-controlled");
+            println!("\nSee .spec/README.md for more details.");
         }
     }
 
