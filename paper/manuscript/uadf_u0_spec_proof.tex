@@ -9,7 +9,8 @@
 \newtheorem{proposition}{Proposition}
 \newtheorem{remark}{Remark}
 
-\title{Typed Semantics for Root-Spec Integration in UAD/f:\\Lean4 Formalization of U0 Construction}
+\title{Dual Semantics for Root-Spec Control in UAD/f:\
+Join ($U0$) and Meet ($U^{\wedge}$) in a Typed Core}
 \author{spec-oracle project}
 \date{February 14, 2026}
 
@@ -17,301 +18,322 @@
 \maketitle
 
 \begin{abstract}
-We formalize the root-specification integration core (U0 construction) of UAD/f in Lean4.
-The research problem is definitional ambiguity: many descriptions write
-$U0=\bigcup_i f^{-1}_{0i}(A_i)$ without typing the layer spaces or defining
-what $f^{-1}_{0i}$ means for partial mappings.
-We introduce a typed setting with root space $\Omega$, per-layer carriers $\beta_i$,
-domain predicates $D_i\subseteq \beta_i$, admissible predicates
-$A_i\subseteq D_i$, and partial projections
-$\mathrm{proj}_i:\Omega\to\mathrm{Option}\,\beta_i$.
-Inverse images are induced from \texttt{proj}, not postulated.
-We prove: preimage monotonicity and union preservation, domain-respecting lifting
-($A_i\subseteq D_i \Rightarrow lifted(i)\subseteq f^{-1}_{0i}(D_i)$),
-least-upper-bound characterization of $U0$, monotonic growth under layer-set extension,
-a layer-transfer theorem under relation-preserving assumptions,
-an inter-layer composition law for induced inverse images,
-an extraction-adequacy transfer theorem, and contradiction/consistency duality.
-We further report an external case study on real OSS artifacts
-(PostgreSQL, zlib, SQLite) using an automated constraint-extraction pipeline.
-The contribution is a mechanically checked core semantics for U0 construction,
-not full semantic adequacy of the whole UAD/f methodology.
-The external study is limited to numeric-bound constraints (not full structural or temporal semantics).
+We address definitional ambiguity in layered root-spec reconstruction for UAD/f.
+The common notation
+$U0=\bigcup_i f^{-1}_{0i}(A_i)$
+often leaves three points implicit: typed layer spaces, partiality of projection,
+and the semantic role of the operator itself.
+We give a typed core model with root space $\Omega$, index set $I$,
+layer carriers $\beta_i$, domain/admissible predicates
+$D_i\subseteq \beta_i$, $A_i\subseteq D_i$, and partial projections
+$\mathrm{proj}_i: \Omega \to \mathrm{Option}\,\beta_i$.
+Inverse image is induced from projection witnesses, not postulated.
+
+A central revision is to separate two operators in one model:
+(1) join-style coverage $U0:=\bigcup_i lifted(i)$ and
+(2) meet-style integration $U^{\wedge}$ requiring all active layers.
+We prove: GLB characterization of $U^{\wedge}$,
+$U^{\wedge}\subseteq U0$ under non-empty active sets,
+a transfer theorem with explicit same-root coupling assumptions,
+inter-layer composition via partial bind,
+one-sided extraction adequacy (sound-only and complete-only inclusions),
+and a mechanized non-adjunction result under undefined projection points.
+
+An OSS extraction proof-of-concept is performed on three artifacts
+(PostgreSQL, zlib, SQLite) with automated extraction,
+source-lock metadata (URL/SHA256/timestamp), and mutation sensitivity checks.
+The contribution is a mechanization paper that exposes hidden assumptions
+and provides reproducible proof and extraction artifacts.
 \end{abstract}
 
-\section{Problem Statement and Research Questions}
-Layered assurance artifacts are heterogeneous. If a root specification is reconstructed
-from layer views, the reconstruction operator must be typed and explicit.
-This paper asks:
+\section{Problem Statement and Objectives}
+\textbf{Problem.}
+The core problem is multi-layer control failure:
+requirements, API specs, types/contracts, tests, and implementations each provide
+local guarantees, but cross-layer consistency is not controlled by a shared ruler.
+Here, a ``layer'' means a specification artifact at a different abstraction level.
+Each layer $i$ is connected from root space $\Omega$ via partial projection
+$\mathrm{proj}_i:\Omega\to\mathrm{Option}\,\beta_i$.
+This causes layer contradictions, coverage gaps, and broken change propagation.
+
+\textbf{Objective.}
+Formalize a minimal typed kernel for cross-layer control, separate
+join-style coverage ($U0$) from meet-style simultaneous satisfaction ($U^{\wedge}$),
+and mechanically validate transfer/composition/adequacy assumptions.
+
+\textbf{Scope.}
+The result is a reusable mechanized kernel with explicit assumptions,
+plus reproducible extraction evidence on real artifacts.
+
+\section{Research Questions}
 \begin{enumerate}[leftmargin=2em]
-\item[\textbf{RQ1}] Can U0 construction be defined coherently when each layer has its own type?
-\item[\textbf{RQ2}] Can admissible-vs-domain constraints be lifted to the root level?
-\item[\textbf{RQ3}] Is root construction monotone under layer-set extension?
-\item[\textbf{RQ4}] Can a general extraction relation be connected to induced inverse images, and can that theorem be instantiated to a concrete decision rule?
-\item[\textbf{RQ5}] Can constraints extracted from real OSS requirement/API/code artifacts be handled consistently in this model?
+\item[\textbf{RQ1}] Can induced inverse images be defined coherently with per-layer heterogeneous carriers?
+\item[\textbf{RQ2}] Can $A_i\subseteq D_i$ be lifted to root-witness validity?
+\item[\textbf{RQ3}] Can join-style and meet-style root operators coexist coherently in one typed model?
+\item[\textbf{RQ4}] Can transfer/composition assumptions be stated precisely enough for machine checking?
+\item[\textbf{RQ5}] Can extraction adequacy be decomposed into sound-only and complete-only forms?
+\item[\textbf{RQ6}] Can the real-OSS extraction pipeline be executed reproducibly (pipeline executability)?
 \end{enumerate}
-\noindent
-UAD/f is treated as a self-contained model in this paper: all required entities
-($\Omega, I, \beta_i, D_i, A_i, \mathrm{proj}_i$) are fully specified in text and Lean code.
-\noindent
-Paper type: this is a mechanization-oriented original article.
-Claims are centered on formal coherence of the typed UAD/f core and reusable machine-checked lemmas; external evidence is limited to a small three-project OSS case study (not broad industrial effectiveness).
 
 \section{Typed UAD/f Core}
 \begin{definition}[Typed model]
-Fix a root space $\Omega$, index set $I$, and layer carriers $\beta_i$.
+Fix root space $\Omega$, index set $I$, and carrier family $\beta_i$.
 For each layer $i$:
 \[
-D_i \subseteq \beta_i,\qquad A_i \subseteq D_i,\qquad
-\mathrm{proj}_i : \Omega \to \mathrm{Option}\,\beta_i.
+D_i\subseteq\beta_i,\quad A_i\subseteq D_i,\quad
+\mathrm{proj}_i:\Omega\to\mathrm{Option}\,\beta_i.
 \]
 \end{definition}
+\noindent
+Separating $D_i$ from $A_i$ is intentional: $D_i$ captures the addressed domain,
+while $A_i$ captures admissible behavior inside that domain.
+This separation enables root-level witness-within-domain theorems (RQ2).
 
 \begin{definition}[Induced inverse image]
-For $S \subseteq \beta_i$:
+For $S\subseteq\beta_i$:
 \[
 f^{-1}_{0i}(S)
-:=\{x\in\Omega \mid \exists y\in\beta_i,\ \mathrm{proj}_i(x)=\mathrm{some}(y)\land y\in S\}.
-\]
-\noindent
-In Lean, this is encoded as a predicate \texttt{SpecSet $\Omega$ := $\Omega \to Prop$};
-thus the binder ``$x \in \Omega$'' is represented by \texttt{fun x : $\Omega$ => ...}.
-\end{definition}
-
-\begin{definition}[Lifted layer and U0]
-\[
-lifted(i):=f^{-1}_{0i}(A_i),\qquad
-U0:=\bigcup_{i\in I} lifted(i).
+:=\{x\in\Omega\mid\exists y\in\beta_i,\ \mathrm{proj}_i(x)=\mathrm{some}(y)\land y\in S\}.
 \]
 \end{definition}
 
-\begin{definition}[Inter-layer predicates]
+\paragraph{Lean excerpt (definition level).}
+\begin{verbatim}
+def preimage (M : Model ι α) (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+
+def UAndOn (active : ι → Prop) : SpecSet α :=
+  fun x : α => ∀ i : ι, active i → x ∈ M.lifted i
+\end{verbatim}
+
+\paragraph{Order used for theorem terminology.}
+All terms join/meet/LUB/GLB in this paper are with respect to set inclusion
+order ($\subseteq$):
+\begin{itemize}
+\item join (least upper bound) $=\cup$;
+\item meet (greatest lower bound) $=\cap$.
+\end{itemize}
+Specification strength is discussed only as an intuition: larger admissible sets
+are weaker specifications. Thus $U0$ is an over-approximation/coverage operator.
+
+\section{Join/Meet Split for Root Semantics}
+\begin{definition}[Join-style root coverage]
 \[
-\mathrm{Contradictory}(i,j):\equiv
-\forall x,\ x\in lifted(i)\to x\in lifted(j)\to\bot,
+lifted(i):=f^{-1}_{0i}(A_i),\qquad U0:=\bigcup_{i\in I} lifted(i).
 \]
-\[
-\mathrm{Consistent}(i,j):\equiv
-\exists x,\ x\in lifted(i)\land x\in lifted(j).
-\]
+$U0$ is coverage/join in set-inclusion order:
+at least one active layer admits the root witness.
+$U0$ is therefore an over-approximation (weaker, in the admissible-set sense).
 \end{definition}
 
-\section{Main Results}
-\begin{theorem}[Preimage monotonicity]
-$S\subseteq T \Rightarrow f^{-1}_{0i}(S)\subseteq f^{-1}_{0i}(T)$.
-\end{theorem}
-
-\begin{theorem}[Preimage union preservation]
-$f^{-1}_{0i}(S\cup T)=f^{-1}_{0i}(S)\cup f^{-1}_{0i}(T)$.
-\end{theorem}
-
-\begin{theorem}[Domain-respecting lifting]
-$A_i\subseteq D_i \Rightarrow lifted(i)\subseteq f^{-1}_{0i}(D_i)$.
-\end{theorem}
-
-\begin{proposition}[Root witness validity]
-If $x\in U0$, then $\exists i,\exists y,\ \mathrm{proj}_i(x)=\mathrm{some}(y)\land y\in D_i$.
-\end{proposition}
-
-\begin{theorem}[Least-upper-bound characterization]
-For any $B\subseteq\Omega$:
+\begin{definition}[Meet-style integrated root]
+For active-layer predicate $active:I\to Prop$:
 \[
-(\forall i,\ lifted(i)\subseteq B)\iff U0\subseteq B.
+U^{\wedge}_{active}(x):\equiv \forall i,\ active(i)\to x\in lifted(i).
 \]
-Hence $U0=\bigsqcup_{i\in I} lifted(i)$ in the powerset order.
+Global meet is $U^{\wedge}:=U^{\wedge}_{\top}$.
+\end{definition}
+
+\begin{theorem}[Join/meet linkage]
+\label{thm:join-meet-linkage}
+If at least one active layer exists, then
+$U^{\wedge}_{active}\subseteq U0_{active}$.
+For two layers $i,j$, consistency is equivalent to non-emptiness of
+$U^{\wedge}_{\{i,j\}}$.
 \end{theorem}
 
-\begin{theorem}[Layer-extension monotonicity]
-For active-layer predicates $J,K:I\to\mathrm{Prop}$, if
-$\forall i,\ J(i)\to K(i)$ then $U0_J\subseteq U0_K$.
+\begin{theorem}[Active-set antitonicity]
+If $active\subseteq active'$, then
+$U^{\wedge}_{active'}\subseteq U^{\wedge}_{active}$.
+With empty active set, $U^{\wedge}$ is vacuously universal.
 \end{theorem}
 
-\begin{theorem}[Layer-transfer under admissibility-preserving relation]
-Let $R : \beta_i \to \beta_j \to \mathrm{Prop}$ satisfy:
-(1) each projected $y_j$ has a related projected $y_i$ witness,
+\section{Core Theorems}
+\begin{theorem}[Transfer with same-root coupling]
+\label{thm:transfer}
+Let $R: \beta_i\to\beta_j\to Prop$ satisfy:
+(1) $\forall x,y_j,\ \mathrm{proj}_j(x)=some(y_j) \to \exists y_i,\ \mathrm{proj}_i(x)=some(y_i)\land R(y_i,y_j)$,
 (2) $R$ preserves admissibility from $A_j$ to $A_i$.
 Then $lifted(j)\subseteq lifted(i)$.
 \end{theorem}
 \noindent
-Mechanized instances are provided in \texttt{TransferExample.lean}
-(\texttt{false -> true}) and \texttt{TransferChainExample.lean}
-(\texttt{code -> api -> req}).
-Operationally, this supports safe propagation of stronger constraints across
-traceability updates (e.g., code/API constraints to requirement-layer root witnesses).
+This theorem provides a sufficient condition; necessity is not claimed.
 
-\begin{theorem}[Consistency/contradiction duality]
-$\mathrm{Contradictory}(i,j)\iff\neg\mathrm{Consistent}(i,j)$.
+\begin{theorem}[Composition law]
+\label{thm:composition}
+For $g: \beta_i\to Option\,\beta_j$,
+if $\mathrm{proj}_j=\mathrm{bind}(\mathrm{proj}_i,g)$ pointwise,
+then
+\[
+f^{-1}_{0j}(S)=f^{-1}_{0i}(pullbackVia_g(S)),
+\]
+where
+$pullbackVia_g(S):=\{y_i\mid\exists y_j, g(y_i)=some(y_j)\land y_j\in S\}$.
 \end{theorem}
 
-\begin{theorem}[Inter-layer composition law]
-If $\mathrm{proj}_j(x)=\mathrm{bind}(\mathrm{proj}_i(x),g)$ for all $x\in\Omega$,
-then for every $S\subseteq \beta_j$:
-\[
-f^{-1}_{0j}(S) = f^{-1}_{0i}(g^{-1}(S)).
-\]
-\end{theorem}
-\noindent
-The commutation hypothesis matches extractor pipelines where layer-$j$
-projection is implemented as a post-transform over layer-$i$ projection;
-see \texttt{CompositionExample.lean}.
-This enables decomposition of higher-layer inverse-image checks into lower-layer
-checks plus an explicit transformer $g$, useful for incremental extractor validation.
-
-\begin{theorem}[General extraction adequacy transfer]
-If an extraction relation $E : \Omega \to \beta_i \to Prop$ satisfies
-\[
-\mathrm{proj}_i(x)=\mathrm{some}(y) \iff E(x,y),
-\]
-then for every $S\subseteq \beta_i$:
-\[
-f^{-1}_{0i}(S)=\{x\in\Omega \mid \exists y,\ E(x,y)\land y\in S\}.
-\]
-\end{theorem}
-
-\begin{theorem}[Extractor decision equivalence (password policy case)]
-For artifacts:
-requirement $(min_{req}, max_{req})$, API $(min_{api})$, code $(max_{code})$,
-define:
-\[
-check := \mathbf{decide}\left(
-\max(min_{req},min_{api}) \le \min(max_{req},max_{code})
-\right).
-\]
-Then:
-\[
-check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code).
-\]
-\end{theorem}
-
-\begin{theorem}[Non-adjunction under partial projection]
-If there exists $x_0\in\Omega$ with $\mathrm{proj}_i(x_0)=none$, then
-the existential preimage operator at layer $i$ has no left adjoint on full powersets:
-\[
-\neg \exists F,\ \forall S,T,\ F(S)\subseteq T \iff S\subseteq f^{-1}_{0i}(T).
-\]
-\end{theorem}
-
-\section{Mechanization and Reproducibility}
-Lean artifacts are organized by proof purpose:
+\begin{theorem}[One-sided adequacy decomposition]
+\label{thm:adequacy}
+For extraction relation $E: \Omega\to\beta_i\to Prop$:
 \begin{itemize}
-\item \texttt{Definitions}: typed UAD/f core (\texttt{Layer}, \texttt{Model}, \texttt{preimage})
-\item \texttt{U0Spec}: construction lemmas, LUB theorem, layer-extension monotonicity
-\item \texttt{InterLayer}: contradiction/consistency + transfer + composition + adequacy theorem
-\item \texttt{CaseStudy}: extractor decision soundness/completeness theorem
-\item \texttt{Examples}: satisfiable and contradictory instances
+\item if projection implies $E$ (soundness), then $preimage\subseteq semanticPullback$;
+\item if $E$ implies projection realizability (completeness), then $semanticPullback\subseteq preimage$;
+\item if both hold, equality follows.
 \end{itemize}
+Operationally:
+\begin{itemize}
+\item completeness-side inclusion is required for safe emptiness claims (avoid false contradictions);
+\item soundness-side inclusion is required to avoid reporting spurious satisfiable witnesses.
+\end{itemize}
+\end{theorem}
 
-Reproduction:
+\begin{theorem}[Non-adjunction under partiality]
+\label{thm:no-adjunction}
+If $\exists x_0,\ \mathrm{proj}_i(x_0)=none$, then existential preimage at layer $i$
+has no left adjoint on full powersets.
+\end{theorem}
+
+\paragraph{Foundational lemmas (background).}
+Preimage monotonicity, preimage union preservation,
+$U0$ least-upper-bound characterization,
+and contradiction/consistency duality are mechanized as background results.
+
+\section{Formalization Engineering Decisions}
+The main contribution is a reference mechanization that makes required assumptions explicit:
+these items are presented as implementable design decisions in the UAD/f context,
+not as claims of first discovery in the broader formal-methods literature.
+\begin{enumerate}[leftmargin=2em]
+\item ``Integration'' is semantically split (join vs meet) and cannot be represented by a single operator name.
+\item Transfer requires same-root coupling assumptions; relation-only statements are insufficient.
+\item Adequacy assumptions must be staged (sound-only / complete-only) before bi-implication claims.
+\item Partial projections break automatic adjunction intuition.
+\end{enumerate}
+
+\section{Case Study and Extraction Pipeline Executability Demo}
+\paragraph{Lean-level case theorem.}
+In \texttt{PasswordPolicy.lean}, we prove:
+\[
+check=true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code).
+\]
+This is a theorem-level equivalence between closed-form check and witness existence.
+
+\paragraph{Real OSS extraction.}
+\texttt{paper/case-study/real\_projects/external\_validation.py}
+fetches official pages and extracts numeric bounds for
+PostgreSQL identifier length, zlib compression level, and SQLite page size.
+Observed results (2026-02-14):
+\begin{itemize}
+\item projects: 3, consistent: 3, contradictory: 0
+\item mutation sensitivity: 3/3 contradictory mutations detected
+\end{itemize}
+\noindent
+Selection note: the three projects form a convenience sample chosen for
+public availability of requirement/API/code artifacts and stable URL retrieval.
+Hence this section demonstrates pipeline executability with reproducibility locks, not contradiction prevalence estimation.
+\noindent
+Constraint domains are intentionally diverse (identifier length, compression level, page size)
+to test extraction feasibility across different numeric-spec contexts.
+\noindent
+Mutation checks validate contradiction-detection mechanics only; they are not evidence of real-world defect rates.
+\noindent
+Theory linkage is intentionally limited: extracted bounds are treated as
+operational input candidates for interval checks.
+Extraction soundness/completeness itself is not proven in this paper,
+and we do not claim direct theorem application from this regex layer.
+\noindent
+Thus the regex extraction layer is treated as an input-construction layer, not as a verified extractor.
+
+\paragraph{Reproducibility lock.}
+The pipeline outputs:
+\begin{itemize}
+\item \texttt{external\_validation\_results.json}
+\item \texttt{external\_validation\_sources.lock.json}
+\item \texttt{snapshots/*}
+\end{itemize}
+with URL, SHA256, retrieval timestamp, and snapshot path.
+The extraction script uses Python standard library only (no extra pip dependencies).
+Online fetching requires network access.
+Offline replay is supported via:
+\begin{verbatim}
+python external_validation.py --offline-lock external_validation_sources.lock.json
+\end{verbatim}
+which validates snapshot SHA256 against lock records and re-runs extraction without network.
+
+\section{Reproducibility and Transparency}
+Lean reproduction:
 \begin{verbatim}
 cd paper/lean
 ~/.elan/bin/lake build
 \end{verbatim}
 
-Pinned toolchain:
+Toolchain:
 \begin{itemize}
 \item Lean4: \texttt{leanprover/lean4:v4.27.0}
 \item Lake: \texttt{5.0.0-src+db93fe1}
-\item toolchain file: \texttt{paper/lean/lean-toolchain}
-\item lake definition: \texttt{paper/lean/lakefile.lean}
-\item manifest: \texttt{paper/lean/lake-manifest.json} (packages = [])
-\item reproducibility commit: \texttt{3b06520d9704c09dcec03d609731910bcfa0edc9}
+\item manifest: \texttt{packages = []} (Lean stdlib only; no mathlib)
 \end{itemize}
 
-Current footprint:
+Logic assumptions:
+\texttt{SpecSet := (\_ -> Prop)} with extensionality via
+\texttt{funext + propext}; no explicit \texttt{open Classical} import in this development.
+
+Current size:
 \begin{itemize}
-\item 979 LOC across core Lean files
-\item 35 theorem declarations
+\item 1103 LOC
+\item 43 theorem declarations
+\item theorem breakdown: 12 core theorem claims (\S4), 26 background/proof-support lemmas, 5 example theorems
 \end{itemize}
 
-\paragraph{Non-trivial proof engineering points}
+\section{Related Work Positioning}
+We align with abstract-interpretation intuition on monotone inverse-image behavior
+(Cousot \& Cousot), but differ by first-class partiality and typed per-layer carriers.
+Institution theory (Goguen \& Burstall) motivates cross-language satisfaction transfer,
+while this paper focuses on a concrete root operator pair ($U0$, $U^{\wedge}$)
+and mechanized obligations (transfer/composition assumptions).
+The tradeoff is explicit: we prioritize executability in Lean with
+first-class partial projections and root-space join/meet operators over full categorical generality.
+Compared with system-level formalisms such as TLA+,
+this work isolates the integration kernel rather than full behavioral modeling.
+Interface-automata style assume/guarantee compatibility (de Alfaro \& Henzinger)
+is complementary: we do not replace interface-theoretic composition,
+but make root-level operator semantics explicit under partial projections.
+Refinement-calculus viewpoints (Back \& von Wright) provide a general
+stepwise-development framework; our focus is narrower on mechanizing
+root operators with explicit order semantics.
+Practical use guideline:
 \begin{itemize}
-\item The dependent carrier family \texttt{carrier : I -> Type} requires explicit witness transport in existential proofs for \texttt{preimage}.
-\item The composition theorem relies on case-splitting over \texttt{Option.bind} (\texttt{some}/\texttt{none}) and normalization under the commutation hypothesis.
-\item Predicate-as-set encoding (\texttt{SpecSet}) requires explicit membership/subset instances and repeated extensionality reasoning (\texttt{set\_ext}).
-\item Quantitatively, \texttt{preimage\_compose} contains two explicit case splits and four \texttt{calc} chains, while \texttt{lifted\_transfer} uses nested witness reconstruction across relation hypotheses.
-\item Theorem-level linkage: \texttt{preimage\_union} depends on dependent witness scoping, \texttt{lifted\_subset\_preimage\_domain} on explicit projection witnesses, and \texttt{preimage\_compose} on \texttt{Option.bind} normalization.
+\item use this UAD/f core when root-level join/meet separation under partial projections is the primary concern;
+\item use Institution-style frameworks when cross-logic satisfaction transport is central;
+\item use TLA+ when temporal behavior/refinement is the core objective.
 \end{itemize}
-
-\paragraph{Synthetic consistency cross-check}
-We provide a reproducible benchmark (\texttt{paper/case-study/password\_policy\_benchmark.py})
-as a consistency check (not a proof substitute) with 5 seeds $\times$ 200,000 generated artifact triples.
-The key validation is agreement between the closed-form decision rule and brute-force witness search:
-\begin{itemize}
-\item baseline comparison (20,000 cases): mismatches = 0
-\item witness validity check (20,000 cases): witness\_violation\_count = 0
-\item distribution indicator: contradiction ratio = 0.214478
-\end{itemize}
-\noindent
-This synthetic check validates implementation alignment only; external validity is evaluated separately in the next paragraph.
-
-\paragraph{External validation on real OSS artifacts}
-We add a real-artifact case study
-(\texttt{paper/case-study/real\_projects/external\_validation.py})
-that fetches official docs/source pages and extracts layer constraints:
-\begin{itemize}
-\item PostgreSQL identifier length (runtime preset / lexical doc / \texttt{NAMEDATALEN})
-\item zlib compression level (manual / Python API doc / \texttt{zlib.h} constants)
-\item SQLite page size (PRAGMA doc / file-format doc / \texttt{sqliteLimit.h})
-\end{itemize}
-Observed results (2026-02-14):
-\begin{itemize}
-\item real projects: 3, consistent: 3, contradictory: 0
-\item mutation sensitivity test (forcing requirement lower bound above upper bound): 3/3 contradictions detected
-\end{itemize}
-This section is the main case-study evidence for external applicability at small scale.
-For RQ5, these values are the primary external-validity indicators:
-\texttt{n\_real\_projects=3}, \texttt{n\_real\_consistent=3}, mutation detection \texttt{3/3}.
-Their theoretical role is to instantiate Theorem 3 (domain-respecting lifting)
-and Theorem 4 (existence of domain-valid witnesses) on non-synthetic artifacts.
-
-\section{Related Work and Positioning}
-Our order-theoretic lemmas are compatible with classical abstract interpretation
-viewpoints (Cousot \& Cousot, 1977), while our target is narrower:
-typed partial projections for root-specification reconstruction.
-In particular, our \texttt{preimage} operator is induced by
-$\mathrm{proj}:\Omega\to Option\,\beta_i$; because undefined points are explicit,
-embedding into a standard total-map Galois adjunction requires additional domain/totality assumptions.
-This difference is formalized by a mechanized non-adjunction theorem for undefined projection points.
-This is not an isolated fact: it justifies why U0 correctness arguments in this
-paper explicitly track witnesses (\texttt{proj\_i(x)=some(y)}) instead of relying on
-implicit adjunction-based transport.
-Institution-style semantic transport (Goguen \& Burstall, 1984) addresses
-language-independent satisfaction, whereas we focus on a concrete U0 operator.
-Our correspondence is: layer index set $I$ as signature-level indexing and
-$lifted(i)$ as root-level satisfaction set for layer $i$.
-Unlike general institution axiomatization, satisfaction-preservation obligations
-are given explicitly as assumptions ($R$ in transfer, $hcomm$ in composition).
-Compared with system-level formal methods (e.g., TLA+, Lamport 2002), this work
-does not model full system behavior; it isolates and mechanizes the U0 integration kernel,
-and connects it to an executable decision rule in a concrete case study.
 
 \section{Scope and Limitations}
-\begin{remark}
-This paper proves internal coherence of typed U0 construction.
-It does \emph{not} prove full adequacy of UAD/f in practical engineering pipelines.
-\end{remark}
-
-Not proven here:
 \begin{enumerate}[leftmargin=2em]
-\item faithfulness of concrete extractors to $\mathrm{proj}_i$,
-\item global completeness/soundness of end-to-end UAD/f workflows,
-\item large-scale external validity (current real-artifact study covers three projects and numeric-bound constraints).
+\item No full semantic correctness proof of concrete industrial extractors.
+\item External evidence is limited to a convenience sample of three projects and numeric-bound constraints.
+\item Mutation checks validate detector sensitivity, not real-world bug prevalence.
+\item Regex extraction soundness/completeness is not quantified here.
+\item Current external cases do not yet exercise deep composition chains or one-sided adequacy in production extractors.
 \end{enumerate}
 
 \section{Conclusion}
-We remove ambiguity in U0 construction by giving a typed UAD/f core and
-defining $f^{-1}_{0i}$ via partial projections.
-Lean4 proofs establish domain-respecting lifting, supremum characterization of U0,
-layer-extension monotonicity, composition preservation, and extraction-adequacy transfer.
-This provides a precise baseline for stronger future results (composition laws,
-extractor correctness, and CI-level artifact guarantees).
-The scientific increment is not restating elementary set facts, but exposing
-missing assumptions in typed partial multi-layer integration (including mechanized
-non-adjunction under undefined projections).
+We provide a typed, mechanized UAD/f root-integration core that explicitly separates
+join-style coverage ($U0$) from meet-style simultaneous satisfaction ($U^{\wedge}$).
+The main contribution is explicit exposure and machine-checking of
+previously implicit assumptions (operator semantics, transfer coupling,
+one-sided adequacy, and partiality-induced non-adjunction),
+plus reproducible source-locked execution of the pre-input extraction pipeline.
+RQ closure (navigation): RQ1 is resolved by the typed inverse-image definition;
+RQ2 by domain-lift witness lemmas; RQ3 by join/meet split plus Theorem~\ref{thm:join-meet-linkage};
+RQ4 by Theorem~\ref{thm:transfer} and Theorem~\ref{thm:composition};
+RQ5 by Theorem~\ref{thm:adequacy}; RQ6 is partially addressed by the
+source-locked extraction pipeline executability demo, with extraction
+soundness/completeness left as future work.
 
-\paragraph{References (informal)}
-[1] P. Cousot and R. Cousot, ``Abstract Interpretation,'' POPL 1977.\\
-[2] J. A. Goguen and R. M. Burstall, ``Introducing Institutions,'' 1984.\\
-[3] L. Lamport, \emph{Specifying Systems}, 2002.
+\paragraph{References}
+[1] Patrick Cousot and Radhia Cousot, ``Abstract Interpretation: A Unified Lattice Model for Static Analysis of Programs by Construction or Approximation of Fixpoints,'' in \emph{Proceedings of the 4th ACM SIGACT-SIGPLAN Symposium on Principles of Programming Languages (POPL 1977)}, pp. 238--252, 1977.\\
+[2] Joseph A. Goguen and Rod M. Burstall, ``Introducing Institutions,'' in \emph{Logics of Programs}, Lecture Notes in Computer Science 164, Springer, pp. 221--256, 1984.\\
+[3] Leslie Lamport, \emph{Specifying Systems: The TLA+ Language and Tools for Hardware and Software Engineers}, Addison-Wesley, 2002.\\
+[4] Luca de Alfaro and Thomas A. Henzinger, ``Interface Automata,'' in \emph{Proceedings of the 9th ACM SIGSOFT International Symposium on Foundations of Software Engineering (FSE 2001)}, pp. 109--120, 2001.\\
+[5] Ralph-Johan Back and Joakim von Wright, \emph{Refinement Calculus: A Systematic Introduction}, Springer, 1998.
 
 \end{document}

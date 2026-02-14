@@ -14,7 +14,7 @@
      [["UadfU0Paper/uadf_u0_paper:extraDep",
        [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
       ["imports",
-       [["UadfU0 transitive imports (legacy)", "becde1ff4a549ccd"],
+       [["UadfU0 transitive imports (legacy)", "6fa0699c56f3f1d5"],
         ["UadfU0:importAllArts", "2dab2b3effc3677e"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
@@ -26,4 +26,4 @@
   ["/Users/ab/Projects/spec-oracle/paper/lean/Main.lean", "17713b1c49a6155b"],
   ["options", "00000000000006bb"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "2d365fdadeb5408d"}
+ "depHash": "8db28cf19b448779"}

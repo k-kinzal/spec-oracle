@@ -36,6 +36,17 @@ example : 2 ∈ twoLayerTypedModel.U0 := by
   change 2 ≥ 1
   decide
 
+example : 2 ∈ twoLayerTypedModel.UAnd := by
+  intro i hi
+  cases i with
+  | false =>
+      refine ⟨true, ?_, rfl⟩
+      simp [twoLayerTypedModel]
+  | true =>
+      refine ⟨2, rfl, ?_⟩
+      change 2 ≥ 1
+      decide
+
 example : 0 ∈ twoLayerTypedModel.U0 := by
   refine ⟨false, ?_⟩
   refine ⟨true, ?_, rfl⟩
@@ -59,6 +70,17 @@ example : ¬ twoLayerTypedModel.Contradictory true false := by
     · refine ⟨true, ?_, rfl⟩
       simp [twoLayerTypedModel]
   exact (Model.contradictory_iff_not_consistent (M := twoLayerTypedModel) true false).1 hContra hCons
+
+example : twoLayerTypedModel.UAnd ⊆ twoLayerTypedModel.U0 := by
+  have hsub :
+      twoLayerTypedModel.UAndOn (fun _ : Bool => True) ⊆
+        twoLayerTypedModel.U0On (fun _ : Bool => True) :=
+    Model.UAndOn_subset_U0On (M := twoLayerTypedModel) (active := fun _ : Bool => True) ⟨true, trivial⟩
+  intro x hx
+  have hxAndOn : x ∈ twoLayerTypedModel.UAndOn (fun _ : Bool => True) := by
+    simpa [Model.UAnd_eq_UAndOn_all (M := twoLayerTypedModel)] using hx
+  have hxU0On : x ∈ twoLayerTypedModel.U0On (fun _ : Bool => True) := hsub hxAndOn
+  simpa [Model.U0_eq_U0On_all (M := twoLayerTypedModel)] using hxU0On
 
 end Examples
 end UadfU0

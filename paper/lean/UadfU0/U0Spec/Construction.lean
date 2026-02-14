@@ -56,6 +56,14 @@ theorem mem_U0_iff (x : α) :
 def U0On (active : ι → Prop) : SpecSet α :=
   fun x : α => ∃ i : ι, active i ∧ x ∈ M.lifted i
 
+/-- Meet-style integrated specification: all active layers must hold simultaneously. -/
+def UAndOn (active : ι → Prop) : SpecSet α :=
+  fun x : α => ∀ i : ι, active i → x ∈ M.lifted i
+
+/-- Global meet-style integrated specification over all layers. -/
+def UAnd : SpecSet α :=
+  M.UAndOn (fun _ : ι => True)
+
 /-- If the active layer set grows, the induced root specification grows. -/
 theorem U0On_monotone {J K : ι → Prop}
     (hJK : ∀ i : ι, J i → K i) :
@@ -76,6 +84,68 @@ theorem U0_eq_U0On_all :
   · intro hx
     rcases hx with ⟨i, _, hix⟩
     exact ⟨i, hix⟩
+
+/-- `UAnd` is the special case where all layers are active. -/
+theorem UAnd_eq_UAndOn_all :
+    M.UAnd = M.UAndOn (fun _ : ι => True) := by
+  rfl
+
+/--
+If the active-layer predicate grows, meet-style integration becomes stricter.
+Equivalently, `UAndOn` is antitone in the active predicate.
+-/
+theorem UAndOn_antitone {J K : ι → Prop}
+    (hJK : ∀ i : ι, J i → K i) :
+    M.UAndOn K ⊆ M.UAndOn J := by
+  intro x hx i hi
+  exact hx i (hJK i hi)
+
+/--
+With no active layers, meet-style integration is vacuously true for every root point.
+-/
+theorem UAndOn_empty_eq_univ :
+    M.UAndOn (fun _ : ι => False) = (fun _ : α => True) := by
+  apply set_ext
+  intro x
+  constructor
+  · intro _hx
+    trivial
+  · intro _hx i hi
+    exact False.elim hi
+
+/--
+If all active layers hold at `x` and at least one active layer exists,
+then `x` is included in the corresponding join-style root spec.
+-/
+theorem UAndOn_subset_U0On
+    {active : ι → Prop}
+    (hActive : ∃ i : ι, active i) :
+    M.UAndOn active ⊆ M.U0On active := by
+  intro x hx
+  rcases hActive with ⟨i, hi⟩
+  exact ⟨i, hi, hx i hi⟩
+
+/--
+For any pair of layers, consistency is equivalent to non-emptiness of
+the pair-restricted meet-style integrated specification.
+-/
+theorem consistent_iff_exists_UAndOn_pair (i j : ι) :
+    M.Consistent i j ↔ ∃ x : α, x ∈ M.UAndOn (fun k : ι => k = i ∨ k = j) := by
+  constructor
+  · intro hCons
+    rcases hCons with ⟨x, hxi, hxj⟩
+    refine ⟨x, ?_⟩
+    intro k hk
+    cases hk with
+    | inl hki =>
+        simpa [hki] using hxi
+    | inr hkj =>
+        simpa [hkj] using hxj
+  · intro h
+    rcases h with ⟨x, hx⟩
+    refine ⟨x, ?_, ?_⟩
+    · exact hx i (Or.inl rfl)
+    · exact hx j (Or.inr rfl)
 
 /-- Every lifted layer contributes directly to U0. -/
 theorem lifted_subset_U0 (i : ι) :

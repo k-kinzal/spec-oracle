@@ -1,8 +1,8 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["28b466122f2a6547.olean"],
-  "i": "ec1bf90ea860a567.ilean",
+ {"o": ["6fbafb008d182013.olean"],
+  "i": "9b7127a1e76c9b92.ilean",
   "c": "37bbfe274e922f58.c"},
  "log":
  [{"message":
@@ -15,8 +15,8 @@
        [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
       ["imports",
        [["UadfU0.InterLayer.Consistency transitive imports (legacy)",
-         "02fae88d91a39540"],
-        ["UadfU0.InterLayer.Consistency:importAllArts", "c2c1b00874a50033"]]]]],
+         "6e3c6f1137ceda1d"],
+        ["UadfU0.InterLayer.Consistency:importAllArts", "00a611ca6cd51f15"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -25,7 +25,7 @@
   ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
    "9a2be90fd35343e5"],
   ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/TwoLayer.lean",
-   "2237ec9d6b68131a"],
+   "4df6a6dbe1ff1480"],
   ["options", "00000000000006bb"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "4a456d9f6d85ce72"}
+ "depHash": "1dba2ab514de3b23"}

@@ -1,8 +1,8 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["200f3eedf8ad833f.olean"],
-  "i": "4e2bfbf097ff9b09.ilean",
+ {"o": ["8dce3876a8b99bff.olean"],
+  "i": "4b306b4f2cd387ad.ilean",
   "c": "3fd4d5f8e3d3c6eb.c"},
  "log":
  [{"message":
@@ -16,7 +16,7 @@
       ["imports",
        [["UadfU0.U0Spec.Construction transitive imports (legacy)",
          "f42258e499a8b77a"],
-        ["UadfU0.U0Spec.Construction:importAllArts", "5cc541d5be2173f6"]]]]],
+        ["UadfU0.U0Spec.Construction:importAllArts", "2bdeb9335c839a13"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -25,7 +25,7 @@
   ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
    "9a2be90fd35343e5"],
   ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/U0Spec/Minimality.lean",
-   "d69ac9e1f4f303ee"],
+   "d49f2aeb106975b3"],
   ["options", "00000000000006bb"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "3c590d57cc94c1d1"}
+ "depHash": "e3329afdce0448d8"}

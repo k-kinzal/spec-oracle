@@ -4,7 +4,7 @@
 
 The goal is to create an open-source specification description tool for a new era.
 
-NOTE: You are running away from the essence of specORACLE. Nothing has been achieved. Only the owner is permitted to rewrite this CLAUDE.md. Do not run away. Face it.
+Note: The goal has not been reached. Have you realized the core concept? Have all constraints been met? Face the essence of specORACLE; the issues that should be resolved with specORACLE have not been addressed yet. Confront the problems you want to solve.
 
 ## Core Concept
 
@@ -22,17 +22,20 @@ Humans express intent. The system infers everything else.
 
 ## Constraints
 
-- Behavior must always be guaranteed through tests, contracts, properties, and proofs.
-- Changes and commits should always be kept to the absolute minimum.
-- Specifications should always be managed using specification description tools.
+- All issues listed in @PROBLEM.md should be resolved.
+- Behavior should always be guaranteed by means such as tests, contracts, properties, or proofs. Furthermore, it should be guaranteed not just by one, but by multiple layers.
+- Specifications should always be managed using the writing tool currently being developed.
+- Commits should always be made in the smallest possible units.
 - Do not implement everything from scratch; utilize existing tools and libraries where possible.
-- Ensure that all issues in @PROBLEM.md have been resolved.
+
+## Prohibited
+
 - The user cannot answer your questions. Asking for clarification is prohibited.
 - There is no interest in plans. Planning mode is prohibited.
 
 ## Desirable
 
-- First, please verify the specifications using the specification writing tool you initially created.
+- First, please use the specification creation tool you initially developed to check the specifications of this tool. This is not an inspection of the specifications. Please understand the current specifications in terms of what features it possesses as a specification description tool.
 - Record the work performed under the `tasks` directory. There are no specific format requirements.
 - Finally, ensure that the updated specifications are saved within the specification writing tool you created.
 
@@ -45,4 +48,4 @@ The name **ORACLE** reflects its role: bringing order to ambiguity and making co
 
 Details:
 - **@docs/motivation.md** - Why specORACLE is needed (background, problem, and role)
-- **@docs/conversation.md** - What a specification is (theoretical foundation and U/D/A/f model)
+- **@docs/conversation.md** - What a specification is (theoretical foundation and UDA/f model)

@@ -40,5 +40,34 @@ theorem U0_is_supremum :
   · intro B hB
     exact M.U0_below_every_upper_bound B hB
 
+/-- Meet-style integrated spec is a lower bound for each active layer. -/
+theorem UAndOn_lower_bound
+    (active : ι → Prop)
+    (i : ι)
+    (hi : active i) :
+    M.UAndOn active ⊆ M.lifted i := by
+  intro x hx
+  exact hx i hi
+
+/-- Any common lower bound of active lifted layers is below the meet-style spec. -/
+theorem below_UAndOn_of_lower_bounds
+    (active : ι → Prop)
+    (B : SpecSet α)
+    (hB : ∀ i : ι, active i → B ⊆ M.lifted i) :
+    B ⊆ M.UAndOn active := by
+  intro x hxB i hi
+  exact hB i hi hxB
+
+/-- Greatest-lower-bound characterization for meet-style integrated spec. -/
+theorem UAndOn_greatest_lower_bound_iff
+    (active : ι → Prop)
+    (B : SpecSet α) :
+    (B ⊆ M.UAndOn active) ↔ (∀ i : ι, active i → B ⊆ M.lifted i) := by
+  constructor
+  · intro h i hi x hx
+    exact (h hx) i hi
+  · intro h
+    exact M.below_UAndOn_of_lower_bounds active B h
+
 end Model
 end UadfU0

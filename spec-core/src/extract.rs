@@ -42,7 +42,22 @@ impl SpecGraph {
         // Skip low-quality test assertions that are just code artifacts
         // Examples: "Invariant: g.node_count(), 1", "Invariant: fetched.kind, NodeKind::Assertion"
         if content.starts_with("Invariant: ") {
-            // Check if content contains semantic keywords indicating it's a real specification
+            // Reject if it contains Rust syntax (it's code, not a spec)
+            let rust_syntax_markers = [
+                ".iter()", ".any(", ".contains(", ".len()", ".get(",
+                "!(", "||", "&&", ">", "<", "==", "!=",
+                ".is_empty()", ".starts_with(", ".ends_with(",
+                "assert!", "panic!", "unwrap(", "expect(",
+                "{}", "[]", "\"{}\"", "format!", "println!"
+            ];
+            let has_rust_syntax = rust_syntax_markers.iter()
+                .any(|marker| content.contains(marker));
+
+            if has_rust_syntax {
+                return false;  // Rust code, not a specification
+            }
+
+            // Also check for semantic keywords (original filter)
             let semantic_keywords = [
                 "must", "should", "shall", "require", "ensure", "verify", "validate",
                 "detect", "identify", "check", "test verifies", "system", "user",
@@ -64,26 +79,29 @@ impl SpecGraph {
             return false;
         }
 
-        // Skip test function names that are too short or lack semantic keywords
-        // Examples: "coverage empty graph", "empty graph", "no tests"
+        // Skip test function names that are too short or lack strong semantic value
+        // Examples: "coverage empty graph", "empty graph", "no tests", "user login"
         if spec.kind == NodeKind::Scenario || spec.metadata.get("extractor") == Some(&"function_name".to_string()) {
-            // Check minimum length (at least 20 characters for meaningful spec)
-            if content.len() < 20 {
+            // Check minimum length (at least 25 characters for descriptive spec)
+            if content.len() < 25 {
                 return false;
             }
 
-            // Check for semantic keywords indicating real specification
-            let semantic_keywords = [
-                "must", "should", "shall", "can", "will", "ensure", "verify", "validate",
-                "detect", "identify", "check", "test", "system", "user", "when",
-                "specification", "requirement", "constraint", "correctly", "properly"
+            // Must have strong semantic keywords (not just "user" or "test")
+            let strong_keywords = [
+                "must", "should", "shall", "ensure", "verify", "validate",
+                "detect", "identify", "check for", "when", "if",
+                "specification", "requirement", "constraint", "correctly", "properly",
+                "without", "with", "given", "then", "returns", "accepts"
             ];
-
-            let has_semantic = semantic_keywords.iter()
+            let has_strong_semantic = strong_keywords.iter()
                 .any(|kw| content.to_lowercase().contains(kw));
 
-            if !has_semantic {
-                // Short scenario without semantic keywords - likely just function name
+            // Reject if no strong semantics OR if it's just a test name pattern
+            let is_trivial_test_name = content.to_lowercase().starts_with("scenario: ") &&
+                !has_strong_semantic;
+
+            if !has_strong_semantic || is_trivial_test_name {
                 return false;
             }
         }

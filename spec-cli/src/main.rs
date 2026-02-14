@@ -939,13 +939,136 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                 }
             }
         }
+        Commands::GetNode { id } => {
+            let graph = store.load()?;
+
+            // Resolve short ID to full UUID if needed
+            let full_id = if id.len() == 8 {
+                // Try to find node by short ID
+                let nodes = graph.list_nodes(None);
+                let matches: Vec<_> = nodes.iter()
+                    .filter(|n| n.id.starts_with(&id))
+                    .collect();
+
+                if matches.is_empty() {
+                    println!("❌ Node not found with ID starting with: {}", id);
+                    return Ok(());
+                } else if matches.len() > 1 {
+                    println!("❌ Ambiguous short ID: {} (matches {} nodes)", id, matches.len());
+                    println!("\nMatching nodes:");
+                    for node in matches.iter().take(5) {
+                        println!("  [{}] {}", &node.id[..8], node.content.chars().take(60).collect::<String>());
+                    }
+                    return Ok(());
+                }
+                matches[0].id.clone()
+            } else {
+                id.clone()
+            };
+
+            // Get the node
+            let node = graph.get_node(&full_id);
+            if node.is_none() {
+                println!("❌ Node not found: {}", full_id);
+                return Ok(());
+            }
+
+            let node = node.unwrap();
+            let layer_label = format_formality_layer(node.formality_layer);
+
+            println!("📄 Specification Details\n");
+            println!("ID:      {}", node.id);
+            println!("Layer:   [{}]", layer_label);
+            println!("Kind:    {}", format_node_kind(node.kind));
+            println!("Content: {}", node.content);
+
+            if !node.metadata.is_empty() {
+                println!("\nMetadata:");
+                for (k, v) in &node.metadata {
+                    println!("  {}: {}", k, v);
+                }
+            }
+
+            // Show relationships
+            let edges = graph.list_edges(Some(&node.id));
+            if !edges.is_empty() {
+                println!("\nRelationships ({} total):", edges.len());
+
+                // Group by direction
+                let mut outgoing = Vec::new();
+                let mut incoming = Vec::new();
+
+                for (edge_data, source_id, target_id) in &edges {
+                    if *source_id == node.id {
+                        outgoing.push((edge_data, target_id));
+                    } else {
+                        incoming.push((edge_data, source_id));
+                    }
+                }
+
+                if !outgoing.is_empty() {
+                    println!("\n  Outgoing ({}):", outgoing.len());
+                    for (edge_data, target_id) in outgoing.iter().take(10) {
+                        if let Some(target) = graph.get_node(target_id) {
+                            println!("    → {} [{}] {}",
+                                format_edge_kind(edge_data.kind),
+                                &target_id[..8],
+                                target.content.chars().take(50).collect::<String>()
+                            );
+                        }
+                    }
+                    if outgoing.len() > 10 {
+                        println!("    ... and {} more", outgoing.len() - 10);
+                    }
+                }
+
+                if !incoming.is_empty() {
+                    println!("\n  Incoming ({}):", incoming.len());
+                    for (edge_data, source_id) in incoming.iter().take(10) {
+                        if let Some(source) = graph.get_node(source_id) {
+                            println!("    ← {} [{}] {}",
+                                format_edge_kind(edge_data.kind),
+                                &source_id[..8],
+                                source.content.chars().take(50).collect::<String>()
+                            );
+                        }
+                    }
+                    if incoming.len() > 10 {
+                        println!("    ... and {} more", incoming.len() - 10);
+                    }
+                }
+            } else {
+                println!("\n⚠️  No relationships. This specification is isolated.");
+            }
+
+            println!("\n💡 Use 'spec trace {}' for full relationship tree", &node.id[..8]);
+        }
         Commands::Trace { id, depth } => {
             let graph = store.load()?;
 
+            // Resolve short ID to full UUID if needed
+            let full_id = if id.len() == 8 {
+                let nodes = graph.list_nodes(None);
+                let matches: Vec<_> = nodes.iter()
+                    .filter(|n| n.id.starts_with(&id))
+                    .collect();
+
+                if matches.is_empty() {
+                    println!("❌ Node not found with ID starting with: {}", id);
+                    return Ok(());
+                } else if matches.len() > 1 {
+                    println!("❌ Ambiguous short ID: {}", id);
+                    return Ok(());
+                }
+                matches[0].id.clone()
+            } else {
+                id.clone()
+            };
+
             // Get the root node
-            let root_node = graph.get_node(&id);
+            let root_node = graph.get_node(&full_id);
             if root_node.is_none() {
-                println!("❌ Node not found: {}", id);
+                println!("❌ Node not found: {}", full_id);
                 return Ok(());
             }
 
@@ -967,7 +1090,7 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
 
             // Trace relationships
             let max_depth = if depth == 0 { 999 } else { depth };
-            let relationships = graph.trace_relationships(&id, max_depth);
+            let relationships = graph.trace_relationships(&full_id, max_depth);
 
             if relationships.is_empty() {
                 println!("⚠️  No relationships found for this specification.");
@@ -1646,35 +1769,59 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                 // Apply the same quality filter from extract.rs
                 let content = &node.content;
                 let is_low_quality = {
-                    // Check 1: Invariant without semantic keywords
+                    // Check 1: Invariant that is actually Rust code
                     if content.starts_with("Invariant: ") {
-                        let semantic_keywords = [
-                            "must", "should", "shall", "require", "ensure", "verify", "validate",
-                            "detect", "identify", "check", "test verifies", "system", "user",
-                            "specification", "requirement", "constraint"
+                        // Reject if it contains Rust syntax
+                        let rust_syntax_markers = [
+                            ".iter()", ".any(", ".contains(", ".len()", ".get(",
+                            "!(", "||", "&&", ">", "<", "==", "!=",
+                            ".is_empty()", ".starts_with(", ".ends_with(",
+                            "assert!", "panic!", "unwrap(", "expect(",
+                            "{}", "[]", "\"{}\"", "format!", "println!"
                         ];
-                        let has_semantic = semantic_keywords.iter()
-                            .any(|kw| content.to_lowercase().contains(kw));
-                        !has_semantic
+                        let has_rust_syntax = rust_syntax_markers.iter()
+                            .any(|marker| content.contains(marker));
+
+                        if has_rust_syntax {
+                            true  // Rust code, not a specification
+                        } else {
+                            // Also check for semantic keywords (original filter)
+                            let semantic_keywords = [
+                                "must", "should", "shall", "require", "ensure", "verify", "validate",
+                                "detect", "identify", "check", "test verifies", "system", "user",
+                                "specification", "requirement", "constraint"
+                            ];
+                            let has_semantic = semantic_keywords.iter()
+                                .any(|kw| content.to_lowercase().contains(kw));
+                            !has_semantic
+                        }
                     }
                     // Check 2: Trivial scenarios
                     else if content == "scenario {}" || content.trim().is_empty() {
                         true
                     }
-                    // Check 3: Scenarios/function names that are too short or lack semantic keywords
+                    // Check 3: Scenarios/function names that are too short or lack semantic value
                     else if node.kind == spec_core::NodeKind::Scenario ||
                             node.metadata.get("extractor") == Some(&"function_name".to_string()) {
-                        if content.len() < 20 {
+                        // Too short (less than 25 chars is likely not descriptive enough)
+                        if content.len() < 25 {
                             true
                         } else {
-                            let semantic_keywords = [
-                                "must", "should", "shall", "can", "will", "ensure", "verify", "validate",
-                                "detect", "identify", "check", "test", "system", "user", "when",
-                                "specification", "requirement", "constraint", "correctly", "properly"
+                            // Must have strong semantic keywords (not just "user" or "test")
+                            let strong_keywords = [
+                                "must", "should", "shall", "ensure", "verify", "validate",
+                                "detect", "identify", "check for", "when", "if",
+                                "specification", "requirement", "constraint", "correctly", "properly",
+                                "without", "with", "given", "then", "returns", "accepts"
                             ];
-                            let has_semantic = semantic_keywords.iter()
+                            let has_strong_semantic = strong_keywords.iter()
                                 .any(|kw| content.to_lowercase().contains(kw));
-                            !has_semantic
+
+                            // Reject if no strong semantics OR if it's just a test name pattern
+                            let is_trivial_test_name = content.to_lowercase().starts_with("scenario: ") &&
+                                !has_strong_semantic;
+
+                            !has_strong_semantic || is_trivial_test_name
                         }
                     } else {
                         false
