@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "17bd0c324256",
+  "session_id": "5154b3e9-07ce-4887-a40f-bd55776a5fb9",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T11:20:42.083809Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".envrc.example",
+    "Cargo.toml",
+    "spec-core/Cargo.toml",
+    "spec-core/src/prover/mod.rs",
+    "spec-core/src/prover/z3_backend.rs",
+    "tasks/2026-02-14-session-52-z3-smt-solver-integration.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 282,
+    "cache_creation_tokens": 100649,
+    "cache_read_tokens": 3161075,
+    "output_tokens": 8342,
+    "api_call_count": 35
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T11:20:41.837056Z",
+    "agent_lines": 0,
+    "human_added": 2037,
+    "human_modified": 2,
+    "human_removed": 0,
+    "total_committed": 2037,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/5154b3e9-07ce-4887-a40f-bd55776a5fb9.jsonl"
+}

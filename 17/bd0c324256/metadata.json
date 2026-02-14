@@ -3,13 +3,19 @@
   "checkpoint_id": "17bd0c324256",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 1,
+  "checkpoints_count": 2,
   "files_touched": [
+    ".envrc.example",
+    "Cargo.toml",
     "spec-cli/src/main.rs",
+    "spec-core/Cargo.toml",
+    "spec-core/src/prover/mod.rs",
+    "spec-core/src/prover/z3_backend.rs",
     "spec-core/src/udaf.rs",
     "tasks/2026-02-14-session-49-prove-satisfiability.md",
     "tasks/2026-02-14-session-50-constraint-extraction.md",
     "tasks/2026-02-14-session-51-formal-contradiction-detection.md",
+    "tasks/2026-02-14-session-52-z3-smt-solver-integration.md",
     "tasks/2026-02-14-session-continue-goal-complete.md"
   ],
   "sessions": [
@@ -19,13 +25,20 @@
       "context": "/17/bd0c324256/0/context.md",
       "content_hash": "/17/bd0c324256/0/content_hash.txt",
       "prompt": "/17/bd0c324256/0/prompt.txt"
+    },
+    {
+      "metadata": "/17/bd0c324256/1/metadata.json",
+      "transcript": "/17/bd0c324256/1/full.jsonl",
+      "context": "/17/bd0c324256/1/context.md",
+      "content_hash": "/17/bd0c324256/1/content_hash.txt",
+      "prompt": "/17/bd0c324256/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 626,
-    "cache_creation_tokens": 90227,
-    "cache_read_tokens": 5834298,
-    "output_tokens": 8480,
-    "api_call_count": 78
+    "input_tokens": 908,
+    "cache_creation_tokens": 190876,
+    "cache_read_tokens": 8995373,
+    "output_tokens": 16822,
+    "api_call_count": 113
   }
 }
