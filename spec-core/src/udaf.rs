@@ -587,6 +587,200 @@ impl UDAFModel {
             .collect()
     }
 
+    /// Extract constraints from natural language text
+    ///
+    /// Parses specification text to identify implicit constraints like:
+    /// - "at least N" → minimum constraint
+    /// - "at most N" → maximum constraint
+    /// - "must be" / "must not be" → boolean constraints
+    /// - "between X and Y" → range constraints
+    ///
+    /// Returns a vector of extracted constraints.
+    fn extract_constraints_from_text(&self, text: &str) -> Vec<Constraint> {
+        let mut constraints = Vec::new();
+        let lower_text = text.to_lowercase();
+
+        // Pattern 1: "at least N"
+        if let Some(min_value) = self.extract_numeric_value(&lower_text, "at least") {
+            constraints.push(Constraint {
+                description: format!("Minimum value: {}", min_value),
+                formal: Some(format!(">= {}", min_value)),
+                kind: ConstraintKind::Universal,
+                metadata: {
+                    let mut m = HashMap::new();
+                    m.insert("pattern".to_string(), "at_least".to_string());
+                    m.insert("value".to_string(), min_value.to_string());
+                    m.insert("source".to_string(), text.to_string());
+                    m
+                },
+            });
+        }
+
+        // Pattern 2: "at most N"
+        if let Some(max_value) = self.extract_numeric_value(&lower_text, "at most") {
+            constraints.push(Constraint {
+                description: format!("Maximum value: {}", max_value),
+                formal: Some(format!("<= {}", max_value)),
+                kind: ConstraintKind::Universal,
+                metadata: {
+                    let mut m = HashMap::new();
+                    m.insert("pattern".to_string(), "at_most".to_string());
+                    m.insert("value".to_string(), max_value.to_string());
+                    m.insert("source".to_string(), text.to_string());
+                    m
+                },
+            });
+        }
+
+        // Pattern 3: "minimum N" / "minimum of N"
+        if let Some(min_value) = self.extract_numeric_value(&lower_text, "minimum") {
+            constraints.push(Constraint {
+                description: format!("Minimum value: {}", min_value),
+                formal: Some(format!(">= {}", min_value)),
+                kind: ConstraintKind::Universal,
+                metadata: {
+                    let mut m = HashMap::new();
+                    m.insert("pattern".to_string(), "minimum".to_string());
+                    m.insert("value".to_string(), min_value.to_string());
+                    m.insert("source".to_string(), text.to_string());
+                    m
+                },
+            });
+        }
+
+        // Pattern 4: "maximum N" / "maximum of N"
+        if let Some(max_value) = self.extract_numeric_value(&lower_text, "maximum") {
+            constraints.push(Constraint {
+                description: format!("Maximum value: {}", max_value),
+                formal: Some(format!("<= {}", max_value)),
+                kind: ConstraintKind::Universal,
+                metadata: {
+                    let mut m = HashMap::new();
+                    m.insert("pattern".to_string(), "maximum".to_string());
+                    m.insert("value".to_string(), max_value.to_string());
+                    m.insert("source".to_string(), text.to_string());
+                    m
+                },
+            });
+        }
+
+        // Pattern 5: "exactly N"
+        if let Some(exact_value) = self.extract_numeric_value(&lower_text, "exactly") {
+            constraints.push(Constraint {
+                description: format!("Exact value: {}", exact_value),
+                formal: Some(format!("== {}", exact_value)),
+                kind: ConstraintKind::Universal,
+                metadata: {
+                    let mut m = HashMap::new();
+                    m.insert("pattern".to_string(), "exactly".to_string());
+                    m.insert("value".to_string(), exact_value.to_string());
+                    m.insert("source".to_string(), text.to_string());
+                    m
+                },
+            });
+        }
+
+        // Pattern 6: "between X and Y"
+        if let Some((min, max)) = self.extract_range(&lower_text) {
+            constraints.push(Constraint {
+                description: format!("Range: {} to {}", min, max),
+                formal: Some(format!(">= {} && <= {}", min, max)),
+                kind: ConstraintKind::Universal,
+                metadata: {
+                    let mut m = HashMap::new();
+                    m.insert("pattern".to_string(), "range".to_string());
+                    m.insert("min".to_string(), min.to_string());
+                    m.insert("max".to_string(), max.to_string());
+                    m.insert("source".to_string(), text.to_string());
+                    m
+                },
+            });
+        }
+
+        // Pattern 7: "must be" (boolean requirement)
+        if lower_text.contains("must be") && !lower_text.contains("at least") && !lower_text.contains("at most") {
+            // Extract what must be
+            if let Some(pos) = lower_text.find("must be") {
+                let after = &text[pos + 7..].trim();
+                if !after.is_empty() {
+                    constraints.push(Constraint {
+                        description: format!("Required: {}", after),
+                        formal: Some(format!("== {}", after)),
+                        kind: ConstraintKind::Universal,
+                        metadata: {
+                            let mut m = HashMap::new();
+                            m.insert("pattern".to_string(), "must_be".to_string());
+                            m.insert("value".to_string(), after.to_string());
+                            m.insert("source".to_string(), text.to_string());
+                            m
+                        },
+                    });
+                }
+            }
+        }
+
+        // Pattern 8: "must not be" / "cannot be" (boolean prohibition)
+        if lower_text.contains("must not") || lower_text.contains("cannot be") {
+            let pattern = if lower_text.contains("must not") { "must not" } else { "cannot be" };
+            if let Some(pos) = lower_text.find(pattern) {
+                let after = &text[pos + pattern.len()..].trim();
+                if !after.is_empty() {
+                    constraints.push(Constraint {
+                        description: format!("Forbidden: {}", after),
+                        formal: Some(format!("!= {}", after)),
+                        kind: ConstraintKind::Universal,
+                        metadata: {
+                            let mut m = HashMap::new();
+                            m.insert("pattern".to_string(), "must_not_be".to_string());
+                            m.insert("value".to_string(), after.to_string());
+                            m.insert("source".to_string(), text.to_string());
+                            m
+                        },
+                    });
+                }
+            }
+        }
+
+        constraints
+    }
+
+    /// Extract numeric value after a keyword
+    fn extract_numeric_value(&self, text: &str, keyword: &str) -> Option<i64> {
+        if let Some(pos) = text.find(keyword) {
+            let after = &text[pos + keyword.len()..];
+            for word in after.split_whitespace() {
+                if let Ok(n) = word.trim_matches(|c: char| !c.is_numeric()).parse::<i64>() {
+                    return Some(n);
+                }
+            }
+        }
+        None
+    }
+
+    /// Extract range from "between X and Y" pattern
+    fn extract_range(&self, text: &str) -> Option<(i64, i64)> {
+        if let Some(pos) = text.find("between") {
+            let after = &text[pos + 7..];
+            let parts: Vec<&str> = after.split("and").collect();
+            if parts.len() >= 2 {
+                let min = self.extract_first_number(parts[0])?;
+                let max = self.extract_first_number(parts[1])?;
+                return Some((min, max));
+            }
+        }
+        None
+    }
+
+    /// Extract first number from string
+    fn extract_first_number(&self, s: &str) -> Option<i64> {
+        for word in s.split_whitespace() {
+            if let Ok(n) = word.trim_matches(|c: char| !c.is_numeric()).parse::<i64>() {
+                return Some(n);
+            }
+        }
+        None
+    }
+
     /// Populate UDAFModel from a SpecGraph
     ///
     /// This synchronizes the theoretical model with the practical graph representation.
@@ -632,6 +826,12 @@ impl UDAFModel {
                     kind: ConstraintKind::Universal,
                     metadata: node.metadata.clone(),
                 });
+            } else {
+                // For non-Constraint nodes, extract implicit constraints from natural language
+                let extracted = self.extract_constraints_from_text(&node.content);
+                for constraint in extracted {
+                    admissible_set.add_constraint(constraint);
+                }
             }
 
             self.admissible_sets.insert(node.id.clone(), admissible_set);

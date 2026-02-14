@@ -162,9 +162,9 @@
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
-          "line": "171-181"
+          "line": "171-181",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -176,8 +176,8 @@
         "kind": "Assertion",
         "metadata": {
           "function": "detect_contradictions",
-          "formality_layer": "U3",
-          "source_file": "spec-core/src/graph.rs"
+          "source_file": "spec-core/src/graph.rs",
+          "formality_layer": "U3"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -206,9 +206,9 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Assertion",
         "metadata": {
+          "line": "183-192",
           "formality_layer": "U2",
-          "source_file": "proto/spec_oracle.proto",
-          "line": "183-192"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -241,9 +241,9 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
-          "line": "7,105-113",
-          "source_file": "proto/spec_oracle.proto"
+          "line": "7,105-113"
         },
         "created_at": 1771061822,
         "modified_at": 1771061822,
@@ -267,9 +267,9 @@
         "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U2",
           "line": "19-20",
-          "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -306,8 +306,8 @@
         "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
+          "formality_layer": "U3",
           "function": "Commands::Find"
         },
         "created_at": 1771062016,
@@ -320,8 +320,8 @@
         "kind": "Assertion",
         "metadata": {
           "source_file": "proto/spec_oracle.proto",
-          "line": "14,148-153",
-          "formality_layer": "U2"
+          "formality_layer": "U2",
+          "line": "14,148-153"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -332,9 +332,9 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Assertion",
         "metadata": {
+          "function": "Commands::Trace",
           "formality_layer": "U3",
-          "source_file": "spec-cli/src/main.rs",
-          "function": "Commands::Trace"
+          "source_file": "spec-cli/src/main.rs"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -690,6 +690,24 @@
         "metadata": {},
         "created_at": 1771066370,
         "modified_at": 1771066370,
+        "formality_layer": 0
+      },
+      {
+        "id": "26424bb1-6535-423d-ba3e-b54710613d00",
+        "content": "Password must be between 8 and 20 characters",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771066569,
+        "modified_at": 1771066569,
+        "formality_layer": 0
+      },
+      {
+        "id": "6f7dfaf3-7f7e-484e-89dd-f1ee48f45da4",
+        "content": "Password must be at least 25 characters",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771066592,
+        "modified_at": 1771066592,
         "formality_layer": 0
       }
     ],
