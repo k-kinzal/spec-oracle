@@ -3,11 +3,14 @@
   "checkpoint_id": "88f678b61df5",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 7,
+  "checkpoints_count": 8,
   "files_touched": [
     ".spec/specs.json.backup-session61",
     "PROBLEM.md",
     "connect_layers.py",
+    "scripts/README.md",
+    "scripts/connect_layer_label_spec.py",
+    "scripts/export_specs_md.py",
     "scripts/fix_formality_layer_code.py",
     "scripts/fix_layer_display.py",
     "scripts/migrate_formality_layer.py",
@@ -20,7 +23,10 @@
     "tasks/2026-02-14-session-62-summary.md",
     "tasks/2026-02-14-session-63-connect-u2-to-u0.md",
     "tasks/2026-02-14-session-65-formality-layer-migration.md",
-    "tasks/2026-02-14-session-67-show-layer-labels.md"
+    "tasks/2026-02-14-session-67-show-layer-labels.md",
+    "tasks/2026-02-14-session-68-part2-documentation.md",
+    "tasks/2026-02-14-session-68-summary.md",
+    "tasks/2026-02-14-session-68-zero-omissions.md"
   ],
   "sessions": [
     {
@@ -71,13 +77,20 @@
       "context": "/88/f678b61df5/6/context.md",
       "content_hash": "/88/f678b61df5/6/content_hash.txt",
       "prompt": "/88/f678b61df5/6/prompt.txt"
+    },
+    {
+      "metadata": "/88/f678b61df5/7/metadata.json",
+      "transcript": "/88/f678b61df5/7/full.jsonl",
+      "context": "/88/f678b61df5/7/context.md",
+      "content_hash": "/88/f678b61df5/7/content_hash.txt",
+      "prompt": "/88/f678b61df5/7/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 2134,
-    "cache_creation_tokens": 502448,
-    "cache_read_tokens": 19459775,
-    "output_tokens": 30756,
-    "api_call_count": 265
+    "input_tokens": 2528,
+    "cache_creation_tokens": 601424,
+    "cache_read_tokens": 23333194,
+    "output_tokens": 41420,
+    "api_call_count": 314
   }
 }
