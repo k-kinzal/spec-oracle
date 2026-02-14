@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "88f678b61df5",
+  "session_id": "199c12b4-2574-44cd-a064-67f33a447ca0",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-14T12:43:29.79853Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-cli/src/main.rs",
+    "tasks/2026-02-14-session-60-summary-command.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 474,
+    "cache_creation_tokens": 67222,
+    "cache_read_tokens": 4247368,
+    "output_tokens": 5274,
+    "api_call_count": 59
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-14T12:43:29.168819Z",
+    "agent_lines": 116,
+    "human_added": 7724,
+    "human_modified": 21,
+    "human_removed": 0,
+    "total_committed": 7861,
+    "agent_percentage": 1.4756392316499172
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/199c12b4-2574-44cd-a064-67f33a447ca0.jsonl"
+}
