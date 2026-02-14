@@ -796,6 +796,7 @@ impl RustExtractor {
 
         let mut in_test = false;
         let mut test_name = String::new();
+        let mut test_body = String::new();
         let mut test_start_line = 0;
 
         for (line_num, line) in content.lines().enumerate() {
@@ -805,31 +806,131 @@ impl RustExtractor {
             if trimmed.starts_with("#[test]") || trimmed.contains("#[test]") {
                 in_test = true;
                 test_start_line = line_num + 1;
+                test_body.clear();
             } else if in_test && trimmed.starts_with("fn ") {
                 if let Some(name) = Self::extract_fn_name(trimmed) {
                     test_name = name.to_string();
                 }
-            } else if in_test && trimmed == "}" && !test_name.is_empty() {
-                // End of test function
-                specs.push(InferredSpecification {
-                    content: format!("Scenario: {}", test_name.strip_prefix("test_").unwrap_or(&test_name).replace('_', " ")),
-                    kind: NodeKind::Scenario,
-                    confidence: 0.9,
-                    source_file: file_name.clone(),
-                    source_line: test_start_line,
-                    formality_layer: 3, // Executable test
-                    metadata: HashMap::from([
-                        ("test_function".to_string(), test_name.clone()),
-                        ("extractor".to_string(), "test".to_string()),
-                    ]),
-                });
+            } else if in_test && !test_name.is_empty() {
+                // Collect test body for AI analysis
+                test_body.push_str(line);
+                test_body.push('\n');
 
-                in_test = false;
-                test_name.clear();
+                if trimmed == "}" {
+                    // End of test function
+
+                    // Extract U3 test scenario (the test itself)
+                    let scenario_name = test_name.strip_prefix("test_").unwrap_or(&test_name).replace('_', " ");
+                    specs.push(InferredSpecification {
+                        content: format!("Scenario: {}", scenario_name),
+                        kind: NodeKind::Scenario,
+                        confidence: 0.9,
+                        source_file: file_name.clone(),
+                        source_line: test_start_line,
+                        formality_layer: 3, // U3 - Executable test
+                        metadata: HashMap::from([
+                            ("test_function".to_string(), test_name.clone()),
+                            ("extractor".to_string(), "test".to_string()),
+                        ]),
+                    });
+
+                    // Extract U0 requirement via AI (reverse mapping f₀₃⁻¹: U3 → U0)
+                    if let Some(u0_spec) = Self::extract_intent_from_test_with_ai(&test_name, &test_body) {
+                        specs.push(InferredSpecification {
+                            content: u0_spec,
+                            kind: NodeKind::Constraint, // Root requirements are constraints
+                            confidence: 0.95, // AI-extracted intent is high confidence
+                            source_file: file_name.clone(),
+                            source_line: test_start_line,
+                            formality_layer: 0, // U0 - root specification inferred from U3
+                            metadata: HashMap::from([
+                                ("test_function".to_string(), test_name.clone()),
+                                ("extractor".to_string(), "ai_intent".to_string()),
+                                ("reverse_mapping".to_string(), "f_03_inverse".to_string()),
+                                ("derived_from_u3".to_string(), "true".to_string()),
+                            ]),
+                        });
+                    }
+
+                    in_test = false;
+                    test_name.clear();
+                    test_body.clear();
+                }
             }
         }
 
         Ok(specs)
+    }
+
+    /// Extract the INTENT behind a test using AI (reverse mapping f₀₃⁻¹: U3 → U0)
+    ///
+    /// This is the core of the reverse mapping engine. Instead of just pattern-matching
+    /// test names, we use AI to understand what requirement the test is verifying.
+    fn extract_intent_from_test_with_ai(test_name: &str, test_body: &str) -> Option<String> {
+        use std::process::{Command, Stdio};
+
+        // Check if claude CLI is available
+        let available = Command::new("claude")
+            .arg("--version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok();
+
+        if !available {
+            // Fallback to simple name-based extraction if AI unavailable
+            return None;
+        }
+
+        let prompt = format!(
+            r#"You are analyzing a test function to extract the root specification (U0) it verifies.
+
+Test name: {}
+Test code:
+{}
+
+Task: Extract the fundamental REQUIREMENT or CONSTRAINT that this test is verifying.
+Output ONLY a single sentence specification in natural language, starting with "The system must..." or "System must..." or similar.
+
+Focus on:
+- What requirement is being tested? (not how it's tested)
+- What constraint must the system satisfy?
+- What capability must the system provide?
+
+Output format: Single sentence, no explanation, no code, just the requirement.
+Example output: "The system must detect contradictions when password length requirements conflict"
+"#,
+            test_name, test_body
+        );
+
+        let output = Command::new("claude")
+            .arg("-p")
+            .arg(&prompt)
+            .output()
+            .ok()?;
+
+        if !output.status.success() {
+            return None;
+        }
+
+        let response = String::from_utf8(output.stdout).ok()?;
+        let spec = response.trim();
+
+        // Validate that we got a reasonable specification
+        if spec.is_empty() || spec.len() < 20 || spec.len() > 500 {
+            return None;
+        }
+
+        // Check that it's a specification (contains requirement keywords)
+        let requirement_keywords = ["must", "shall", "should", "system", "require"];
+        let has_requirement = requirement_keywords.iter()
+            .any(|kw| spec.to_lowercase().contains(kw));
+
+        if !has_requirement {
+            return None;
+        }
+
+        Some(spec.to_string())
     }
 
     fn extract_from_docs(
