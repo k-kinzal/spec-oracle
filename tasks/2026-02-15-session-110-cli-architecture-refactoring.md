@@ -98,7 +98,10 @@ Each phase will be committed separately (smallest possible units).
 - [x] Phase 1: Extract Presentation (✓ Complete - formatter module, 97 lines)
 - [x] Phase 2: Extract Persistence (✓ Complete - store_router module, 58 lines)
 - [x] Phase 3a: Extract Utilities (✓ Complete - utils module, 159 lines)
-- [ ] Phase 3b: Extract Commands (In Progress)
+- [ ] Phase 3b: Extract Commands (In Progress - Session 111)
+  - [x] Add command extracted (add.rs, 158 lines)
+  - [x] Check command extracted (check.rs, 204 lines)
+  - [ ] Remaining ~30 commands to extract
 - [ ] Phase 4: Extract AI
 - [ ] Phase 5: Verify Self-Governance
 
@@ -108,6 +111,8 @@ Each phase will be committed separately (smallest possible units).
 - After Phase 1: 4444 lines (-31 lines)
 - After Phase 2: 4432 lines (-12 lines)
 - After Phase 3a: 4309 lines (-123 lines)
-- **Total reduction: 166 lines (3.71%)**
+- After Phase 3b (Session 111): 4180 lines (-129 lines)
+- **Total reduction: 295 lines (6.59%)**
+- **Commands module: 372 lines**
 - **Target: < 500 lines (90% reduction)**
-- **Remaining: 3809 lines to extract**
+- **Remaining: 3680 lines to extract**
