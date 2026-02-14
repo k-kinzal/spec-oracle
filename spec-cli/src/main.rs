@@ -2,6 +2,8 @@ mod proto {
     tonic::include_proto!("spec_oracle");
 }
 
+mod presentation;
+
 use clap::{Parser, Subcommand};
 use proto::spec_oracle_client::SpecOracleClient;
 use proto::{SpecNodeKind, SpecEdgeKind};
@@ -10,6 +12,7 @@ use std::path::PathBuf;
 use tonic::Request;
 use tracing_subscriber::EnvFilter;
 use spec_core::{FileStore, NodeKind as CoreNodeKind};
+use presentation::formatter::*;
 
 #[derive(Parser)]
 #[command(name = "spec")]
@@ -418,17 +421,6 @@ fn parse_formality_layer(formality_layer: u8) -> u32 {
     formality_layer as u32
 }
 
-fn format_formality_layer(formality_layer: u8) -> String {
-    // Format numeric layer as "U0", "U1", "U2", "U3"
-    match formality_layer {
-        0 => "U0".to_string(),
-        1 => "U1".to_string(),
-        2 => "U2".to_string(),
-        3 => "U3".to_string(),
-        _ => format!("U{}", formality_layer),
-    }
-}
-
 fn parse_edge_kind(s: &str) -> SpecEdgeKind {
     match s.to_lowercase().as_str() {
         "refines" => SpecEdgeKind::Refines,
@@ -440,29 +432,6 @@ fn parse_edge_kind(s: &str) -> SpecEdgeKind {
         "formalizes" => SpecEdgeKind::Formalizes,
         "transform" => SpecEdgeKind::Transform,
         _ => SpecEdgeKind::Refines,
-    }
-}
-
-fn format_node_kind(kind: CoreNodeKind) -> &'static str {
-    match kind {
-        CoreNodeKind::Assertion => "assertion",
-        CoreNodeKind::Constraint => "constraint",
-        CoreNodeKind::Scenario => "scenario",
-        CoreNodeKind::Definition => "definition",
-        CoreNodeKind::Domain => "domain",
-    }
-}
-
-fn format_edge_kind(kind: spec_core::EdgeKind) -> &'static str {
-    match kind {
-        spec_core::EdgeKind::Refines => "refines",
-        spec_core::EdgeKind::DependsOn => "depends_on",
-        spec_core::EdgeKind::Contradicts => "contradicts",
-        spec_core::EdgeKind::DerivesFrom => "derives_from",
-        spec_core::EdgeKind::Synonym => "synonym",
-        spec_core::EdgeKind::Composes => "composes",
-        spec_core::EdgeKind::Formalizes => "formalizes",
-        spec_core::EdgeKind::Transform => "transform",
     }
 }
 
