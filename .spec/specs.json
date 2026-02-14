@@ -108,6 +108,24 @@
         "created_at": 1771060360,
         "modified_at": 1771060360,
         "formality_layer": 0
+      },
+      {
+        "id": "ee493f23-22d4-483c-8afe-2926a0ec1f73",
+        "content": "The find command provides semantic search with natural language queries and layer filtering",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060502,
+        "modified_at": 1771060502,
+        "formality_layer": 0
+      },
+      {
+        "id": "b9d116dd-afde-498c-8fe2-0dca01b6c08b",
+        "content": "The find command must show helpful suggestions when no results are found",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771060503,
+        "modified_at": 1771060503,
+        "formality_layer": 0
       }
     ],
     "node_holes": [],
