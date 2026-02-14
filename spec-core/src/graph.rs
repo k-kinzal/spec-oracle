@@ -1,3 +1,4 @@
+use chrono::Utc;
 use petgraph::graph::{DiGraph, EdgeIndex, NodeIndex};
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
@@ -30,6 +31,10 @@ pub struct SpecNodeData {
     pub content: String,
     pub kind: NodeKind,
     pub metadata: HashMap<String, String>,
+    #[serde(default)]
+    pub created_at: i64,
+    #[serde(default)]
+    pub modified_at: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +42,8 @@ pub struct SpecEdgeData {
     pub id: String,
     pub kind: EdgeKind,
     pub metadata: HashMap<String, String>,
+    #[serde(default)]
+    pub created_at: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -97,11 +104,14 @@ impl SpecGraph {
         metadata: HashMap<String, String>,
     ) -> &SpecNodeData {
         let id = Uuid::new_v4().to_string();
+        let now = Utc::now().timestamp();
         let data = SpecNodeData {
             id: id.clone(),
             content,
             kind,
             metadata,
+            created_at: now,
+            modified_at: now,
         };
         let idx = self.graph.add_node(data);
         self.id_to_index.insert(id, idx);
@@ -162,10 +172,12 @@ impl SpecGraph {
             .ok_or_else(|| GraphError::NodeNotFound(target_id.to_string()))?;
 
         let id = Uuid::new_v4().to_string();
+        let now = Utc::now().timestamp();
         let data = SpecEdgeData {
             id: id.clone(),
             kind,
             metadata,
+            created_at: now,
         };
         let eidx = self.graph.add_edge(src_idx, tgt_idx, data);
         self.edge_id_to_index.insert(id, eidx);

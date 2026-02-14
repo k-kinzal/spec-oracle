@@ -30,6 +30,8 @@ message SpecNode {
   string content = 2;
   SpecNodeKind kind = 3;
   map<string, string> metadata = 4;
+  int64 created_at = 5;
+  int64 modified_at = 6;
 }
 
 enum SpecNodeKind {
@@ -49,6 +51,7 @@ message SpecEdge {
   string target_id = 3;
   SpecEdgeKind kind = 4;
   map<string, string> metadata = 5;
+  int64 created_at = 6;
 }
 
 enum SpecEdgeKind {

@@ -32,6 +32,8 @@ fn to_proto_node(n: &spec_core::SpecNodeData) -> proto::SpecNode {
         content: n.content.clone(),
         kind: to_proto_node_kind(n.kind).into(),
         metadata: n.metadata.clone(),
+        created_at: n.created_at,
+        modified_at: n.modified_at,
     }
 }
 
@@ -63,6 +65,7 @@ fn to_proto_edge(e: &spec_core::SpecEdgeData, src: &str, tgt: &str) -> proto::Sp
         target_id: tgt.to_string(),
         kind: to_proto_edge_kind(e.kind).into(),
         metadata: e.metadata.clone(),
+        created_at: e.created_at,
     }
 }
 
