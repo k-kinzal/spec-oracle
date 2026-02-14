@@ -1283,16 +1283,45 @@
     - 18a29ef "Session 68: Achieve zero omissions by connecting layer label specification"
   - **解決状況**: ✅ **完了** - ゼロ漏れ達成、実用的な漏れ検出を実現
 
-- [ ] **infer-relationshipsが大量のエッジを一度に作成**
+- [x] **infer-relationshipsが大量のエッジを一度に作成** ✅ **解決済み (2026-02-15, Session 125)**
   - **発見日**: 2026-02-14
   - **詳細**: `spec infer-relationships`を実行すると、2,192個のエッジが一度に作成される。正しいか検証できない。また、424個のレビュー提案も多すぎる。
   - **影響範囲**: データの信頼性が不明。誤った関係が大量に作成される可能性。
-  - **解決策案**:
-    - バッチ実行ではなく、インタラクティブモード（1つずつ確認）
-    - confidenceの閾値を上げる
-    - ドライランモード（`--dry-run`で結果をプレビュー）
-    - `--limit <N>`オプション（N個までに制限）
-  - **解決状況**: 未着手
+  - **解決内容** (2026-02-15):
+    - ✅ **Dry-run mode** (`--dry-run`): Preview edges without creating them
+    - ✅ **Limit option** (`--limit <N>`): Control maximum number of edges to create
+    - ✅ **Interactive mode** (`--interactive`): Review and confirm each edge individually
+    - ✅ All features implemented in `infer-relationships-ai` command
+  - **実装詳細**:
+    - `spec-cli/src/main.rs`: Added three new command options
+    - `spec-cli/src/commands/dispatcher.rs`: Updated command routing
+    - `spec-cli/src/commands/relationships.rs`: Implemented three execution modes (dry-run, interactive, normal)
+  - **使用例**:
+    ```bash
+    # Preview without creating:
+    spec infer-relationships-ai --dry-run
+
+    # Create maximum 50 edges:
+    spec infer-relationships-ai --limit 50
+
+    # Review each edge interactively:
+    spec infer-relationships-ai --interactive
+
+    # Combined options:
+    spec infer-relationships-ai --dry-run --limit 20 --min-confidence 0.9
+    ```
+  - **検証結果**:
+    - Dry-run mode: Shows preview, no edges created ✅
+    - Limit option: Respects maximum edge count ✅
+    - Interactive mode: Prompts for confirmation on each edge ✅
+    - All modes maintain backward compatibility ✅
+  - **Impact**:
+    - Users can preview changes before committing
+    - Users can control the scope of automated inference
+    - Users can review each edge individually for maximum trust
+    - Improves safety and usability for production use
+  - **関連タスク**: `tasks/2026-02-15-session-125-enhance-relationship-inference.md`
+  - **解決状況**: ✅ **完了** - 安全制御機能実装完了、ユーザー信頼性向上
 
 - [ ] **推論結果に循環参照がある**
   - **発見日**: 2026-02-14

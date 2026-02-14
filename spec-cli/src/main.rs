@@ -344,6 +344,15 @@ enum Commands {
         /// Minimum confidence threshold (0.0-1.0)
         #[arg(long, default_value = "0.7")]
         min_confidence: f32,
+        /// Preview edges without creating them (dry-run mode)
+        #[arg(long)]
+        dry_run: bool,
+        /// Maximum number of edges to create (0 = unlimited)
+        #[arg(long, default_value = "0")]
+        limit: usize,
+        /// Interactive review mode (confirm each edge before creation)
+        #[arg(long)]
+        interactive: bool,
     },
     /// Watch source files and maintain specification synchronization
     Watch {

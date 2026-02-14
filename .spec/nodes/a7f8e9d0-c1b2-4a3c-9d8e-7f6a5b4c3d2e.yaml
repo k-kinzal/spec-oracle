@@ -3,9 +3,9 @@ content: 'Session 57 verified goal achievement through comprehensive implementat
 kind: Assertion
 metadata:
   date: 2026-02-14
+  session: '57'
   verified_modules: prover, udaf
   resolved_issues: 3 critical
-  session: '57'
 created_at: 1771070800
 modified_at: 1771070800
 formality_layer: 3

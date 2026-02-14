@@ -2,12 +2,12 @@ id: b3949bb3-1013-40a0-9c6e-18a723e25133
 content: Semantic normalization
 kind: Assertion
 metadata:
+  extractor: proto_rpc
+  inferred: 'true'
+  source_file: proto/spec_oracle.proto
   source_line: '31'
   confidence: '0.95'
   rpc_name: FindRelatedTerms
-  source_file: proto/spec_oracle.proto
-  extractor: proto_rpc
-  inferred: 'true'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

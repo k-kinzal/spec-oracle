@@ -92,8 +92,8 @@ pub async fn dispatch_standalone(
         crate::Commands::Extract { source, language, min_confidence } => {
             commands::execute_extract_standalone(&mut store, source, language, min_confidence)?;
         }
-        crate::Commands::InferRelationshipsAi { min_confidence } => {
-            commands::execute_infer_relationships_ai_standalone(&mut store, min_confidence)?;
+        crate::Commands::InferRelationshipsAi { min_confidence, dry_run, limit, interactive } => {
+            commands::execute_infer_relationships_ai_standalone(&mut store, min_confidence, dry_run, limit, interactive)?;
         }
         _ => {
             eprintln!("Command not yet supported in standalone mode.");

@@ -3,11 +3,11 @@ content: 'RPC: Detect contradictions'
 kind: Assertion
 metadata:
   inferred: 'true'
+  source_line: '19'
+  source_file: proto/spec_oracle.proto
+  extractor: proto_rpc
   rpc_name: DetectContradictions
   confidence: '0.95'
-  source_file: proto/spec_oracle.proto
-  source_line: '19'
-  extractor: proto_rpc
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

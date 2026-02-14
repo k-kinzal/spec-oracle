@@ -2,11 +2,11 @@ id: b6face50-4f4f-4c5e-9380-e839f42b24cc
 content: 'Scenario: detect semantic contradiction password length'
 kind: Scenario
 metadata:
-  source_line: '1627'
   source_file: spec-core/src/graph.rs
   test_function: detect_semantic_contradiction_password_length
-  inferred: 'true'
   extractor: test
+  inferred: 'true'
+  source_line: '1627'
   confidence: '0.9'
 created_at: 1771077123
 modified_at: 1771077123

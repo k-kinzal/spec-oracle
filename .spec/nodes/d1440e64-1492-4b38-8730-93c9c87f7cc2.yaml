@@ -3,10 +3,10 @@ content: 'RPC: Detect omissions'
 kind: Assertion
 metadata:
   source_file: proto/spec_oracle.proto
-  extractor: proto_rpc
-  source_line: '20'
   rpc_name: DetectOmissions
   confidence: '0.95'
+  extractor: proto_rpc
+  source_line: '20'
   inferred: 'true'
 created_at: 1771078430
 modified_at: 1771078430

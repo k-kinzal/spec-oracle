@@ -3,11 +3,11 @@ content: 'Scenario: detect explicit contradiction'
 kind: Scenario
 metadata:
   inferred: 'true'
-  test_function: detect_explicit_contradiction
   source_line: '1604'
-  confidence: '0.9'
+  test_function: detect_explicit_contradiction
   source_file: spec-core/src/graph.rs
   extractor: test
+  confidence: '0.9'
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

@@ -2,14 +2,14 @@ id: 417b1306-aa9e-4c21-ab6d-529a5b53bc65
 content: 'Invariant: login(user, "correct_password").is_ok()'
 kind: Definition
 metadata:
+  extractor: assertion
+  source_file: /tmp/test_extract.rs
   inferred: 'true'
   confidence: '0.95'
-  source_file: /tmp/test_extract.rs
-  is_example: 'true'
-  extractor: assertion
-  source_line: '13'
-  assertion: login(user, "correct_password").is_ok()
   example_purpose: test_data
+  is_example: 'true'
+  assertion: login(user, "correct_password").is_ok()
+  source_line: '13'
 created_at: 1771094226
 modified_at: 1771094226
 formality_layer: 3

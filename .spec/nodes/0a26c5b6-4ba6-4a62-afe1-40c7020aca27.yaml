@@ -2,11 +2,11 @@ id: 0a26c5b6-4ba6-4a62-afe1-40c7020aca27
 content: Returns the newly extracted InferredSpecification objects that should be ingested into the graph.
 kind: Assertion
 metadata:
-  inferred: 'true'
-  extractor: doc
   doc_comment: 'true'
-  source_line: '404'
+  extractor: doc
+  inferred: 'true'
   source_file: spec-core/src/udaf.rs
+  source_line: '404'
   confidence: '0.7'
 created_at: 1771093752
 modified_at: 1771093752

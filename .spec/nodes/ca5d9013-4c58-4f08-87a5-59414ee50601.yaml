@@ -5,9 +5,9 @@ metadata:
   test_function: detect_omission_domain_without_refinements
   source_line: '1666'
   confidence: '0.9'
-  inferred: 'true'
   source_file: spec-core/src/graph.rs
   extractor: test
+  inferred: 'true'
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

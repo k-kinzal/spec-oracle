@@ -2,12 +2,12 @@ id: 41d13458-48a5-451d-8503-87ba087f38b9
 content: 'Invariant: report.nodes_created, 2, "Should create 2 high-confidence nodes"'
 kind: Constraint
 metadata:
-  assertion: report.nodes_created, 2, "Should create 2 high-confidence nodes"
-  confidence: '0.95'
   inferred: 'true'
-  extractor: assertion
-  source_file: spec-core/src/extract.rs
   source_line: '1064'
+  confidence: '0.95'
+  source_file: spec-core/src/extract.rs
+  extractor: assertion
+  assertion: report.nodes_created, 2, "Should create 2 high-confidence nodes"
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

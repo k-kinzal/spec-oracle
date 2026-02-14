@@ -1,0 +1,7 @@
+id: dd829647-7a16-4762-b0db-67b7be4f88a8
+content: The infer-relationships-ai command supports --limit option to control maximum number of edges created
+kind: Assertion
+metadata: {}
+created_at: 1771111184
+modified_at: 1771111184
+formality_layer: 0

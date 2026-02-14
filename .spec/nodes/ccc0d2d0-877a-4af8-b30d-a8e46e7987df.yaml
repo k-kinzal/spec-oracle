@@ -3,11 +3,11 @@ content: 'Scenario: list nodes with filter'
 kind: Scenario
 metadata:
   confidence: '0.9'
-  inferred: 'true'
   source_file: spec-core/src/graph.rs
-  source_line: '1786'
   test_function: list_nodes_with_filter
+  source_line: '1786'
   extractor: test
+  inferred: 'true'
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3

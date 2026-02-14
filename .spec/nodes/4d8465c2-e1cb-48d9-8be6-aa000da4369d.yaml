@@ -2,11 +2,11 @@ id: 4d8465c2-e1cb-48d9-8be6-aa000da4369d
 content: 'Scenario: detect potential synonyms by structure'
 kind: Scenario
 metadata:
-  test_function: detect_potential_synonyms_by_structure
-  inferred: 'true'
   source_file: spec-core/src/graph.rs
   confidence: '0.9'
   extractor: test
+  test_function: detect_potential_synonyms_by_structure
+  inferred: 'true'
   source_line: '1834'
 created_at: 1771077123
 modified_at: 1771077123

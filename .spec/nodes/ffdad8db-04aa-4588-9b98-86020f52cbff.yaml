@@ -1,0 +1,7 @@
+id: ffdad8db-04aa-4588-9b98-86020f52cbff
+content: The infer-relationships-ai command supports dry-run mode to preview edges without creating them
+kind: Assertion
+metadata: {}
+created_at: 1771111181
+modified_at: 1771111181
+formality_layer: 0
