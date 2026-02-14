@@ -174,6 +174,15 @@ enum Commands {
         #[arg(long, default_value = "0.7")]
         min_confidence: f32,
     },
+    /// Detect inter-universe inconsistencies in multi-layered specifications
+    DetectInterUniverseInconsistencies,
+    /// Set universe metadata for a node
+    SetUniverse {
+        /// Node ID
+        id: String,
+        /// Universe identifier (e.g., "ui", "api", "database")
+        universe: String,
+    },
 }
 
 fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -195,6 +204,8 @@ fn parse_edge_kind(s: &str) -> SpecEdgeKind {
         "derives_from" | "derives-from" => SpecEdgeKind::DerivesFrom,
         "synonym" => SpecEdgeKind::Synonym,
         "composes" => SpecEdgeKind::Composes,
+        "formalizes" => SpecEdgeKind::Formalizes,
+        "transform" => SpecEdgeKind::Transform,
         _ => SpecEdgeKind::Refines,
     }
 }
@@ -218,6 +229,8 @@ fn edge_kind_name(k: i32) -> &'static str {
         Ok(SpecEdgeKind::DerivesFrom) => "derives_from",
         Ok(SpecEdgeKind::Synonym) => "synonym",
         Ok(SpecEdgeKind::Composes) => "composes",
+        Ok(SpecEdgeKind::Formalizes) => "formalizes",
+        Ok(SpecEdgeKind::Transform) => "transform",
         _ => "unknown",
     }
 }
@@ -906,6 +919,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             println!("\n✓ Extracted and ingested {} specifications", filtered.len());
+        }
+        Commands::DetectInterUniverseInconsistencies => {
+            let resp = client
+                .detect_inter_universe_inconsistencies(Request::new(
+                    proto::DetectInterUniverseInconsistenciesRequest {},
+                ))
+                .await?;
+            let inconsistencies = resp.into_inner().inconsistencies;
+            if inconsistencies.is_empty() {
+                println!("No inter-universe inconsistencies detected.");
+            } else {
+                println!(
+                    "Found {} inter-universe inconsistenc(ies):",
+                    inconsistencies.len()
+                );
+                for i in inconsistencies {
+                    let spec_a = i.spec_a.unwrap();
+                    let spec_b = i.spec_b.unwrap();
+                    println!("\n  Inter-Universe Inconsistency:");
+                    println!("    Universe A: '{}'", i.universe_a);
+                    println!(
+                        "      Spec [{}]: {}",
+                        spec_a.id, spec_a.content
+                    );
+                    println!("    Universe B: '{}'", i.universe_b);
+                    println!(
+                        "      Spec [{}]: {}",
+                        spec_b.id, spec_b.content
+                    );
+                    if !i.transform_path.is_empty() {
+                        println!("    Transform path: {:?}", i.transform_path);
+                    }
+                    println!("    Reason: {}", i.explanation);
+                }
+            }
+        }
+        Commands::SetUniverse { id, universe } => {
+            let resp = client
+                .set_node_universe(Request::new(proto::SetNodeUniverseRequest {
+                    node_id: id.clone(),
+                    universe: universe.clone(),
+                }))
+                .await?;
+            if let Some(node) = resp.into_inner().node {
+                println!(
+                    "✓ Set universe '{}' for node [{}]: {}",
+                    universe, id, node.content
+                );
+            } else {
+                println!("Failed to set universe for node '{}'", id);
+            }
         }
     }
 

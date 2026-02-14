@@ -24,6 +24,7 @@ pub enum EdgeKind {
     Synonym,
     Composes,
     Formalizes,  // Target is a more formal version of source
+    Transform,   // Function f: maps spec from source universe to target universe
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,6 +67,16 @@ pub struct Omission {
 pub struct LayerInconsistency {
     pub source: SpecNodeData,
     pub target: SpecNodeData,
+    pub explanation: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct InterUniverseInconsistency {
+    pub universe_a: String,  // Universe identifier (from metadata)
+    pub universe_b: String,
+    pub spec_a: SpecNodeData,
+    pub spec_b: SpecNodeData,
+    pub transform_path: Vec<String>,  // Edge IDs forming the transformation path
     pub explanation: String,
 }
 
@@ -142,6 +153,17 @@ impl SpecGraph {
             }
         }
         false
+    }
+
+    pub fn update_node_metadata(&mut self, id: &str, key: String, value: String) -> Option<SpecNodeData> {
+        if let Some(&idx) = self.id_to_index.get(id) {
+            if let Some(node) = self.graph.node_weight_mut(idx) {
+                node.metadata.insert(key, value);
+                node.modified_at = Utc::now().timestamp();
+                return Some(node.clone());
+            }
+        }
+        None
     }
 
     pub fn remove_node(&mut self, id: &str) -> Option<SpecNodeData> {
@@ -470,6 +492,164 @@ impl SpecGraph {
         }
 
         result
+    }
+
+    /// Detect inter-universe inconsistencies: specifications across different universes
+    /// (U₁, U₂, ...) that contradict each other despite Transform edges connecting them.
+    /// This addresses the conversation.md critique about multi-layered specifications.
+    pub fn detect_inter_universe_inconsistencies(&self) -> Vec<InterUniverseInconsistency> {
+        let mut result = Vec::new();
+
+        // Group nodes by universe (from metadata "universe" field)
+        let mut universe_nodes: HashMap<String, Vec<(NodeIndex, &SpecNodeData)>> = HashMap::new();
+        for idx in self.graph.node_indices() {
+            let node = &self.graph[idx];
+            if let Some(universe) = node.metadata.get("universe") {
+                universe_nodes
+                    .entry(universe.clone())
+                    .or_insert_with(Vec::new)
+                    .push((idx, node));
+            }
+        }
+
+        // For each Transform edge, check if the specifications are consistent
+        for eidx in self.graph.edge_indices() {
+            let edge = &self.graph[eidx];
+            if edge.kind == EdgeKind::Transform {
+                if let Some((src_idx, tgt_idx)) = self.graph.edge_endpoints(eidx) {
+                    let src_node = &self.graph[src_idx];
+                    let tgt_node = &self.graph[tgt_idx];
+
+                    let src_universe = src_node.metadata.get("universe").map(|s| s.as_str());
+                    let tgt_universe = tgt_node.metadata.get("universe").map(|s| s.as_str());
+
+                    // Only check if both nodes have universe metadata and they differ
+                    if let (Some(u_a), Some(u_b)) = (src_universe, tgt_universe) {
+                        if u_a != u_b {
+                            // Check for semantic contradiction via simple heuristics:
+                            // 1. Contradictory keywords (must/must not, required/forbidden)
+                            // 2. Conflicting numeric constraints
+                            let contradiction = Self::detect_semantic_contradiction(
+                                &src_node.content,
+                                &tgt_node.content,
+                            );
+
+                            if let Some(explanation) = contradiction {
+                                result.push(InterUniverseInconsistency {
+                                    universe_a: u_a.to_string(),
+                                    universe_b: u_b.to_string(),
+                                    spec_a: src_node.clone(),
+                                    spec_b: tgt_node.clone(),
+                                    transform_path: vec![edge.id.clone()],
+                                    explanation,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check for contradictions across universes without direct Transform edges
+        // (this catches missing transformation functions - the "f" gap)
+        let universe_names: Vec<String> = universe_nodes.keys().cloned().collect();
+        for i in 0..universe_names.len() {
+            for j in (i + 1)..universe_names.len() {
+                let u_a = &universe_names[i];
+                let u_b = &universe_names[j];
+
+                if let (Some(nodes_a), Some(nodes_b)) =
+                    (universe_nodes.get(u_a), universe_nodes.get(u_b))
+                {
+                    // Check if there's a Transform path between these universes
+                    let has_transform = self.graph.edge_indices().any(|eidx| {
+                        let edge = &self.graph[eidx];
+                        if edge.kind != EdgeKind::Transform {
+                            return false;
+                        }
+                        if let Some((src_idx, tgt_idx)) = self.graph.edge_endpoints(eidx) {
+                            let src_u = self.graph[src_idx].metadata.get("universe");
+                            let tgt_u = self.graph[tgt_idx].metadata.get("universe");
+                            (src_u.map(|s| s.as_str()) == Some(u_a.as_str())
+                                && tgt_u.map(|s| s.as_str()) == Some(u_b.as_str()))
+                                || (src_u.map(|s| s.as_str()) == Some(u_b.as_str())
+                                    && tgt_u.map(|s| s.as_str()) == Some(u_a.as_str()))
+                        } else {
+                            false
+                        }
+                    });
+
+                    // If no transform exists but both universes have related concepts, flag it
+                    if !has_transform {
+                        for (_, node_a) in nodes_a {
+                            for (_, node_b) in nodes_b {
+                                // Check if concepts are related (similar content)
+                                if Self::are_related_concepts(&node_a.content, &node_b.content) {
+                                    result.push(InterUniverseInconsistency {
+                                        universe_a: u_a.clone(),
+                                        universe_b: u_b.clone(),
+                                        spec_a: (*node_a).clone(),
+                                        spec_b: (*node_b).clone(),
+                                        transform_path: vec![],
+                                        explanation: format!(
+                                            "Missing transformation function (f) between universes '{}' and '{}' for related concepts",
+                                            u_a, u_b
+                                        ),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Helper: detect semantic contradiction between two specification strings
+    fn detect_semantic_contradiction(content_a: &str, content_b: &str) -> Option<String> {
+        let a_lower = content_a.to_lowercase();
+        let b_lower = content_b.to_lowercase();
+
+        // Check for must/must not conflicts
+        if (a_lower.contains("must") && !a_lower.contains("must not"))
+            && (b_lower.contains("must not") || b_lower.contains("forbidden"))
+        {
+            return Some("Contradictory requirement: 'must' vs 'must not'".to_string());
+        }
+
+        // Check for required/optional conflicts
+        if a_lower.contains("required") && b_lower.contains("optional") {
+            return Some("Contradictory requirement: 'required' vs 'optional'".to_string());
+        }
+
+        // Check for conflicting numeric constraints (e.g., ">= 8" vs "< 8")
+        // This is a simplified heuristic - real implementation would parse properly
+        if a_lower.contains(">=") && b_lower.contains("<") {
+            return Some("Potentially conflicting numeric constraints".to_string());
+        }
+
+        None
+    }
+
+    /// Helper: check if two concepts are related (share significant terms)
+    fn are_related_concepts(content_a: &str, content_b: &str) -> bool {
+        let a_lower = content_a.to_lowercase();
+        let b_lower = content_b.to_lowercase();
+
+        let a_words: Vec<&str> = a_lower
+            .split_whitespace()
+            .filter(|w| w.len() > 4) // Only significant words
+            .collect();
+        let b_words: Vec<&str> = b_lower
+            .split_whitespace()
+            .filter(|w| w.len() > 4)
+            .collect();
+
+        // Check if they share at least 2 significant words
+        let shared_count = a_words.iter().filter(|w| b_words.contains(w)).count();
+        shared_count >= 2
     }
 
     /// Find all formalizations of a given node (nodes it formalizes to).
@@ -1848,5 +2028,95 @@ mod tests {
         let trend = g.get_compliance_trend(&node).unwrap();
 
         assert_eq!(trend.trend_direction, "stable");
+    }
+
+    #[test]
+    fn detect_inter_universe_inconsistencies_empty() {
+        let g = SpecGraph::new();
+        let inconsistencies = g.detect_inter_universe_inconsistencies();
+        assert!(inconsistencies.is_empty());
+    }
+
+    #[test]
+    fn detect_inter_universe_inconsistencies_with_transform() {
+        let mut g = SpecGraph::new();
+
+        // Create nodes in different universes
+        let mut metadata_ui = HashMap::new();
+        metadata_ui.insert("universe".to_string(), "ui".to_string());
+        let ui_node_id = g
+            .add_node(
+                "User must authenticate".into(),
+                NodeKind::Constraint,
+                metadata_ui,
+            )
+            .id
+            .clone();
+
+        let mut metadata_api = HashMap::new();
+        metadata_api.insert("universe".to_string(), "api".to_string());
+        let api_node_id = g
+            .add_node(
+                "Authentication is forbidden".into(),
+                NodeKind::Constraint,
+                metadata_api,
+            )
+            .id
+            .clone();
+
+        // Add Transform edge between them
+        g.add_edge(&ui_node_id, &api_node_id, EdgeKind::Transform, HashMap::new())
+            .ok();
+
+        let inconsistencies = g.detect_inter_universe_inconsistencies();
+
+        // Should detect contradiction between "must" and "forbidden"
+        assert!(!inconsistencies.is_empty());
+        assert_eq!(inconsistencies[0].universe_a, "ui");
+        assert_eq!(inconsistencies[0].universe_b, "api");
+    }
+
+    #[test]
+    fn detect_inter_universe_inconsistencies_missing_transform() {
+        let mut g = SpecGraph::new();
+
+        // Create nodes in different universes with related content
+        let mut metadata_ui = HashMap::new();
+        metadata_ui.insert("universe".to_string(), "ui".to_string());
+        g.add_node(
+            "Button click triggers authentication process".into(),
+            NodeKind::Scenario,
+            metadata_ui,
+        );
+
+        let mut metadata_api = HashMap::new();
+        metadata_api.insert("universe".to_string(), "api".to_string());
+        g.add_node(
+            "Authentication process validates credentials".into(),
+            NodeKind::Constraint,
+            metadata_api,
+        );
+
+        // No Transform edge between them
+        let inconsistencies = g.detect_inter_universe_inconsistencies();
+
+        // Should detect missing transformation function
+        let missing_transform = inconsistencies
+            .iter()
+            .any(|i| i.transform_path.is_empty() && i.explanation.contains("Missing transformation"));
+        assert!(missing_transform);
+    }
+
+    #[test]
+    fn update_node_metadata_works() {
+        let mut g = SpecGraph::new();
+        let node = g.add_node("Test".into(), NodeKind::Assertion, HashMap::new());
+        let node_id = node.id.clone();
+
+        let updated = g.update_node_metadata(&node_id, "universe".to_string(), "test".to_string());
+        assert!(updated.is_some());
+
+        let retrieved = g.get_node(&node_id).unwrap();
+        assert_eq!(retrieved.metadata.get("universe"), Some(&"test".to_string()));
     }
 }

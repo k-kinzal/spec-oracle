@@ -11,13 +11,16 @@ A next-generation specification description tool with strict graph-based specifi
 ## Features
 
 - Graph-based specification storage (nodes: assertions, constraints, scenarios, definitions, domains)
-- Relationship tracking (refines, depends_on, contradicts, derives_from, synonym, composes)
-- Contradiction detection (explicit and structural)
+- Relationship tracking (refines, depends_on, contradicts, derives_from, synonym, composes, formalizes, transform)
+- Contradiction detection (explicit, structural, and inter-universe)
 - Omission detection (isolated nodes, incomplete domains, unsupported scenarios)
+- Inter-universe consistency checking (multi-layered specification validation)
+- Automatic specification extraction from code (Rust)
 - Natural language querying via AI integration (claude, codex)
 - Terminology resolution and synonym management
+- Temporal queries and compliance tracking
 - File-based persistence (JSON)
-- Comprehensive test coverage
+- Comprehensive test coverage (53 tests)
 
 ## Quick Start
 
@@ -71,7 +74,9 @@ cargo run --bin spec -- ask "What are the authentication requirements?"
 - `query <text> [--ai]` - Search specifications
 - `detect-contradictions` - Find conflicting specifications
 - `detect-omissions` - Find incomplete specifications
+- `detect-inter-universe-inconsistencies` - Find cross-layer contradictions
 - `resolve-term <term>` - Find definitions and synonyms
+- `set-universe <id> <universe>` - Set universe metadata for multi-layer specs
 
 ### AI Integration
 - `ask <question> [--ai-cmd <claude|codex>]` - Natural language Q&A
@@ -92,6 +97,8 @@ cargo run --bin spec -- ask "What are the authentication requirements?"
 - **derives_from**: Source derived from target
 - **synonym**: Terms are synonymous
 - **composes**: Source composes with target
+- **formalizes**: Target is more formal version of source
+- **transform**: Maps specification from source universe to target universe (f function)
 
 ## Configuration
 
@@ -111,10 +118,13 @@ cargo run --bin spec -- --server http://localhost:50051 <command>
 cargo test
 ```
 
-All 14 tests verify:
+All 53 tests verify:
 - Node and edge CRUD operations
-- Contradiction detection
+- Contradiction detection (explicit, structural, inter-universe)
 - Omission detection
+- Multi-layer specification consistency
+- Automatic specification extraction
+- Temporal queries and compliance tracking
 - Search and terminology resolution
 - Serialization and persistence
 

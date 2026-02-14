@@ -79,6 +79,7 @@ fn to_proto_edge_kind(k: EdgeKind) -> proto::SpecEdgeKind {
         EdgeKind::Synonym => proto::SpecEdgeKind::Synonym,
         EdgeKind::Composes => proto::SpecEdgeKind::Composes,
         EdgeKind::Formalizes => proto::SpecEdgeKind::Formalizes,
+        EdgeKind::Transform => proto::SpecEdgeKind::Transform,
     }
 }
 
@@ -91,6 +92,7 @@ fn from_proto_edge_kind(k: i32) -> EdgeKind {
         Ok(proto::SpecEdgeKind::Synonym) => EdgeKind::Synonym,
         Ok(proto::SpecEdgeKind::Composes) => EdgeKind::Composes,
         Ok(proto::SpecEdgeKind::Formalizes) => EdgeKind::Formalizes,
+        Ok(proto::SpecEdgeKind::Transform) => EdgeKind::Transform,
         _ => EdgeKind::DependsOn,
     }
 }
@@ -629,6 +631,48 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
             node: Some(to_proto_node(&trend.node)),
             data_points,
             trend_direction: trend.trend_direction,
+        }))
+    }
+
+    async fn detect_inter_universe_inconsistencies(
+        &self,
+        _request: Request<proto::DetectInterUniverseInconsistenciesRequest>,
+    ) -> Result<Response<proto::DetectInterUniverseInconsistenciesResponse>, Status> {
+        let graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+        let inconsistencies: Vec<proto::InterUniverseInconsistency> = graph
+            .detect_inter_universe_inconsistencies()
+            .into_iter()
+            .map(|i| proto::InterUniverseInconsistency {
+                universe_a: i.universe_a,
+                universe_b: i.universe_b,
+                spec_a: Some(to_proto_node(&i.spec_a)),
+                spec_b: Some(to_proto_node(&i.spec_b)),
+                transform_path: i.transform_path,
+                explanation: i.explanation,
+            })
+            .collect();
+        Ok(Response::new(
+            proto::DetectInterUniverseInconsistenciesResponse { inconsistencies },
+        ))
+    }
+
+    async fn set_node_universe(
+        &self,
+        request: Request<proto::SetNodeUniverseRequest>,
+    ) -> Result<Response<proto::SetNodeUniverseResponse>, Status> {
+        let req = request.into_inner();
+        let mut graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
+
+        let node = graph
+            .update_node_metadata(&req.node_id, "universe".to_string(), req.universe)
+            .ok_or_else(|| Status::not_found("Node not found"))?;
+
+        if let Err(e) = self.store.save(&*graph) {
+            eprintln!("Failed to persist after setting universe: {}", e);
+        }
+
+        Ok(Response::new(proto::SetNodeUniverseResponse {
+            node: Some(to_proto_node(&node)),
         }))
     }
 }

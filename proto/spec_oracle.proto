@@ -44,6 +44,10 @@ service SpecOracle {
   rpc DiffTimestamps(DiffTimestampsRequest) returns (DiffTimestampsResponse);
   rpc GetNodeHistory(GetNodeHistoryRequest) returns (GetNodeHistoryResponse);
   rpc GetComplianceTrend(GetComplianceTrendRequest) returns (GetComplianceTrendResponse);
+
+  // Inter-universe consistency (conversation.md U, D, A, f implementation)
+  rpc DetectInterUniverseInconsistencies(DetectInterUniverseInconsistenciesRequest) returns (DetectInterUniverseInconsistenciesResponse);
+  rpc SetNodeUniverse(SetNodeUniverseRequest) returns (SetNodeUniverseResponse);
 }
 
 // --- Node types ---
@@ -87,6 +91,7 @@ enum SpecEdgeKind {
   SYNONYM = 5;         // Source and target are synonymous terms
   COMPOSES = 6;        // Source composes with target into a higher-level spec
   FORMALIZES = 7;      // Target is a more formal version of source
+  TRANSFORM = 8;       // Function f: maps spec from source universe to target universe
 }
 
 // --- Request/Response messages ---
@@ -353,4 +358,28 @@ message GetComplianceTrendResponse {
 message ComplianceDataPoint {
   int64 timestamp = 1;
   float score = 2;
+}
+
+message DetectInterUniverseInconsistenciesRequest {}
+
+message DetectInterUniverseInconsistenciesResponse {
+  repeated InterUniverseInconsistency inconsistencies = 1;
+}
+
+message InterUniverseInconsistency {
+  string universe_a = 1;
+  string universe_b = 2;
+  SpecNode spec_a = 3;
+  SpecNode spec_b = 4;
+  repeated string transform_path = 5;  // Edge IDs forming transformation path
+  string explanation = 6;
+}
+
+message SetNodeUniverseRequest {
+  string node_id = 1;
+  string universe = 2;  // Universe identifier (e.g., "ui", "api", "database")
+}
+
+message SetNodeUniverseResponse {
+  SpecNode node = 1;
 }
