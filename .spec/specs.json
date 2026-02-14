@@ -43,7 +43,9 @@
         "id": "c8f23449-3f4c-40b1-a8f4-6dc2c93444b1",
         "content": "The system must detect omissions where specifications have no relationships to other specifications",
         "kind": "Assertion",
-        "metadata": {},
+        "metadata": {
+          "formality_layer": "U0"
+        },
         "created_at": 1771060209,
         "modified_at": 1771060209,
         "formality_layer": 0
@@ -152,8 +154,8 @@
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
           "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2",
           "line": "171-181"
         },
         "created_at": 1771061149,
@@ -165,9 +167,9 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Assertion",
         "metadata": {
+          "source_file": "spec-core/src/graph.rs",
           "function": "detect_contradictions",
-          "formality_layer": "U3",
-          "source_file": "spec-core/src/graph.rs"
+          "formality_layer": "U3"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -189,6 +191,41 @@
         "metadata": {},
         "created_at": 1771061314,
         "modified_at": 1771061314,
+        "formality_layer": 0
+      },
+      {
+        "id": "7c6d4b66-e684-4281-b83c-81c5fc7d07e3",
+        "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
+        "kind": "Assertion",
+        "metadata": {
+          "line": "183-192",
+          "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2"
+        },
+        "created_at": 1771061588,
+        "modified_at": 1771061588,
+        "formality_layer": 2
+      },
+      {
+        "id": "194a46a7-fed0-4e65-8b0f-4f60813edd62",
+        "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
+        "kind": "Assertion",
+        "metadata": {
+          "source_file": "spec-core/src/graph.rs",
+          "formality_layer": "U3",
+          "function": "detect_omissions"
+        },
+        "created_at": 1771061597,
+        "modified_at": 1771061597,
+        "formality_layer": 3
+      },
+      {
+        "id": "54585621-ab87-4654-a392-5517a9bb5376",
+        "content": "Multi-layer specification tracking demonstrated for both contradiction and omission detection features",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771061693,
+        "modified_at": 1771061693,
         "formality_layer": 0
       }
     ],
@@ -213,6 +250,26 @@
           "kind": "Formalizes",
           "metadata": {},
           "created_at": 1771061232
+        }
+      ],
+      [
+        4,
+        20,
+        {
+          "id": "a9b8c7d6-e5f4-4321-8765-abcdef012345",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771061650
+        }
+      ],
+      [
+        20,
+        21,
+        {
+          "id": "b1c2d3e4-f5a6-4567-8901-fedcba987654",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771061651
         }
       ]
     ]
