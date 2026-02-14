@@ -148,6 +148,13 @@ impl SpecGraph {
         self.id_to_index.get(id).map(|&idx| &self.graph[idx])
     }
 
+    /// Find a node by content and kind (for deduplication)
+    pub fn find_node_by_content(&self, content: &str, kind: NodeKind) -> Option<&SpecNodeData> {
+        self.graph
+            .node_weights()
+            .find(|n| n.content == content && n.kind == kind)
+    }
+
     pub fn update_node_formality(&mut self, id: &str, formality_layer: u8) -> bool {
         if let Some(&idx) = self.id_to_index.get(id) {
             if let Some(node) = self.graph.node_weight_mut(idx) {

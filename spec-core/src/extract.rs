@@ -119,25 +119,33 @@ impl SpecGraph {
             contradictions_found: Vec::new(),
         };
 
-        // Create nodes for high-confidence inferences
+        // Create nodes for high-confidence inferences (with deduplication)
         let mut created_ids = Vec::new();
         for spec in specs {
             // Apply both confidence threshold and quality filter
             if spec.confidence >= 0.7 && Self::is_high_quality_spec(&spec) {
-                let mut metadata = spec.metadata.clone();
-                metadata.insert("source_file".to_string(), spec.source_file.clone());
-                metadata.insert("source_line".to_string(), spec.source_line.to_string());
-                metadata.insert("confidence".to_string(), spec.confidence.to_string());
-                metadata.insert("inferred".to_string(), "true".to_string());
+                // Check for duplicate before creating node
+                if let Some(existing) = self.find_node_by_content(&spec.content, spec.kind) {
+                    // Duplicate found - skip creation, but track for edge inference
+                    created_ids.push(existing.id.clone());
+                    report.nodes_skipped += 1;
+                } else {
+                    // New node - create it
+                    let mut metadata = spec.metadata.clone();
+                    metadata.insert("source_file".to_string(), spec.source_file.clone());
+                    metadata.insert("source_line".to_string(), spec.source_line.to_string());
+                    metadata.insert("confidence".to_string(), spec.confidence.to_string());
+                    metadata.insert("inferred".to_string(), "true".to_string());
 
-                let node = self.add_node_with_layer(
-                    spec.content,
-                    spec.kind,
-                    spec.formality_layer,
-                    metadata,
-                );
-                created_ids.push(node.id.clone());
-                report.nodes_created += 1;
+                    let node = self.add_node_with_layer(
+                        spec.content,
+                        spec.kind,
+                        spec.formality_layer,
+                        metadata,
+                    );
+                    created_ids.push(node.id.clone());
+                    report.nodes_created += 1;
+                }
             } else {
                 report.nodes_skipped += 1;
             }
