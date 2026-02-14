@@ -342,20 +342,22 @@ impl SpecGraph {
         // First try simple similarity
         let simple_sim = self.calculate_semantic_similarity(text1, text2);
 
-        // If similarity is already high, no need for AI
-        if simple_sim > 0.5 {
+        // If similarity is very high (>0.8), trust keyword matching
+        if simple_sim > 0.8 {
             return simple_sim;
         }
 
-        // If different formality layers and low simple similarity, try AI
-        if layer1 != layer2 {
+        // For moderate similarity (0.4-0.8), use AI to disambiguate
+        // This catches same-layer duplicates that keyword matching misses
+        if simple_sim >= 0.4 {
             if let Some(ai_sim) = ai.semantic_similarity(text1, text2, layer1, layer2) {
                 // Blend simple and AI similarity (weighted average)
-                // Give more weight to AI for cross-layer comparisons
+                // Give more weight to AI for disambiguation
                 return simple_sim * 0.3 + ai_sim * 0.7;
             }
         }
 
+        // For very low similarity (<0.4), skip AI (too expensive, low probability)
         simple_sim
     }
 
