@@ -163,8 +163,8 @@
         "kind": "Assertion",
         "metadata": {
           "source_file": "proto/spec_oracle.proto",
-          "line": "171-181",
-          "formality_layer": "U2"
+          "formality_layer": "U2",
+          "line": "171-181"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -207,8 +207,8 @@
         "kind": "Assertion",
         "metadata": {
           "formality_layer": "U2",
-          "line": "183-192",
-          "source_file": "proto/spec_oracle.proto"
+          "source_file": "proto/spec_oracle.proto",
+          "line": "183-192"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -219,9 +219,9 @@
         "content": "The detect_omissions function must identify isolated nodes, domains without refinements, and scenarios without assertions",
         "kind": "Assertion",
         "metadata": {
+          "function": "detect_omissions",
           "source_file": "spec-core/src/graph.rs",
-          "formality_layer": "U3",
-          "function": "detect_omissions"
+          "formality_layer": "U3"
         },
         "created_at": 1771061597,
         "modified_at": 1771061597,
@@ -241,9 +241,9 @@
         "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
         "kind": "Assertion",
         "metadata": {
-          "source_file": "proto/spec_oracle.proto",
           "formality_layer": "U2",
-          "line": "7,105-113"
+          "line": "7,105-113",
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061822,
         "modified_at": 1771061822,
@@ -254,9 +254,9 @@
         "content": "The add command must infer spec kind from natural language, add node to graph, and save",
         "kind": "Assertion",
         "metadata": {
+          "function": "Commands::Add",
           "source_file": "spec-cli/src/main.rs",
-          "formality_layer": "U3",
-          "function": "Commands::Add"
+          "formality_layer": "U3"
         },
         "created_at": 1771061825,
         "modified_at": 1771061825,
@@ -281,8 +281,8 @@
         "kind": "Constraint",
         "metadata": {
           "source_file": "spec-cli/src/main.rs",
-          "formality_layer": "U3",
-          "function": "Commands::Check"
+          "function": "Commands::Check",
+          "formality_layer": "U3"
         },
         "created_at": 1771061935,
         "modified_at": 1771061935,
@@ -294,8 +294,8 @@
         "kind": "Assertion",
         "metadata": {
           "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2",
-          "line": "18,162-169"
+          "line": "18,162-169",
+          "formality_layer": "U2"
         },
         "created_at": 1771062014,
         "modified_at": 1771062014,
@@ -307,8 +307,8 @@
         "kind": "Assertion",
         "metadata": {
           "formality_layer": "U3",
-          "function": "Commands::Find",
-          "source_file": "spec-cli/src/main.rs"
+          "source_file": "spec-cli/src/main.rs",
+          "function": "Commands::Find"
         },
         "created_at": 1771062016,
         "modified_at": 1771062016,
@@ -319,9 +319,9 @@
         "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
         "kind": "Assertion",
         "metadata": {
-          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto",
           "line": "14,148-153",
-          "source_file": "proto/spec_oracle.proto"
+          "formality_layer": "U2"
         },
         "created_at": 1771062086,
         "modified_at": 1771062086,
@@ -332,9 +332,9 @@
         "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
         "kind": "Assertion",
         "metadata": {
-          "function": "Commands::Trace",
+          "formality_layer": "U3",
           "source_file": "spec-cli/src/main.rs",
-          "formality_layer": "U3"
+          "function": "Commands::Trace"
         },
         "created_at": 1771062087,
         "modified_at": 1771062087,
@@ -672,6 +672,24 @@
         "metadata": {},
         "created_at": 1771066001,
         "modified_at": 1771066001,
+        "formality_layer": 0
+      },
+      {
+        "id": "29a169bd-20d5-4df7-b582-6469c3e1f6f2",
+        "content": "Test satisfiability proof demonstration",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771066366,
+        "modified_at": 1771066366,
+        "formality_layer": 0
+      },
+      {
+        "id": "2bfb7e05-e689-4ecc-b1a1-c1e3a8ffc0d5",
+        "content": "Test satisfiability proof",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771066370,
+        "modified_at": 1771066370,
         "formality_layer": 0
       }
     ],

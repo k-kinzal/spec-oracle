@@ -245,6 +245,11 @@ enum Commands {
         /// Second specification ID
         spec_b: String,
     },
+    /// Prove satisfiability of a specification (formal proof generation)
+    ProveSatisfiability {
+        /// Specification ID to prove satisfiable
+        spec: String,
+    },
     /// Inspect U/D/A/f model structure (display universes, domains, admissible sets, transforms)
     InspectModel {
         /// Show detailed information for each universe
@@ -1044,6 +1049,87 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                     println!("❌ REFUTED: Specifications contradict each other");
                     println!("   A₁ ∩ A₂ = ∅ - Admissible sets are disjoint");
                     println!("   No implementation can satisfy both specifications simultaneously");
+                }
+                spec_core::ProofStatus::Unknown => {
+                    println!("❓ UNKNOWN: Could not prove or refute");
+                    println!("   Current solver is incomplete (heuristic-based)");
+                    println!("   SMT solver integration needed for complete verification");
+                }
+                spec_core::ProofStatus::Pending => {
+                    println!("⏳ PENDING: Proof in progress");
+                }
+            }
+        }
+        Commands::ProveSatisfiability { spec } => {
+            use spec_core::{Prover, UDAFModel};
+
+            let graph = store.load()?;
+            let mut udaf_model = UDAFModel::new();
+            udaf_model.populate_from_graph(&graph);
+
+            println!("🔬 Proving Satisfiability of Specification\n");
+            println!("═══════════════════════════════════════════════════════════════\n");
+
+            // Get the specification
+            let node = graph.get_node(&spec);
+
+            if node.is_none() {
+                eprintln!("❌ Specification '{}' not found", spec);
+                std::process::exit(1);
+            }
+
+            let node = node.unwrap();
+
+            println!("📋 Specification:");
+            println!("   ID:      [{}]", &spec[..8]);
+            println!("   Content: {}", node.content);
+            println!("   Kind:    {:?}", node.kind);
+            println!();
+
+            // Get admissible set
+            let admissible = udaf_model.admissible_sets.get(&spec);
+
+            if admissible.is_none() {
+                println!("⚠️  Admissible set not found in U/D/A/f model");
+                println!("   Run 'spec inspect-model' to verify model state");
+                std::process::exit(1);
+            }
+
+            let admissible = admissible.unwrap();
+
+            println!("🔍 Admissible Set: {} constraints", admissible.constraints.len());
+            for (i, constraint) in admissible.constraints.iter().enumerate() {
+                println!("   {}: {} ({:?})", i+1, constraint.description, constraint.kind);
+            }
+            println!();
+
+            // Prove satisfiability
+            let mut prover = Prover::new();
+            let proof = prover.prove_satisfiability(admissible);
+
+            println!("═══════════════════════════════════════════════════════════════\n");
+            println!("📜 Formal Proof Generated\n");
+            println!("Property: {:?}", proof.property);
+            println!("Method:   {:?}", proof.method);
+            println!("Status:   {:?}", proof.status);
+            println!();
+
+            println!("Proof Steps:");
+            for (i, step) in proof.steps.iter().enumerate() {
+                println!("  {}. {}", i+1, step.description);
+                println!("     Justification: {}", step.justification);
+                println!();
+            }
+
+            match proof.status {
+                spec_core::ProofStatus::Proven => {
+                    println!("✅ PROVEN: Specification is satisfiable");
+                    println!("   ∃x. x ∈ A - There exists an implementation satisfying the specification");
+                }
+                spec_core::ProofStatus::Refuted => {
+                    println!("❌ REFUTED: Specification is unsatisfiable");
+                    println!("   A = ∅ - Admissible set is empty");
+                    println!("   No implementation can satisfy this specification");
                 }
                 spec_core::ProofStatus::Unknown => {
                     println!("❓ UNKNOWN: Could not prove or refute");
@@ -1945,6 +2031,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::ProveConsistency { spec_a: _, spec_b: _ } => {
             println!("🔬 Proving Consistency\n");
             println!("ProveConsistency command requires standalone mode (project-local .spec/ directory)");
+            println!("Run 'spec init' to initialize project-local specification management.");
+            println!("\nReason: Prover integration with U/D/A/f model requires direct file access.");
+        }
+        Commands::ProveSatisfiability { spec: _ } => {
+            println!("🔬 Proving Satisfiability\n");
+            println!("ProveSatisfiability command requires standalone mode (project-local .spec/ directory)");
             println!("Run 'spec init' to initialize project-local specification management.");
             println!("\nReason: Prover integration with U/D/A/f model requires direct file access.");
         }
