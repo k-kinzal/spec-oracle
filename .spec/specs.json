@@ -54,7 +54,9 @@
         "id": "a1ab944c-470f-4405-8de6-f65979c52095",
         "content": "Users can add specifications using natural language without specifying node kinds or relationships",
         "kind": "Scenario",
-        "metadata": {},
+        "metadata": {
+          "formality_layer": "U0"
+        },
         "created_at": 1771060210,
         "modified_at": 1771060210,
         "formality_layer": 0
@@ -99,7 +101,9 @@
         "id": "dbc5525f-ec05-42fa-8823-dddd359567ed",
         "content": "The check command must run both contradiction and omission detection and present unified results",
         "kind": "Assertion",
-        "metadata": {},
+        "metadata": {
+          "formality_layer": "U0"
+        },
         "created_at": 1771060359,
         "modified_at": 1771060359,
         "formality_layer": 0
@@ -117,7 +121,9 @@
         "id": "ee493f23-22d4-483c-8afe-2926a0ec1f73",
         "content": "The find command provides semantic search with natural language queries and layer filtering",
         "kind": "Assertion",
-        "metadata": {},
+        "metadata": {
+          "formality_layer": "U0"
+        },
         "created_at": 1771060502,
         "modified_at": 1771060502,
         "formality_layer": 0
@@ -135,7 +141,9 @@
         "id": "b176641e-ab94-414b-a777-0a69ab47e035",
         "content": "The trace command displays all relationships for a specification in a hierarchical tree format",
         "kind": "Assertion",
-        "metadata": {},
+        "metadata": {
+          "formality_layer": "U0"
+        },
         "created_at": 1771060938,
         "modified_at": 1771060938,
         "formality_layer": 0
@@ -154,9 +162,9 @@
         "content": "DetectContradictions RPC returns Contradiction messages containing node_a, node_b, and explanation fields",
         "kind": "Assertion",
         "metadata": {
+          "line": "171-181",
           "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2",
-          "line": "171-181"
+          "formality_layer": "U2"
         },
         "created_at": 1771061149,
         "modified_at": 1771061149,
@@ -167,9 +175,9 @@
         "content": "The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U3",
           "source_file": "spec-core/src/graph.rs",
-          "function": "detect_contradictions",
-          "formality_layer": "U3"
+          "function": "detect_contradictions"
         },
         "created_at": 1771061151,
         "modified_at": 1771061151,
@@ -198,9 +206,9 @@
         "content": "DetectOmissions RPC returns Omission messages containing description and related_nodes fields",
         "kind": "Assertion",
         "metadata": {
+          "formality_layer": "U2",
           "line": "183-192",
-          "source_file": "proto/spec_oracle.proto",
-          "formality_layer": "U2"
+          "source_file": "proto/spec_oracle.proto"
         },
         "created_at": 1771061588,
         "modified_at": 1771061588,
@@ -226,6 +234,146 @@
         "metadata": {},
         "created_at": 1771061693,
         "modified_at": 1771061693,
+        "formality_layer": 0
+      },
+      {
+        "id": "41052fda-aef8-4443-991f-80e5165991c7",
+        "content": "AddNode RPC accepts content, kind, and metadata to create a new specification node",
+        "kind": "Assertion",
+        "metadata": {
+          "line": "7,105-113",
+          "source_file": "proto/spec_oracle.proto",
+          "formality_layer": "U2"
+        },
+        "created_at": 1771061822,
+        "modified_at": 1771061822,
+        "formality_layer": 2
+      },
+      {
+        "id": "f52e0895-4753-4ceb-b59f-cc9dac67a3f8",
+        "content": "The add command must infer spec kind from natural language, add node to graph, and save",
+        "kind": "Assertion",
+        "metadata": {
+          "formality_layer": "U3",
+          "function": "Commands::Add",
+          "source_file": "spec-cli/src/main.rs"
+        },
+        "created_at": 1771061825,
+        "modified_at": 1771061825,
+        "formality_layer": 3
+      },
+      {
+        "id": "c8f0f89e-be5e-4ea9-b24d-a9a1eb4d4f03",
+        "content": "Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results",
+        "kind": "Assertion",
+        "metadata": {
+          "line": "19-20",
+          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto"
+        },
+        "created_at": 1771061935,
+        "modified_at": 1771061935,
+        "formality_layer": 2
+      },
+      {
+        "id": "ae111e6b-256c-47dc-9862-f4165150f62e",
+        "content": "The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code",
+        "kind": "Constraint",
+        "metadata": {
+          "function": "Commands::Check",
+          "source_file": "spec-cli/src/main.rs",
+          "formality_layer": "U3"
+        },
+        "created_at": 1771061935,
+        "modified_at": 1771061935,
+        "formality_layer": 3
+      },
+      {
+        "id": "a565f8bd-53f8-485d-9141-da7fb5686fe9",
+        "content": "Query RPC accepts natural_language_query and returns matching_nodes with semantic matching",
+        "kind": "Assertion",
+        "metadata": {
+          "line": "18,162-169",
+          "formality_layer": "U2",
+          "source_file": "proto/spec_oracle.proto"
+        },
+        "created_at": 1771062014,
+        "modified_at": 1771062014,
+        "formality_layer": 2
+      },
+      {
+        "id": "8a79071d-6eac-42c5-97ff-539bade167e5",
+        "content": "The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found",
+        "kind": "Assertion",
+        "metadata": {
+          "formality_layer": "U3",
+          "function": "Commands::Find",
+          "source_file": "spec-cli/src/main.rs"
+        },
+        "created_at": 1771062016,
+        "modified_at": 1771062016,
+        "formality_layer": 3
+      },
+      {
+        "id": "97578131-68b3-4d13-be53-12f0c4da819d",
+        "content": "ListEdges RPC returns all edges for a given node_id or all edges when node_id is empty",
+        "kind": "Assertion",
+        "metadata": {
+          "source_file": "proto/spec_oracle.proto",
+          "line": "14,148-153",
+          "formality_layer": "U2"
+        },
+        "created_at": 1771062086,
+        "modified_at": 1771062086,
+        "formality_layer": 2
+      },
+      {
+        "id": "8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80",
+        "content": "The trace command must traverse relationships recursively, display them in hierarchical tree format, and support depth limiting",
+        "kind": "Assertion",
+        "metadata": {
+          "function": "Commands::Trace",
+          "formality_layer": "U3",
+          "source_file": "spec-cli/src/main.rs"
+        },
+        "created_at": 1771062087,
+        "modified_at": 1771062087,
+        "formality_layer": 3
+      },
+      {
+        "id": "7d91abca-5b0e-431b-ad01-8cf8b38e2010",
+        "content": "Sessions 40-42 expanded multi-layer tracking from 1 to 6 features, adding 10 specifications and 10 Formalizes edges",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771062280,
+        "modified_at": 1771062280,
+        "formality_layer": 0
+      },
+      {
+        "id": "fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2",
+        "content": "All high-priority features now have complete U0→U2→U3 traceability: contradiction detection, omission detection, add command, check command, find command, and trace command",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771062281,
+        "modified_at": 1771062281,
+        "formality_layer": 0
+      },
+      {
+        "id": "27ac314f-d58a-4843-9be8-0660e674b519",
+        "content": "Session 43 connected supporting specifications to parent features using Refines edges, reducing isolated specs from 17 to 14 and demonstrating hierarchical specification structure",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771062696,
+        "modified_at": 1771062696,
+        "formality_layer": 0
+      },
+      {
+        "id": "c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d",
+        "content": "Refines edges represent within-concern elaboration where supporting details refine main requirements, complementing Formalizes edges that represent cross-layer transformation",
+        "kind": "Assertion",
+        "metadata": {},
+        "created_at": 1771062698,
+        "modified_at": 1771062698,
         "formality_layer": 0
       }
     ],
@@ -270,6 +418,122 @@
           "kind": "Formalizes",
           "metadata": {},
           "created_at": 1771061651
+        }
+      ],
+      [
+        5,
+        23,
+        {
+          "id": "c1d2e3f4-a5b6-4567-8901-add0001add01",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771061900
+        }
+      ],
+      [
+        23,
+        24,
+        {
+          "id": "d2e3f4a5-b6c7-4567-8901-add0002add02",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771061901
+        }
+      ],
+      [
+        10,
+        25,
+        {
+          "id": "e3f4a5b6-c7d8-4567-8901-check01check01",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771062000
+        }
+      ],
+      [
+        25,
+        26,
+        {
+          "id": "f4a5b6c7-d8e9-4567-8901-check02check02",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771062001
+        }
+      ],
+      [
+        12,
+        27,
+        {
+          "id": "a5b6c7d8-e9f0-4567-8901-find001find001",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771062100
+        }
+      ],
+      [
+        27,
+        28,
+        {
+          "id": "b6c7d8e9-f0a1-4567-8901-find002find002",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771062101
+        }
+      ],
+      [
+        14,
+        29,
+        {
+          "id": "c7d8e9f0-a1b2-4567-8901-trace01trace01",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771062200
+        }
+      ],
+      [
+        29,
+        30,
+        {
+          "id": "d8e9f0a1-b2c3-4567-8901-trace02trace02",
+          "kind": "Formalizes",
+          "metadata": {},
+          "created_at": 1771062201
+        }
+      ],
+      [
+        11,
+        10,
+        {
+          "id": "refines-check-exit-001",
+          "kind": "Refines",
+          "metadata": {
+            "reason": "Exit code requirement refines check command behavior"
+          },
+          "created_at": 1771070000
+        }
+      ],
+      [
+        13,
+        12,
+        {
+          "id": "refines-find-suggest-001",
+          "kind": "Refines",
+          "metadata": {
+            "reason": "Helpful suggestions refine find command UX"
+          },
+          "created_at": 1771070001
+        }
+      ],
+      [
+        15,
+        14,
+        {
+          "id": "refines-trace-depth-001",
+          "kind": "Refines",
+          "metadata": {
+            "reason": "Depth limiting refines trace command functionality"
+          },
+          "created_at": 1771070002
         }
       ]
     ]
