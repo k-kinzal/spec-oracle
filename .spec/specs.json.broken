@@ -2623,15 +2623,13 @@
       {
         "id": "b65f4b11-5cfe-4296-86c2-f4b313ab4699",
         "content": "cargo run --bin spec -- add-edge <constraint-id> <domain-id> --kind refines",
-        "kind": "Definition",
+        "kind": "Constraint",
         "metadata": {
           "extractor": "documentation",
           "confidence": "0.85",
           "source_file": "README.md",
           "source_line": "92",
-          "inferred": "true",
-          "is_example": "true",
-          "example_source": "command example or explanation"
+          "inferred": "true"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -2687,15 +2685,13 @@
       {
         "id": "d2dde5c6-8013-44d9-82ce-b6e355666dfd",
         "content": "constraint: Universal invariant",
-        "kind": "Definition",
+        "kind": "Constraint",
         "metadata": {
           "extractor": "documentation",
           "inferred": "true",
           "source_line": "232",
           "source_file": "README.md",
-          "confidence": "0.85",
-          "is_example": "true",
-          "example_source": "command example or explanation"
+          "confidence": "0.85"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -2704,15 +2700,13 @@
       {
         "id": "0955b543-fff8-4d89-b52f-a81ff590659f",
         "content": "scenario: Existential requirement (required path)",
-        "kind": "Definition",
+        "kind": "Constraint",
         "metadata": {
           "extractor": "documentation",
           "source_line": "233",
           "source_file": "README.md",
           "confidence": "0.85",
-          "inferred": "true",
-          "is_example": "true",
-          "example_source": "command example or explanation"
+          "inferred": "true"
         },
         "created_at": 1771095538,
         "modified_at": 1771095538,
@@ -5693,7 +5687,7 @@
           "id": "readme-226-189",
           "kind": "DerivesFrom",
           "metadata": {
-            "confidence": "0.8",
+            "confidence": ""confidence": 0.8",
             "reason": "README documentation of existing feature"
           },
           "created_at": 1771090000
@@ -5706,23 +5700,10 @@
           "id": "readme-228-121",
           "kind": "DerivesFrom",
           "metadata": {
-            "confidence": "0.8",
+            "confidence": ""confidence": 0.8",
             "reason": "README documentation of existing feature"
           },
           "created_at": 1771090000
-        }
-      ],
-      [
-        221,
-        180,
-        {
-          "id": "readme-graph-storage",
-          "kind": "DerivesFrom",
-          "metadata": {
-            "confidence": "0.90",
-            "reason": "README describes SpecGraph implementation"
-          },
-          "created_at": 1771090100
         }
       ]
     ]
