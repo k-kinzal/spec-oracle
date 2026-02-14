@@ -11,6 +11,11 @@ uuid = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
 regex = { workspace = true }
+z3 = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile = "3.8"
+
+[features]
+default = ["z3-solver"]
+z3-solver = ["z3"]

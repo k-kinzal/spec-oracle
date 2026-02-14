@@ -1,0 +1,25 @@
+# Environment configuration for specORACLE development
+#
+# Copy this file to .envrc and customize for your environment
+# If using direnv, run `direnv allow` to load automatically
+
+# Z3 SMT Solver configuration
+# Required for building specORACLE with formal verification support
+#
+# Installation:
+#   macOS:   brew install z3
+#   Ubuntu:  sudo apt-get install libz3-dev
+#   Arch:    sudo pacman -S z3
+
+# Z3 header location (auto-detect with homebrew on macOS)
+export Z3_SYS_Z3_HEADER="$(brew --prefix z3 2>/dev/null)/include/z3.h"
+
+# Z3 library path for linker
+export RUSTFLAGS="-L $(brew --prefix z3 2>/dev/null)/lib"
+
+# Alternative: Manual paths (if not using homebrew)
+# export Z3_SYS_Z3_HEADER="/usr/local/include/z3.h"
+# export RUSTFLAGS="-L /usr/local/lib"
+
+# To build without Z3 (fallback to heuristic prover):
+# cargo build --no-default-features

@@ -8,11 +8,14 @@
 /// > specORACLEは、「証明された世界」を提供することが本質である
 /// > "The essence of specORACLE is to provide a 'proven world'"
 ///
-/// Current implementation: Lightweight constraint solver
-/// Future: Integration with Lean4, Coq, Z3, etc.
+/// Current implementation: Z3 SMT solver (complete formal verification)
+/// Fallback: Lightweight constraint solver (when Z3 unavailable)
+
+mod z3_backend;
 
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use z3_backend::Z3Backend;
 
 /// Proof: A formal verification that a property holds
 ///
@@ -125,12 +128,16 @@ pub struct ProofStep {
 pub struct Prover {
     /// All proofs in the system
     proofs: HashMap<String, Proof>,
+
+    /// Z3 SMT solver backend
+    z3_backend: Z3Backend,
 }
 
 impl Prover {
     pub fn new() -> Self {
         Self {
             proofs: HashMap::new(),
+            z3_backend: Z3Backend::new(),
         }
     }
 
@@ -138,6 +145,10 @@ impl Prover {
     ///
     /// Attempts to prove: ∃x. (x ∈ A1 ∧ x ∈ A2)
     /// (There exists an implementation that satisfies both specs)
+    ///
+    /// Strategy:
+    /// 1. Try Z3 SMT solver (complete formal verification)
+    /// 2. Fallback to heuristics if Z3 unavailable
     pub fn prove_consistency(
         &mut self,
         spec_a: &crate::udaf::AdmissibleSet,
@@ -148,19 +159,35 @@ impl Prover {
             spec_b: spec_b.spec_id.clone(),
         };
 
-        // Use lightweight constraint solver
-        let (status, steps) = self.check_consistency_via_constraints(spec_a, spec_b);
+        // Try Z3 first (complete proof)
+        let (status, steps) = self.z3_backend.check_consistency(
+            &spec_a.constraints,
+            &spec_b.constraints,
+        );
+
+        let method = if cfg!(feature = "z3-solver") {
+            ProofMethod::SMTSolver {
+                solver: "Z3".to_string(),
+                formula: format!(
+                    "Consistency check: {} constraints (A) ∧ {} constraints (B)",
+                    spec_a.constraints.len(),
+                    spec_b.constraints.len()
+                ),
+            }
+        } else {
+            ProofMethod::ConstraintSolving {
+                solver: "lightweight_builtin".to_string(),
+                constraints: vec![
+                    format!("A1: {} constraints", spec_a.constraints.len()),
+                    format!("A2: {} constraints", spec_b.constraints.len()),
+                ],
+            }
+        };
 
         let proof = Proof {
             id: uuid::Uuid::new_v4().to_string(),
             property,
-            method: ProofMethod::ConstraintSolving {
-                solver: "lightweight_builtin".to_string(),
-                constraints: vec![
-                    format!("A1: {:?}", spec_a.constraints),
-                    format!("A2: {:?}", spec_b.constraints),
-                ],
-            },
+            method,
             status,
             steps,
             metadata: HashMap::new(),
@@ -174,6 +201,10 @@ impl Prover {
     ///
     /// Attempts to prove: ∃x. x ∈ A
     /// (There exists at least one implementation that satisfies the spec)
+    ///
+    /// Strategy:
+    /// 1. Try Z3 SMT solver (complete formal verification)
+    /// 2. Fallback to heuristics if Z3 unavailable
     pub fn prove_satisfiability(
         &mut self,
         spec: &crate::udaf::AdmissibleSet,
@@ -182,15 +213,25 @@ impl Prover {
             spec: spec.spec_id.clone(),
         };
 
-        let (status, steps) = self.check_satisfiability_via_constraints(spec);
+        // Try Z3 first (complete proof)
+        let (status, steps) = self.z3_backend.check_satisfiability(&spec.constraints);
+
+        let method = if cfg!(feature = "z3-solver") {
+            ProofMethod::SMTSolver {
+                solver: "Z3".to_string(),
+                formula: format!("Satisfiability check: {} constraints", spec.constraints.len()),
+            }
+        } else {
+            ProofMethod::ConstraintSolving {
+                solver: "lightweight_builtin".to_string(),
+                constraints: spec.constraints.iter().map(|c| c.description.clone()).collect(),
+            }
+        };
 
         let proof = Proof {
             id: uuid::Uuid::new_v4().to_string(),
             property,
-            method: ProofMethod::ConstraintSolving {
-                solver: "lightweight_builtin".to_string(),
-                constraints: spec.constraints.iter().map(|c| c.description.clone()).collect(),
-            },
+            method,
             status,
             steps,
             metadata: HashMap::new(),
@@ -512,7 +553,9 @@ mod tests {
         let proof = prover.prove_satisfiability(&spec);
 
         assert_eq!(proof.status, ProofStatus::Refuted);
-        assert!(proof.steps.iter().any(|s| s.description.contains("unsatisfiability")));
+        assert!(proof.steps.iter().any(|s|
+            s.description.contains("unsatisfiability") ||
+            s.description.contains("UNSATISFIABLE")));
     }
 
     #[test]
@@ -564,7 +607,9 @@ mod tests {
         let proof = prover.prove_consistency(&spec_a, &spec_b);
 
         assert_eq!(proof.status, ProofStatus::Refuted);
-        assert!(proof.steps.iter().any(|s| s.description.contains("contradiction")));
+        assert!(proof.steps.iter().any(|s|
+            s.description.contains("contradiction") ||
+            s.description.contains("CONTRADICTORY")));
     }
 
     #[test]
