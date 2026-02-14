@@ -176,12 +176,53 @@ pub fn execute_list_edges_standalone(
         graph.list_edges(None)
     };
     println!("Found {} edge(s):", edges.len());
-    for (edge_data, source_id, target_id) in edges {
-        println!("  {} --[{:?}]--> {}",
-            &source_id[..8],
-            edge_data.kind,
-            &target_id[..8]);
+
+    for (edge_data, source_id, target_id) in &edges {
+        // Get source node
+        if let Some(source_node) = graph.get_node(source_id) {
+            let source_layer = format_formality_layer(source_node.formality_layer);
+            let source_preview = source_node.content.chars().take(50).collect::<String>();
+            let source_display = if source_node.content.len() > 50 {
+                format!("{}...", source_preview)
+            } else {
+                source_preview
+            };
+
+            println!("\n  [{}] [{}] {:?} - {}",
+                source_layer,
+                &source_id[..8],
+                source_node.kind,
+                source_display);
+        } else {
+            println!("\n  [{}] (node not found)", &source_id[..8]);
+        }
+
+        println!("    --[{:?}]-->", edge_data.kind);
+
+        // Get target node
+        if let Some(target_node) = graph.get_node(target_id) {
+            let target_layer = format_formality_layer(target_node.formality_layer);
+            let target_preview = target_node.content.chars().take(50).collect::<String>();
+            let target_display = if target_node.content.len() > 50 {
+                format!("{}...", target_preview)
+            } else {
+                target_preview
+            };
+
+            println!("  [{}] [{}] {:?} - {}",
+                target_layer,
+                &target_id[..8],
+                target_node.kind,
+                target_display);
+        } else {
+            println!("  [{}] (node not found)", &target_id[..8]);
+        }
     }
+
+    if !edges.is_empty() {
+        println!(); // Add blank line after edges
+    }
+
     Ok(())
 }
 
