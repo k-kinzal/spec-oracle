@@ -32,8 +32,14 @@ Refactor CLI to satisfy specification [b706e529]:
 ## Implementation Progress
 
 ### Phase 1: Extract Remaining Commands
-- [ ] Extract 30+ remaining command handlers from run_standalone()
-- [ ] Move to commands/ module with consistent structure
+- [x] Extract API commands to commands/api.rs (9 commands)
+- [x] Extract Summary command to commands/summary.rs
+- [x] Extract Extract command to commands/extract.rs
+- [x] Extract Prover commands to commands/prover.rs (ProveConsistency, ProveSatisfiability, InspectModel)
+- [x] **Current**: main.rs reduced from 3736 to 3131 lines (-605 lines, -16.2%)
+- [ ] Extract U0 operations (ConstructU0, CleanupLowQuality)
+- [ ] Extract Layer operations (VerifyLayers, FilterByLayer, DetectLayerInconsistencies)
+- [ ] Extract remaining commands
 - [ ] Each command handler: input validation → use case → presentation
 
 ### Phase 2: Create Use Cases Module
