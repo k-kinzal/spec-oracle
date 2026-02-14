@@ -1,8 +1,8 @@
 {
   "active": true,
-  "iteration": 29,
+  "iteration": 33,
   "max_iterations": 9999,
   "completion_promise": "",
-  "decision": "continue",
-  "hook_called": true
+  "decision": null,
+  "hook_called": false
 }

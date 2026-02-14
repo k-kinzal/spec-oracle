@@ -342,6 +342,58 @@ impl SpecGraph {
             }
         }
 
+        // Detect duplicates and semantic contradictions within same layer
+        let all_nodes: Vec<(NodeIndex, &SpecNodeData)> = self
+            .graph
+            .node_indices()
+            .map(|idx| (idx, &self.graph[idx]))
+            .collect();
+
+        for i in 0..all_nodes.len() {
+            for j in (i + 1)..all_nodes.len() {
+                let (idx_a, node_a) = all_nodes[i];
+                let (idx_b, node_b) = all_nodes[j];
+
+                // Skip if nodes are connected by Synonym edge (duplicates are intentional)
+                let has_synonym_edge = self.graph.edges_connecting(idx_a, idx_b).any(|e| {
+                    self.graph[e.id()].kind == EdgeKind::Synonym
+                }) || self.graph.edges_connecting(idx_b, idx_a).any(|e| {
+                    self.graph[e.id()].kind == EdgeKind::Synonym
+                });
+                if has_synonym_edge {
+                    continue;
+                }
+
+                // Check for exact duplicates (same content and kind)
+                if node_a.content.trim() == node_b.content.trim() && node_a.kind == node_b.kind {
+                    result.push(Contradiction {
+                        node_a: node_a.clone(),
+                        node_b: node_b.clone(),
+                        explanation: format!(
+                            "Duplicate specification: same content and kind '{:?}'",
+                            node_a.kind
+                        ),
+                    });
+                    continue; // Skip semantic check if exact duplicate
+                }
+
+                // Check for semantic contradictions (e.g., password 8 vs 10 chars)
+                // Only check within same formality layer to avoid false positives
+                if node_a.formality_layer == node_b.formality_layer {
+                    if let Some(explanation) = Self::detect_semantic_contradiction(
+                        &node_a.content,
+                        &node_b.content,
+                    ) {
+                        result.push(Contradiction {
+                            node_a: node_a.clone(),
+                            node_b: node_b.clone(),
+                            explanation,
+                        });
+                    }
+                }
+            }
+        }
+
         result
     }
 
@@ -612,15 +664,18 @@ impl SpecGraph {
         let a_lower = content_a.to_lowercase();
         let b_lower = content_b.to_lowercase();
 
-        // Check for must/must not conflicts
+        // Check for must/must not conflicts (only if concepts are related)
         if (a_lower.contains("must") && !a_lower.contains("must not"))
             && (b_lower.contains("must not") || b_lower.contains("forbidden"))
+            && Self::are_related_concepts(content_a, content_b)
         {
             return Some("Contradictory requirement: 'must' vs 'must not'".to_string());
         }
 
-        // Check for required/optional conflicts
-        if a_lower.contains("required") && b_lower.contains("optional") {
+        // Check for required/optional conflicts (only if concepts are related)
+        if a_lower.contains("required") && b_lower.contains("optional")
+            && Self::are_related_concepts(content_a, content_b)
+        {
             return Some("Contradictory requirement: 'required' vs 'optional'".to_string());
         }
 
@@ -629,15 +684,18 @@ impl SpecGraph {
             if num_a != num_b && a_lower.contains("password") && b_lower.contains("password") {
                 return Some(format!("Conflicting password length: {} vs {} characters", num_a, num_b));
             }
-            if num_a != num_b && (a_lower.contains("length") || b_lower.contains("length")
+            if num_a != num_b && Self::are_related_concepts(content_a, content_b)
+                && (a_lower.contains("length") || b_lower.contains("length")
                 || a_lower.contains("minimum") || b_lower.contains("minimum")
                 || a_lower.contains("at least") || b_lower.contains("at least")) {
                 return Some(format!("Conflicting minimum values: {} vs {}", num_a, num_b));
             }
         }
 
-        // Check for conflicting numeric constraints (e.g., ">= 8" vs "< 8")
-        if a_lower.contains(">=") && b_lower.contains("<") {
+        // Check for conflicting numeric constraints (only if about same variable)
+        if a_lower.contains(">=") && b_lower.contains("<")
+            && Self::are_related_concepts(content_a, content_b)
+        {
             return Some("Potentially conflicting numeric constraints".to_string());
         }
 
@@ -672,23 +730,49 @@ impl SpecGraph {
         None
     }
 
-    /// Helper: check if two concepts are related (share significant terms)
+    /// Helper: check if two concepts are related (share significant terms or word stems)
     fn are_related_concepts(content_a: &str, content_b: &str) -> bool {
         let a_lower = content_a.to_lowercase();
         let b_lower = content_b.to_lowercase();
 
+        // Filter out meta-words that don't indicate semantic relatedness
+        let meta_words = ["invariant", "template", "contains", "fetched", "expected"];
+
         let a_words: Vec<&str> = a_lower
-            .split_whitespace()
-            .filter(|w| w.len() > 4) // Only significant words
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|w| w.len() > 4 && !meta_words.contains(w)) // Only significant words, exclude meta-words
             .collect();
         let b_words: Vec<&str> = b_lower
-            .split_whitespace()
-            .filter(|w| w.len() > 4)
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|w| w.len() > 4 && !meta_words.contains(w))
             .collect();
 
-        // Check if they share at least 2 significant words
-        let shared_count = a_words.iter().filter(|w| b_words.contains(w)).count();
-        shared_count >= 2
+        // Check for exact word matches
+        let exact_matches = a_words.iter().filter(|w| b_words.contains(w)).count();
+        if exact_matches >= 2 {
+            return true;
+        }
+
+        // Check for word stems (common prefix of at least 5 chars)
+        let mut stem_matches = 0;
+        for &word_a in &a_words {
+            for &word_b in &b_words {
+                let min_len = word_a.len().min(word_b.len());
+                if min_len >= 5 {
+                    let prefix_len = word_a
+                        .chars()
+                        .zip(word_b.chars())
+                        .take_while(|(a, b)| a == b)
+                        .count();
+                    if prefix_len >= 5 {
+                        stem_matches += 1;
+                        break; // Count each word_a only once
+                    }
+                }
+            }
+        }
+
+        exact_matches >= 1 || stem_matches >= 1
     }
 
     /// Find all formalizations of a given node (nodes it formalizes to).
@@ -1462,6 +1546,47 @@ mod tests {
         let contradictions = g.detect_contradictions();
         assert_eq!(contradictions.len(), 1);
         assert!(contradictions[0].explanation.contains("Explicit contradiction"));
+    }
+
+    #[test]
+    fn detect_duplicate_specifications() {
+        let mut g = SpecGraph::new();
+        g.add_node("Password must be at least 8 characters".into(), NodeKind::Constraint, HashMap::new());
+        g.add_node("Password must be at least 8 characters".into(), NodeKind::Constraint, HashMap::new());
+
+        let contradictions = g.detect_contradictions();
+        assert!(contradictions.iter().any(|c| c.explanation.contains("Duplicate specification")),
+            "Should detect duplicate specifications");
+    }
+
+    #[test]
+    fn detect_semantic_contradiction_password_length() {
+        let mut g = SpecGraph::new();
+        let mut meta_a = HashMap::new();
+        meta_a.insert("formality_layer".to_string(), "0".to_string());
+        let mut meta_b = HashMap::new();
+        meta_b.insert("formality_layer".to_string(), "0".to_string());
+
+        g.add_node("Password must be at least 8 characters".into(), NodeKind::Constraint, meta_a);
+        g.add_node("Password must be minimum 10 characters".into(), NodeKind::Constraint, meta_b);
+
+        let contradictions = g.detect_contradictions();
+        assert!(contradictions.iter().any(|c| c.explanation.contains("password length")
+            || c.explanation.contains("Conflicting")),
+            "Should detect conflicting password length requirements");
+    }
+
+    #[test]
+    fn no_duplicate_detection_for_synonym_edges() {
+        let mut g = SpecGraph::new();
+        let a = g.add_node("Authentication".into(), NodeKind::Definition, HashMap::new()).id.clone();
+        let b = g.add_node("Authentication".into(), NodeKind::Definition, HashMap::new()).id.clone();
+        g.add_edge(&a, &b, EdgeKind::Synonym, HashMap::new()).unwrap();
+
+        let contradictions = g.detect_contradictions();
+        // Should not report duplicate if Synonym edge exists
+        assert!(!contradictions.iter().any(|c| c.explanation.contains("Duplicate")),
+            "Should not report duplicates when Synonym edge exists");
     }
 
     #[test]
