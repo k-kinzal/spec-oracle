@@ -146,6 +146,12 @@
     - Session 123でget-node拡張時に5個の仕様を追加したが、エッジ接続を忘れて孤立した
     - Session 124で6個のRefinesエッジを追加し、再びゼロ孤立を達成
     - 現状: 244 specs, 0 contradictions, 0 isolated specs
+  - **注記** (Session 127, 2026-02-15):
+    - Session 126で3個の仕様追加、Session 97でproto抽出時の9個のRPC仕様が孤立していた
+    - 合計12個の孤立仕様を発見：3個のU0仕様（Session 126）+ 9個のU2仕様（RPC）
+    - 全12個をCLI coherent structure requirement（c6119c42）に接続
+    - 結果: 250 specs, 274 edges, 0 isolated specs ✅
+    - タスク: `tasks/2026-02-15-session-127-connect-isolated-specs.md`
   - **解決状況**: ✅ **完了** - 逆写像エンジンが意図通りに機能するようになった
 
 - [x] **🚨 抽出機能が重複仕様を大量作成する（べき等性違反）** ✅ **解決済み (2026-02-15)**
