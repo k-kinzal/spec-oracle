@@ -3,12 +3,13 @@
   "checkpoint_id": "3cce9c57c2d3",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 5,
+  "checkpoints_count": 6,
   "files_touched": [
     "CLAUDE.md",
     "docs/conversation.md",
     "spec-cli/src/main.rs",
     "tasks/2026-02-14-session-53-continue-for-goal.md",
+    "tasks/2026-02-14-session-54-zero-omissions.md",
     "tasks/2026-02-14-session-56-beyond-dsl-achievement.md",
     "tasks/2026-02-14-session-56-continue-for-goal.md",
     "tasks/2026-02-14-session-56-final-summary.md"
@@ -34,13 +35,20 @@
       "context": "/3c/ce9c57c2d3/2/context.md",
       "content_hash": "/3c/ce9c57c2d3/2/content_hash.txt",
       "prompt": "/3c/ce9c57c2d3/2/prompt.txt"
+    },
+    {
+      "metadata": "/3c/ce9c57c2d3/3/metadata.json",
+      "transcript": "/3c/ce9c57c2d3/3/full.jsonl",
+      "context": "/3c/ce9c57c2d3/3/context.md",
+      "content_hash": "/3c/ce9c57c2d3/3/content_hash.txt",
+      "prompt": "/3c/ce9c57c2d3/3/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 1036,
-    "cache_creation_tokens": 875845,
-    "cache_read_tokens": 6871304,
-    "output_tokens": 6392,
-    "api_call_count": 105
+    "input_tokens": 1406,
+    "cache_creation_tokens": 961826,
+    "cache_read_tokens": 10585331,
+    "output_tokens": 9494,
+    "api_call_count": 151
   }
 }
