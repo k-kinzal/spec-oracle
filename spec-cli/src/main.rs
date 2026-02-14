@@ -587,18 +587,94 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
             }
         }
         Commands::DetectContradictions => {
-            let graph = store.load()?;
-            let contradictions = graph.detect_contradictions();
+            use spec_core::{Prover, UDAFModel};
 
-            if contradictions.is_empty() {
-                println!("✓ No contradictions detected");
-            } else {
-                println!("Found {} contradiction(s):", contradictions.len());
-                for (i, contradiction) in contradictions.iter().enumerate() {
-                    println!("\n{}. {}", i + 1, contradiction.explanation);
-                    println!("   A: [{}] {}", &contradiction.node_a.id[..8], contradiction.node_a.content);
-                    println!("   B: [{}] {}", &contradiction.node_b.id[..8], contradiction.node_b.content);
+            let graph = store.load()?;
+            let mut udaf_model = UDAFModel::new();
+            udaf_model.populate_from_graph(&graph);
+
+            println!("🔍 Detecting Contradictions (Formal Verification)\n");
+            println!("═══════════════════════════════════════════════════════════════\n");
+
+            // Get all nodes to check pairwise
+            let nodes = graph.list_nodes(None);
+            let mut contradictions_found = 0;
+            let mut checked_pairs = 0;
+
+            println!("Analyzing {} specifications...\n", nodes.len());
+
+            let mut prover = Prover::new();
+
+            for i in 0..nodes.len() {
+                for j in i+1..nodes.len() {
+                    let node_a = &nodes[i];
+                    let node_b = &nodes[j];
+                    checked_pairs += 1;
+
+                    // Get admissible sets
+                    if let (Some(admissible_a), Some(admissible_b)) = (
+                        udaf_model.admissible_sets.get(&node_a.id),
+                        udaf_model.admissible_sets.get(&node_b.id),
+                    ) {
+                        // Skip if either has no constraints (nothing to prove)
+                        if admissible_a.constraints.is_empty() || admissible_b.constraints.is_empty() {
+                            continue;
+                        }
+
+                        // Prove consistency
+                        let proof = prover.prove_consistency(admissible_a, admissible_b);
+
+                        // Check if refuted (contradiction detected)
+                        if proof.status == spec_core::ProofStatus::Refuted {
+                            contradictions_found += 1;
+
+                            println!("❌ Contradiction #{}\n", contradictions_found);
+                            println!("   Specification A:");
+                            println!("     ID:      [{}]", &node_a.id[..8]);
+                            println!("     Content: {}", node_a.content);
+                            println!("     Constraints: {}", admissible_a.constraints.len());
+                            for c in &admissible_a.constraints {
+                                println!("       - {} ({})", c.description, c.formal.as_ref().unwrap_or(&"none".to_string()));
+                            }
+                            println!();
+
+                            println!("   Specification B:");
+                            println!("     ID:      [{}]", &node_b.id[..8]);
+                            println!("     Content: {}", node_b.content);
+                            println!("     Constraints: {}", admissible_b.constraints.len());
+                            for c in &admissible_b.constraints {
+                                println!("       - {} ({})", c.description, c.formal.as_ref().unwrap_or(&"none".to_string()));
+                            }
+                            println!();
+
+                            println!("   Formal Proof:");
+                            for (step_num, step) in proof.steps.iter().enumerate() {
+                                println!("     {}. {}", step_num + 1, step.description);
+                            }
+                            println!();
+
+                            println!("   Mathematical Result:");
+                            println!("     A₁ ∩ A₂ = ∅ (admissible sets are disjoint)");
+                            println!("     No implementation can satisfy both specifications");
+                            println!("\n   ───────────────────────────────────────────────────────────\n");
+                        }
+                    }
                 }
+            }
+
+            println!("═══════════════════════════════════════════════════════════════\n");
+            println!("Summary:");
+            println!("  Specifications checked: {}", nodes.len());
+            println!("  Pairwise comparisons: {}", checked_pairs);
+            println!("  Contradictions found: {}", contradictions_found);
+            println!();
+
+            if contradictions_found == 0 {
+                println!("✅ No contradictions detected");
+                println!("   All specifications are mutually consistent");
+            } else {
+                println!("⚠️  {} formal contradictions detected", contradictions_found);
+                println!("   Review and resolve contradictions above");
             }
         }
         Commands::DetectOmissions => {
