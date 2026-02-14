@@ -3,6 +3,7 @@ mod proto {
 }
 
 mod presentation;
+mod persistence;
 
 use clap::{Parser, Subcommand};
 use proto::spec_oracle_client::SpecOracleClient;
@@ -13,6 +14,7 @@ use tonic::Request;
 use tracing_subscriber::EnvFilter;
 use spec_core::{FileStore, NodeKind as CoreNodeKind};
 use presentation::formatter::*;
+use persistence::store_router::*;
 
 #[derive(Parser)]
 #[command(name = "spec")]
@@ -435,20 +437,6 @@ fn parse_edge_kind(s: &str) -> SpecEdgeKind {
     }
 }
 
-/// Find .spec/specs.json by walking up from current directory
-fn find_spec_file() -> Option<PathBuf> {
-    let mut current = std::env::current_dir().ok()?;
-    loop {
-        let spec_file = current.join(".spec").join("specs.json");
-        if spec_file.exists() {
-            return Some(spec_file);
-        }
-        if !current.pop() {
-            break;
-        }
-    }
-    None
-}
 
 /// Convert proto NodeKind to core NodeKind
 fn proto_to_core_kind(kind: SpecNodeKind) -> CoreNodeKind {
