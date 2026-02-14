@@ -3,10 +3,10 @@ content: 'Scenario: generate contract template for constraint'
 kind: Scenario
 metadata:
   source_line: '1867'
-  inferred: 'true'
   extractor: test
   confidence: '0.9'
   source_file: spec-core/src/graph.rs
+  inferred: 'true'
   test_function: generate_contract_template_for_constraint
 created_at: 1771077123
 modified_at: 1771077123

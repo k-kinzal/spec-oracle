@@ -3,11 +3,11 @@ content: Terminology resolution
 kind: Assertion
 metadata:
   source_line: '24'
+  rpc_name: ResolveTerminology
   extractor: proto_rpc
   inferred: 'true'
   confidence: '0.95'
   source_file: proto/spec_oracle.proto
-  rpc_name: ResolveTerminology
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

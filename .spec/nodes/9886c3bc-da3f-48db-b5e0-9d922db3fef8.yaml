@@ -3,10 +3,10 @@ content: 'RPC: Remove edge'
 kind: Assertion
 metadata:
   source_line: '15'
-  source_file: proto/spec_oracle.proto
-  extractor: proto_rpc
-  rpc_name: RemoveEdge
   inferred: 'true'
+  rpc_name: RemoveEdge
+  extractor: proto_rpc
+  source_file: proto/spec_oracle.proto
   confidence: '0.95'
 created_at: 1771078430
 modified_at: 1771078430

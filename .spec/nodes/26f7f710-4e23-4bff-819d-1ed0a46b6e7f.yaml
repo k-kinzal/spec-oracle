@@ -2,12 +2,12 @@ id: 26f7f710-4e23-4bff-819d-1ed0a46b6e7f
 content: 'Invariant: !validate_user_authentication(&user)'
 kind: Constraint
 metadata:
-  confidence: '0.95'
-  source_file: spec-core/src/extract.rs
-  assertion: '!validate_user_authentication(&user)'
-  extractor: assertion
   inferred: 'true'
+  confidence: '0.95'
   source_line: '980'
+  extractor: assertion
+  assertion: '!validate_user_authentication(&user)'
+  source_file: spec-core/src/extract.rs
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

@@ -2,11 +2,11 @@ id: d1440e64-1492-4b38-8730-93c9c87f7cc2
 content: 'RPC: Detect omissions'
 kind: Assertion
 metadata:
-  confidence: '0.95'
-  extractor: proto_rpc
   source_file: proto/spec_oracle.proto
-  rpc_name: DetectOmissions
+  extractor: proto_rpc
   source_line: '20'
+  rpc_name: DetectOmissions
+  confidence: '0.95'
   inferred: 'true'
 created_at: 1771078430
 modified_at: 1771078430

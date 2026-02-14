@@ -4,10 +4,10 @@ kind: Constraint
 metadata:
   inferred: 'true'
   doc_comment: 'true'
-  source_line: '971'
   source_file: spec-core/src/extract.rs
-  confidence: '0.8'
+  source_line: '971'
   extractor: doc
+  confidence: '0.8'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 0

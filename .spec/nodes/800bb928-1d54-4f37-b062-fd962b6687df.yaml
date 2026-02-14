@@ -4,9 +4,9 @@ kind: Assertion
 metadata:
   confidence: '0.95'
   extractor: proto_rpc
-  source_line: '45'
   inferred: 'true'
   rpc_name: GetNodeHistory
+  source_line: '45'
   source_file: proto/spec_oracle.proto
 created_at: 1771078430
 modified_at: 1771078430

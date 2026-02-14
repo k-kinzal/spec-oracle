@@ -2,14 +2,14 @@ id: 489f4790-94e6-4290-9426-6b231aba44ac
 content: 'Invariant: validate_password(long_password).is_ok()'
 kind: Definition
 metadata:
+  source_file: /tmp/test_extract.rs
   source_line: '7'
+  assertion: validate_password(long_password).is_ok()
+  confidence: '0.95'
   inferred: 'true'
   example_purpose: test_data
-  assertion: validate_password(long_password).is_ok()
-  source_file: /tmp/test_extract.rs
-  extractor: assertion
   is_example: 'true'
-  confidence: '0.95'
+  extractor: assertion
 created_at: 1771094226
 modified_at: 1771094226
 formality_layer: 3

@@ -3,11 +3,11 @@ content: 'Scenario: no duplicate detection for synonym edges'
 kind: Scenario
 metadata:
   confidence: '0.9'
-  extractor: test
   test_function: no_duplicate_detection_for_synonym_edges
-  source_file: spec-core/src/graph.rs
-  inferred: 'true'
   source_line: '1644'
+  source_file: spec-core/src/graph.rs
+  extractor: test
+  inferred: 'true'
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3
