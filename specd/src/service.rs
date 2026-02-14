@@ -105,13 +105,20 @@ impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
     ) -> Result<Response<proto::AddNodeResponse>, Status> {
         let req = request.into_inner();
         let mut graph = self.graph.lock().map_err(|e| Status::internal(e.to_string()))?;
-        let node = graph.add_node(
+
+        // Extract formality_layer from metadata if present
+        let formality_layer = req.metadata.get("formality_layer")
+            .and_then(|s| s.parse::<u8>().ok())
+            .unwrap_or(0);
+
+        let node = graph.add_node_with_layer(
             req.content,
             from_proto_node_kind(req.kind),
+            formality_layer,
             req.metadata,
         );
         let resp = proto::AddNodeResponse {
-            node: Some(to_proto_node(node)),
+            node: Some(to_proto_node(&node)),
         };
         self.save(&graph)?;
         Ok(Response::new(resp))
