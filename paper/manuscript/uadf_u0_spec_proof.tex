@@ -71,8 +71,8 @@ plus reproducible extraction evidence on real artifacts.
 \item[\textbf{RQ2}] Can $A_i\subseteq D_i$ be lifted to root-witness validity?
 \item[\textbf{RQ3}] Can join-style and meet-style root operators coexist coherently in one typed model?
 \item[\textbf{RQ4}] Can transfer/composition assumptions be stated precisely enough for machine checking?
-\item[\textbf{RQ5}] Can extraction adequacy be decomposed into sound-only and complete-only forms?
-\item[\textbf{RQ6}] Can the real-OSS extraction pipeline be executed reproducibly (pipeline executability)?
+\item[\textbf{RQ5 (theory)}] Can extraction adequacy over an abstract relation $E$ be decomposed into sound-only and complete-only forms?
+\item[\textbf{RQ6 (practice)}] Can technical re-executability of the real-OSS extraction pipeline be ensured?
 \end{enumerate}
 
 \section{Typed UAD/f Core}
@@ -179,6 +179,7 @@ For extraction relation $E: \Omega\to\beta_i\to Prop$:
 \item if $E$ implies projection realizability (completeness), then $semanticPullback\subseteq preimage$;
 \item if both hold, equality follows.
 \end{itemize}
+Here, $E$ is an abstract relation; this theorem does not prove semantic preservation of the regex extractor used in the OSS demo.
 Operationally:
 \begin{itemize}
 \item completeness-side inclusion is required for safe emptiness claims (avoid false contradictions);
@@ -220,6 +221,8 @@ This is a theorem-level equivalence between closed-form check and witness existe
 \texttt{paper/case-study/real\_projects/external\_validation.py}
 fetches official pages and extracts numeric bounds for
 PostgreSQL identifier length, zlib compression level, and SQLite page size.
+\textbf{Important:} this is a technical executability demo ($n=3$ convenience sample),
+not an estimation of contradiction prevalence or population representativeness.
 Observed results (2026-02-14):
 \begin{itemize}
 \item projects: 3, consistent: 3, contradictory: 0
@@ -241,6 +244,8 @@ Extraction soundness/completeness itself is not proven in this paper,
 and we do not claim direct theorem application from this regex layer.
 \noindent
 Thus the regex extraction layer is treated as an input-construction layer, not as a verified extractor.
+This section addresses RQ6 (practice), while practical application of RQ5 (theory)
+requires additional extractor-semantics proofs.
 
 \paragraph{Reproducibility lock.}
 The pipeline outputs:
@@ -251,6 +256,7 @@ The pipeline outputs:
 \end{itemize}
 with URL, SHA256, retrieval timestamp, and snapshot path.
 The extraction script uses Python standard library only (no extra pip dependencies).
+Snapshots are included in this repository for offline replay.
 Online fetching requires network access.
 Offline replay is supported via:
 \begin{verbatim}
@@ -325,9 +331,9 @@ plus reproducible source-locked execution of the pre-input extraction pipeline.
 RQ closure (navigation): RQ1 is resolved by the typed inverse-image definition;
 RQ2 by domain-lift witness lemmas; RQ3 by join/meet split plus Theorem~\ref{thm:join-meet-linkage};
 RQ4 by Theorem~\ref{thm:transfer} and Theorem~\ref{thm:composition};
-RQ5 by Theorem~\ref{thm:adequacy}; RQ6 is partially addressed by the
-source-locked extraction pipeline executability demo, with extraction
-soundness/completeness left as future work.
+RQ5 (theory) by Theorem~\ref{thm:adequacy}; RQ6 (practice) is resolved as technical
+re-executability of the source-locked extraction pipeline.
+Extractor soundness/completeness is outside RQ6 scope and left as future work.
 
 \paragraph{References}
 [1] Patrick Cousot and Radhia Cousot, ``Abstract Interpretation: A Unified Lattice Model for Static Analysis of Programs by Construction or Approximation of Fixpoints,'' in \emph{Proceedings of the 4th ACM SIGACT-SIGPLAN Symposium on Principles of Programming Languages (POPL 1977)}, pp. 238--252, 1977.\\

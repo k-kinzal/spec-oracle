@@ -24,7 +24,7 @@
 
 ### 0.3 貢献範囲
 - 研究者: 暗黙仮定（随伴の成立、層間伝播仮定、抽出同値仮定）を明示し、議論可能にする。
-- 実務者: `U0`（被覆合成 / over-approximation）と `U∧`（同時満足）を使い分け、差分統合と矛盾判定を混同しない設計指針を得る。
+- 実務者: `U0`（被覆合成 / over-approximation）と `U∧`（同時満足）の使い分け定義、および抽出パイプライン技術的実行可能性のPoCを得る（一般適用性は未評価）。
 - 再現性: Lean証明・抽出スクリプト・ソースロックを同梱し、第三者検証可能にする。
 
 ## 1. 研究課題（RQ）
@@ -34,8 +34,8 @@
 - `RQ2`: `A(i) ⊆ D(i)` を root 側の証人妥当性に持ち上げられるか。
 - `RQ3`: join側 (`U0`) と meet側 (`U∧`) を同一モデル上で整合的に定義できるか。
 - `RQ4`: 層間伝播・層間合成の仮定を型付きで明示し、機械検証できるか。
-- `RQ5`: 抽出関係適合を `↔` だけでなく one-sided（sound / complete）にも分解できるか。
-- `RQ6`: 実OSSアーティファクト抽出パイプラインを再実行可能な形で運用できるか（実行可能性）。
+- `RQ5 (theory)`: 抽象抽出関係 `E : Ω → β_i → Prop` に対し、抽出適合を `↔` だけでなく one-sided（sound / complete）にも分解できるか。
+- `RQ6 (practice)`: 実OSSアーティファクト抽出パイプラインの**技術的再実行可能性**を確保できるか。
 
 ### 1.1 評価軸
 | 軸 | 内容 | 指標 |
@@ -44,7 +44,7 @@
 | 理論妥当性 | RQ対応定理 | §4 の中核定理群 |
 | 非自明性 | Lean化で顕在化した欠落仮定 | §5（設計判断1〜4） |
 | 再現可能性 | build/抽出再実行性 | §7.3, §7.4 |
-| 実アーティファクト接続可能性 | 抽出パイプラインの再現実行 | §6.2（3 OSS + 変異検出） |
+| 抽出パイプライン実行可能性デモ | source-lock 付き再実行（PoC限定: n=3, 数値境界制約のみ, 抽出正当性は対象外） | §6.2（3 OSS, source-lock 再実行） |
 
 ## 2. 型付き UAD/f モデル（自己完結定義）
 ### 2.1 記法表
@@ -52,7 +52,7 @@
 |---|---|---|
 | `Ω` | `α` | ルート空間 |
 | `I` | `ι` | 層インデックス |
-| `β_i` | `carrier i` | 層 `i` の搬送型 |
+| `β_i` | `M.carrier i : Type w` | 層 `i` の搬送型（`carrier : ι → Type w` の `i` への適用結果） |
 | `D_i` | `D i : SpecSet (carrier i)` | 層 `i` の対象領域 |
 | `A_i` | `Ui i : SpecSet (carrier i)` | 層 `i` の許容集合 |
 | `f_{0i}` | `proj i : Ω → Option β_i` | 部分射影 |
@@ -60,9 +60,11 @@
 本文では数学記法 `A(i)` を用い、Lean実装名 `Ui i` に対応づける。
 
 `D(i)` を分離する理由:
-- `A(i)` だけでは「仕様が語る対象範囲」と「その範囲内で許容される条件」が混在する。
-- `A(i) ⊆ D(i)` を明示することで、root 側証人が domain 内に落ちること（RQ2）を定理として追跡できる。
+- `carrier i` は型レベルの対象空間全体を表し、`D(i)` はその上の対象領域述語（値レベル制約）を表す。
+- `A(i)` だけでは「仕様が語る対象範囲（`D(i)`）」と「その範囲内で許容される条件（`A(i)`）」が混在する。
+- `A(i) ⊆ D(i)` を明示することで、root 側証人が `carrier i` のうち domain 述語 `D(i)` を満たすこと（RQ2）を定理として追跡できる。
 - 実アーティファクト抽出でも、境界値・単位・包含性の前提を `D(i)` 側に置き、`A(i)` は許容条件に限定できる。
+- ただし §6.2 の現行抽出デモは `A(i)` 候補生成に主眼があり、`D(i)` 分離の実運用実証までは到達していない（限界 §9）。
 
 ### 2.2 逆像の誘導定義
 \[
@@ -145,17 +147,15 @@ Contradictory(i,j) :\Leftrightarrow \forall x,\ x\in lifted(i)\to x\in lifted(j)
 ### 4.1 層間伝播の十分条件（同一点 `x` の連結仮定）
 `R : β_i → β_j → Prop` とし、次を仮定する。
 
-1. `∀ x yj, proj_j x = some yj → ∃ yi, proj_i x = some yi ∧ R yi yj`
-2. `∀ yi yj, R yi yj → yj∈A(j) → yi∈A(i)`
+1. (`hproj` in Lean) `∀ x yj, proj_j x = some yj → ∃ yi, proj_i x = some yi ∧ R yi yj`
+2. (`hA` in Lean) `∀ yi yj, R yi yj → yj∈A(j) → yi∈A(i)`
 
 このとき `lifted(j) ⊆ lifted(i)`。
-
-注意: 本定理は仮定1,2の**十分性**を示す。必要性（より弱い仮定では不可能であること）は本稿では証明していない。
 
 Lean: `lifted_transfer` in `paper/lean/UadfU0/InterLayer/Transfer.lean`。
 
 ### 4.2 層間合成則（`pullbackVia` を明示）
-`g : β_i → Option β_j` に対して
+`g : β_i → Option β_j`（`β_i` から `β_j` への部分写像）に対して
 \[
 pullbackVia_g(S) := \{yi \mid \exists yj,\ g(yi)=some(yj)\land yj\in S\}
 \]
@@ -178,11 +178,12 @@ Lean: `preimage_compose` in `paper/lean/UadfU0/InterLayer/Composition.lean`。
   - Lean: `preimage_eq_semanticPullback`
 
 これにより、`proj_i(x)=some(y) ↔ E(x,y)` の強仮定を分解し、現実抽出器への接続を段階化した。
+ここでの `E` は抽象関係であり、regex 抽出器の意味保存性をこの節で証明したことを意味しない。
 
 運用上の帰結:
-- 偽陰性（見逃し）を避ける側に効くのは soundness 側ではなく completeness 側 (`semanticPullback ⊆ preimage`) である。
 - 偽陽性（存在しない整合を報告）を避ける側に効くのは soundness 側 (`preimage ⊆ semanticPullback`) である。
-- `U∧` の空判定を安全側（「空なら本当に空」）で使うには completeness 側が必要となる。
+- 偽陰性（見逃し）を避ける側に効くのは completeness 側 (`semanticPullback ⊆ preimage`) である。
+- `U∧` の空判定でどちらの側を安全性基準に置くかは運用要件に依存するため、判定ポリシー（偽陽性抑制 / 偽陰性抑制）を先に固定する必要がある。
 
 ### 4.4 部分射影下での非随伴性
 `∃x0, proj_i(x0)=none` なら、`preimage_i` は冪集合上の左随伴を持たない。
@@ -244,6 +245,9 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
 4. 交差判定で整合性評価
 5. 変異試験（`requirement.lower = upper + 1`）で矛盾検出感度を確認
 
+**重要**: 本節の `n=3` は技術的実行可能性デモであり、矛盾発生率の推定や母集団代表性の主張を意図しない。  
+選定は「3層公開・数値境界制約・URL固定取得可能」という実行要件に基づく convenience sample である。
+
 デモ実行結果（2026-02-14）:
 - `n_real_projects = 3`
 - `n_real_consistent = 3`
@@ -259,7 +263,7 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
 
 選定理由とバイアス管理:
 - 3件はいずれも「要求文書・API文書・実装ソース」の3層が公開され、URL固定取得が可能な代表例として選定した convenience sample である。
-- 制約種別としては、識別子長（言語仕様）、圧縮レベル（アルゴリズムパラメータ）、ページサイズ（ストレージ設定）を含み、異なるドメインで抽出可否を確認する目的で選んだ。
+- 制約種別はいずれも数値境界制約である。識別子長（言語仕様）、圧縮レベル（アルゴリズムパラメータ）、ページサイズ（ストレージ設定）という文脈の異なる3件で、同一の数値抽出処理が技術的に再実行できるかを確認する目的で選んだ。
 - したがって本結果は contradiction 発生率を推定する統計研究ではなく、抽出から判定までの**パイプライン実行可能性デモ**として解釈する。
 - 版固定情報（URL/SHA256/UTC時刻）は `external_validation_sources.lock.json` に記録し、結果追試で同一入力を再構成できるようにした。
 
@@ -274,8 +278,10 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
 - 結果: 3件とも整合、変異3件は全検出。
 - 解釈: 本節が示すのは「既存仕様の不具合発見率」ではなく、**実アーティファクト抽出からJSON出力・交差判定までを source-lock 付きで再実行できること**。
 - ただし抽出器自体（regex層）の正当性保証は本稿の範囲外であり、抽出 soundness/completeness は仮定として扱う。
+- したがって本節は `RQ6 (practice)` の実行可能性確認を対象とし、`RQ5 (theory)` の実抽出器適用（意味保存証明）は対象外である。
 - 変異試験の意味: `lower > upper` 変異は、実装した区間判定が破綻入力を検出することを確認する sanity check であり、理論の外的妥当性や現実バグ有病率を示すものではない。
 - 限界: 対象は数値境界制約に限定。構造制約・時間制約は未評価。
+- 運用ポリシーの目安: 偽陽性抑制を優先する場合は soundness 側、偽陰性抑制を優先する場合は completeness 側を重視して抽出器要件を定める。
 
 ## 7. 再現可能性
 ### 7.1 Lean 再現
@@ -324,10 +330,13 @@ cd paper/lean
 
 `source_lock` には URL, SHA256, 取得UTC時刻, snapshot path を記録し、抽出再現の証跡とする。
 抽出スクリプトは Python標準ライブラリのみを使用し、追加pip依存を必要としない。
+`snapshots/*` は本リポジトリに同梱し、オフライン追試時の入力として利用する。
 
 追試手順（オンライン/オフライン）:
-1. オンライン初回実行: `python external_validation.py` を実行し、`results` / `source_lock` / `snapshots` を生成する（ネットワーク必要）。
-2. オフライン追試: `python external_validation.py --offline-lock external_validation_sources.lock.json` を実行し、snapshot と lock の SHA256 整合を検証した上で同じ抽出処理を再実行する（ネットワーク不要）。
+1. オンライン再取得: `python external_validation.py` を引数なしで実行し、`results` / `source_lock` / `snapshots` を再生成する（既存 lock/snapshot があってもオンライン取得を行う。ネットワーク必要）。
+2. オフライン追試: `python external_validation.py --offline-lock external_validation_sources.lock.json` を実行し、各 snapshot 読み込み時に lock 記録との SHA256 整合を検証しながら同じ抽出処理を再実行する（ネットワーク不要）。
+3. SHA256 検証は `paper/case-study/real_projects/external_validation.py` の `fetch_text` オフライン分岐で実装している（不一致時は例外停止）。
+4. オフライン追試で SHA256 不一致が発生した場合は、論文実行時と異なる入力であり再現性が保証されないことを意味するため、同梱 snapshot と lock の一致状態を復元して再実行する。
 
 ## 8. 関連研究と位置づけ
 本稿は既存理論の代替ではなく、UAD/f 最小コアの mechanization を目的とする。
@@ -358,6 +367,7 @@ cd paper/lean
 4. regex 抽出の soundness/completeness（抽出漏れ・誤抽出率）は本稿で定量評価していない。
 5. 現在のケースは層間合成連鎖や one-sided adequacy の実プロジェクト実証まで到達していない。
 6. mathlib非依存のため、既存ライブラリ比較の網羅性は今後の課題。
+7. 層間伝播定理（§4.1）は十分条件を与えるが、必要条件は未証明である。
 
 ## 10. 結論
 本稿は、UAD/f の root 統合問題を
@@ -381,8 +391,8 @@ RQ対応の要約:
 - `RQ2`: §4.6 背景補題群（`lifted_subset_preimage_domain`, `U0_witness_projects_to_some_domain`）で解決。
 - `RQ3`: §3 と §4.5（`U0`/`U∧` の join/meet 分離と GLB/LUB 性質）で解決。
 - `RQ4`: §4.1, §4.2（`lifted_transfer`, `preimage_compose`）で仮定明示の上で解決。
-- `RQ5`: §4.3（sound-only / complete-only / equality）で段階的に解決。
-- `RQ6`: §6.2, §7.5 で source-lock 付き抽出パイプラインの再実行可能性を確認（部分解決）。抽出正当性（soundness/completeness）の評価は未解決。
+- `RQ5 (theory)`: §4.3（sound-only / complete-only / equality）で抽象関係 `E` に対する分解を定式化して解決。実抽出器への適用には抽出層の意味保存証明が別途必要（限界 §9）。
+- `RQ6 (practice)`: §6.2, §7.5 で source-lock 付き抽出パイプラインの技術的再実行可能性を確認して解決。抽出正当性（soundness/completeness）は RQ6 の対象外であり、限界 §9 に記載。
 
 ---
 ### 参考文献

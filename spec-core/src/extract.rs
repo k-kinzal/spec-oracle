@@ -544,6 +544,20 @@ impl SpecGraph {
         // First try simple similarity
         let simple_sim = self.calculate_semantic_similarity(text1, text2);
 
+        // For cross-layer comparisons, ALWAYS use AI if available
+        // Keyword overlap is meaningless across layers (U0 uses natural language, U2/U3 use technical terms)
+        // Example: U0 "system must detect contradictions" ↔ U2 "RPC: DetectContradictions" (overlap ~0.1, semantic ~0.9)
+        if layer1 != layer2 {
+            if let Some(ai_sim) = ai.semantic_similarity(text1, text2, layer1, layer2) {
+                // Trust AI heavily for cross-layer matching
+                // Keyword overlap is noise, semantic equivalence is signal
+                return simple_sim * 0.2 + ai_sim * 0.8;
+            }
+            // AI unavailable: fall back to simple similarity (will miss many connections)
+            return simple_sim;
+        }
+
+        // Same-layer comparisons: use original conservative logic
         // If similarity is very high (>0.8), trust keyword matching
         if simple_sim > 0.8 {
             return simple_sim;
@@ -559,7 +573,7 @@ impl SpecGraph {
             }
         }
 
-        // For very low similarity (<0.4), skip AI (too expensive, low probability)
+        // For very low similarity (<0.4) in same layer, skip AI (too expensive, low probability)
         simple_sim
     }
 
