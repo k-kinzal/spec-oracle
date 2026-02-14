@@ -629,23 +629,42 @@
     - **main.rsの分割**: command handlerをユースケース別モジュールへ分離し、表示層も別コンポーネント化。
   - **解決状況**: 未着手（調査・言語化完了、設計再編は未実施）
 
-- [ ] **U1層（形式仕様）とU2層（インターフェース定義）の仕様が欠落** 🔄 **部分的に解決 (2026-02-14, Session 62)**
+- [ ] **U2層（インターフェース定義）の自動抽出が未実装**
   - **発見日**: 2026-02-14
-  - **詳細**: 主要な仕様（omission検出など）について、U0（自然言語）とU3（コード）の間の中間層が記録されていない。
+  - **詳細**: U2層（gRPC proto、API仕様、型定義）を自動抽出する機能が存在しない。現状は手動で`spec add`により追加している。
+  - **現状の問題**:
+    - ❌ gRPC protoファイルからRPC定義を自動抽出できない
+    - ❌ 手動で`spec add`により28個のRPC methodを追加（本質に反する）
+    - ❌ Pythonスクリプトで`formality_layer`を設定（本質に反する）
+    - ❌ proto定義が変更されても自動反映されない
+  - **影響範囲**: U0-U3の多層追跡が不完全。U2層が手動管理のため、protoとの整合性が保証されない。
+  - **どうあって欲しいか**:
+    - **Proto抽出器の実装**:
+      - `spec extract <proto-file>` → gRPC RPC定義を自動抽出
+      - `spec extract spec-daemon/proto/spec.proto` → 28個のRPC仕様を自動抽出、U2層に追加
+      - formality_layer=2を自動設定
+      - U0仕様との対応を自動推論
+    - **継続的抽出**:
+      - proto変更時に自動再抽出
+      - CIで`spec extract`を実行
+      - 手動管理不要
+    - **他のU2ソース対応**:
+      - OpenAPI/Swagger定義からAPI仕様抽出
+      - TypeScript型定義から型仕様抽出
+      - IDL（Thrift, Avro）から仕様抽出
+  - **U1層について**:
     - U1: TLA+、Alloy、形式モデルなど
-    - U2: gRPC proto定義、API仕様、型定義など
-  - **影響範囲**: 完全な多層仕様追跡ができない。設計から実装への変換過程が不可視。
-  - **解決内容**:
-    - ✅ **U2層完成** (Session 62):
-      - 全28個のgRPC RPC methodをU2仕様として抽出
-      - 7仕様 → 35仕様 (5倍増加)
-      - `spec add`経由で28個のRPC method定義を追加
-      - Python scriptで`formality_layer: U2`メタデータを設定
-      - タスク文書: `tasks/2026-02-14-session-62-complete-u2-layer.md`
-    - ⏳ **U1層**: 未着手
-      - このプロジェクトではTLA+/Alloy形式仕様が存在しない
-      - U1層が必要な場合、将来的に追加可能
-  - **解決状況**: 🔄 **部分的に解決** - U2層完成、U1層は本プロジェクトでは該当なし
+    - 本プロジェクトでは現在TLA+/Alloy仕様が存在しない
+    - 将来的にTLA+/Alloy抽出器を実装可能
+  - **実装の方向性**:
+    - `ProtoExtractor::extract(path)` の実装（RustExtractorと同様）
+    - `InferredSpecification { formality_layer: 2, ... }`
+    - `TransformStrategy::ProtoExtraction` の実装
+    - `spec extract`でprotoファイル対応
+  - **理論的背景**:
+    - f₀₂⁻¹: U2 → U0（protoインターフェース定義から根仕様を逆算）
+    - U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3)
+  - **解決状況**: ❌ **未着手** - 手動追加のみ、自動抽出未実装
 
 - [x] **formality_layerの二重管理** ✅ **解決済み (2026-02-14, Session 65)**
   - **発見日**: 2026-02-14
