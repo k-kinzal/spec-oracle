@@ -588,7 +588,12 @@ async fn run_standalone(command: Commands, spec_path: PathBuf) -> Result<(), Box
                     CoreNodeKind::Definition => "definition",
                     CoreNodeKind::Domain => "domain",
                 };
-                println!("  [{}] {} - {}", &node.id[..8], kind_str, node.content);
+                let layer_label = format_formality_layer(node.formality_layer);
+                println!("  [{}] [{}] {} - {}",
+                    layer_label,
+                    &node.id[..8],
+                    kind_str,
+                    node.content);
             }
         }
         Commands::DetectContradictions => {
@@ -1732,7 +1737,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 println!("Found {} node(s):", nodes.len());
                 for node in nodes {
-                    println!("  [{}] {} - {}", node.id, node_kind_name(node.kind), node.content);
+                    let layer_label = format_formality_layer(node.formality_layer as u8);
+                    println!("  [{}] [{}] {} - {}",
+                        layer_label,
+                        node.id,
+                        node_kind_name(node.kind),
+                        node.content);
                 }
             }
         }
@@ -1796,7 +1806,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if !result.matching_nodes.is_empty() {
                 println!("\nMatching nodes:");
                 for node in result.matching_nodes {
-                    println!("  [{}] {} - {}", node.id, node_kind_name(node.kind), node.content);
+                    let layer_label = format_formality_layer(node.formality_layer as u8);
+                    println!("  [{}] [{}] {} - {}",
+                        layer_label,
+                        node.id,
+                        node_kind_name(node.kind),
+                        node.content);
                 }
             }
         }
