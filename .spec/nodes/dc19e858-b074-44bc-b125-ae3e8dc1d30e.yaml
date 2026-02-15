@@ -2,10 +2,10 @@ id: dc19e858-b074-44bc-b125-ae3e8dc1d30e
 content: 'RPC: Diff timestamps'
 kind: Assertion
 metadata:
+  inferred: 'true'
+  rpc_name: DiffTimestamps
   extractor: proto_rpc
   source_line: '44'
-  rpc_name: DiffTimestamps
-  inferred: 'true'
   source_file: proto/spec_oracle.proto
   confidence: '0.95'
 created_at: 1771078430

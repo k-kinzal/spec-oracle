@@ -2,11 +2,11 @@ id: 0e01afc7-1685-4e95-ade3-1149f4f614aa
 content: Node operations
 kind: Assertion
 metadata:
-  source_line: '7'
-  confidence: '0.95'
-  rpc_name: AddNode
   source_file: proto/spec_oracle.proto
+  rpc_name: AddNode
   inferred: 'true'
+  confidence: '0.95'
+  source_line: '7'
   extractor: proto_rpc
 created_at: 1771078430
 modified_at: 1771078430

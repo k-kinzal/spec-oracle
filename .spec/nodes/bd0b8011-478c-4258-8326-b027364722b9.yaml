@@ -2,12 +2,12 @@ id: bd0b8011-478c-4258-8326-b027364722b9
 content: 'Scenario: get compliance trend with data'
 kind: Scenario
 metadata:
-  extractor: test
-  confidence: '0.9'
-  source_line: '2434'
-  source_file: spec-core/src/graph.rs
-  inferred: 'true'
   test_function: get_compliance_trend_with_data
+  confidence: '0.9'
+  source_file: spec-core/src/graph.rs
+  source_line: '2434'
+  inferred: 'true'
+  extractor: test
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3

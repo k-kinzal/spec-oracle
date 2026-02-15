@@ -2,8 +2,8 @@ id: ae111e6b-256c-47dc-9862-f4165150f62e
 content: The check command implementation must call detect_contradictions and detect_omissions, display results, and exit with appropriate status code
 kind: Constraint
 metadata:
-  source_file: spec-cli/src/main.rs
   function: Commands::Check
+  source_file: spec-cli/src/main.rs
 created_at: 1771061935
 modified_at: 1771061935
 formality_layer: 3

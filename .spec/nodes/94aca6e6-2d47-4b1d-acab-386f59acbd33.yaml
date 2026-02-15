@@ -4,10 +4,10 @@ kind: Assertion
 metadata:
   source_line: '520'
   confidence: '0.7'
-  extractor: doc
-  inferred: 'true'
   doc_comment: 'true'
   source_file: spec-core/src/graph.rs
+  inferred: 'true'
+  extractor: doc
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 0

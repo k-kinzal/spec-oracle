@@ -2,8 +2,8 @@ id: c2f9b469-f182-4e76-8fef-4168feb10dd6
 content: Session 103 verified that Z3 formal verification is fully integrated and working by testing contradictory password constraints (at least 12 vs at most 10) which Z3 correctly detected as formally proven inconsistent
 kind: Definition
 metadata:
-  describes: session_103_z3_verification_test
   meta_specification: 'true'
+  describes: session_103_z3_verification_test
 created_at: 1771093376
 modified_at: 1771093376
 formality_layer: 0

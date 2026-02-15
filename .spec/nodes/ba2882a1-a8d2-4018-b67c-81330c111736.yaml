@@ -3,8 +3,8 @@ content: 'Scenario: detect inter universe inconsistencies missing transform'
 kind: Scenario
 metadata:
   test_function: detect_inter_universe_inconsistencies_missing_transform
-  source_line: '2308'
   extractor: test
+  source_line: '2308'
   confidence: '0.9'
   inferred: 'true'
   source_file: spec-core/src/graph.rs
