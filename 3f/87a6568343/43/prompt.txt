@@ -1,0 +1,1217 @@
+Implement the following plan:
+
+# Plan: Separate Projection (f) from Extractor in Formal Layer
+
+## Context
+
+**Problem**: The current formal layer mixes projection functions and extractors, violating the paper model.
+
+According to `/Users/ab/Projects/spec-oracle/paper/manuscript/uadf_u0_spec_proof.md` §2.6, the model requires clear separation:
+
+```
+proj_i : Ω → Option β_i  (projection from root to layer)
+  = (obs_i : Ω → Option Γ_i) >> (extract_i : Γ_i → Option β_i)
+```
+
+Where:
+- **Ω**: Root space (behavioral trace or artifact bundle)
+- **Γ_i**: Artifact space (requirements docs, API specs, code)
+- **β_i**: Layer-specific IR (intermediate representation)
+- **obs_i**: Observer (root → artifact)
+- **extract_i**: Extractor (artifact → IR)
+- **proj_i**: Projection composition
+
+**Current Reality** (from exploration):
+- `TransformStrategy::ASTAnalysis` conflates projection and extraction
+- No explicit Ω (root space) type
+- No Γ_i (artifact space) type
+- `execute_transform()` directly calls `RustExtractor::extract()`
+- Projection and extraction are mixed together
+
+**User Requirement**: Make formal layer types correct according to paper model. Defer implementation details of U0 construction.
+
+## Solution: Introduce Proper Type Separation
+
+### 1. New Module Structure
+
+Create `/Users/ab/Projects/spec-oracle/spec-core/src/formal/projection/` with:
+
+**projection/mod.rs**
+```rust
+//! Projection layer following paper §2.6
+pub mod root_space;
+pub mod artifact_space;
+pub mod observer;
+pub mod projection;
+
+pub use root_space::{RootSpace, RootSpaceKind};
+pub use artifact_space::{ArtifactSpace, ArtifactKind, ArtifactContent};
+pub use observer::{Observer, ArtifactBundleObserver, TraceObserver};
+pub use projection::{Projection, Extractor};
+```
+
+**projection/root_space.rs**
+
+Define Ω (root space) following the 3-layer pattern (ID/ProofData/Metadata):
+
+```rust
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
+
+/// Root space Ω: foundational space from which projections are derived
+/// Following paper §2.5, supports Trace or ArtifactBundle instantiation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RootSpace {
+    // Layer 1: Identifier
+    pub id: RootSpaceId,
+
+    // Layer 2: ProofData (optional - not used for root space)
+    // Root space is not a proof target, so no proof_data
+
+    // Layer 3: Metadata (stores all organizational info)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meta: Option<RootSpaceMetadata>,
+}
+
+/// Root space identifier
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct RootSpaceId(String);
+
+impl RootSpaceId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4().to_string())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Root space metadata (Layer 3)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RootSpaceMetadata {
+    #[serde(flatten)]
+    inner: HashMap<String, String>,
+}
+
+impl RootSpaceMetadata {
+    pub fn new() -> Self {
+        Self { inner: HashMap::new() }
+    }
+
+    /// Get root space kind (trace or artifact_bundle)
+    pub fn kind(&self) -> Option<RootSpaceKind> {
+        self.inner.get("kind").and_then(|k| match k.as_str() {
+            "trace" => Some(RootSpaceKind::Trace),
+            "artifact_bundle" => Some(RootSpaceKind::ArtifactBundle),
+            _ => None,
+        })
+    }
+
+    pub fn set_kind(&mut self, kind: RootSpaceKind) {
+        self.inner.insert("kind".to_string(), kind.to_string());
+    }
+
+    /// Snapshot time (for artifact bundles)
+    pub fn snapshot_time(&self) -> Option<&String> {
+        self.inner.get("snapshot_time")
+    }
+
+    pub fn set_snapshot_time(&mut self, time: String) {
+        self.inner.insert("snapshot_time".to_string(), time);
+    }
+
+    /// Version/commit (for reproducibility)
+    pub fn version(&self) -> Option<&String> {
+        self.inner.get("version")
+    }
+
+    pub fn set_version(&mut self, version: String) {
+        self.inner.insert("version".to_string(), version);
+    }
+
+    /// Generic getter
+    pub fn get(&self, key: &str) -> Option<&String> {
+        self.inner.get(key)
+    }
+
+    /// Generic setter
+    pub fn insert(&mut self, key: String, value: String) {
+        self.inner.insert(key, value);
+    }
+}
+
+/// Root space kind (stored in metadata)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RootSpaceKind {
+    /// Ω_trace: Behavioral trace
+    Trace,
+    /// Ω_art: Artifact bundle (PoC choice)
+    ArtifactBundle,
+}
+
+impl std::fmt::Display for RootSpaceKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RootSpaceKind::Trace => write!(f, "trace"),
+            RootSpaceKind::ArtifactBundle => write!(f, "artifact_bundle"),
+        }
+    }
+}
+
+impl RootSpace {
+    /// Create new root space with artifact bundle kind
+    pub fn new_artifact_bundle() -> Self {
+        let mut meta = RootSpaceMetadata::new();
+        meta.set_kind(RootSpaceKind::ArtifactBundle);
+
+        Self {
+            id: RootSpaceId::new(),
+            meta: Some(meta),
+        }
+    }
+
+    /// Create new root space with trace kind
+    pub fn new_trace() -> Self {
+        let mut meta = RootSpaceMetadata::new();
+        meta.set_kind(RootSpaceKind::Trace);
+
+        Self {
+            id: RootSpaceId::new(),
+            meta: Some(meta),
+        }
+    }
+}
+```
+
+**projection/artifact_space.rs**
+
+Define Γ_i (artifact space) following the 3-layer pattern:
+
+```rust
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use uuid::Uuid;
+
+/// Artifact space Γ_i: layer-specific artifact representation
+/// Following 3-layer pattern (ID/ProofData/Metadata)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArtifactSpace {
+    // Layer 1: Identifier
+    pub id: ArtifactSpaceId,
+
+    // Layer 2: ProofData (optional - not used for artifact space)
+    // Artifact space is a data source, not a proof target
+
+    // Layer 3: Metadata (stores all organizational info)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meta: Option<ArtifactSpaceMetadata>,
+}
+
+/// Artifact space identifier
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ArtifactSpaceId(String);
+
+impl ArtifactSpaceId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4().to_string())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Artifact space metadata (Layer 3)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ArtifactSpaceMetadata {
+    #[serde(flatten)]
+    inner: HashMap<String, String>,
+}
+
+impl ArtifactSpaceMetadata {
+    pub fn new() -> Self {
+        Self { inner: HashMap::new() }
+    }
+
+    /// Get artifact kind
+    pub fn kind(&self) -> Option<ArtifactKind> {
+        self.inner.get("kind").and_then(|k| match k.as_str() {
+            "requirements_doc" => Some(ArtifactKind::RequirementsDoc),
+            "api_spec" => Some(ArtifactKind::APISpec),
+            "source_code" => Some(ArtifactKind::SourceCode),
+            "test_code" => Some(ArtifactKind::TestCode),
+            "type_definitions" => Some(ArtifactKind::TypeDefinitions),
+            "formal_spec" => Some(ArtifactKind::FormalSpec),
+            _ => None,
+        })
+    }
+
+    pub fn set_kind(&mut self, kind: ArtifactKind) {
+        self.inner.insert("kind".to_string(), kind.to_string());
+    }
+
+    /// Content type (text, file_ref, structured)
+    pub fn content_type(&self) -> Option<&String> {
+        self.inner.get("content_type")
+    }
+
+    pub fn set_content_type(&mut self, content_type: String) {
+        self.inner.insert("content_type".to_string(), content_type);
+    }
+
+    /// Content value (text content or file path)
+    pub fn content_value(&self) -> Option<&String> {
+        self.inner.get("content_value")
+    }
+
+    pub fn set_content_value(&mut self, value: String) {
+        self.inner.insert("content_value".to_string(), value);
+    }
+
+    /// Source reference (where artifact came from)
+    pub fn source(&self) -> Option<&String> {
+        self.inner.get("source")
+    }
+
+    pub fn set_source(&mut self, source: String) {
+        self.inner.insert("source".to_string(), source);
+    }
+
+    /// Generic getter
+    pub fn get(&self, key: &str) -> Option<&String> {
+        self.inner.get(key)
+    }
+
+    /// Generic setter
+    pub fn insert(&mut self, key: String, value: String) {
+        self.inner.insert(key, value);
+    }
+}
+
+/// Artifact kind (stored in metadata)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArtifactKind {
+    RequirementsDoc,
+    APISpec,
+    SourceCode,
+    TestCode,
+    TypeDefinitions,
+    FormalSpec,
+}
+
+impl std::fmt::Display for ArtifactKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArtifactKind::RequirementsDoc => write!(f, "requirements_doc"),
+            ArtifactKind::APISpec => write!(f, "api_spec"),
+            ArtifactKind::SourceCode => write!(f, "source_code"),
+            ArtifactKind::TestCode => write!(f, "test_code"),
+            ArtifactKind::TypeDefinitions => write!(f, "type_definitions"),
+            ArtifactKind::FormalSpec => write!(f, "formal_spec"),
+        }
+    }
+}
+
+impl ArtifactSpace {
+    /// Create new artifact space from text content
+    pub fn from_text(text: String, kind: ArtifactKind, source: String) -> Self {
+        let mut meta = ArtifactSpaceMetadata::new();
+        meta.set_kind(kind);
+        meta.set_content_type("text".to_string());
+        meta.set_content_value(text);
+        meta.set_source(source);
+
+        Self {
+            id: ArtifactSpaceId::new(),
+            meta: Some(meta),
+        }
+    }
+
+    /// Create new artifact space from file reference
+    pub fn from_file(path: PathBuf, kind: ArtifactKind) -> Self {
+        let mut meta = ArtifactSpaceMetadata::new();
+        meta.set_kind(kind);
+        meta.set_content_type("file_ref".to_string());
+        meta.set_content_value(path.to_string_lossy().to_string());
+        meta.set_source(path.to_string_lossy().to_string());
+
+        Self {
+            id: ArtifactSpaceId::new(),
+            meta: Some(meta),
+        }
+    }
+
+    /// Create new artifact space from structured data
+    pub fn from_structured(data: serde_json::Value, kind: ArtifactKind, source: String) -> Self {
+        let mut meta = ArtifactSpaceMetadata::new();
+        meta.set_kind(kind);
+        meta.set_content_type("structured".to_string());
+        meta.set_content_value(data.to_string());
+        meta.set_source(source);
+
+        Self {
+            id: ArtifactSpaceId::new(),
+            meta: Some(meta),
+        }
+    }
+
+    /// Get text content (if available)
+    pub fn as_text(&self) -> Result<String, String> {
+        let meta = self.meta.as_ref().ok_or("No metadata")?;
+        let content_type = meta.content_type().ok_or("No content type")?;
+        let content_value = meta.content_value().ok_or("No content value")?;
+
+        match content_type.as_str() {
+            "text" => Ok(content_value.clone()),
+            "file_ref" => std::fs::read_to_string(content_value)
+                .map_err(|e| format!("Failed to read file: {}", e)),
+            "structured" => Ok(content_value.clone()),
+            _ => Err(format!("Unknown content type: {}", content_type)),
+        }
+    }
+}
+```
+
+**projection/observer.rs**
+
+Define obs_i (Ω → Option Γ_i):
+
+```rust
+use crate::formal::projection::{RootSpace, RootSpaceKind, ArtifactSpace, ArtifactKind};
+use crate::formal::universe::UniverseId;
+use std::path::PathBuf;
+
+/// Observer: obs_i: Ω → Option Γ_i
+pub trait Observer: Send + Sync {
+    fn observe(&self, root: &RootSpace, layer_id: &UniverseId) -> Option<ArtifactSpace>;
+    fn artifact_kind(&self) -> ArtifactKind;
+}
+
+/// Artifact bundle observer (default for PoC)
+/// Observes artifacts from an artifact bundle root space
+pub struct ArtifactBundleObserver;
+
+impl Observer for ArtifactBundleObserver {
+    fn observe(&self, root: &RootSpace, layer_id: &UniverseId) -> Option<ArtifactSpace> {
+        let meta = root.meta.as_ref()?;
+
+        // Check that this is an artifact bundle
+        if meta.kind()? != RootSpaceKind::ArtifactBundle {
+            return None;
+        }
+
+        let layer_name = layer_id.as_str();
+
+        // Get artifact path from metadata
+        // Format: "artifact_{layer_name}_path"
+        let artifact_key = format!("artifact_{}_path", layer_name);
+        let artifact_path = meta.get(&artifact_key)?;
+
+        // Create artifact space from file reference
+        Some(ArtifactSpace::from_file(
+            PathBuf::from(artifact_path),
+            self.artifact_kind(),
+        ))
+    }
+
+    fn artifact_kind(&self) -> ArtifactKind {
+        ArtifactKind::SourceCode
+    }
+}
+
+/// Trace observer (for Ω_trace)
+/// Observes events from a behavioral trace root space
+pub struct TraceObserver {
+    pub layer_name: String,
+}
+
+impl Observer for TraceObserver {
+    fn observe(&self, root: &RootSpace, _layer_id: &UniverseId) -> Option<ArtifactSpace> {
+        let meta = root.meta.as_ref()?;
+
+        // Check that this is a trace
+        if meta.kind()? != RootSpaceKind::Trace {
+            return None;
+        }
+
+        // Get trace events from metadata
+        // Format: "trace_events" contains JSON array of events
+        let events_json = meta.get("trace_events")?;
+        let all_events: Vec<serde_json::Value> = serde_json::from_str(events_json).ok()?;
+
+        // Filter events for this layer
+        let layer_events: Vec<_> = all_events
+            .into_iter()
+            .filter(|event| {
+                event.get("layer")
+                    .and_then(|l| l.as_str())
+                    .map(|l| l == self.layer_name)
+                    .unwrap_or(false)
+            })
+            .collect();
+
+        if layer_events.is_empty() {
+            return None;
+        }
+
+        // Create artifact space from structured data
+        let event_data = serde_json::to_value(layer_events).ok()?;
+        Some(ArtifactSpace::from_structured(
+            event_data,
+            ArtifactKind::TestCode,
+            format!("trace:{}", self.layer_name),
+        ))
+    }
+
+    fn artifact_kind(&self) -> ArtifactKind {
+        ArtifactKind::TestCode
+    }
+}
+
+/// File system observer
+/// Observes artifacts directly from file system
+pub struct FileSystemObserver {
+    pub base_path: PathBuf,
+}
+
+impl Observer for FileSystemObserver {
+    fn observe(&self, _root: &RootSpace, layer_id: &UniverseId) -> Option<ArtifactSpace> {
+        // Map layer to file pattern
+        let pattern = match layer_id.layer() {
+            1 => "**/*.tla", // Formal specs
+            2 => "**/*.proto", // API specs
+            3 => "**/*.rs", // Source code
+            _ => return None,
+        };
+
+        // Find first matching file
+        // (In real implementation, would use glob and select appropriately)
+        let file_path = self.base_path.join(pattern);
+
+        Some(ArtifactSpace::from_file(
+            file_path,
+            self.artifact_kind(),
+        ))
+    }
+
+    fn artifact_kind(&self) -> ArtifactKind {
+        ArtifactKind::SourceCode
+    }
+}
+```
+
+**projection/projection.rs**
+
+Define proj_i composition and Extractor trait:
+
+```rust
+/// Extractor trait: extract_i: Γ_i → Option β_i
+pub trait Extractor<T>: Send + Sync {
+    fn extract(&self, artifact: &ArtifactSpace) -> Result<Vec<T>, String>;
+}
+
+/// Projection: proj_i = obs_i >> extract_i
+pub struct Projection<O, E> {
+    pub observer: O,
+    pub extractor: E,
+    pub target_layer: UniverseId,
+}
+
+impl<O, E, T> Projection<O, E>
+where
+    O: Observer,
+    E: Extractor<T>,
+{
+    /// Execute projection: obs >> extract
+    pub fn project(&self, root: &RootSpace) -> Result<Vec<T>, String> {
+        // Step 1: obs_i(root) → Option Γ_i
+        let artifact = self.observer.observe(root, &self.target_layer)
+            .ok_or_else(|| format!("No artifact for layer {}", self.target_layer.as_str()))?;
+
+        // Step 2: extract_i(artifact) → Option β_i
+        self.extractor.extract(&artifact)
+    }
+}
+```
+
+### 2. Modify TransformStrategy → ProjectionStrategy
+
+In `/Users/ab/Projects/spec-oracle/spec-core/src/formal/transform/transform.rs`:
+
+**Replace TransformStrategy with ProjectionStrategy**:
+
+```rust
+/// Strategy for projection (replaces TransformStrategy)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ProjectionStrategy {
+    ASTExtraction {
+        language: String,
+        observer: ObserverKind,  // NEW: explicit observer
+        extractor_config: HashMap<String, String>,
+    },
+
+    NLPExtraction {
+        model: String,
+        observer: ObserverKind,  // NEW: explicit observer
+        prompt_template: String,
+    },
+
+    FormalVerification {
+        tool: String,
+        observer: ObserverKind,  // NEW: explicit observer
+        verification_config: HashMap<String, String>,
+    },
+
+    TypeExtraction {
+        type_system: String,
+        observer: ObserverKind,  // NEW: explicit observer
+    },
+
+    Manual {
+        description: String,
+    },
+}
+
+/// Serializable observer reference
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ObserverKind {
+    ArtifactBundle,
+    Trace { layer_name: String },
+    FileSystem { base_path: String },
+}
+
+impl ObserverKind {
+    pub fn instantiate(&self) -> Box<dyn Observer> {
+        match self {
+            ObserverKind::ArtifactBundle => Box::new(ArtifactBundleObserver),
+            ObserverKind::Trace { layer_name } => Box::new(TraceObserver {
+                layer_name: layer_name.clone(),
+            }),
+            ObserverKind::FileSystem { base_path } => Box::new(FileSystemObserver {
+                base_path: PathBuf::from(base_path),
+            }),
+        }
+    }
+}
+```
+
+**Update TransformFunction**:
+
+```rust
+pub struct TransformFunction {
+    pub id: TransformId,
+    pub source_universe: UniverseId,
+    pub target_universe: UniverseId,
+    pub description: String,
+    pub kind: TransformKind,
+    pub strategy: ProjectionStrategy,  // CHANGED from TransformStrategy
+    pub metadata: TransformMetadata,
+}
+```
+
+### 3. Update RustExtractor to Implement Extractor Trait
+
+In `/Users/ab/Projects/spec-oracle/spec-core/src/extract.rs`:
+
+```rust
+use crate::formal::projection::{Extractor, ArtifactSpace};
+
+impl Extractor<InferredSpecification> for RustExtractor {
+    fn extract(&self, artifact: &ArtifactSpace) -> Result<Vec<InferredSpecification>, String> {
+        let content = artifact.as_text()?;
+        let mut specs = Vec::new();
+
+        // Use existing extraction methods (adapted to work with string content)
+        specs.extend(Self::extract_from_function_names_str(&content, &artifact.source)?);
+        specs.extend(Self::extract_from_assertions_str(&content, &artifact.source)?);
+        specs.extend(Self::extract_from_tests_str(&content, &artifact.source)?);
+        specs.extend(Self::extract_from_docs_str(&content, &artifact.source)?);
+        specs.extend(Self::extract_from_panics_str(&content, &artifact.source)?);
+
+        Ok(specs)
+    }
+}
+
+// Keep old API for backward compatibility
+impl RustExtractor {
+    pub fn extract(file_path: &Path) -> Result<Vec<InferredSpecification>, String> {
+        let artifact = ArtifactSpace::from_file(
+            file_path.to_path_buf(),
+            ArtifactKind::SourceCode,
+        );
+
+        let extractor = RustExtractor;
+        extractor.extract(&artifact)
+    }
+}
+```
+
+### 4. Update execute_transform and construct_u0
+
+In `/Users/ab/Projects/spec-oracle/spec-core/src/formal/model/model.rs`:
+
+**execute_transform now takes RootSpace**:
+
+```rust
+impl UDAFModel {
+    fn execute_transform(
+        &self,
+        transform: &TransformFunction,
+        graph: &SpecRepository,
+        root: &RootSpace,  // NEW: explicit root space
+    ) -> Result<Vec<InferredSpecification>, String> {
+        match &transform.strategy {
+            ProjectionStrategy::ASTExtraction { language, observer, extractor_config } => {
+                if language == "rust" {
+                    self.execute_rust_projection(observer, extractor_config, root)
+                } else {
+                    Err(format!("Unsupported language: {}", language))
+                }
+            }
+            ProjectionStrategy::Manual { .. } => Ok(Vec::new()),
+            _ => Ok(Vec::new()),
+        }
+    }
+
+    fn execute_rust_projection(
+        &self,
+        observer_kind: &ObserverKind,
+        config: &HashMap<String, String>,
+        root: &RootSpace,
+    ) -> Result<Vec<InferredSpecification>, String> {
+        // Instantiate observer and extractor
+        let observer = observer_kind.instantiate();
+        let extractor = RustExtractor;
+
+        // Create projection
+        let projection = Projection {
+            observer,
+            extractor,
+            target_layer: UniverseId::projection(3, "code".to_string(), String::new())?,
+        };
+
+        // Execute: obs >> extract
+        let specs = projection.project(root)?;
+
+        // Filter by confidence
+        let min_confidence = config
+            .get("min_confidence")
+            .and_then(|s| s.parse::<f32>().ok())
+            .unwrap_or(0.7);
+
+        Ok(specs.into_iter()
+            .filter(|spec| spec.confidence >= min_confidence)
+            .collect())
+    }
+}
+```
+
+**construct_u0 now requires RootSpace**:
+
+```rust
+impl UDAFModel {
+    /// Construct U0 from projection universes via inverse mappings
+    /// U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3)
+    pub fn construct_u0(
+        &mut self,
+        graph: &SpecRepository,
+        root: &RootSpace,  // NEW: explicit root
+    ) -> Result<Vec<InferredSpecification>, String> {
+        let mut newly_created_specs = Vec::new();
+
+        for universe_id in self.universes.keys() {
+            if universe_id.layer() == 0 { continue; }
+
+            let inverse_transform_id = TransformId::inverse(universe_id);
+
+            if let Some(transform) = self.transforms.get(&inverse_transform_id) {
+                let extracted_specs = self.execute_transform(transform, graph, root)?;
+                newly_created_specs.extend(extracted_specs);
+            }
+        }
+
+        Ok(newly_created_specs)
+    }
+}
+```
+
+### 5. Update formal/mod.rs Exports
+
+In `/Users/ab/Projects/spec-oracle/spec-core/src/formal/mod.rs`:
+
+```rust
+pub mod projection;  // NEW module
+
+// Re-export projection types
+pub use projection::{
+    RootSpace, RootSpaceKind,
+    ArtifactSpace, ArtifactKind, ArtifactContent,
+    Observer, ArtifactBundleObserver, TraceObserver,
+    Projection, Extractor,
+};
+```
+
+### 6. Backward Compatibility
+
+Add compatibility layer in `transform/transform.rs`:
+
+```rust
+impl TransformFunction {
+    /// New constructor with explicit projection
+    pub fn new_with_projection(
+        source_universe: UniverseId,
+        description: String,
+        strategy: ProjectionStrategy,
+    ) -> Self {
+        Self {
+            id: TransformId::inverse(&source_universe),
+            source_universe,
+            target_universe: UniverseId::root(),
+            description,
+            kind: TransformKind::Inverse,
+            strategy,
+            metadata: TransformMetadata::new(),
+        }
+    }
+}
+```
+
+## Files to Create
+
+1. `spec-core/src/formal/projection/mod.rs` - Module exports
+2. `spec-core/src/formal/projection/root_space.rs` - Ω type (RootSpace, TraceSpace, ArtifactBundleSpace)
+3. `spec-core/src/formal/projection/artifact_space.rs` - Γ_i type (ArtifactSpace, ArtifactContent, ArtifactKind)
+4. `spec-core/src/formal/projection/observer.rs` - obs_i (Observer trait, ArtifactBundleObserver, TraceObserver)
+5. `spec-core/src/formal/projection/projection.rs` - proj_i composition (Projection struct, Extractor trait)
+
+## Files to Modify
+
+1. `spec-core/src/formal/mod.rs` - Add `pub mod projection;` and re-export types
+2. `spec-core/src/formal/transform/transform.rs` - Replace TransformStrategy with ProjectionStrategy, add ObserverKind
+3. `spec-core/src/formal/model/model.rs` - Update execute_transform and construct_u0 signatures to take RootSpace
+4. `spec-core/src/extract.rs` - Implement `Extractor<InferredSpecification>` trait for RustExtractor
+
+## Verification
+
+### Type Checking
+```bash
+cd spec-core
+cargo check
+```
+
+Should compile without errors after all changes.
+
+### Existing Tests
+```bash
+cd spec-core
+cargo test
+```
+
+Existing tests should still pass (backward compatibility).
+
+### New API Test
+```rust
+#[test]
+fn test_projection_composition() {
+    // Create artifact bundle root using metadata-based design
+    let mut root = RootSpace::new_artifact_bundle();
+
+    // Add artifact metadata
+    if let Some(meta) = root.meta.as_mut() {
+        meta.set_snapshot_time("2025-01-01".to_string());
+        meta.set_version("abc123".to_string());
+        // Register artifact path for U3 (code layer)
+        meta.insert("artifact_U3_path".to_string(), "src/lib.rs".to_string());
+    }
+
+    // Create projection strategy
+    let strategy = ProjectionStrategy::ASTExtraction {
+        language: "rust".to_string(),
+        observer: ObserverKind::ArtifactBundle,
+        extractor_config: HashMap::new(),
+    };
+
+    // Create transform
+    let transform = TransformFunction::new_with_projection(
+        UniverseId::projection(3, "code".to_string(), String::new()).unwrap(),
+        "Extract from code".to_string(),
+        strategy,
+    );
+
+    // Execute
+    let model = UDAFModel::new();
+    let graph = SpecRepository::new();
+    let specs = model.execute_transform(&transform, &graph, &root).unwrap();
+
+    // Verify composition worked
+    assert!(!specs.is_empty());
+}
+```
+
+## Migration Notes
+
+- CLI code using `construct_u0()` will need to pass a `RootSpace`
+- Most existing extractor code can remain unchanged (RustExtractor.extract() still works)
+- New code should use `Projection<O, E>` API for explicit composition
+- Old TransformStrategy still works via backward compatibility layer (deprecated)
+
+## Implementation Order
+
+1. Create `projection/` module files (root_space, artifact_space, observer, projection)
+2. Update `formal/mod.rs` to export new types
+3. Modify `transform.rs` to add ProjectionStrategy and ObserverKind
+4. Update `model.rs` signatures (execute_transform, construct_u0)
+5. Implement Extractor trait in `extract.rs`
+6. Update CLI/test code to create RootSpace instances
+7. Run verification tests
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/ab/.claude/projects/-Users-ab-Projects-spec-oracle/2ac9d3d2-52f5-4ca9-b0ab-80a1bd7fbc45.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.
+
+---
+
+<teammate-message teammate_id="projection-dev" color="purple" summary="Task #4 complete: projection.rs created">
+Task #4 is complete. I created `/Users/ab/Projects/spec-oracle/spec-core/src/formal/projection/projection.rs` with the following:
+
+1. **`Extractor<T>` trait** - defines `fn extract(&self, artifact: &ArtifactSpace) -> Vec<T>`, representing the Gamma_i to beta_i extraction step.
+
+2. **`Projection<O, E>` struct** - generic over observer type `O` and extractor type `E`, with fields:
+   - `observer: O`
+   - `extractor: E`
+   - `target_layer: UniverseId`
+
+3. **`project()` method** - implements the `obs >> extract` composition:
+   - Calls `self.observer.observe(root, &self.target_layer)` to get `ArtifactSpace`
+   - Calls `self.extractor.extract(&artifact)` to get `Vec<T>`
+   - Returns the result
+
+4. **Unit test** with stub observer/extractor verifying the composition pipeline works.
+
+Imports used:
+- `crate::formal::projection::{ArtifactSpace, Observer, RootSpace}` (from sibling modules)
+- `crate::formal::universe::UniverseId`
+
+Note: The test assumes `RootSpace::new()` and `ArtifactSpace::empty()` constructors exist on the sibling types, and that `Observer` trait has signature `fn observe(&self, root: &RootSpace, layer: &UniverseId) -> ArtifactSpace`. These need to be provided by tasks #1, #2, and #3.
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="projection-dev" color="purple">
+{"type":"idle_notification","from":"projection-dev","timestamp":"2026-02-15T09:46:45.350Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="system">
+{"type":"teammate_terminated","message":"projection-dev has shut down."}
+</teammate-message>
+
+<teammate-message teammate_id="projection-dev" color="purple">
+{"type":"idle_notification","from":"projection-dev","timestamp":"2026-02-15T09:46:49.258Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="projection-dev" color="purple">
+{"type":"shutdown_approved","requestId":"shutdown","from":"projection-dev","timestamp":"2026-02-15T09:46:52.733Z","paneId":"in-process","backendType":"in-process"}
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="root-space-dev" color="blue" summary="Task #1 done: root_space.rs created with 3-layer pattern">
+Task #1 complete: Created `/Users/ab/Projects/spec-oracle/spec-core/src/formal/projection/root_space.rs`.
+
+The module implements the full 3-layer pattern consistent with the existing formal layer types (Domain, Universe, Transform):
+
+**Layer 1 - RootSpaceId**: UUID-based identifier with parse/serialize/display, matching DomainId pattern.
+
+**Layer 2 - RootSpaceProofData**: Proof-essential data containing `artifact_count` and `source_universes` (with deduplication via `add_source_universe`). Includes `has_sources()` check.
+
+**Layer 3 - RootSpaceMetadata**: HashMap-based metadata with typed accessors for `kind`, `snapshot_time`, and `version`. Generic `get`/`insert` via MetadataKey. From/Into HashMap conversions.
+
+**RootSpaceKind enum**: `ArtifactBundle` and `Trace` variants with `as_str()` and Display.
+
+**RootSpace struct**: Three fields (`id`, `proof_data`, `meta`). Constructors `new_artifact_bundle()` and `new_trace()` set kind in metadata. Convenience accessors delegate to metadata layer (`kind()`, `snapshot_time()`, `version()`). Proof data accessors (`get_proof_data`, `get_proof_data_mut`) for Prover access.
+
+File passes rustfmt. Note: the projection directory was created but no `mod.rs` exists yet (that's task #5).
+</teammate-message>
+
+<teammate-message teammate_id="root-space-dev" color="blue">
+{"type":"idle_notification","from":"root-space-dev","timestamp":"2026-02-15T09:47:29.577Z","idleReason":"available"}
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="root-space-dev" color="blue">
+{"type":"idle_notification","from":"root-space-dev","timestamp":"2026-02-15T09:47:35.860Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="artifact-space-dev" color="green" summary="Task #2 artifact_space.rs completed">
+Task #2 (Create projection/artifact_space.rs) is complete.
+
+Created file: `/Users/ab/Projects/spec-oracle/spec-core/src/formal/projection/artifact_space.rs`
+
+Implementation summary:
+- **ArtifactKind** enum: RequirementsDoc, APISpec, SourceCode, TestCode, TypeDefinitions, FormalSpec (with Display impl for serialization round-tripping)
+- **ArtifactSpaceId** (Layer 1): UUID-based identifier with parse/new/as_str, Serialize/Deserialize, Display, Default impls (matches DomainId pattern)
+- **ArtifactSpaceMetadata** (Layer 3): HashMap-based with typed accessors for kind(), content_type(), content_value(), source(), plus generic get/insert via MetadataKey. Includes Default, From<HashMap>, Into<HashMap> impls.
+- **ArtifactSpace** struct: 2 fields (id + meta). Layer 2 is intentionally absent since artifacts are inputs to reverse mappings, not verification targets.
+- Constructors: `from_text()`, `from_file()`, `from_structured()` -- each sets kind, content_type, content_value, and source in metadata
+- Helper: `as_text()` returns content only when content_type is "text"
+- Convenience delegators: `kind()`, `source()` on ArtifactSpace
+
+The file passes rustfmt and follows the same patterns as universe/, domain/, and transform/ modules. It is not yet wired into the module tree (that's task #5).
+</teammate-message>
+
+<teammate-message teammate_id="artifact-space-dev" color="green">
+{"type":"idle_notification","from":"artifact-space-dev","timestamp":"2026-02-15T09:47:42.711Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="root-space-dev" color="blue" summary="Acknowledging shutdown">
+Acknowledged. Shutting down now.
+</teammate-message>
+
+<teammate-message teammate_id="root-space-dev" color="blue">
+{"type":"idle_notification","from":"root-space-dev","timestamp":"2026-02-15T09:47:45.833Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="artifact-space-dev" color="green">
+{"type":"idle_notification","from":"artifact-space-dev","timestamp":"2026-02-15T09:47:47.512Z","idleReason":"available"}
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="artifact-space-dev" color="green" summary="Acknowledging shutdown">
+Acknowledged. Shutting down now.
+</teammate-message>
+
+<teammate-message teammate_id="system">
+{"type":"teammate_terminated","message":"root-space-dev has shut down."}
+</teammate-message>
+
+<teammate-message teammate_id="root-space-dev" color="blue">
+{"type":"shutdown_approved","requestId":"shutdown-1771148878676@root-space-dev","from":"root-space-dev","timestamp":"2026-02-15T09:48:02.222Z","paneId":"in-process","backendType":"in-process"}
+</teammate-message>
+
+<teammate-message teammate_id="artifact-space-dev" color="green">
+{"type":"idle_notification","from":"artifact-space-dev","timestamp":"2026-02-15T09:48:03.079Z","idleReason":"available"}
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="observer-dev" color="yellow" summary="Task #3 observer.rs complete with API note">
+Task #3 (observer.rs) is complete. Created `/Users/ab/Projects/spec-oracle/spec-core/src/formal/projection/observer.rs`.
+
+**What was implemented:**
+
+1. **Observer trait** with `observe(&self, root: &RootSpace) -> Option<ArtifactSpace>` and `artifact_kind(&self) -> ArtifactKind`
+
+2. **ArtifactBundleObserver** - checks `root.kind() == Some(RootSpaceKind::ArtifactBundle)`, extracts content_value/source from metadata, returns `ArtifactSpace::from_text()`
+
+3. **TraceObserver** - checks `root.kind() == Some(RootSpaceKind::Trace)`, extracts trace_data or content_value from metadata, returns `ArtifactSpace::from_text()`
+
+4. **FileSystemObserver** - kind-agnostic, requires "file_path" in root space metadata, returns `ArtifactSpace::from_file()`
+
+5. **10 unit tests** covering: kind matching/rejection for each observer, file_path requirement, content extraction, artifact kind correctness
+
+**API compatibility note:** I verified the implementation against the actual `RootSpace` and `ArtifactSpace` APIs from the sibling modules:
+- Uses `root.kind()` returning `Option<RootSpaceKind>` (correct)
+- Uses `root.meta.inner()` for metadata access (correct)
+- Uses `ArtifactSpace::from_text(kind, content, source)` 3-arg signature (correct)
+- Uses `ArtifactSpace::from_file(kind, file_path)` 2-arg signature (correct)
+
+**Note on projection.rs divergence:** The projection.rs teammate defined a different Observer signature (`fn observe(&self, root: &RootSpace, layer: &UniverseId) -> ArtifactSpace`) in their test stubs. My implementation follows task #3's specification (`obs_i: Omega -> Option<Gamma_i>`) where the observer identity is encoded in the struct, not passed as a parameter, and returns Option. This will need reconciliation in task #5 (mod.rs) or task #10 (verification).
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="observer-dev" color="yellow">
+{"type":"idle_notification","from":"observer-dev","timestamp":"2026-02-15T09:48:42.412Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="system">
+{"type":"teammate_terminated","message":"artifact-space-dev has shut down."}
+</teammate-message>
+
+<teammate-message teammate_id="observer-dev" color="yellow" summary="Task #3 already done, available for next work">
+Task #3 was already completed in my previous work. The file exists at `/Users/ab/Projects/spec-oracle/spec-core/src/formal/projection/observer.rs`.
+
+All four parallel tasks (#1-#4) are now complete, which unblocks task #5 (Create projection/mod.rs module exports). I'm available to pick up task #5 or any other unblocked work if needed.
+</teammate-message>
+
+<teammate-message teammate_id="artifact-space-dev" color="green">
+{"type":"shutdown_approved","requestId":"shutdown-1771148929915@artifact-space-dev","from":"artifact-space-dev","timestamp":"2026-02-15T09:48:53.247Z","paneId":"in-process","backendType":"in-process"}
+</teammate-message>
+
+<teammate-message teammate_id="observer-dev" color="yellow">
+{"type":"idle_notification","from":"observer-dev","timestamp":"2026-02-15T09:48:56.228Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="system">
+{"type":"teammate_terminated","message":"observer-dev has shut down."}
+</teammate-message>
+
+<teammate-message teammate_id="observer-dev" color="yellow">
+{"type":"shutdown_approved","requestId":"shutdown","from":"observer-dev","timestamp":"2026-02-15T09:49:00.340Z","paneId":"in-process","backendType":"in-process"}
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="transform-updater" color="orange" summary="Task #7 complete: transform.rs updated with ProjectionStrategy">
+Task #7 is complete. Here's a summary of changes made to `/Users/ab/Projects/spec-oracle/spec-core/src/formal/transform/transform.rs`:
+
+1. **Added `ObserverKind` enum** (lines 18-31) with three variants:
+   - `ArtifactBundle`
+   - `Trace { layer_name: String }`
+   - `FileSystem { base_path: String }`
+
+2. **Implemented `ObserverKind::instantiate()`** (lines 33-51) - takes an `ArtifactKind` and returns `Box<dyn Observer>`, dispatching to the appropriate concrete observer type.
+
+3. **Added `ProjectionStrategy` enum** (lines 97-129) with five variants:
+   - `ASTExtraction { language, observer, extractor_config }`
+   - `NLPExtraction { model, observer, prompt_template }`
+   - `FormalVerification { tool, observer, verification_config }`
+   - `TypeExtraction { type_system, observer }`
+   - `Manual { description }` (no observer needed)
+
+4. **Marked old `TransformStrategy` as deprecated** with `#[deprecated(note = "Use ProjectionStrategy instead...")]`
+
+5. **Added `new_with_projection()` constructor** (lines 197-251) to `TransformFunction` - converts `ProjectionStrategy` into legacy `TransformStrategy` for backward compatibility during migration.
+
+6. **Updated `mod.rs`** to export `ProjectionStrategy` and `ObserverKind` with `#[allow(deprecated)]`.
+
+Note: `cargo check` fails due to a pre-existing z3 system dependency issue (missing z3.h header), not related to these changes. The code has been manually reviewed for correctness.
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="transform-updater" color="orange">
+{"type":"idle_notification","from":"transform-updater","timestamp":"2026-02-15T09:54:16.869Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="transform-updater" color="orange">
+{"type":"idle_notification","from":"transform-updater","timestamp":"2026-02-15T09:54:19.807Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="transform-updater" color="orange" summary="Acknowledging shutdown">
+Acknowledged. Shutting down now.
+</teammate-message>
+
+<teammate-message teammate_id="extractor-updater" color="cyan" summary="Task #9 complete: Extractor trait impl for RustExtractor">
+Task #9 is complete. Here is a summary of what was done in `/Users/ab/Projects/spec-oracle/spec-core/src/extract.rs`:
+
+1. **Added import** for `Extractor` trait and `ArtifactSpace` from `crate::formal::projection`.
+
+2. **Implemented `Extractor<InferredSpecification>` for `RustExtractor`**:
+   - Calls `artifact.as_text()` to get the content
+   - Calls `artifact.source()` to get the source name
+   - Delegates to the new `extract_from_content()` shared method
+
+3. **Refactored internal methods** to accept `source_name: &str` instead of `file_path: &Path`:
+   - `extract_from_function_names(content, source_name)`
+   - `extract_from_assertions(content, source_name)`
+   - `extract_from_tests(content, source_name)`
+   - `extract_from_docs(content, source_name)`
+   - `extract_from_panics(content, source_name)`
+
+4. **Added `extract_from_content(&str, &str)`** as the shared core method that both the old path-based `extract(Path)` and new trait `extract(&ArtifactSpace)` call.
+
+5. **Backward compatibility preserved**: The old `RustExtractor::extract(file_path: &Path)` API still works, it just reads the file and delegates to `extract_from_content`.
+
+The library compiles clean with `cargo check --no-default-features`. Test compilation has pre-existing errors in other modules (model.rs, sync.rs, projection.rs tests) being worked on by other teammates.
+</teammate-message>
+
+<teammate-message teammate_id="transform-updater" color="orange">
+{"type":"idle_notification","from":"transform-updater","timestamp":"2026-02-15T09:54:25.473Z","idleReason":"available"}
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="extractor-updater" color="cyan">
+{"type":"idle_notification","from":"extractor-updater","timestamp":"2026-02-15T09:54:30.847Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="extractor-updater" color="cyan">
+{"type":"idle_notification","from":"extractor-updater","timestamp":"2026-02-15T09:54:36.000Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="system">
+{"type":"teammate_terminated","message":"extractor-updater has shut down."}
+</teammate-message>
+
+<teammate-message teammate_id="system">
+{"type":"teammate_terminated","message":"transform-updater has shut down."}
+</teammate-message>
+
+<teammate-message teammate_id="extractor-updater" color="cyan">
+{"type":"shutdown_approved","requestId":"shutdown-extractor-updater","from":"extractor-updater","timestamp":"2026-02-15T09:54:40.637Z","paneId":"in-process","backendType":"in-process"}
+</teammate-message>
+
+<teammate-message teammate_id="transform-updater" color="orange">
+{"type":"shutdown_approved","requestId":"shutdown-1771149277890@transform-updater","from":"transform-updater","timestamp":"2026-02-15T09:54:41.234Z","paneId":"in-process","backendType":"in-process"}
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="model-updater" color="pink" summary="Task #8 complete: model.rs updated with RootSpace">
+Task #8 (Update model.rs with RootSpace parameter) is complete. Here's a summary of the changes to `/Users/ab/Projects/spec-oracle/spec-core/src/formal/model/model.rs`:
+
+**1. New imports (lines 8-9):**
+- `use crate::formal::projection::RootSpace;`
+- `use crate::formal::transform::ObserverKind;`
+
+**2. Updated `construct_u0()` signature (line 96):**
+- Added `root: &RootSpace` as the first parameter after `&mut self`
+- Passes `root` through to `execute_transform()`
+
+**3. Updated `execute_transform()` signature (lines 120-124):**
+- Added `root: &RootSpace` parameter
+- The `root` parameter is now available for use when strategies transition to ProjectionStrategy
+
+**4. New `execute_rust_projection()` method (lines 146-192):**
+- Takes `&ObserverKind`, `&HashMap<String, String>` (extractor config), `&RootSpace`, and `&UniverseId` (target layer)
+- Instantiates a concrete observer via `observer_kind.instantiate(ArtifactKind::SourceCode)`
+- Calls `observer.observe(root, target_layer)` to produce an `ArtifactSpace`
+- Extracts using `RustExtractor` which implements `Extractor<InferredSpecification>`
+- Filters results by `min_confidence` from config (default 0.7)
+- Marked `#[allow(dead_code)]` since it will be wired in when `TransformStrategy` is fully replaced by `ProjectionStrategy`
+
+**Note:** I used the manual observe-then-extract pattern rather than the generic `Projection<O, E>` struct because `ObserverKind::instantiate()` returns `Box<dyn Observer>`, and there's no blanket `impl Observer for Box<dyn Observer>` yet. This avoids modifying observer.rs (owned by task #13).
+
+Compiles cleanly with `cargo check --no-default-features`.
+</teammate-message>
+
+---
+
+<teammate-message teammate_id="model-updater" color="pink">
+{"type":"idle_notification","from":"model-updater","timestamp":"2026-02-15T09:56:12.015Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="model-updater" color="pink" summary="Task #8 already done, available for task #10">
+Task #8 was already completed in my previous turn. I received a duplicate assignment message. All blockers for task #10 (Verify projection layer implementation) are now resolved -- tasks #7, #8, and #9 are all completed. I'm available if you'd like to assign task #10 to me or if there's other work.
+</teammate-message>
+
+<teammate-message teammate_id="model-updater" color="pink">
+{"type":"idle_notification","from":"model-updater","timestamp":"2026-02-15T09:56:27.665Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="model-updater" color="pink" summary="Acknowledging shutdown">
+Thanks! Shutting down now.
+</teammate-message>
+
+<teammate-message teammate_id="model-updater" color="pink">
+{"type":"idle_notification","from":"model-updater","timestamp":"2026-02-15T09:56:34.129Z","idleReason":"available"}
+</teammate-message>
+
+<teammate-message teammate_id="system">
+{"type":"teammate_terminated","message":"model-updater has shut down."}
+</teammate-message>
+
+<teammate-message teammate_id="model-updater" color="pink">
+{"type":"shutdown_approved","requestId":"shutdown-1771149529344@model-updater","from":"model-updater","timestamp":"2026-02-15T09:58:52.711Z","paneId":"in-process","backendType":"in-process"}
+</teammate-message>
+
+---
+
+ではこの内容をコミットしてください。
