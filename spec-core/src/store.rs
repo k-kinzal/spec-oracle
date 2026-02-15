@@ -173,6 +173,21 @@ impl DirectoryStore {
         let nodes_dir = self.nodes_dir();
         std::fs::create_dir_all(&nodes_dir)?;
 
+        // Clean up: remove all existing YAML files to ensure removed nodes are deleted
+        if nodes_dir.exists() {
+            // Collect file paths first to avoid iterator corruption
+            let yaml_files: Vec<PathBuf> = std::fs::read_dir(&nodes_dir)?
+                .filter_map(|entry| entry.ok())
+                .map(|e| e.path())
+                .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("yaml"))
+                .collect();
+
+            // Delete files after iteration is complete
+            for path in &yaml_files {
+                std::fs::remove_file(&path)?;
+            }
+        }
+
         // Save each node as individual YAML file
         for node in graph.nodes() {
             let filename = format!("{}.yaml", node.id);
