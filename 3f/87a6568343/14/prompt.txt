@@ -1,0 +1,23 @@
+GOAL:
+- Strict practical-evaluation review after added logs/threats section.
+
+TASK:
+- Reviewer #3 (empirical/practice relevance).
+- Check whether previous blockers are resolved: script-behavior evidence, regex brittleness disclosure, PoC overclaim control.
+
+OUTPUT:
+- First line exactly: VERDICT: OK or VERDICT: NG
+- Then: (1) Blocking issues (2) Non-blocking improvements (3) Final recommendation.
+
+
+# Context files
+
+--- BEGIN FILE: paper/case-study/real_projects/logs/regex_drift_failure.log ---
+input: The page size should be between 512 and 65536 bytes.
+pattern: between ([0-9]+) and 65536 inclusive
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/Users/ab/Projects/spec-oracle/paper/case-study/real_projects/external_validation.py", line 125, in parse_first_int
+    raise ValueError(f"failed to parse {label} with pattern: {pattern}")
+ValueError: failed to parse sqlite requirement min with pattern: between ([0-9]+) and 65536 inclusive
+--- END FILE: paper/case-study/real_projects/logs/regex_drift_failure.log ---
