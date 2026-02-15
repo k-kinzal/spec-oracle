@@ -4,10 +4,10 @@ kind: Scenario
 metadata:
   confidence: '0.9'
   source_file: spec-core/src/graph.rs
+  source_line: '2368'
+  extractor: test
   test_function: diff_timestamps_shows_no_changes_for_stable_graph
   inferred: 'true'
-  extractor: test
-  source_line: '2368'
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3

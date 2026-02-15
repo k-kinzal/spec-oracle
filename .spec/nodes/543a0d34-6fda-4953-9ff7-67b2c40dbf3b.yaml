@@ -2,14 +2,14 @@ id: 543a0d34-6fda-4953-9ff7-67b2c40dbf3b
 content: 'Invariant: validate_password(short_password).is_err()'
 kind: Definition
 metadata:
-  example_purpose: test_data
-  source_line: '4'
-  confidence: '0.95'
-  extractor: assertion
-  is_example: 'true'
-  assertion: validate_password(short_password).is_err()
   inferred: 'true'
+  extractor: assertion
+  confidence: '0.95'
   source_file: /tmp/test_extract.rs
+  example_purpose: test_data
+  assertion: validate_password(short_password).is_err()
+  source_line: '4'
+  is_example: 'true'
 created_at: 1771094226
 modified_at: 1771094226
 formality_layer: 3

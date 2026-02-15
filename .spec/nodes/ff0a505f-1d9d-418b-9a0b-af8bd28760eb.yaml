@@ -3,11 +3,11 @@ content: 'RPC: Get compliance trend'
 kind: Assertion
 metadata:
   source_line: '46'
+  extractor: proto_rpc
+  source_file: proto/spec_oracle.proto
+  rpc_name: GetComplianceTrend
   confidence: '0.95'
   inferred: 'true'
-  rpc_name: GetComplianceTrend
-  source_file: proto/spec_oracle.proto
-  extractor: proto_rpc
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

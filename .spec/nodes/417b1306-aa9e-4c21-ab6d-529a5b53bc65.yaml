@@ -3,13 +3,13 @@ content: 'Invariant: login(user, "correct_password").is_ok()'
 kind: Definition
 metadata:
   source_line: '13'
+  example_purpose: test_data
+  inferred: 'true'
   confidence: '0.95'
   assertion: login(user, "correct_password").is_ok()
   source_file: /tmp/test_extract.rs
-  extractor: assertion
-  example_purpose: test_data
   is_example: 'true'
-  inferred: 'true'
+  extractor: assertion
 created_at: 1771094226
 modified_at: 1771094226
 formality_layer: 3

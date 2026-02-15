@@ -3,11 +3,11 @@ content: Automatic relationship inference
 kind: Assertion
 metadata:
   source_line: '53'
+  confidence: '0.95'
   source_file: proto/spec_oracle.proto
   extractor: proto_rpc
-  rpc_name: InferAllRelationships
-  confidence: '0.95'
   inferred: 'true'
+  rpc_name: InferAllRelationships
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2
