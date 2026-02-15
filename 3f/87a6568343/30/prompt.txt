@@ -1,0 +1,47 @@
+あなたは査読者3（再現性・実装整合）です。以下の対象を厳格査読してください。
+対象:
+- paper/manuscript/uadf_u0_spec_proof.md
+- paper/case-study/real_projects/external_validation.py
+- paper/case-study/real_projects/external_validation_results.json
+- paper/case-study/real_projects/reproduce.sh
+
+観点:
+1) 再現手順（offline-lock, fail-fast/graceful）が本文と実装で一致しているか
+2) 本文中のフィールド名と JSON 出力キーが一致しているか
+3) 用語（invalid/inconclusive/contradictory）の使い分けが一貫しているか
+4) カメラレディとして残る阻害要因があるか
+
+出力形式（Markdown）:
+- Recommendation: Accept / Minor Revision / Major Revision / Reject
+- Key Findings: 箇条書き
+- Required Fixes: 箇条書き（なければ None）
+- Final Verdict: 2-3文
+
+
+# Context files
+
+--- BEGIN FILE: paper/case-study/real_projects/reproduce.sh ---
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}"
+
+mkdir -p logs
+
+python3 external_validation.py \
+  --offline-lock external_validation_sources.lock.json \
+  > logs/external_validation_offline.log
+
+python3 external_validation.py \
+  --offline-lock external_validation_sources.lock.json \
+  --failure-policy none \
+  --none-semantics must \
+  > logs/external_validation_graceful_must.log
+
+python3 external_validation.py \
+  --offline-lock external_validation_sources.lock.json \
+  --failure-policy none \
+  --none-semantics may \
+  > logs/external_validation_graceful_may.log
+--- END FILE: paper/case-study/real_projects/reproduce.sh ---
