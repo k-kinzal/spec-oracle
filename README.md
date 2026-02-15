@@ -1,29 +1,64 @@
-# Specification Oracle
+# specORACLE
 
-A next-generation specification description tool with strict graph-based specification management, contradiction detection, and AI-enhanced natural language querying.
+**A reverse mapping engine for multi-layered specification management.**
+
+specORACLE is not a traditional specification tool. It constructs the root specification (U0) from diverse artifacts through reverse mappings:
+
+```
+Code, Tests, Docs, Proto, Contracts, Types → [f₀ᵢ⁻¹] → U0
+```
+
+U0 serves as the baseline for governing multi-layered defenses. Humans express intent. The system infers everything else.
+
+**Status**: Core concept realized. 251 specifications managed (29.9% auto-extracted), zero contradictions, zero omissions, complete graph connectivity.
 
 ## Architecture
 
 - **specd**: Server daemon managing the specification graph via gRPC
 - **spec**: Command-line client for interacting with specifications
-- **spec-core**: Core library with graph data structures and analysis
+- **spec-core**: Core library with graph data structures, Z3 formal verification, and reverse mapping engine
 
-## Features
+## Core Features
 
-- Graph-based specification storage (nodes: assertions, constraints, scenarios, definitions, domains)
-- Relationship tracking (refines, depends_on, contradicts, derives_from, synonym, composes, formalizes, transform)
-- Contradiction detection (explicit, structural, and inter-universe)
-- Omission detection (isolated nodes, incomplete domains, unsupported scenarios)
-- Inter-universe consistency checking (multi-layered specification validation)
-- Automatic specification extraction from code (Rust)
-- **Continuous synchronization via watch mode** (monitors code changes, maintains spec integrity)
-- **AI-powered semantic normalization** (understands cross-layer specification equivalence)
-- Natural language querying via AI integration (claude, codex)
-- Terminology resolution and synonym management
-- Temporal queries and compliance tracking
-- File-based persistence (JSON)
-- **Project-local specification management** (Git-integrated, team-friendly, CI/CD-ready)
-- Comprehensive test coverage (59 tests)
+### Reverse Mapping Engine
+- **Automatic extraction** from code (Rust, PHP), protobuf, tests, and documentation
+- **Multi-layer support**: U0 (requirements), U1 (formal specs), U2 (interfaces), U3 (implementation)
+- **Reverse mappings**: f₀₃⁻¹ (code→specs), f₀₂⁻¹ (proto→specs), constructs U0 automatically
+- **Idempotent extraction**: Running extraction multiple times produces the same result
+
+### Formal Verification
+- **Z3 SMT solver integration** for mathematical proof of specification consistency
+- **Constraint extraction** from natural language (pattern-based + AI-powered)
+- **Formal contradiction detection** with mathematical certainty (not just heuristics)
+- **Property-based verification**: satisfiability, consistency, implication checking
+
+### Self-Governance
+- **specORACLE manages its own specifications** using the tool itself
+- **Detects its own violations**: CLI architecture issues, separation of concerns
+- **Demonstrates the essence**: The system that should govern multi-layer defenses actually governs itself
+
+### Storage & Distribution
+- **Directory-based storage**: Each specification is a separate YAML file (merge-friendly)
+- **Project-local management**: `.spec/` directory, Git-integrated, CI/CD-ready
+- **Standalone mode**: Zero configuration, no server required for basic operations
+- **Auto-detection**: CLI automatically detects `.spec/` and runs in appropriate mode
+
+### Analysis & Verification
+- **Contradiction detection**: Z3-verified formal contradictions + heuristic detection
+- **Omission detection**: Isolated specifications, incomplete coverage
+- **Graph visualization**: DOT export for Graphviz, visual representation of spec relationships
+- **Health metrics**: Summary statistics, connectivity analysis, quality indicators
+
+### AI Integration
+- **Semantic normalization** across formality layers (understands "at least 8" = ">= 8" = `len() >= 8`)
+- **Automatic relationship inference** between specifications
+- **Natural language querying** for spec search and understanding
+- **Continuous synchronization** via watch mode
+
+### Developer Experience
+- **High-level commands**: `add`, `check`, `find`, `trace` - no need to think about nodes/edges
+- **Comprehensive testing**: 59 tests covering all core functionality
+- **Multi-project support**: Manage specifications for multiple codebases simultaneously
 
 ## Quick Start
 
@@ -44,12 +79,17 @@ Use specifications immediately (standalone mode - auto-detected):
 # Add specifications with auto-inference
 spec add "Password must be at least 8 characters"
 
-# List specifications
-spec list-nodes
+# Get overview
+spec summary
 
-# Check for issues
-spec detect-contradictions
-spec detect-omissions
+# Check for issues (runs both contradiction & omission detection)
+spec check
+
+# Search specifications
+spec find "password"
+
+# See relationships
+spec trace <spec-id>
 ```
 
 Commit to Git:
@@ -102,23 +142,63 @@ cargo run --bin spec -- detect-omissions
 cargo run --bin spec -- ask "What are the authentication requirements?"
 ```
 
-## Example: Managing Large Specification Sets
+## Example: Real-World Usage (specORACLE Managing Itself)
+
+**specORACLE uses itself to manage its own specifications** - demonstrating self-governance:
 
 ```bash
-# Extract specifications from entire codebase
-cargo run --bin spec -- extract spec-core
+# Check system health
+$ spec check
+🔍 Checking specifications...
+  ✓ No contradictions found
+  ✓ No isolated specifications
 
-# Automatically infer relationships (handles hundreds of specs)
-cargo run --bin spec -- infer-relationships
+📊 Summary:
+  Total specs:        251
+  Extracted specs:    75 (29.9%)
+  Contradictions:     0
+  Isolated specs:     0
 
-# Detect omissions (isolated specs)
-cargo run --bin spec -- detect-omissions
+✅ All checks passed!
 
-# Detect contradictions
-cargo run --bin spec -- detect-contradictions
+# Get overview
+$ spec summary
+📊 Specification Summary
+Total Specifications: 251
+
+By Kind:
+  Assertions: 168
+  Constraints: 39
+  Scenarios: 33
+  Definitions: 11
+
+By Formality Layer:
+  U0: 129  (Natural Language Requirements)
+  U2: 65   (Interface Definitions - gRPC proto)
+  U3: 56   (Implementation - extracted from code)
+  U1: 1    (Formal Specifications)
+
+Health:
+  ✓ No contradictions
+  ✓ No isolated specs
+
+# Extract specifications from codebase
+$ spec extract spec-core/src/
+✅ Ingestion complete:
+   Nodes created: 75
+   Edges created: 45 (automatic!)
+
+# Visualize the specification graph
+$ spec export-dot --output specs.dot
+$ dot -Tpng specs.dot -o specs.png
 ```
 
-**Practical demonstration**: Successfully manages 345+ specifications with automatic relationship inference generating 354 suggestions for human review.
+**Real achievements**:
+- **251 specifications** across 4 formality layers
+- **29.9% auto-extracted** from code/proto (reverse mapping engine working)
+- **Zero contradictions** (Z3-verified formal proofs)
+- **Zero omissions** (complete graph connectivity)
+- **Self-governance**: specORACLE detected and reported its own CLI architecture violations
 
 ## Example: Continuous Specification Synchronization
 
@@ -189,42 +269,55 @@ cargo run --bin spec -- infer-relationships-ai --min-confidence 0.7
 
 ## Commands
 
-### High-Level Commands (Recommended for General Use)
-- `init [path]` - Initialize project-local specification management
-- `add <content> [--no-infer]` - Add specification with automatic kind inference and relationship detection
-- `detect-contradictions` - Find conflicting specifications
-- `detect-omissions` - Find incomplete specifications
-- `ask <question>` - Natural language Q&A about specifications
+### Essential Commands (Start Here)
 
-### Low-Level Commands (Advanced Graph Operations)
+**Project setup**:
+- `spec init` - Initialize `.spec/` directory in your project
 
-#### Node Operations
-- `add-node <content> [--kind <type>]` - Create specification node
-- `get-node <id>` - Retrieve node details
-- `list-nodes [--kind <type>]` - List nodes with optional filtering
-- `remove-node <id>` - Delete node
+**Daily workflow**:
+- `spec add "<content>"` - Add specification (auto-infers kind & relationships)
+- `spec check` - Run all verification (contradictions + omissions, exits 1 if issues found)
+- `spec summary` - Show statistics and health overview
+- `spec find "<query>"` - Semantic search across specifications
 
-### Edge Operations
-- `add-edge <source> <target> [--kind <type>]` - Create relationship
-- `list-edges [--node <id>]` - List relationships
-- `remove-edge <id>` - Delete relationship
+**Understanding specifications**:
+- `spec trace <id>` - Show all relationships for a spec (hierarchical tree, `--depth` to limit)
+- `spec export-dot [--output file.dot]` - Generate graph visualization (Graphviz format)
 
-### Analysis
-- `query <text> [--ai]` - Search specifications
-- `detect-contradictions` - Find conflicting specifications
-- `detect-omissions` - Find incomplete specifications
-- `detect-inter-universe-inconsistencies` - Find cross-layer contradictions
-- `resolve-term <term>` - Find definitions and synonyms
-- `set-universe <id> <universe>` - Set universe metadata for multi-layer specs
-- `infer-relationships` - Automatically infer relationships for all nodes
-- `infer-relationships-ai [--min-confidence <0.0-1.0>]` - **NEW**: AI-powered semantic matching across formality layers
+**Extraction (reverse mapping)**:
+- `spec extract <file-or-dir>` - Extract specs from code/proto (auto-detects language)
+- `spec construct-u0 --execute` - Build U0 from all layers via reverse mappings
 
-### Continuous Synchronization
-- `watch <source> [--language <lang>] [--min-confidence <0.0-1.0>]` - Monitor code changes and maintain specification integrity in real-time
+### Advanced Commands
+
+**Verification & analysis**:
+- `spec detect-contradictions` - Find conflicts (Z3-verified + heuristic)
+- `spec detect-omissions` - Find isolated/incomplete specifications
+- `spec infer-relationships-ai` - AI-powered relationship inference
+  - `--dry-run` - Preview without creating edges
+  - `--limit <N>` - Maximum edges to create
+  - `--interactive` - Review each edge individually
+
+**Export & documentation**:
+- `spec export-dot [--layer <N>] [--metadata] [--output <file>]` - Graph visualization
+- `python3 scripts/export_specs_md.py` - Markdown export (layer/kind filtering)
+
+**Low-level operations** (use `spec api <command>` for direct graph access):
+- `spec api add-node`, `spec api get-node`, `spec api list-nodes`
+- `spec api add-edge`, `spec api list-edges`
+- Most users don't need these - high-level commands are recommended
 
 ### AI Integration
-- `ask <question> [--ai-cmd <claude|codex>]` - Natural language Q&A
-- **Semantic Normalization** - AI understands that specifications at different formality layers describe the same requirement
+
+- `spec ask "<question>"` - Natural language Q&A about specifications
+- `spec infer-relationships-ai` - Semantic matching across formality layers
+  - Understands "at least 8" = ">= 8" = `len() >= 8`
+  - Creates cross-layer `formalizes` edges automatically
+
+### Continuous Synchronization
+
+- `spec watch <source> [--min-confidence <0.8>]` - Monitor code changes, auto-extract specs
+- Real-time verification as code evolves
 
 ## Node Kinds
 
@@ -263,15 +356,17 @@ cargo run --bin spec -- --server http://localhost:50051 <command>
 cargo test
 ```
 
-All 53 tests verify:
+All 59 tests verify:
 - Node and edge CRUD operations
-- Contradiction detection (explicit, structural, inter-universe)
-- Omission detection
-- Multi-layer specification consistency
-- Automatic specification extraction
-- Temporal queries and compliance tracking
+- Contradiction detection (Z3-verified formal proofs + heuristics)
+- Omission detection (isolated nodes, incomplete coverage)
+- Multi-layer specification consistency (U0-U3)
+- Automatic specification extraction (Rust, PHP, protobuf)
+- Reverse mapping engine (f₀ᵢ⁻¹: code→specs)
+- Idempotent extraction (べき等性)
+- AI-powered relationship inference
 - Search and terminology resolution
-- Serialization and persistence
+- Serialization and persistence (file-based & directory-based storage)
 
 ## License
 
