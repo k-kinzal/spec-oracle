@@ -5,6 +5,7 @@ mod transform;
 mod transform_id;
 mod transform_metadata;
 
-pub use transform::{TransformFunction, TransformKind, TransformStrategy};
+#[allow(deprecated)]
+pub use transform::{TransformFunction, TransformKind, TransformStrategy, ProjectionStrategy, ObserverKind};
 pub use transform_id::TransformId;
 pub use transform_metadata::TransformMetadata;

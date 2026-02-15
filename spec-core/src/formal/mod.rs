@@ -15,6 +15,7 @@ pub mod transform;
 pub mod metadata;
 pub mod model;
 pub mod proof;
+pub mod projection;
 
 // Re-export main types for convenience
 pub use error::IdError;
@@ -34,3 +35,10 @@ pub use proof::{Prover, UnderspecificationReport};
 // Re-export verification types
 #[cfg(feature = "z3-solver")]
 pub use model::{Contradiction, Omission, LayerInconsistency, InterUniverseInconsistency};
+
+// Re-export projection types
+pub use projection::{
+    RootSpace, RootSpaceKind, ArtifactSpace, ArtifactKind,
+    Observer, ArtifactBundleObserver, TraceObserver, FileSystemObserver,
+    Projection, Extractor,
+};

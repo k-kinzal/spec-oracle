@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use crate::formal::*;
+use crate::formal::projection::RootSpace;
+use crate::formal::transform::ObserverKind;
 use crate::{InferredSpecification, RustExtractor};
 use crate::data::SpecRepository;
 
@@ -91,7 +93,7 @@ impl UDAFModel {
     ///
     /// This is the core operation that realizes the theoretical model.
     /// Returns the newly extracted InferredSpecification objects that should be ingested into the graph.
-    pub fn construct_u0(&mut self, graph: &SpecRepository) -> Result<Vec<InferredSpecification>, String> {
+    pub fn construct_u0(&mut self, root: &RootSpace, graph: &SpecRepository) -> Result<Vec<InferredSpecification>, String> {
         // Collect all newly extracted specifications from projection universes
         let mut newly_created_specs = Vec::new();
 
@@ -106,7 +108,7 @@ impl UDAFModel {
 
             if let Some(transform) = self.transforms.get(&inverse_transform_id) {
                 // Execute the transform strategy to extract/map specifications
-                let extracted_specs = self.execute_transform(transform, graph)?;
+                let extracted_specs = self.execute_transform(transform, root, graph)?;
                 newly_created_specs.extend(extracted_specs);
             }
         }
@@ -118,6 +120,7 @@ impl UDAFModel {
     fn execute_transform(
         &self,
         transform: &TransformFunction,
+        root: &RootSpace,
         graph: &SpecRepository,
     ) -> Result<Vec<InferredSpecification>, String> {
         match &transform.strategy {
@@ -138,6 +141,54 @@ impl UDAFModel {
                 Ok(Vec::new())
             }
         }
+    }
+
+    /// Execute a Rust projection through the observer >> extractor composition.
+    ///
+    /// This implements the projection pipeline from paper section 2.6:
+    ///   RootSpace ->[obs_i]-> ArtifactSpace ->[extract_i]-> Vec<InferredSpecification>
+    ///
+    /// Steps:
+    /// 1. Instantiate observer from ObserverKind
+    /// 2. Create RustExtractor
+    /// 3. Observe root space to produce ArtifactSpace
+    /// 4. Extract InferredSpecifications from ArtifactSpace
+    /// 5. Filter results by min_confidence
+    #[allow(dead_code)]
+    fn execute_rust_projection(
+        &self,
+        observer_kind: &ObserverKind,
+        extractor_config: &HashMap<String, String>,
+        root: &RootSpace,
+        target_layer: &UniverseId,
+    ) -> Result<Vec<InferredSpecification>, String> {
+        use crate::formal::projection::Extractor as ExtractorTrait;
+
+        // Step 1: Instantiate observer from ObserverKind
+        let observer = observer_kind.instantiate(ArtifactKind::SourceCode);
+
+        // Step 2: Observe root space -> ArtifactSpace (obs_i: Omega -> Option Gamma_i)
+        let artifact = match observer.observe(root, target_layer) {
+            Some(a) => a,
+            None => return Ok(Vec::new()),
+        };
+
+        // Step 3: Extract specifications (extract_i: Gamma_i -> Vec<beta_i>)
+        let extractor = RustExtractor;
+        let all_specs: Vec<InferredSpecification> = extractor.extract(&artifact);
+
+        // Step 4: Filter by confidence threshold
+        let min_confidence = extractor_config
+            .get("min_confidence")
+            .and_then(|s| s.parse::<f32>().ok())
+            .unwrap_or(0.7);
+
+        let filtered: Vec<InferredSpecification> = all_specs
+            .into_iter()
+            .filter(|spec| spec.confidence >= min_confidence)
+            .collect();
+
+        Ok(filtered)
     }
 
     /// Execute Rust AST analysis to extract specifications from code

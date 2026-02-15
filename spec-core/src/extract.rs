@@ -1,4 +1,5 @@
 use crate::data::{NodeKind, EdgeKind, SpecRepository, SpecNodeData};
+use crate::formal::projection::{Extractor, ArtifactSpace};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -684,38 +685,58 @@ impl SpecRepository {
 /// Extract specifications from Rust source code
 pub struct RustExtractor;
 
+impl Extractor<InferredSpecification> for RustExtractor {
+    fn extract(&self, artifact: &ArtifactSpace) -> Vec<InferredSpecification> {
+        let content = match artifact.as_text() {
+            Some(text) => text.clone(),
+            None => return Vec::new(),
+        };
+        let source = artifact.source()
+            .map(|s| s.clone())
+            .unwrap_or_else(|| "unknown".to_string());
+
+        Self::extract_from_content(&content, &source).unwrap_or_default()
+    }
+}
+
 impl RustExtractor {
-    /// Extract specifications from Rust file
+    /// Extract specifications from Rust file (backward-compatible path-based API)
     pub fn extract(file_path: &Path) -> Result<Vec<InferredSpecification>, String> {
         let content = std::fs::read_to_string(file_path)
             .map_err(|e| format!("Failed to read file: {}", e))?;
+        let file_name = file_path.to_string_lossy().to_string();
 
+        Self::extract_from_content(&content, &file_name)
+    }
+
+    /// Core extraction logic that works with string content and a source name
+    fn extract_from_content(content: &str, source_name: &str) -> Result<Vec<InferredSpecification>, String> {
         let mut specs = Vec::new();
 
         // Extract from function names (conventions like validate_*, check_*, require_*)
-        specs.extend(Self::extract_from_function_names(&content, file_path)?);
+        specs.extend(Self::extract_from_function_names(content, source_name)?);
 
         // Extract from assertions (assert!, assert_eq!, debug_assert!)
-        specs.extend(Self::extract_from_assertions(&content, file_path)?);
+        specs.extend(Self::extract_from_assertions(content, source_name)?);
 
         // Extract from test functions
-        specs.extend(Self::extract_from_tests(&content, file_path)?);
+        specs.extend(Self::extract_from_tests(content, source_name)?);
 
         // Extract from doc comments
-        specs.extend(Self::extract_from_docs(&content, file_path)?);
+        specs.extend(Self::extract_from_docs(content, source_name)?);
 
         // Extract from panic messages
-        specs.extend(Self::extract_from_panics(&content, file_path)?);
+        specs.extend(Self::extract_from_panics(content, source_name)?);
 
         Ok(specs)
     }
 
     fn extract_from_function_names(
         content: &str,
-        file_path: &Path,
+        source_name: &str,
     ) -> Result<Vec<InferredSpecification>, String> {
         let mut specs = Vec::new();
-        let file_name = file_path.to_string_lossy().to_string();
+        let file_name = source_name.to_string();
 
         for (line_num, line) in content.lines().enumerate() {
             // Match function definitions
@@ -753,10 +774,10 @@ impl RustExtractor {
 
     fn extract_from_assertions(
         content: &str,
-        file_path: &Path,
+        source_name: &str,
     ) -> Result<Vec<InferredSpecification>, String> {
         let mut specs = Vec::new();
-        let file_name = file_path.to_string_lossy().to_string();
+        let file_name = source_name.to_string();
 
         for (line_num, line) in content.lines().enumerate() {
             // Match assert!, assert_eq!, debug_assert!, etc.
@@ -781,10 +802,10 @@ impl RustExtractor {
 
     fn extract_from_tests(
         content: &str,
-        file_path: &Path,
+        source_name: &str,
     ) -> Result<Vec<InferredSpecification>, String> {
         let mut specs = Vec::new();
-        let file_name = file_path.to_string_lossy().to_string();
+        let file_name = source_name.to_string();
 
         let mut in_test = false;
         let mut test_name = String::new();
@@ -927,10 +948,10 @@ Example output: "The system must detect contradictions when password length requ
 
     fn extract_from_docs(
         content: &str,
-        file_path: &Path,
+        source_name: &str,
     ) -> Result<Vec<InferredSpecification>, String> {
         let mut specs = Vec::new();
-        let file_name = file_path.to_string_lossy().to_string();
+        let file_name = source_name.to_string();
 
         for (line_num, line) in content.lines().enumerate() {
             let trimmed = line.trim();
@@ -972,10 +993,10 @@ Example output: "The system must detect contradictions when password length requ
 
     fn extract_from_panics(
         content: &str,
-        file_path: &Path,
+        source_name: &str,
     ) -> Result<Vec<InferredSpecification>, String> {
         let mut specs = Vec::new();
-        let file_name = file_path.to_string_lossy().to_string();
+        let file_name = source_name.to_string();
 
         for (line_num, line) in content.lines().enumerate() {
             // Match panic! with message
