@@ -3,11 +3,11 @@ content: 'RPC: Get node history'
 kind: Assertion
 metadata:
   confidence: '0.95'
-  extractor: proto_rpc
   rpc_name: GetNodeHistory
-  source_file: proto/spec_oracle.proto
-  inferred: 'true'
   source_line: '45'
+  extractor: proto_rpc
+  inferred: 'true'
+  source_file: proto/spec_oracle.proto
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

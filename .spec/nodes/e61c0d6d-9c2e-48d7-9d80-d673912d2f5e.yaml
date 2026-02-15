@@ -2,14 +2,14 @@ id: e61c0d6d-9c2e-48d7-9d80-d673912d2f5e
 content: 'Invariant: fetched.content, "User must authenticate"'
 kind: Definition
 metadata:
-  is_example: 'true'
-  source_file: spec-core/src/graph.rs
-  assertion: fetched.content, "User must authenticate"
   source_line: '1780'
-  confidence: '0.95'
   extractor: assertion
+  confidence: '0.95'
   example_purpose: test_data
   inferred: 'true'
+  source_file: spec-core/src/graph.rs
+  assertion: fetched.content, "User must authenticate"
+  is_example: 'true'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

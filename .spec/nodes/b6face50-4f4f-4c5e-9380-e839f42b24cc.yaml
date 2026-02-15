@@ -5,9 +5,9 @@ metadata:
   test_function: detect_semantic_contradiction_password_length
   source_file: spec-core/src/graph.rs
   source_line: '1627'
+  extractor: test
   inferred: 'true'
   confidence: '0.9'
-  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

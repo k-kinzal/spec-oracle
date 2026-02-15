@@ -5,8 +5,8 @@ metadata:
   source_file: README.md
   source_line: '13'
   confidence: '0.85'
-  inferred: 'true'
   extractor: documentation
+  inferred: 'true'
 created_at: 1771095538
 modified_at: 1771095538
 formality_layer: 0

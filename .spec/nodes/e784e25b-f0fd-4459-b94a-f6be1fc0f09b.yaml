@@ -2,12 +2,12 @@ id: e784e25b-f0fd-4459-b94a-f6be1fc0f09b
 content: 'Scenario: detect layer inconsistency wrong direction'
 kind: Scenario
 metadata:
-  source_line: '1759'
+  test_function: detect_layer_inconsistency_wrong_direction
+  extractor: test
+  inferred: 'true'
   confidence: '0.9'
   source_file: spec-core/src/graph.rs
-  extractor: test
-  test_function: detect_layer_inconsistency_wrong_direction
-  inferred: 'true'
+  source_line: '1759'
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

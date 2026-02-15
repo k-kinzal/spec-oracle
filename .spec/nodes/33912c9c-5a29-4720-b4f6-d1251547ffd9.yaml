@@ -3,11 +3,11 @@ content: 'Scenario: load nonexistent returns empty'
 kind: Scenario
 metadata:
   inferred: 'true'
-  source_file: spec-core/src/store.rs
   confidence: '0.9'
-  test_function: load_nonexistent_returns_empty
-  extractor: test
   source_line: '65'
+  extractor: test
+  source_file: spec-core/src/store.rs
+  test_function: load_nonexistent_returns_empty
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

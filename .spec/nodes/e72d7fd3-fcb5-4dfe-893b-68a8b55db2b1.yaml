@@ -3,13 +3,13 @@ content: 'Violation: Amount must be greater than zero'
 kind: Definition
 metadata:
   source_file: spec-core/src/extract.rs
-  inferred: 'true'
-  panic: Amount must be greater than zero
   extractor: panic
+  source_line: '985'
   is_example: 'true'
   confidence: '0.85'
   example_purpose: test_data
-  source_line: '985'
+  panic: Amount must be greater than zero
+  inferred: 'true'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

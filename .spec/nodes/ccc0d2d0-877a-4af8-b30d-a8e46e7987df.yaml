@@ -2,12 +2,12 @@ id: ccc0d2d0-877a-4af8-b30d-a8e46e7987df
 content: 'Scenario: list nodes with filter'
 kind: Scenario
 metadata:
+  extractor: test
   inferred: 'true'
+  test_function: list_nodes_with_filter
   source_line: '1786'
   source_file: spec-core/src/graph.rs
   confidence: '0.9'
-  test_function: list_nodes_with_filter
-  extractor: test
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3

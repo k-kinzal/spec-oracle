@@ -3,11 +3,11 @@ content: 'RPC: Find formalizations'
 kind: Assertion
 metadata:
   source_line: '28'
+  confidence: '0.95'
   source_file: proto/spec_oracle.proto
   extractor: proto_rpc
-  confidence: '0.95'
-  rpc_name: FindFormalizations
   inferred: 'true'
+  rpc_name: FindFormalizations
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

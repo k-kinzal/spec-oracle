@@ -3,12 +3,12 @@ content: '- "Password must be >= 8 chars" (natural language)'
 kind: Definition
 metadata:
   extractor: doc
-  inferred: 'true'
   source_line: '5'
+  example_purpose: test_data
+  doc_comment: 'true'
   is_example: 'true'
   confidence: '0.8'
-  doc_comment: 'true'
-  example_purpose: test_data
+  inferred: 'true'
   source_file: spec-core/src/ai_semantic.rs
 created_at: 1771093752
 modified_at: 1771093752
