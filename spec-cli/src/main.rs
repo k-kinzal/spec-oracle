@@ -470,6 +470,21 @@ enum Commands {
         #[arg(long)]
         execute: bool,
     },
+    /// Mark a specification as archived (excluded from checks but kept for history)
+    Archive {
+        /// Specification ID to archive
+        id: String,
+    },
+    /// Mark a specification as deprecated (shows warnings but still checked)
+    Deprecate {
+        /// Specification ID to deprecate
+        id: String,
+    },
+    /// Mark a specification as active (remove lifecycle status)
+    Activate {
+        /// Specification ID to activate
+        id: String,
+    },
 }
 
 

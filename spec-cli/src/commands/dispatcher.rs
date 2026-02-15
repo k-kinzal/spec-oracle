@@ -98,6 +98,15 @@ pub async fn dispatch_standalone(
         crate::Commands::InferRelationshipsAi { min_confidence, dry_run, limit, interactive } => {
             commands::execute_infer_relationships_ai_standalone(&mut store, min_confidence, dry_run, limit, interactive)?;
         }
+        crate::Commands::Archive { id } => {
+            commands::execute_archive(&mut store, id)?;
+        }
+        crate::Commands::Deprecate { id } => {
+            commands::execute_deprecate(&mut store, id)?;
+        }
+        crate::Commands::Activate { id } => {
+            commands::execute_activate(&mut store, id)?;
+        }
         _ => {
             eprintln!("Command not yet supported in standalone mode.");
             eprintln!("For advanced features, use server mode (start specd first).");
