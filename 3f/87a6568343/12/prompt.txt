@@ -1,0 +1,27 @@
+GOAL:
+- Perform a strict mechanization/reproducibility review.
+
+CONTEXT:
+- Lean4 is the verification tool, not the paper's objective.
+- The manuscript now includes may-semantics references and reproducibility claims.
+
+TASK:
+- Act as Reviewer #2 (formalization/mechanization).
+- Check if manuscript claims are supported by Lean definitions/theorems in context.
+- Check reproducibility section for overstatement or missing essentials.
+- Decide publishability for this round.
+
+OUTPUT:
+- First line exactly: VERDICT: OK or VERDICT: NG
+- Then sections:
+  1) Blocking issues (if any)
+  2) Non-blocking improvements
+  3) Final recommendation (accept / minor / major)
+- Keep concise and concrete.
+
+
+# Context files
+
+--- BEGIN FILE: paper/lean/lean-toolchain ---
+leanprover/lean4:v4.27.0
+--- END FILE: paper/lean/lean-toolchain ---
