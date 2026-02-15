@@ -1,0 +1,87 @@
+Reviewer=R3 (reproducibility).
+Use ONLY provided files. If unverifiable from provided files, do not include as required fix.
+Focus on reproducibility package completeness, replay commands, dependencies, and expected-output verification.
+
+
+# Context files
+
+--- BEGIN FILE: paper/case-study/real_projects/README.md ---
+# Real-Project Feasibility Validation (RQ6)
+
+This directory contains a **preliminary feasibility demonstration** for the
+UAD/f PoC extraction pipeline.
+It is not a statistical external-validation study.
+
+## Scope
+- Target constraints:
+  - PostgreSQL identifier length
+  - zlib compression level
+  - SQLite page size
+- Layer model:
+  - `requirement`, `api`, `code`
+- Output intent:
+  - deterministic replay with source lock
+  - tri-valued judgement + policy projection
+  - mutation expectation tracking
+
+## Required Files (Reproducibility Package)
+- `external_validation.py`
+- `reproduce.sh`
+- `external_validation_sources.lock.json`
+- `snapshots/*`
+
+## Method Summary
+1. Load artifacts from snapshots (offline lock) or fetch online.
+2. Extract numeric bounds via regex into layer artifacts.
+3. Build tri-state layer status:
+   - `supported`: two-sided interval exists and `lower <= upper`
+   - `invalid`: two-sided interval exists and `lower > upper`
+   - `unknown`: extraction failed or one-sided bound only
+4. Compute:
+   - `judgement`: raw 3-valued result (`consistent` / `contradictory` / `inconclusive`)
+   - `policy_judgement`: policy projection by `--none-semantics`
+5. Run two pre-fixed mutation families:
+   - `stale_requirement_lower`
+   - `unit_mismatch_upper_scale_down_1024`
+
+## Replay Modes
+Use `reproduce.sh` to run all three modes:
+- `external_validation_offline.log`
+  - offline fail-fast
+- `external_validation_graceful_must.log`
+  - graceful + must (`inconclusive -> contradictory`)
+- `external_validation_graceful_may.log`
+  - graceful + may (`inconclusive -> consistent`)
+
+## Run
+```bash
+cd paper/case-study/real_projects
+bash reproduce.sh
+```
+
+## Minimal Verification Checklist
+```bash
+cd paper/case-study/real_projects
+jq '{n_real_projects, raw_judgement_distribution, policy_judgement_distribution, mutation_detected_by_expectation}' logs/external_validation_offline.log
+```
+
+Expected checks:
+- `n_real_projects == 3`
+- `raw_judgement_distribution.consistent == 3`
+- `mutation_detected_by_expectation == 6`
+
+Notes:
+- `date` is runtime-dependent and not part of deterministic comparison.
+- Python dependency is stdlib-only (no extra pip packages required).
+
+## Outputs
+- `external_validation_results.json`
+  - `real_results`: extracted constraints + tri-state outputs
+  - `mutation_results`: expected-outcome checks
+  - `source_lock`: URL/SHA256/timestamp/snapshot metadata
+  - `extraction_patterns`: regex + matched fragments
+- `external_validation_sources.lock.json`
+  - compact lock file (URL/SHA256/timestamp/snapshot path)
+- `logs/*`
+  - replay outputs for each mode
+--- END FILE: paper/case-study/real_projects/README.md ---
