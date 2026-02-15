@@ -1,0 +1,282 @@
+Implement the following plan:
+
+# UAD/f モデル型厳密化プラン
+
+## Context
+
+UAD/f モデル (`spec-core/src/udaf.rs`) の実装が型安全性に欠けており、以下の問題が発生しています：
+
+1. **String ID の多用**: Universe.id, Domain.id などすべて String で、命名規則が強制されていない
+2. **HashMap<String, String> metadata**: キーも値も自由形式で、タイプミスが検出されない
+3. **参照の整合性なし**: HashSet<String> で ID 参照しているが、参照先の存在確認がない
+4. **設計上の矛盾**: Universe に layer フィールドが存在するが、Universe 自体が層を表すため冗長
+
+これらを解決するため、型システムを活用した厳密化を行います。
+
+## 修正方針
+
+### 1. ID 型システムの導入
+
+newtype パターンで専用の ID 型を定義：
+
+- **UniverseId**: "U0", "U1" などの形式を強制、parse 時にバリデーション
+- **DomainId**: UUID ベース
+- **SpecId**: UUID ベース
+- **TransformId**: "f_SOURCE_to_TARGET" 形式を強制
+
+各 ID 型は：
+- `parse()` でバリデーション
+- `as_str()` で String への変換
+- Serialize/Deserialize 対応
+
+### 2. Metadata 型システムの導入
+
+**MetadataKey enum** で既知のキーを列挙：
+- Universe, SourceFile, RpcName, Extractor, Inferred, Variable, ImplCode, TestCode, Pattern, Value, Min, Max, Source
+- Custom(String) で拡張可能性を保持
+
+**専用 Metadata 型**：
+- UniverseMetadata, DomainMetadata, ConstraintMetadata, TransformMetadata
+- 各型で頻繁に使われるキーにアクセサメソッド提供
+- 内部的には HashMap<String, String> を保持（互換性）
+
+### 3. 型安全な参照集合
+
+**SpecSet**, **DomainSet** で型安全な ID 集合管理：
+- `insert(id: SpecId)`, `contains(&SpecId)` で型チェック
+- `validate(&HashSet<SpecId>)` で参照整合性検証
+- 内部は HashSet<String> で serialize 互換性維持
+
+### 4. Universe.layer フィールドの削除
+
+Universe 自体が層を表すため、layer フィールドは冗長。削除して id から導出：
+
+```rust
+impl Universe {
+    pub fn layer(&self) -> u8 {
+        self.id.layer()  // UniverseId から抽出
+    }
+}
+```
+
+### 5. 参照整合性検証
+
+`UDAFModel::validate()` メソッドで全参照をチェック：
+- Universe の specifications が存在する SpecId を指しているか
+- Domain の universe_id が存在する UniverseId を指しているか
+- Transform の source_universe, target_universe が存在するか
+
+## 実装計画
+
+### Phase 1: 新しい型定義の追加（非破壊的）
+
+**ファイル作成**:
+- `spec-core/src/udaf/ids.rs`: UniverseId, DomainId, SpecId, TransformId, IdError
+- `spec-core/src/udaf/metadata.rs`: MetadataKey, Metadata, 各専用 Metadata 型
+- `spec-core/src/udaf/refs.rs`: SpecSet, DomainSet
+
+**spec-core/src/udaf.rs 修正**:
+- mod 宣言追加: `mod ids; mod metadata; mod refs;`
+- pub use で export
+- 既存の String ベース定義はそのまま維持
+
+### Phase 2: UDAF 構造体の型更新
+
+**spec-core/src/udaf.rs**:
+
+Universe:
+```rust
+pub struct Universe {
+    pub id: UniverseId,              // String → UniverseId
+    // pub layer: u8,                // 削除
+    pub name: String,
+    pub description: String,
+    pub specifications: SpecSet,     // HashSet<String> → SpecSet
+    pub metadata: UniverseMetadata,  // HashMap<String, String> → UniverseMetadata
+}
+```
+
+Domain:
+```rust
+pub struct Domain {
+    pub id: DomainId,                // String → DomainId
+    pub name: String,
+    pub description: String,
+    pub universe_id: UniverseId,     // String → UniverseId
+    pub covered_by: SpecSet,         // HashSet<String> → SpecSet
+    pub subdomains: DomainSet,       // Vec<String> → DomainSet
+    pub metadata: DomainMetadata,    // HashMap<String, String> → DomainMetadata
+}
+```
+
+AdmissibleSet:
+```rust
+pub struct AdmissibleSet {
+    pub spec_id: SpecId,             // String → SpecId
+    pub universe_id: UniverseId,     // String → UniverseId
+    pub constraints: Vec<Constraint>,
+    pub contradicts: SpecSet,        // HashSet<String> → SpecSet
+    pub metadata: Metadata,          // HashMap<String, String> → Metadata
+}
+```
+
+Constraint:
+```rust
+pub struct Constraint {
+    pub description: String,
+    pub formal: Option<String>,
+    pub kind: ConstraintKind,
+    pub metadata: ConstraintMetadata, // HashMap<String, String> → ConstraintMetadata
+}
+```
+
+TransformFunction:
+```rust
+pub struct TransformFunction {
+    pub id: TransformId,              // String → TransformId
+    pub source_universe: UniverseId,  // String → UniverseId
+    pub target_universe: UniverseId,  // String → UniverseId
+    pub description: String,
+    pub kind: TransformKind,
+    pub strategy: TransformStrategy,
+    pub metadata: TransformMetadata,  // HashMap<String, String> → TransformMetadata
+}
+```
+
+UDAFModel:
+```rust
+pub struct UDAFModel {
+    pub universes: HashMap<UniverseId, Universe>,           // キーを UniverseId に
+    pub domains: HashMap<DomainId, Domain>,                 // キーを DomainId に
+    pub admissible_sets: HashMap<SpecId, AdmissibleSet>,    // キーを SpecId に
+    pub transforms: HashMap<TransformId, TransformFunction>, // キーを TransformId に
+    pub metadata: Metadata,                                 // HashMap → Metadata
+}
+```
+
+### Phase 3: コンストラクタとメソッドの更新
+
+**Universe**:
+- `root()`: UniverseId::root() 使用
+- `projection(layer)`: UniverseId::projection(layer)? で Result 返却
+- `layer()` メソッド追加: id から抽出
+
+**Domain**:
+- `new()`: DomainId::new() で自動生成、universe_id を UniverseId で受け取る
+
+**AdmissibleSet**:
+- `new(spec_id: SpecId, universe_id: UniverseId)`
+
+**TransformFunction**:
+- `inverse()`: TransformId::inverse() 使用
+- `forward()`: TransformId::forward() 使用
+
+**UDAFModel**:
+- `validate()` メソッド追加: 全参照の整合性チェック
+- `add_universe()`, `add_domain()` などを型安全に
+
+### Phase 4: 内部実装の更新
+
+**spec-core/src/udaf.rs**:
+
+`populate_from_graph()`:
+- ノードの metadata から universe を取得する際、MetadataKey::Universe 使用
+- `format!("U{}", layer)` → `UniverseId::projection(layer)?`
+- HashMap への挿入を型安全な ID で
+
+`construct_u0()`:
+- `format!("f_{}_to_U0", universe_id)` → `TransformId::inverse(&universe_id)`
+- ループを `for (universe_id, universe) in &self.universes` で型安全に
+
+`detect_contradictions()`:
+- `admissible_sets.keys()` が SpecId のイテレータに
+- contains チェックが型安全に
+
+`extract_constraints_from_text()`:
+- metadata 挿入を MetadataKey 使用
+
+### Phase 5: 関連ファイルの更新
+
+**spec-core/src/graph.rs**:
+- `InterUniverseInconsistency.universe_a/b`: String → UniverseId
+- metadata.get("universe") → metadata.get(&MetadataKey::Universe)
+- set_node_universe() で UniverseId 受け取り
+
+**spec-core/src/extract.rs**:
+- InferredSpecification の metadata を Metadata 型に
+- metadata 挿入を MetadataKey 使用
+
+**spec-cli/src/commands/u0.rs**:
+- UDAF モデルとのやりとりを型安全に
+- universe_id の扱いを UniverseId に
+
+**specd/src/service.rs**:
+- SetNodeUniverseRequest で受け取った String を UniverseId::parse()
+- gRPC との境界で型変換
+
+## 検証
+
+### 1. コンパイル確認
+```bash
+cd spec-core && cargo build
+cd ../specd && cargo build
+cd ../spec-cli && cargo build
+```
+
+### 2. 既存テストの実行
+```bash
+cd spec-core && cargo test
+cd ../spec-cli && cargo test
+```
+
+### 3. 型安全性の確認
+
+誤った ID を使用するコードがコンパイルエラーになることを確認：
+```rust
+// これはコンパイルエラー
+let domain_id = DomainId::new();
+model.universes.get(&domain_id); // 型不一致
+```
+
+### 4. 参照整合性検証
+
+```rust
+let mut model = UDAFModel::new();
+// ... データ追加 ...
+model.validate()?; // 不正な参照があればエラー
+```
+
+### 5. シリアライゼーション確認
+
+既存の JSON データが読み込めることを確認：
+```bash
+specd # 既存の specs.json を読み込んで起動
+```
+
+## Critical Files
+
+- `/Users/ab/Projects/spec-oracle/spec-core/src/udaf.rs` - メイン実装、完全な型更新
+- `/Users/ab/Projects/spec-oracle/spec-core/src/udaf/ids.rs` - 新規作成、ID 型定義
+- `/Users/ab/Projects/spec-oracle/spec-core/src/udaf/metadata.rs` - 新規作成、Metadata 型定義
+- `/Users/ab/Projects/spec-oracle/spec-core/src/udaf/refs.rs` - 新規作成、参照集合型
+- `/Users/ab/Projects/spec-oracle/spec-core/src/graph.rs` - metadata 使用箇所の更新
+- `/Users/ab/Projects/spec-oracle/spec-core/src/extract.rs` - metadata 生成箇所の更新
+- `/Users/ab/Projects/spec-oracle/spec-cli/src/commands/u0.rs` - UDAF モデル使用箇所
+- `/Users/ab/Projects/spec-oracle/specd/src/service.rs` - gRPC 境界での型変換
+- `/Users/ab/Projects/spec-oracle/MEMO.md` - 設計メモ（layer 削除の記録）
+
+## 注意事項
+
+- **破壊的変更**: この変更は既存の Rust API を破壊します（JSON フォーマットは互換性維持）
+- **段階的実装**: Phase 1-5 を順に実装し、各段階でテストを確認
+- **エラーハンドリング**: parse() が失敗する可能性があるため、適切な Result 型使用
+- **後方互換性**: 内部的には String を保持し、serde で透過的に変換
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/ab/.claude/projects/-Users-ab-Projects-spec-oracle/58738dbe-918a-4494-b171-02ccb87c0ddd.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.
+
+---
+
+はい、コンパイルは通るべきです。通らないということは作業は終わっていません。
