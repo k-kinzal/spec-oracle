@@ -2,12 +2,12 @@ id: 69e3e6cc-4507-4744-8a50-b93b30a3adc8
 content: AI-powered relationship inference (cross-layer semantic matching)
 kind: Assertion
 metadata:
-  extractor: proto_rpc
-  inferred: 'true'
-  source_file: proto/spec_oracle.proto
   confidence: '0.95'
   rpc_name: InferAllRelationshipsWithAi
+  inferred: 'true'
+  source_file: proto/spec_oracle.proto
   source_line: '56'
+  extractor: proto_rpc
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

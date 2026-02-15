@@ -3,9 +3,9 @@ content: 'RPC: List nodes'
 kind: Assertion
 metadata:
   extractor: proto_rpc
-  rpc_name: ListNodes
-  source_file: proto/spec_oracle.proto
   source_line: '9'
+  source_file: proto/spec_oracle.proto
+  rpc_name: ListNodes
   confidence: '0.95'
   inferred: 'true'
 created_at: 1771078430

@@ -1,0 +1,7 @@
+id: c12f2359-3682-4ede-95e7-0024e3f04138
+content: The list-nodes command must support --limit and --offset parameters for pagination when using --full mode, showing "X - Y of Z" and "...and N more (use --offset M to see next page)" hints
+kind: Assertion
+metadata: {}
+created_at: 1771119827
+modified_at: 1771119827
+formality_layer: 0

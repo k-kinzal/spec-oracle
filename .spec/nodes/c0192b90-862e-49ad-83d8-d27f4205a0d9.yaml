@@ -3,14 +3,14 @@ content: spec-cli/src/main.rs contains 4 functions, 1 structs, 5 modules
 kind: Assertion
 metadata:
   function_count: '4'
-  extractor: architecture
-  property: module_structure
   inferred: 'true'
   struct_count: '1'
-  confidence: '0.95'
-  source_line: '0'
-  module_count: '5'
+  extractor: architecture
   source_file: spec-cli/src/main.rs
+  module_count: '5'
+  source_line: '0'
+  property: module_structure
+  confidence: '0.95'
 created_at: 1771104181
 modified_at: 1771104181
 formality_layer: 3
