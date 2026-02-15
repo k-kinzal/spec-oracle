@@ -2,12 +2,12 @@ id: 33912c9c-5a29-4720-b4f6-d1251547ffd9
 content: 'Scenario: load nonexistent returns empty'
 kind: Scenario
 metadata:
-  source_file: spec-core/src/store.rs
-  extractor: test
-  confidence: '0.9'
-  source_line: '65'
-  test_function: load_nonexistent_returns_empty
   inferred: 'true'
+  source_file: spec-core/src/store.rs
+  confidence: '0.9'
+  test_function: load_nonexistent_returns_empty
+  extractor: test
+  source_line: '65'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

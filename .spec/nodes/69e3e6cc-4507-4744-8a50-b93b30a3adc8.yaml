@@ -4,10 +4,10 @@ kind: Assertion
 metadata:
   confidence: '0.95'
   rpc_name: InferAllRelationshipsWithAi
-  inferred: 'true'
   source_file: proto/spec_oracle.proto
-  source_line: '56'
   extractor: proto_rpc
+  source_line: '56'
+  inferred: 'true'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

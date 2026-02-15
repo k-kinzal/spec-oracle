@@ -2,12 +2,12 @@ id: e70a5ebe-9770-437e-8a45-2df485ff0a0b
 content: 'RPC: List edges'
 kind: Assertion
 metadata:
-  inferred: 'true'
-  source_line: '14'
-  extractor: proto_rpc
   rpc_name: ListEdges
   source_file: proto/spec_oracle.proto
+  source_line: '14'
   confidence: '0.95'
+  extractor: proto_rpc
+  inferred: 'true'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

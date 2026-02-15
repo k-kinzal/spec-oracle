@@ -4,10 +4,10 @@ kind: Scenario
 metadata:
   confidence: '0.9'
   source_line: '2434'
-  inferred: 'true'
   test_function: get_compliance_trend_with_data
-  source_file: spec-core/src/graph.rs
   extractor: test
+  source_file: spec-core/src/graph.rs
+  inferred: 'true'
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3

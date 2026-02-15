@@ -3,10 +3,10 @@ content: 'Scenario: detect semantic contradiction password length'
 kind: Scenario
 metadata:
   test_function: detect_semantic_contradiction_password_length
-  inferred: 'true'
   source_file: spec-core/src/graph.rs
-  confidence: '0.9'
   source_line: '1627'
+  inferred: 'true'
+  confidence: '0.9'
   extractor: test
 created_at: 1771077123
 modified_at: 1771077123

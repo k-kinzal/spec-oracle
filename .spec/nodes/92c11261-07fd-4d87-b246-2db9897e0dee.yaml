@@ -2,10 +2,10 @@ id: 92c11261-07fd-4d87-b246-2db9897e0dee
 content: 'RPC: Detect contradictions'
 kind: Assertion
 metadata:
+  source_line: '19'
   confidence: '0.95'
   inferred: 'true'
   rpc_name: DetectContradictions
-  source_line: '19'
   source_file: proto/spec_oracle.proto
   extractor: proto_rpc
 created_at: 1771078430

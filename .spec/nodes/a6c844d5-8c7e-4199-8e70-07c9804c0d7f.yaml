@@ -2,11 +2,11 @@ id: a6c844d5-8c7e-4199-8e70-07c9804c0d7f
 content: 'RPC: Set node universe'
 kind: Assertion
 metadata:
-  inferred: 'true'
-  source_file: proto/spec_oracle.proto
   source_line: '50'
-  extractor: proto_rpc
+  source_file: proto/spec_oracle.proto
   confidence: '0.95'
+  inferred: 'true'
+  extractor: proto_rpc
   rpc_name: SetNodeUniverse
 created_at: 1771078430
 modified_at: 1771078430

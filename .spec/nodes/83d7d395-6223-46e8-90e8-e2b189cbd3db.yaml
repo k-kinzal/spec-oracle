@@ -2,12 +2,12 @@ id: 83d7d395-6223-46e8-90e8-e2b189cbd3db
 content: 'Scenario: generate contract template returns none for non testable'
 kind: Scenario
 metadata:
-  source_file: spec-core/src/graph.rs
-  confidence: '0.9'
-  test_function: generate_contract_template_returns_none_for_non_testable
   inferred: 'true'
-  extractor: test
   source_line: '1912'
+  extractor: test
+  confidence: '0.9'
+  source_file: spec-core/src/graph.rs
+  test_function: generate_contract_template_returns_none_for_non_testable
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

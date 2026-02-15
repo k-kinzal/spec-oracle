@@ -2,12 +2,12 @@ id: 564b6e40-b052-440d-8654-3ab97c7dfae9
 content: 'RPC: Remove node'
 kind: Assertion
 metadata:
-  extractor: proto_rpc
-  source_line: '10'
-  rpc_name: RemoveNode
-  inferred: 'true'
   confidence: '0.95'
   source_file: proto/spec_oracle.proto
+  extractor: proto_rpc
+  inferred: 'true'
+  rpc_name: RemoveNode
+  source_line: '10'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

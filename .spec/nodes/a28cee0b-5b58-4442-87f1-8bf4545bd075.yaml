@@ -2,12 +2,12 @@ id: a28cee0b-5b58-4442-87f1-8bf4545bd075
 content: 'Invariant: detect.content, "Detect contradictions between specifications"'
 kind: Constraint
 metadata:
-  assertion: detect.content, "Detect contradictions between specifications"
-  extractor: assertion
-  source_line: '1209'
-  confidence: '0.95'
-  source_file: spec-core/src/extract.rs
   inferred: 'true'
+  source_line: '1209'
+  assertion: detect.content, "Detect contradictions between specifications"
+  source_file: spec-core/src/extract.rs
+  confidence: '0.95'
+  extractor: assertion
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3
