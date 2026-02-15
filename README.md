@@ -57,7 +57,7 @@ U0 serves as the baseline for governing multi-layered defenses. Humans express i
 
 ### Developer Experience
 - **High-level commands**: `add`, `check`, `find`, `trace` - no need to think about nodes/edges
-- **Comprehensive testing**: 59 tests covering all core functionality
+- **Comprehensive testing**: 73 tests covering all core functionality
 - **Multi-project support**: Manage specifications for multiple codebases simultaneously
 
 ## Quick Start
@@ -356,7 +356,7 @@ cargo run --bin spec -- --server http://localhost:50051 <command>
 cargo test
 ```
 
-All 59 tests verify:
+All 73 tests verify:
 - Node and edge CRUD operations
 - Contradiction detection (Z3-verified formal proofs + heuristics)
 - Omission detection (isolated nodes, incomplete coverage)
