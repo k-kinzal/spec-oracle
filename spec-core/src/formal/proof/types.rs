@@ -2,7 +2,6 @@
 ///
 /// This module defines the fundamental types for representing proofs
 /// and properties in the specORACLE verification system.
-
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 

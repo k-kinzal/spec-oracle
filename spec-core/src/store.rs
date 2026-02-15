@@ -1,4 +1,4 @@
-use crate::graph::SpecGraph;
+use crate::data::SpecRepository;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, thiserror::Error)]
@@ -20,19 +20,19 @@ pub enum Store {
 }
 
 impl Store {
-    /// Load specification graph from storage
-    pub fn load(&self) -> Result<SpecGraph, StoreError> {
+    /// Load specification repository from storage
+    pub fn load(&self) -> Result<SpecRepository, StoreError> {
         match self {
             Store::File(store) => store.load(),
             Store::Directory(store) => store.load(),
         }
     }
 
-    /// Save specification graph to storage
-    pub fn save(&self, graph: &SpecGraph) -> Result<(), StoreError> {
+    /// Save specification repository to storage
+    pub fn save(&self, repo: &SpecRepository) -> Result<(), StoreError> {
         match self {
-            Store::File(store) => store.save(graph),
-            Store::Directory(store) => store.save(graph),
+            Store::File(store) => store.save(repo),
+            Store::Directory(store) => store.save(repo),
         }
     }
 
@@ -47,7 +47,7 @@ impl Store {
     }
 }
 
-/// File-based persistence for the specification graph.
+/// File-based persistence for the specification repository.
 pub struct FileStore {
     path: PathBuf,
 }
@@ -59,21 +59,21 @@ impl FileStore {
         }
     }
 
-    pub fn load(&self) -> Result<SpecGraph, StoreError> {
+    pub fn load(&self) -> Result<SpecRepository, StoreError> {
         if !self.path.exists() {
-            return Ok(SpecGraph::new());
+            return Ok(SpecRepository::new());
         }
         let data = std::fs::read_to_string(&self.path)?;
-        let mut graph: SpecGraph = serde_json::from_str(&data)?;
-        graph.rebuild_indices();
-        Ok(graph)
+        let mut repo: SpecRepository = serde_json::from_str(&data)?;
+        repo.rebuild_indices();
+        Ok(repo)
     }
 
-    pub fn save(&self, graph: &SpecGraph) -> Result<(), StoreError> {
+    pub fn save(&self, repo: &SpecRepository) -> Result<(), StoreError> {
         if let Some(parent) = self.path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let data = serde_json::to_string_pretty(graph)?;
+        let data = serde_json::to_string_pretty(repo)?;
         std::fs::write(&self.path, data)?;
         Ok(())
     }
@@ -82,7 +82,7 @@ impl FileStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::NodeKind;
+    use crate::data::NodeKind;
     use std::collections::HashMap;
 
     #[test]
@@ -90,10 +90,10 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("spec_oracle_test_{}", uuid::Uuid::new_v4()));
         let store = FileStore::new(dir.join("specs.json"));
 
-        let mut graph = SpecGraph::new();
-        graph.add_node("test node".into(), NodeKind::Assertion, HashMap::new());
+        let mut repo = SpecRepository::new();
+        repo.add_node("test node".into(), NodeKind::Assertion, HashMap::new());
 
-        store.save(&graph).unwrap();
+        store.save(&repo).unwrap();
         let loaded = store.load().unwrap();
         assert_eq!(loaded.node_count(), 1);
 
@@ -103,12 +103,12 @@ mod tests {
     #[test]
     fn load_nonexistent_returns_empty() {
         let store = FileStore::new("/tmp/nonexistent_spec_oracle_test.json");
-        let graph = store.load().unwrap();
-        assert_eq!(graph.node_count(), 0);
+        let repo = store.load().unwrap();
+        assert_eq!(repo.node_count(), 0);
     }
 }
 
-/// Directory-based persistence for the specification graph.
+/// Directory-based persistence for the specification repository.
 /// Each node is saved as an individual YAML file for better merge conflict resolution.
 pub struct DirectoryStore {
     base_path: PathBuf,
@@ -129,16 +129,17 @@ impl DirectoryStore {
         self.base_path.join("edges.yaml")
     }
 
+    #[allow(dead_code)]
     fn metadata_file(&self) -> PathBuf {
         self.base_path.join("metadata.yaml")
     }
 
-    pub fn load(&self) -> Result<SpecGraph, StoreError> {
+    pub fn load(&self) -> Result<SpecRepository, StoreError> {
         if !self.base_path.exists() {
-            return Ok(SpecGraph::new());
+            return Ok(SpecRepository::new());
         }
 
-        let mut graph = SpecGraph::new();
+        let mut repo = SpecRepository::new();
 
         // Load nodes from individual YAML files
         let nodes_dir = self.nodes_dir();
@@ -148,8 +149,8 @@ impl DirectoryStore {
                 let path = entry.path();
                 if path.extension().and_then(|s| s.to_str()) == Some("yaml") {
                     let content = std::fs::read_to_string(&path)?;
-                    let node: crate::graph::SpecNodeData = serde_yaml::from_str(&content)?;
-                    graph.add_node_from_loaded(node);
+                    let node: crate::data::SpecNodeData = serde_yaml::from_str(&content)?;
+                    repo.add_node_from_loaded(node);
                 }
             }
         }
@@ -158,17 +159,17 @@ impl DirectoryStore {
         let edges_file = self.edges_file();
         if edges_file.exists() {
             let content = std::fs::read_to_string(&edges_file)?;
-            let edges: Vec<crate::graph::Edge> = serde_yaml::from_str(&content)?;
+            let edges: Vec<crate::data::Edge> = serde_yaml::from_str(&content)?;
             for edge in edges {
-                let _ = graph.add_edge_from_loaded(edge);
+                let _ = repo.add_edge_from_loaded(edge);
             }
         }
 
-        graph.rebuild_indices();
-        Ok(graph)
+        repo.rebuild_indices();
+        Ok(repo)
     }
 
-    pub fn save(&self, graph: &SpecGraph) -> Result<(), StoreError> {
+    pub fn save(&self, repo: &SpecRepository) -> Result<(), StoreError> {
         std::fs::create_dir_all(&self.base_path)?;
         let nodes_dir = self.nodes_dir();
         std::fs::create_dir_all(&nodes_dir)?;
@@ -184,12 +185,12 @@ impl DirectoryStore {
 
             // Delete files after iteration is complete
             for path in &yaml_files {
-                std::fs::remove_file(&path)?;
+                std::fs::remove_file(path)?;
             }
         }
 
         // Save each node as individual YAML file
-        for node in graph.nodes() {
+        for node in repo.nodes() {
             let filename = format!("{}.yaml", node.id);
             let path = nodes_dir.join(filename);
             let content = serde_yaml::to_string(&node)?;
@@ -197,7 +198,7 @@ impl DirectoryStore {
         }
 
         // Save edges as single YAML file
-        let edges: Vec<_> = graph.edges().collect();
+        let edges: Vec<_> = repo.edges().collect();
         let edges_content = serde_yaml::to_string(&edges)?;
         std::fs::write(self.edges_file(), edges_content)?;
 
@@ -208,7 +209,7 @@ impl DirectoryStore {
 #[cfg(test)]
 mod directory_store_tests {
     use super::*;
-    use crate::graph::NodeKind;
+    use crate::data::NodeKind;
     use std::collections::HashMap;
 
     #[test]
@@ -216,11 +217,11 @@ mod directory_store_tests {
         let dir = std::env::temp_dir().join(format!("spec_oracle_dir_test_{}", uuid::Uuid::new_v4()));
         let store = DirectoryStore::new(&dir);
 
-        let mut graph = SpecGraph::new();
-        let node = graph.add_node("test node".into(), NodeKind::Assertion, HashMap::new());
+        let mut repo = SpecRepository::new();
+        let node = repo.add_node("test node".into(), NodeKind::Assertion, HashMap::new());
         let node_id = node.id.clone();
 
-        store.save(&graph).unwrap();
+        store.save(&repo).unwrap();
 
         // Verify individual node file exists
         let node_file = dir.join("nodes").join(format!("{}.yaml", node_id));
@@ -237,7 +238,7 @@ mod directory_store_tests {
     fn directory_store_load_nonexistent() {
         let dir = std::env::temp_dir().join(format!("spec_oracle_nonexistent_{}", uuid::Uuid::new_v4()));
         let store = DirectoryStore::new(&dir);
-        let graph = store.load().unwrap();
-        assert_eq!(graph.node_count(), 0);
+        let repo = store.load().unwrap();
+        assert_eq!(repo.node_count(), 0);
     }
 }

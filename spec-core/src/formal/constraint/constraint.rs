@@ -9,7 +9,6 @@
 ///
 /// CRITICAL: Proofs use `formal` field only. If `formal` is None, it must be extracted
 /// from `meta.description` during proof preparation, but never accessed directly by Prover.
-
 use serde::{Deserialize, Serialize};
 use super::ConstraintMetadata;
 

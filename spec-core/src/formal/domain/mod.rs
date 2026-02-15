@@ -1,5 +1,6 @@
 //! Domain module: The region that a specification actually covers
 
+#[allow(clippy::module_inception)]
 mod domain;
 mod domain_id;
 mod domain_metadata;

@@ -3,7 +3,6 @@
 /// Valid formats:
 /// - "f_U1_to_U0" (inverse mapping)
 /// - "f_U1_to_U2" (forward/parallel mapping)
-
 use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use std::fmt;
 use crate::formal::universe::UniverseId;

@@ -4,8 +4,8 @@
 /// at different formality layers, enabling the tool to recognize that:
 /// - "Password must be >= 8 chars" (natural language)
 /// - `assert!(password.len() >= 8)` (executable code)
+///
 /// are the same specification.
-
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
@@ -51,11 +51,10 @@ impl AISemantic {
     pub fn semantic_similarity(&self, spec1: &str, spec2: &str, layer1: u8, layer2: u8) -> Option<f32> {
         // Check cache first
         let cache_key = self.make_cache_key(spec1, spec2);
-        if let Ok(cache) = self.cache.lock() {
-            if let Some(&score) = cache.get(&cache_key) {
+        if let Ok(cache) = self.cache.lock()
+            && let Some(&score) = cache.get(&cache_key) {
                 return Some(score);
             }
-        }
 
         // Call AI if available
         if !self.is_available() {
@@ -93,7 +92,7 @@ Formality layers: 0=natural language, 1=structured, 2=formal, 3=executable code.
         let score = response.trim().parse::<f32>().ok()?;
 
         // Clamp to valid range
-        let score = score.max(0.0).min(1.0);
+        let score = score.clamp(0.0, 1.0);
 
         // Cache result
         if let Ok(mut cache) = self.cache.lock() {

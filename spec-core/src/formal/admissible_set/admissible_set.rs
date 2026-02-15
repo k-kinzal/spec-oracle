@@ -10,7 +10,6 @@
 /// - Layer 1: Identifier (`spec_id`)
 /// - Layer 2: Proof Data (`proof_data`) - constraints, contradictions
 /// - Layer 3: Metadata (`meta`) - organizational info
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use super::{SpecId, SpecSet};

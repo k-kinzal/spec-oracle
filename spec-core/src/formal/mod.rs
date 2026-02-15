@@ -26,7 +26,11 @@ pub use transform::{TransformFunction, TransformId, TransformKind, TransformStra
 pub use metadata::{Metadata, MetadataKey};
 
 // Re-export model and proof types
-pub use model::UDAFModel;
+pub use model::{UDAFModel, ModelSync};
 pub use proof::{Proof, Property, ProofMethod, ProofStatus, ProofStep};
 #[cfg(feature = "z3-solver")]
 pub use proof::{Prover, UnderspecificationReport};
+
+// Re-export verification types
+#[cfg(feature = "z3-solver")]
+pub use model::{Contradiction, Omission, LayerInconsistency, InterUniverseInconsistency};

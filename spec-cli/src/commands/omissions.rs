@@ -10,6 +10,7 @@ use tonic::Request;
 pub fn execute_omissions_standalone(
     store: &Store,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // Use legacy SpecGraph for omission detection (pure graph operation)
     let graph = store.load()?;
     let omissions = graph.detect_omissions();
 

@@ -1,4 +1,4 @@
-use crate::{NodeKind, SpecGraph};
+use crate::data::{NodeKind, EdgeKind, SpecRepository, SpecNodeData};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -29,12 +29,12 @@ pub struct IngestionReport {
 pub struct EdgeSuggestion {
     pub source_id: String,
     pub target_id: String,
-    pub kind: crate::EdgeKind,
+    pub kind: EdgeKind,
     pub confidence: f32,
     pub explanation: String,
 }
 
-impl SpecGraph {
+impl SpecRepository {
     /// Check if inferred spec has sufficient semantic quality
     fn is_high_quality_spec(spec: &InferredSpecification) -> bool {
         let content = &spec.content;
@@ -158,15 +158,15 @@ impl SpecGraph {
             for suggestion in suggestions {
                 if suggestion.confidence >= 0.8 {
                     // High confidence: auto-create edge
-                    match self.add_edge(
+                    if self.add_edge(
                         &suggestion.source_id,
                         &suggestion.target_id,
                         suggestion.kind,
                         HashMap::new(),
-                    ) {
-                        Ok(_) => report.edges_created += 1,
-                        Err(_) => {} // Ignore errors (node might not exist)
+                    ).is_ok() {
+                        report.edges_created += 1;
                     }
+                    // Ignore errors (node might not exist)
                 } else if suggestion.confidence >= 0.5 {
                     // Medium confidence: suggest for human review
                     report.suggestions.push(suggestion);
@@ -174,16 +174,10 @@ impl SpecGraph {
             }
         }
 
-        // Detect contradictions among newly created nodes
-        let contras = self.detect_contradictions();
-        for contra in contras {
-            if created_ids.contains(&contra.node_a.id) || created_ids.contains(&contra.node_b.id) {
-                report.contradictions_found.push(format!(
-                    "Inferred contradiction: {} vs {}",
-                    contra.node_a.content, contra.node_b.content
-                ));
-            }
-        }
+        // TODO: Contradiction detection should be done via UDAFModel.detect_contradictions()
+        // This is a formal verification operation, not a data layer operation.
+        // For now, we skip contradiction detection during ingestion.
+        // It will be done separately via the formal layer.
 
         report
     }
@@ -195,7 +189,7 @@ impl SpecGraph {
         kind: NodeKind,
         formality_layer: u8,
         metadata: HashMap<String, String>,
-    ) -> crate::SpecNodeData {
+    ) -> SpecNodeData {
         // Use existing add_node infrastructure
         let node = self.add_node(content, kind, metadata);
         let node_id = node.id.clone();
@@ -227,15 +221,15 @@ impl SpecGraph {
             for suggestion in suggestions {
                 if suggestion.confidence >= 0.8 {
                     // High confidence: auto-create edge
-                    match self.add_edge(
+                    if self.add_edge(
                         &suggestion.source_id,
                         &suggestion.target_id,
                         suggestion.kind,
                         HashMap::new(),
-                    ) {
-                        Ok(_) => report.edges_created += 1,
-                        Err(_) => {} // Ignore errors (edge might already exist)
+                    ).is_ok() {
+                        report.edges_created += 1;
                     }
+                    // Ignore errors (edge might already exist)
                 } else if suggestion.confidence >= 0.5 {
                     // Medium confidence: suggest for human review
                     report.suggestions.push(suggestion);
@@ -263,15 +257,15 @@ impl SpecGraph {
         for suggestion in suggestions {
             if suggestion.confidence >= 0.8 {
                 // High confidence: auto-create edge
-                match self.add_edge(
+                if self.add_edge(
                     &suggestion.source_id,
                     &suggestion.target_id,
                     suggestion.kind,
                     HashMap::new(),
-                ) {
-                    Ok(_) => report.edges_created += 1,
-                    Err(_) => {} // Ignore errors (edge might already exist)
+                ).is_ok() {
+                    report.edges_created += 1;
                 }
+                // Ignore errors (edge might already exist)
             } else if suggestion.confidence >= 0.5 {
                 // Medium confidence: suggest for human review
                 report.suggestions.push(suggestion);
@@ -351,7 +345,7 @@ impl SpecGraph {
                         let suggestion = EdgeSuggestion {
                             source_id: source_node.id.clone(),
                             target_id: target_node.id.clone(),
-                            kind: crate::EdgeKind::Formalizes,
+                            kind: EdgeKind::Formalizes,
                             confidence,
                             explanation: format!(
                                 "Same concept at different formality levels ({} -> {})",
@@ -360,15 +354,15 @@ impl SpecGraph {
                         };
 
                         if confidence >= min_confidence {
-                            match self.add_edge(
+                            if self.add_edge(
                                 &suggestion.source_id,
                                 &suggestion.target_id,
                                 suggestion.kind,
                                 HashMap::new(),
-                            ) {
-                                Ok(_) => report.edges_created += 1,
-                                Err(_) => {} // Edge might already exist
+                            ).is_ok() {
+                                report.edges_created += 1;
                             }
+                            // Edge might already exist
                         } else if confidence >= 0.5 {
                             report.suggestions.push(suggestion);
                         }
@@ -418,15 +412,15 @@ impl SpecGraph {
             for suggestion in suggestions {
                 if suggestion.confidence >= min_confidence {
                     // High confidence: auto-create edge
-                    match self.add_edge(
+                    if self.add_edge(
                         &suggestion.source_id,
                         &suggestion.target_id,
                         suggestion.kind,
                         HashMap::new(),
-                    ) {
-                        Ok(_) => report.edges_created += 1,
-                        Err(_) => {} // Ignore errors (edge might already exist)
+                    ).is_ok() {
+                        report.edges_created += 1;
                     }
+                    // Ignore errors (edge might already exist)
                 } else if suggestion.confidence >= 0.5 {
                     // Medium confidence: suggest for human review
                     report.suggestions.push(suggestion);
@@ -600,13 +594,12 @@ impl SpecGraph {
 
         // For moderate similarity (0.4-0.8), use AI to disambiguate
         // This catches same-layer duplicates that keyword matching misses
-        if simple_sim >= 0.4 {
-            if let Some(ai_sim) = ai.semantic_similarity(text1, text2, layer1, layer2) {
+        if simple_sim >= 0.4
+            && let Some(ai_sim) = ai.semantic_similarity(text1, text2, layer1, layer2) {
                 // Blend simple and AI similarity (weighted average)
                 // Give more weight to AI for disambiguation
                 return simple_sim * 0.3 + ai_sim * 0.7;
             }
-        }
 
         // For very low similarity (<0.4) in same layer, skip AI (too expensive, low probability)
         simple_sim
@@ -618,12 +611,12 @@ impl SpecGraph {
         source: &crate::SpecNodeData,
         target: &crate::SpecNodeData,
         similarity: f32,
-    ) -> Option<(crate::EdgeKind, f32, String)> {
+    ) -> Option<(EdgeKind, f32, String)> {
         // Rule 1: Synonym - very high similarity, same kind
         // Check this FIRST because it's most specific (highest threshold)
         if similarity > 0.8 && source.kind == target.kind {
             return Some((
-                crate::EdgeKind::Synonym,
+                EdgeKind::Synonym,
                 similarity * 0.95,
                 "Nearly identical content".to_string(),
             ));
@@ -632,7 +625,7 @@ impl SpecGraph {
         // Rule 2: Formalizes - same concept, different formality levels
         if similarity > 0.5 && source.formality_layer < target.formality_layer {
             return Some((
-                crate::EdgeKind::Formalizes,
+                EdgeKind::Formalizes,
                 similarity * 0.9,
                 format!(
                     "Same concept at different formality levels ({} -> {})",
@@ -647,7 +640,7 @@ impl SpecGraph {
             && target.kind == NodeKind::Constraint
         {
             return Some((
-                crate::EdgeKind::DerivesFrom,
+                EdgeKind::DerivesFrom,
                 similarity * 0.8,
                 "Assertion derives from constraint".to_string(),
             ));
@@ -657,14 +650,14 @@ impl SpecGraph {
         if similarity > 0.6 {
             if source.kind == NodeKind::Scenario && target.kind == NodeKind::Constraint {
                 return Some((
-                    crate::EdgeKind::Refines,
+                    EdgeKind::Refines,
                     similarity * 0.85,
                     "Scenario refines constraint".to_string(),
                 ));
             }
             if source.kind == target.kind {
                 return Some((
-                    crate::EdgeKind::Refines,
+                    EdgeKind::Refines,
                     similarity * 0.9,
                     "Similar specifications (potential refinement)".to_string(),
                 ));
@@ -675,15 +668,14 @@ impl SpecGraph {
         if let (Some(src_file), Some(tgt_file)) = (
             source.metadata.get("source_file"),
             target.metadata.get("source_file"),
-        ) {
-            if src_file == tgt_file && similarity > 0.4 {
+        )
+            && src_file == tgt_file && similarity > 0.4 {
                 return Some((
-                    crate::EdgeKind::Refines,
+                    EdgeKind::Refines,
                     similarity * 0.7,
                     "Same source file".to_string(),
                 ));
             }
-        }
 
         None
     }
@@ -1026,12 +1018,11 @@ Example output: "The system must detect contradictions when password length requ
         for macro_name in &["assert!", "assert_eq!", "assert_ne!", "debug_assert!"] {
             if let Some(idx) = trimmed.find(macro_name) {
                 let after_macro = &trimmed[idx + macro_name.len()..];
-                if let Some(start) = after_macro.find('(') {
-                    if let Some(end) = after_macro.rfind(')') {
+                if let Some(start) = after_macro.find('(')
+                    && let Some(end) = after_macro.rfind(')') {
                         let assertion = &after_macro[start + 1..end];
                         return Some(assertion.trim().to_string());
                     }
-                }
             }
         }
 
@@ -1043,12 +1034,11 @@ Example output: "The system must detect contradictions when password length requ
 
         if let Some(idx) = trimmed.find("panic!(") {
             let after_panic = &trimmed[idx + 7..];
-            if let Some(start) = after_panic.find('"') {
-                if let Some(end) = after_panic[start + 1..].find('"') {
+            if let Some(start) = after_panic.find('"')
+                && let Some(end) = after_panic[start + 1..].find('"') {
                     let message = &after_panic[start + 1..start + 1 + end];
                     return Some(message.to_string());
                 }
-            }
         }
 
         None
@@ -1128,7 +1118,7 @@ fn process_payment(amount: u64) {
 
     #[test]
     fn ingest_inferred_specs() {
-        let mut graph = SpecGraph::new();
+        let mut graph = SpecRepository::new();
 
         let specs = vec![
             InferredSpecification {
@@ -1202,8 +1192,8 @@ impl ProtoExtractor {
             }
 
             // Match RPC definitions: "rpc MethodName(RequestType) returns (ResponseType);"
-            if trimmed.starts_with("rpc ") {
-                if let Some(rpc_name) = Self::extract_rpc_name(trimmed) {
+            if trimmed.starts_with("rpc ")
+                && let Some(rpc_name) = Self::extract_rpc_name(trimmed) {
                     let description = if !current_comment.is_empty() {
                         current_comment.clone()
                     } else {
@@ -1226,7 +1216,6 @@ impl ProtoExtractor {
 
                     current_comment.clear();
                 }
-            }
         }
 
         Ok(specs)
@@ -1366,11 +1355,10 @@ impl DocExtractor {
         }
 
         // Remove numbered list markers (e.g., "1. ")
-        if let Some(pos) = cleaned.find(". ") {
-            if cleaned[..pos].chars().all(|c| c.is_numeric()) {
+        if let Some(pos) = cleaned.find(". ")
+            && cleaned[..pos].chars().all(|c| c.is_numeric()) {
                 cleaned = cleaned[pos + 2..].to_string();
             }
-        }
 
         cleaned.trim().to_string()
     }
@@ -1398,11 +1386,10 @@ impl ArchitectureExtractor {
         specs.push(size_spec);
 
         // Extract module structure if it's a Rust file
-        if file_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-            if let Some(module_spec) = Self::extract_module_structure(&content, &file_name) {
+        if file_path.extension().and_then(|s| s.to_str()) == Some("rs")
+            && let Some(module_spec) = Self::extract_module_structure(&content, &file_name) {
                 specs.push(module_spec);
             }
-        }
 
         Ok(specs)
     }

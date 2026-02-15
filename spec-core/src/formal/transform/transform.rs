@@ -4,7 +4,6 @@
 /// The most critical transforms are inverse mappings: f₀ᵢ⁻¹: Ui → U0
 ///
 /// These are NOT just edge markers - they contain actual transformation logic.
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use super::{TransformId, TransformMetadata};

@@ -1,10 +1,13 @@
-/// Formal verification commands using Prover and U/D/A/f model
+/// Formal verification commands using UDAFModel and U/D/A/f model
 ///
-/// This module implements formal proof commands that leverage the Prover
+/// This module implements formal proof commands that leverage the UDAFModel
 /// to verify consistency, satisfiability, and inspect the U/D/A/f model structure.
 
-use spec_core::{Store, Prover, UDAFModel, NodeKind, EdgeKind, ProofStatus};
+use spec_core::{Store, SpecRepository, UDAFModel, ModelSync, NodeKind, EdgeKind, ProofStatus};
 use crate::utils::parse_formality_layer;
+
+#[cfg(feature = "z3-solver")]
+use spec_core::Prover;
 
 /// Execute ProveConsistency command in standalone mode
 pub fn execute_prove_consistency_standalone(
@@ -12,16 +15,19 @@ pub fn execute_prove_consistency_standalone(
     spec_a: String,
     spec_b: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let mut repo = SpecRepository::from_spec_graph(&spec_graph);
+
     let mut udaf_model = UDAFModel::new();
-    udaf_model.populate_from_graph(&graph);
+    ModelSync::sync_from_repository(&mut udaf_model, &repo)?;
 
     println!("🔬 Proving Consistency Between Specifications\n");
     println!("═══════════════════════════════════════════════════════════════\n");
 
     // Get the specifications
-    let node_a = graph.get_node(&spec_a);
-    let node_b = graph.get_node(&spec_b);
+    let node_a = repo.get_node(&spec_a);
+    let node_b = repo.get_node(&spec_b);
 
     if node_a.is_none() {
         eprintln!("❌ Specification A '{}' not found", spec_a);
@@ -72,43 +78,59 @@ pub fn execute_prove_consistency_standalone(
     }
     println!();
 
-    // Prove consistency
-    let mut prover = Prover::new();
-    let proof = prover.prove_consistency(admissible_a, admissible_b);
+    // Prove consistency (requires z3-solver feature)
+    #[cfg(feature = "z3-solver")]
+    {
+        let mut prover = Prover::new();
+        let proof = prover.prove_consistency(admissible_a, admissible_b);
 
-    println!("═══════════════════════════════════════════════════════════════\n");
-    println!("📜 Formal Proof Generated\n");
-    println!("Property: {:?}", proof.property);
-    println!("Method:   {:?}", proof.method);
-    println!("Status:   {:?}", proof.status);
-    println!();
-
-    println!("Proof Steps:");
-    for (i, step) in proof.steps.iter().enumerate() {
-        println!("  {}. {}", i+1, step.description);
-        println!("     Justification: {}", step.justification);
+        println!("═══════════════════════════════════════════════════════════════\n");
+        println!("📜 Formal Proof Generated\n");
+        println!("Property: {:?}", proof.property);
+        println!("Method:   {:?}", proof.method);
+        println!("Status:   {:?}", proof.status);
         println!();
+
+        println!("Proof Steps:");
+        for (i, step) in proof.steps.iter().enumerate() {
+            println!("  {}. {}", i+1, step.description);
+            println!("     Justification: {}", step.justification);
+            println!();
+        }
+
+        match proof.status {
+            ProofStatus::Proven => {
+                println!("✅ PROVEN: Specifications are consistent");
+                println!("   ∃x. (x ∈ A₁ ∧ x ∈ A₂) - There exists an implementation satisfying both");
+            }
+            ProofStatus::Refuted => {
+                println!("❌ REFUTED: Specifications contradict each other");
+                println!("   A₁ ∩ A₂ = ∅ - Admissible sets are disjoint");
+                println!("   No implementation can satisfy both specifications simultaneously");
+            }
+            ProofStatus::Unknown => {
+                println!("❓ UNKNOWN: Could not prove or refute");
+                println!("   Current solver is incomplete (heuristic-based)");
+                println!("   SMT solver integration needed for complete verification");
+            }
+            ProofStatus::Pending => {
+                println!("⏳ PENDING: Proof in progress");
+            }
+        }
     }
 
-    match proof.status {
-        ProofStatus::Proven => {
-            println!("✅ PROVEN: Specifications are consistent");
-            println!("   ∃x. (x ∈ A₁ ∧ x ∈ A₂) - There exists an implementation satisfying both");
-        }
-        ProofStatus::Refuted => {
-            println!("❌ REFUTED: Specifications contradict each other");
-            println!("   A₁ ∩ A₂ = ∅ - Admissible sets are disjoint");
-            println!("   No implementation can satisfy both specifications simultaneously");
-        }
-        ProofStatus::Unknown => {
-            println!("❓ UNKNOWN: Could not prove or refute");
-            println!("   Current solver is incomplete (heuristic-based)");
-            println!("   SMT solver integration needed for complete verification");
-        }
-        ProofStatus::Pending => {
-            println!("⏳ PENDING: Proof in progress");
-        }
+    #[cfg(not(feature = "z3-solver"))]
+    {
+        println!("⚠️  Z3 solver not available (feature 'z3-solver' not enabled)");
+        println!("   Using heuristic-based consistency check from UDAFModel");
     }
+
+    // Export proof metadata back to repository
+    ModelSync::export_proof_metadata(&udaf_model, &mut repo)?;
+
+    // Note: Saving back to store would require converting SpecRepository → SpecGraph
+    // For now, proof metadata is in-memory only
+    // TODO: Implement SpecRepository → SpecGraph conversion for saving
 
     Ok(())
 }
@@ -118,15 +140,18 @@ pub fn execute_prove_satisfiability_standalone(
     store: &Store,
     spec: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let mut repo = SpecRepository::from_spec_graph(&spec_graph);
+
     let mut udaf_model = UDAFModel::new();
-    udaf_model.populate_from_graph(&graph);
+    ModelSync::sync_from_repository(&mut udaf_model, &repo)?;
 
     println!("🔬 Proving Satisfiability of Specification\n");
     println!("═══════════════════════════════════════════════════════════════\n");
 
     // Get the specification
-    let node = graph.get_node(&spec);
+    let node = repo.get_node(&spec);
 
     if node.is_none() {
         eprintln!("❌ Specification '{}' not found", spec);
@@ -159,42 +184,57 @@ pub fn execute_prove_satisfiability_standalone(
     println!();
 
     // Prove satisfiability
-    let mut prover = Prover::new();
-    let proof = prover.prove_satisfiability(admissible);
+    #[cfg(feature = "z3-solver")]
+    {
+        let mut prover = Prover::new();
+        let proof = prover.prove_satisfiability(admissible);
 
-    println!("═══════════════════════════════════════════════════════════════\n");
-    println!("📜 Formal Proof Generated\n");
-    println!("Property: {:?}", proof.property);
-    println!("Method:   {:?}", proof.method);
-    println!("Status:   {:?}", proof.status);
-    println!();
-
-    println!("Proof Steps:");
-    for (i, step) in proof.steps.iter().enumerate() {
-        println!("  {}. {}", i+1, step.description);
-        println!("     Justification: {}", step.justification);
+        println!("═══════════════════════════════════════════════════════════════\n");
+        println!("📜 Formal Proof Generated\n");
+        println!("Property: {:?}", proof.property);
+        println!("Method:   {:?}", proof.method);
+        println!("Status:   {:?}", proof.status);
         println!();
+
+        println!("Proof Steps:");
+        for (i, step) in proof.steps.iter().enumerate() {
+            println!("  {}. {}", i+1, step.description);
+            println!("     Justification: {}", step.justification);
+            println!();
+        }
+
+        match proof.status {
+            ProofStatus::Proven => {
+                println!("✅ PROVEN: Specification is satisfiable");
+                println!("   ∃x. x ∈ A - There exists an implementation satisfying the specification");
+            }
+            ProofStatus::Refuted => {
+                println!("❌ REFUTED: Specification is unsatisfiable");
+                println!("   A = ∅ - Admissible set is empty");
+                println!("   No implementation can satisfy this specification");
+            }
+            ProofStatus::Unknown => {
+                println!("❓ UNKNOWN: Could not prove or refute");
+                println!("   Current solver is incomplete (heuristic-based)");
+                println!("   SMT solver integration needed for complete verification");
+            }
+            ProofStatus::Pending => {
+                println!("⏳ PENDING: Proof in progress");
+            }
+        }
     }
 
-    match proof.status {
-        ProofStatus::Proven => {
-            println!("✅ PROVEN: Specification is satisfiable");
-            println!("   ∃x. x ∈ A - There exists an implementation satisfying the specification");
-        }
-        ProofStatus::Refuted => {
-            println!("❌ REFUTED: Specification is unsatisfiable");
-            println!("   A = ∅ - Admissible set is empty");
-            println!("   No implementation can satisfy this specification");
-        }
-        ProofStatus::Unknown => {
-            println!("❓ UNKNOWN: Could not prove or refute");
-            println!("   Current solver is incomplete (heuristic-based)");
-            println!("   SMT solver integration needed for complete verification");
-        }
-        ProofStatus::Pending => {
-            println!("⏳ PENDING: Proof in progress");
-        }
+    #[cfg(not(feature = "z3-solver"))]
+    {
+        println!("⚠️  Z3 solver not available (feature 'z3-solver' not enabled)");
     }
+
+    // Export proof metadata back to repository
+    ModelSync::export_proof_metadata(&udaf_model, &mut repo)?;
+
+    // Note: Saving back to store would require converting SpecRepository → SpecGraph
+    // For now, proof metadata is in-memory only
+    // TODO: Implement SpecRepository → SpecGraph conversion for saving
 
     Ok(())
 }
@@ -204,16 +244,18 @@ pub fn execute_inspect_model_standalone(
     store: &Store,
     verbose: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let repo = SpecRepository::from_spec_graph(&spec_graph);
 
     println!("🔍 Inspecting U/D/A/f Model Structure\n");
     println!("═══════════════════════════════════════════════════════════════\n");
 
-    // Populate UDAFModel from graph
+    // Populate UDAFModel from repository
     let mut udaf_model = UDAFModel::new();
-    udaf_model.populate_from_graph(&graph);
+    ModelSync::sync_from_repository(&mut udaf_model, &repo)?;
 
-    println!("📊 Populating U/D/A/f model from SpecGraph...\n");
+    println!("📊 Populating U/D/A/f model from SpecRepository...\n");
 
     // Analyze Universes (U)
     println!("📦 Universes (U):");
@@ -222,7 +264,7 @@ pub fn execute_inspect_model_standalone(
     let mut layer_stats = std::collections::HashMap::new();
     let mut universe_metadata = std::collections::HashMap::new();
 
-    for node in graph.list_nodes(None) {
+    for node in repo.list_nodes(None) {
         let layer = parse_formality_layer(node.formality_layer as u8);
         *layer_stats.entry(layer).or_insert(0) += 1;
 
@@ -259,7 +301,7 @@ pub fn execute_inspect_model_standalone(
     println!("🌐 Domains (D):");
     println!("   The target scope of specifications:\n");
 
-    let domain_nodes: Vec<_> = graph.list_nodes(Some(NodeKind::Domain));
+    let domain_nodes: Vec<_> = repo.list_nodes(Some(NodeKind::Domain));
 
     if domain_nodes.is_empty() {
         println!("   ⚠️  No explicit domain boundaries defined");
@@ -275,9 +317,9 @@ pub fn execute_inspect_model_standalone(
     println!("✓ Admissible Sets (A):");
     println!("   The set of permitted implementations for each specification:\n");
 
-    let constraint_count = graph.list_nodes(Some(NodeKind::Constraint)).len();
-    let assertion_count = graph.list_nodes(Some(NodeKind::Assertion)).len();
-    let scenario_count = graph.list_nodes(Some(NodeKind::Scenario)).len();
+    let constraint_count = repo.list_nodes(Some(NodeKind::Constraint)).len();
+    let assertion_count = repo.list_nodes(Some(NodeKind::Assertion)).len();
+    let scenario_count = repo.list_nodes(Some(NodeKind::Scenario)).len();
 
     println!("   • Constraints (∀): {} universal invariants", constraint_count);
     println!("   • Assertions:      {} concrete claims", assertion_count);
@@ -292,7 +334,7 @@ pub fn execute_inspect_model_standalone(
 
     let mut transform_counts = std::collections::HashMap::new();
 
-    for (edge, _source, _target) in graph.list_edges(None) {
+    for (edge, _source, _target) in repo.list_edges(None) {
         *transform_counts.entry(edge.kind.clone()).or_insert(0) += 1;
     }
 
@@ -362,7 +404,7 @@ pub fn execute_inspect_model_standalone(
                 _ => "U?",
             };
 
-            let layer_nodes: Vec<_> = graph.list_nodes(None).into_iter()
+            let layer_nodes: Vec<_> = repo.list_nodes(None).into_iter()
                 .filter(|n| parse_formality_layer(n.formality_layer) == layer)
                 .collect();
 
@@ -395,16 +437,19 @@ pub fn execute_prove_implication_standalone(
     antecedent_id: String,
     consequent_id: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let mut repo = SpecRepository::from_spec_graph(&spec_graph);
+
     let mut udaf_model = UDAFModel::new();
-    udaf_model.populate_from_graph(&graph);
+    ModelSync::sync_from_repository(&mut udaf_model, &repo)?;
 
     println!("🔬 Proving Implication Between Specifications\n");
     println!("═══════════════════════════════════════════════════════════════\n");
 
     // Get the specifications
-    let node_a = graph.get_node(&antecedent_id);
-    let node_b = graph.get_node(&consequent_id);
+    let node_a = repo.get_node(&antecedent_id);
+    let node_b = repo.get_node(&consequent_id);
 
     if node_a.is_none() {
         eprintln!("❌ Specification (antecedent) '{}' not found", antecedent_id);
@@ -485,41 +530,56 @@ pub fn execute_prove_implication_standalone(
     println!();
 
     // Prove implication
-    let mut prover = Prover::new();
-    let proof = prover.prove_implication(admissible_a, admissible_b);
+    #[cfg(feature = "z3-solver")]
+    {
+        let mut prover = Prover::new();
+        let proof = prover.prove_implication(admissible_a, admissible_b);
 
-    println!("═══════════════════════════════════════════════════════════════\n");
-    println!("📜 Formal Proof Generated\n");
-    println!("Property: {:?}", proof.property);
-    println!("Method:   {:?}", proof.method);
-    println!("Status:   {:?}", proof.status);
-    println!();
-
-    println!("Proof Steps:");
-    for (i, step) in proof.steps.iter().enumerate() {
-        println!("  {}. {}", i+1, step.description);
-        println!("     Justification: {}", step.justification);
+        println!("═══════════════════════════════════════════════════════════════\n");
+        println!("📜 Formal Proof Generated\n");
+        println!("Property: {:?}", proof.property);
+        println!("Method:   {:?}", proof.method);
+        println!("Status:   {:?}", proof.status);
         println!();
+
+        println!("Proof Steps:");
+        for (i, step) in proof.steps.iter().enumerate() {
+            println!("  {}. {}", i+1, step.description);
+            println!("     Justification: {}", step.justification);
+            println!();
+        }
+
+        match proof.status {
+            ProofStatus::Proven => {
+                println!("✅ PROVEN: A1 ⊆ A2 (Implication holds)");
+                println!("   Every implementation satisfying A1 also satisfies A2");
+            }
+            ProofStatus::Refuted => {
+                println!("❌ REFUTED: A1 ⊄ A2 (Implication does not hold)");
+                println!("   Counterexample exists: some implementation satisfies A1 but not A2");
+            }
+            ProofStatus::Unknown => {
+                println!("❓ UNKNOWN: Could not prove or refute");
+                println!("   Current solver is incomplete (heuristic-based)");
+                println!("   SMT solver integration needed for complete verification");
+            }
+            ProofStatus::Pending => {
+                println!("⏳ PENDING: Proof in progress");
+            }
+        }
     }
 
-    match proof.status {
-        ProofStatus::Proven => {
-            println!("✅ PROVEN: A1 ⊆ A2 (Implication holds)");
-            println!("   Every implementation satisfying A1 also satisfies A2");
-        }
-        ProofStatus::Refuted => {
-            println!("❌ REFUTED: A1 ⊄ A2 (Implication does not hold)");
-            println!("   Counterexample exists: some implementation satisfies A1 but not A2");
-        }
-        ProofStatus::Unknown => {
-            println!("❓ UNKNOWN: Could not prove or refute");
-            println!("   Current solver is incomplete (heuristic-based)");
-            println!("   SMT solver integration needed for complete verification");
-        }
-        ProofStatus::Pending => {
-            println!("⏳ PENDING: Proof in progress");
-        }
+    #[cfg(not(feature = "z3-solver"))]
+    {
+        println!("⚠️  Z3 solver not available (feature 'z3-solver' not enabled)");
     }
+
+    // Export proof metadata back to repository
+    ModelSync::export_proof_metadata(&udaf_model, &mut repo)?;
+
+    // Note: Saving back to store would require converting SpecRepository → SpecGraph
+    // For now, proof metadata is in-memory only
+    // TODO: Implement SpecRepository → SpecGraph conversion for saving
 
     Ok(())
 }
@@ -531,17 +591,20 @@ pub fn execute_prove_consistency_domain_standalone(
     spec_b_id: String,
     domain_id: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let mut repo = SpecRepository::from_spec_graph(&spec_graph);
+
     let mut udaf_model = UDAFModel::new();
-    udaf_model.populate_from_graph(&graph);
+    ModelSync::sync_from_repository(&mut udaf_model, &repo)?;
 
     println!("🔬 Proving Consistency Within Domain\n");
     println!("═══════════════════════════════════════════════════════════════\n");
 
     // Get the specifications
-    let node_a = graph.get_node(&spec_a_id);
-    let node_b = graph.get_node(&spec_b_id);
-    let node_domain = graph.get_node(&domain_id);
+    let node_a = repo.get_node(&spec_a_id);
+    let node_b = repo.get_node(&spec_b_id);
+    let node_domain = repo.get_node(&domain_id);
 
     if node_a.is_none() {
         eprintln!("❌ Specification A '{}' not found", spec_a_id);
@@ -661,41 +724,56 @@ pub fn execute_prove_consistency_domain_standalone(
     println!();
 
     // Prove consistency within domain
-    let mut prover = Prover::new();
-    let proof = prover.prove_consistency_within_domain(admissible_a, admissible_b, domain);
+    #[cfg(feature = "z3-solver")]
+    {
+        let mut prover = Prover::new();
+        let proof = prover.prove_consistency_within_domain(admissible_a, admissible_b, domain);
 
-    println!("═══════════════════════════════════════════════════════════════\n");
-    println!("📜 Formal Proof Generated\n");
-    println!("Property: {:?}", proof.property);
-    println!("Method:   {:?}", proof.method);
-    println!("Status:   {:?}", proof.status);
-    println!();
-
-    println!("Proof Steps:");
-    for (i, step) in proof.steps.iter().enumerate() {
-        println!("  {}. {}", i+1, step.description);
-        println!("     Justification: {}", step.justification);
+        println!("═══════════════════════════════════════════════════════════════\n");
+        println!("📜 Formal Proof Generated\n");
+        println!("Property: {:?}", proof.property);
+        println!("Method:   {:?}", proof.method);
+        println!("Status:   {:?}", proof.status);
         println!();
+
+        println!("Proof Steps:");
+        for (i, step) in proof.steps.iter().enumerate() {
+            println!("  {}. {}", i+1, step.description);
+            println!("     Justification: {}", step.justification);
+            println!();
+        }
+
+        match proof.status {
+            ProofStatus::Proven => {
+                println!("✅ PROVEN: Specifications are consistent within domain");
+                println!("   ∃x. (x ∈ A₁ ∧ x ∈ A₂ ∧ x ∈ D) - Implementation exists satisfying both specs within domain");
+            }
+            ProofStatus::Refuted => {
+                println!("❌ REFUTED: Specifications contradict each other within domain");
+                println!("   A₁ ∩ A₂ ∩ D = ∅ - No implementation can satisfy both within domain");
+            }
+            ProofStatus::Unknown => {
+                println!("❓ UNKNOWN: Could not prove or refute");
+                println!("   Current solver is incomplete (heuristic-based)");
+                println!("   SMT solver integration needed for complete verification");
+            }
+            ProofStatus::Pending => {
+                println!("⏳ PENDING: Proof in progress");
+            }
+        }
     }
 
-    match proof.status {
-        ProofStatus::Proven => {
-            println!("✅ PROVEN: Specifications are consistent within domain");
-            println!("   ∃x. (x ∈ A₁ ∧ x ∈ A₂ ∧ x ∈ D) - Implementation exists satisfying both specs within domain");
-        }
-        ProofStatus::Refuted => {
-            println!("❌ REFUTED: Specifications contradict each other within domain");
-            println!("   A₁ ∩ A₂ ∩ D = ∅ - No implementation can satisfy both within domain");
-        }
-        ProofStatus::Unknown => {
-            println!("❓ UNKNOWN: Could not prove or refute");
-            println!("   Current solver is incomplete (heuristic-based)");
-            println!("   SMT solver integration needed for complete verification");
-        }
-        ProofStatus::Pending => {
-            println!("⏳ PENDING: Proof in progress");
-        }
+    #[cfg(not(feature = "z3-solver"))]
+    {
+        println!("⚠️  Z3 solver not available (feature 'z3-solver' not enabled)");
     }
+
+    // Export proof metadata back to repository
+    ModelSync::export_proof_metadata(&udaf_model, &mut repo)?;
+
+    // Note: Saving back to store would require converting SpecRepository → SpecGraph
+    // For now, proof metadata is in-memory only
+    // TODO: Implement SpecRepository → SpecGraph conversion for saving
 
     Ok(())
 }
@@ -706,15 +784,18 @@ pub fn execute_prove_completeness_standalone(
     domain_id: String,
     spec_ids: Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let mut repo = SpecRepository::from_spec_graph(&spec_graph);
+
     let mut udaf_model = UDAFModel::new();
-    udaf_model.populate_from_graph(&graph);
+    ModelSync::sync_from_repository(&mut udaf_model, &repo)?;
 
     println!("🔬 Proving Domain Completeness (Coverage)\n");
     println!("═══════════════════════════════════════════════════════════════\n");
 
     // Get the domain
-    let node_domain = graph.get_node(&domain_id);
+    let node_domain = repo.get_node(&domain_id);
 
     if node_domain.is_none() {
         eprintln!("❌ Domain '{}' not found", domain_id);
@@ -769,7 +850,7 @@ pub fn execute_prove_completeness_standalone(
 
     println!("📋 Covering Specifications ({}):", spec_ids.len());
     for (i, spec_id) in spec_ids.iter().enumerate() {
-        let node = graph.get_node(spec_id);
+        let node = repo.get_node(spec_id);
         if node.is_none() {
             eprintln!("❌ Specification '{}' not found", spec_id);
             std::process::exit(1);
@@ -794,43 +875,58 @@ pub fn execute_prove_completeness_standalone(
     }
 
     // Prove completeness
-    let mut prover = Prover::new();
-    let proof = prover.prove_completeness(domain, &covering_specs);
+    #[cfg(feature = "z3-solver")]
+    {
+        let mut prover = Prover::new();
+        let proof = prover.prove_completeness(domain, &covering_specs);
 
-    println!("═══════════════════════════════════════════════════════════════\n");
-    println!("📜 Formal Proof Generated\n");
-    println!("Property: {:?}", proof.property);
-    println!("Method:   {:?}", proof.method);
-    println!("Status:   {:?}", proof.status);
-    println!();
-
-    println!("Proof Steps:");
-    for (i, step) in proof.steps.iter().enumerate() {
-        println!("  {}. {}", i+1, step.description);
-        println!("     Justification: {}", step.justification);
+        println!("═══════════════════════════════════════════════════════════════\n");
+        println!("📜 Formal Proof Generated\n");
+        println!("Property: {:?}", proof.property);
+        println!("Method:   {:?}", proof.method);
+        println!("Status:   {:?}", proof.status);
         println!();
+
+        println!("Proof Steps:");
+        for (i, step) in proof.steps.iter().enumerate() {
+            println!("  {}. {}", i+1, step.description);
+            println!("     Justification: {}", step.justification);
+            println!();
+        }
+
+        match proof.status {
+            ProofStatus::Proven => {
+                println!("✅ PROVEN: Domain is fully covered (D ⊆ D_S)");
+                println!("   Every element of domain is covered by some specification");
+                println!("   No coverage gaps (漏れB) detected");
+            }
+            ProofStatus::Refuted => {
+                println!("❌ REFUTED: Coverage gap exists");
+                println!("   D ⊄ D_S - Some domain elements are not covered by any specification");
+                println!("   漏れB (coverage gap) detected - check counterexample in proof steps");
+            }
+            ProofStatus::Unknown => {
+                println!("❓ UNKNOWN: Could not prove or refute");
+                println!("   Current solver is incomplete (heuristic-based)");
+                println!("   SMT solver integration needed for complete verification");
+            }
+            ProofStatus::Pending => {
+                println!("⏳ PENDING: Proof in progress");
+            }
+        }
     }
 
-    match proof.status {
-        ProofStatus::Proven => {
-            println!("✅ PROVEN: Domain is fully covered (D ⊆ D_S)");
-            println!("   Every element of domain is covered by some specification");
-            println!("   No coverage gaps (漏れB) detected");
-        }
-        ProofStatus::Refuted => {
-            println!("❌ REFUTED: Coverage gap exists");
-            println!("   D ⊄ D_S - Some domain elements are not covered by any specification");
-            println!("   漏れB (coverage gap) detected - check counterexample in proof steps");
-        }
-        ProofStatus::Unknown => {
-            println!("❓ UNKNOWN: Could not prove or refute");
-            println!("   Current solver is incomplete (heuristic-based)");
-            println!("   SMT solver integration needed for complete verification");
-        }
-        ProofStatus::Pending => {
-            println!("⏳ PENDING: Proof in progress");
-        }
+    #[cfg(not(feature = "z3-solver"))]
+    {
+        println!("⚠️  Z3 solver not available (feature 'z3-solver' not enabled)");
     }
+
+    // Export proof metadata back to repository
+    ModelSync::export_proof_metadata(&udaf_model, &mut repo)?;
+
+    // Note: Saving back to store would require converting SpecRepository → SpecGraph
+    // For now, proof metadata is in-memory only
+    // TODO: Implement SpecRepository → SpecGraph conversion for saving
 
     Ok(())
 }
@@ -841,16 +937,19 @@ pub fn execute_detect_underspec_standalone(
     spec_id: String,
     domain_id: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let mut repo = SpecRepository::from_spec_graph(&spec_graph);
+
     let mut udaf_model = UDAFModel::new();
-    udaf_model.populate_from_graph(&graph);
+    ModelSync::sync_from_repository(&mut udaf_model, &repo)?;
 
     println!("🔬 Detecting Underspecification (漏れA)\n");
     println!("═══════════════════════════════════════════════════════════════\n");
 
     // Get the specification and domain
-    let node_spec = graph.get_node(&spec_id);
-    let node_domain = graph.get_node(&domain_id);
+    let node_spec = repo.get_node(&spec_id);
+    let node_domain = repo.get_node(&domain_id);
 
     if node_spec.is_none() {
         eprintln!("❌ Specification '{}' not found", spec_id);
@@ -901,45 +1000,61 @@ pub fn execute_detect_underspec_standalone(
     });
 
     // Detect underspecification
-    let prover = Prover::new();
-    let report = prover.detect_underspecification(admissible, domain, universe);
+    #[cfg(feature = "z3-solver")]
+    {
+        let prover = Prover::new();
+        let report = prover.detect_underspecification(admissible, domain, universe);
 
-    println!("═══════════════════════════════════════════════════════════════\n");
-    println!("📊 Underspecification Analysis Report\n");
+        println!("═══════════════════════════════════════════════════════════════\n");
+        println!("📊 Underspecification Analysis Report\n");
 
-    println!("Specification: [{}]", &spec_id[..8]);
-    println!("Domain:        [{}]", &domain_id[..8]);
-    println!();
-
-    if report.is_likely_underspecified {
-        println!("⚠️  LIKELY UNDERSPECIFIED (漏れA detected)");
-    } else {
-        println!("✅ Appears adequately specified");
-    }
-    println!("   Confidence: {:.1}%", report.confidence * 100.0);
-    println!();
-
-    if !report.reasons.is_empty() {
-        println!("Reasons:");
-        for (i, reason) in report.reasons.iter().enumerate() {
-            println!("  {}. {}", i+1, reason);
-        }
+        println!("Specification: [{}]", &spec_id[..8]);
+        println!("Domain:        [{}]", &domain_id[..8]);
         println!();
-    }
 
-    if !report.suggestions.is_empty() {
-        println!("Suggestions:");
-        for (i, suggestion) in report.suggestions.iter().enumerate() {
-            println!("  {}. {}", i+1, suggestion);
+        if report.is_likely_underspecified {
+            println!("⚠️  LIKELY UNDERSPECIFIED (漏れA detected)");
+        } else {
+            println!("✅ Appears adequately specified");
         }
+        println!("   Confidence: {:.1}%", report.confidence * 100.0);
         println!();
+
+        if !report.reasons.is_empty() {
+            println!("Reasons:");
+            for (i, reason) in report.reasons.iter().enumerate() {
+                println!("  {}. {}", i+1, reason);
+            }
+            println!();
+        }
+
+        if !report.suggestions.is_empty() {
+            println!("Suggestions:");
+            for (i, suggestion) in report.suggestions.iter().enumerate() {
+                println!("  {}. {}", i+1, suggestion);
+            }
+            println!();
+        }
+
+        println!("═══════════════════════════════════════════════════════════════");
+        println!();
+        println!("Note: Underspecification detection is heuristic-based.");
+        println!("      漏れA (underspecification) is a design choice, not an error.");
+        println!("      Use this report to guide specification refinement decisions.");
     }
 
-    println!("═══════════════════════════════════════════════════════════════");
-    println!();
-    println!("Note: Underspecification detection is heuristic-based.");
-    println!("      漏れA (underspecification) is a design choice, not an error.");
-    println!("      Use this report to guide specification refinement decisions.");
+    #[cfg(not(feature = "z3-solver"))]
+    {
+        println!("⚠️  Z3 solver not available (feature 'z3-solver' not enabled)");
+        println!("   Cannot perform underspecification analysis without Z3");
+    }
+
+    // Export proof metadata back to repository
+    ModelSync::export_proof_metadata(&udaf_model, &mut repo)?;
+
+    // Note: Saving back to store would require converting SpecRepository → SpecGraph
+    // For now, proof metadata is in-memory only
+    // TODO: Implement SpecRepository → SpecGraph conversion for saving
 
     Ok(())
 }

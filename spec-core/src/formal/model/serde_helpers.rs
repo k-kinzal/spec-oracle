@@ -1,5 +1,4 @@
 /// Serde helpers for HashMap with typed IDs
-
 use serde::{Serialize, Deserialize};
 use serde::de::Deserializer;
 use serde::ser::Serializer;

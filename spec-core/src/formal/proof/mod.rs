@@ -10,7 +10,6 @@
 ///
 /// Current implementation: Z3 SMT solver (complete formal verification)
 /// Fallback: Lightweight constraint solver (when Z3 unavailable)
-
 mod types;
 mod z3_backend;
 

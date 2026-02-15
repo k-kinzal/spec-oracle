@@ -2,8 +2,8 @@
   "n_cases_per_run": 200000,
   "n_runs": 5,
   "avg_contradictory_ratio": 0.214478,
-  "avg_elapsed_sec": 0.8779941500000001,
-  "avg_throughput_cases_per_sec": 228521.20879121678,
+  "avg_elapsed_sec": 0.8126050331999999,
+  "avg_throughput_cases_per_sec": 252230.61003893256,
   "environment": {
     "python_version": "3.9.6",
     "platform": "macOS-14.5-arm64-arm-64bit",
@@ -13,9 +13,9 @@
   "baseline_comparison": {
     "seed": 101,
     "n_cases": 20000,
-    "formula_elapsed_sec": 0.006665041999999843,
-    "bruteforce_elapsed_sec": 0.05421466600000002,
-    "speedup_formula_vs_bruteforce": 8.134182200202384,
+    "formula_elapsed_sec": 0.006167374999999531,
+    "bruteforce_elapsed_sec": 0.047557375000000235,
+    "speedup_formula_vs_bruteforce": 7.711121019883476,
     "result_mismatches": 0,
     "witness_violation_count": 0
   },
@@ -29,8 +29,8 @@
       "avg_lower": 24.697265,
       "avg_upper": 48.55372,
       "witness_violation_count": 0,
-      "elapsed_sec": 0.9808238749999999,
-      "throughput_cases_per_sec": 203910.2076302945
+      "elapsed_sec": 0.695708417,
+      "throughput_cases_per_sec": 287476.7576658484
     },
     {
       "seed": 29,
@@ -41,8 +41,8 @@
       "avg_lower": 24.736115,
       "avg_upper": 48.609975,
       "witness_violation_count": 0,
-      "elapsed_sec": 0.861890083,
-      "throughput_cases_per_sec": 232048.15085452143
+      "elapsed_sec": 1.088017416,
+      "throughput_cases_per_sec": 183820.58693075186
     },
     {
       "seed": 43,
@@ -53,8 +53,8 @@
       "avg_lower": 24.736285,
       "avg_upper": 48.56848,
       "witness_violation_count": 0,
-      "elapsed_sec": 0.8520235,
-      "throughput_cases_per_sec": 234735.3095307817
+      "elapsed_sec": 0.7672646249999997,
+      "throughput_cases_per_sec": 260666.2597014688
     },
     {
       "seed": 71,
@@ -65,8 +65,8 @@
       "avg_lower": 24.729565,
       "avg_upper": 48.551755,
       "witness_violation_count": 0,
-      "elapsed_sec": 0.8488042920000001,
-      "throughput_cases_per_sec": 235625.575748149
+      "elapsed_sec": 0.7664650420000001,
+      "throughput_cases_per_sec": 260938.1890113652
     },
     {
       "seed": 89,
@@ -77,8 +77,8 @@
       "avg_lower": 24.703555,
       "avg_upper": 48.54782,
       "witness_violation_count": 0,
-      "elapsed_sec": 0.8464290000000005,
-      "throughput_cases_per_sec": 236286.8001923373
+      "elapsed_sec": 0.7455696659999997,
+      "throughput_cases_per_sec": 268251.25688522856
     }
   ]
 }

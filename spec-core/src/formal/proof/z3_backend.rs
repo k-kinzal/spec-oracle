@@ -14,11 +14,20 @@ use super::types::{ProofStatus, ProofStep};
 use std::collections::HashMap;
 
 /// Z3-based SMT solver backend
+#[allow(dead_code)]
+#[derive(Debug)]
 pub struct Z3Backend {
     #[cfg(feature = "z3-solver")]
     context: Context,
 }
 
+impl Clone for Z3Backend {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+
+#[allow(dead_code)]
 impl Z3Backend {
     pub fn new() -> Self {
         #[cfg(feature = "z3-solver")]
@@ -48,7 +57,7 @@ impl Z3Backend {
 
         #[cfg(not(feature = "z3-solver"))]
         {
-            let mut steps = vec![ProofStep {
+            let steps = vec![ProofStep {
                 description: "Z3 solver not available (feature disabled)".to_string(),
                 justification: "Fallback to heuristic".to_string(),
             }];

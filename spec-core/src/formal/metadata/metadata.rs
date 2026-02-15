@@ -2,7 +2,6 @@
 ///
 /// Internally stores HashMap<String, String> for serialization compatibility,
 /// but provides type-safe access through MetadataKey.
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use super::MetadataKey;

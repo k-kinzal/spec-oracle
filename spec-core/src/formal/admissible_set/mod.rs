@@ -1,5 +1,6 @@
 //! AdmissibleSet module: The set of implementations allowed by a specification
 
+#[allow(clippy::module_inception)]
 mod admissible_set;
 mod spec_id;
 mod spec_set;

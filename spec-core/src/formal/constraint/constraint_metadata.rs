@@ -1,5 +1,4 @@
 /// Metadata for Constraint with convenient accessors
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::formal::MetadataKey;

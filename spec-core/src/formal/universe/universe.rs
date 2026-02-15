@@ -5,7 +5,6 @@
 ///
 /// - U0: Root specification (constructed from inverse mappings, not written directly)
 /// - U1-UN: Projection universes (written by users, e.g., natural language, TLA+, code)
-
 use serde::{Deserialize, Serialize};
 use super::UniverseId;
 use super::UniverseMetadata;

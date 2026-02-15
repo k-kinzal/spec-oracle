@@ -1,5 +1,4 @@
 /// Domain identifier (UUID-based)
-
 use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use std::fmt;
 use uuid::Uuid;

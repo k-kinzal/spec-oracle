@@ -1,5 +1,6 @@
 //! Constraint module: Symbolic representations of membership conditions
 
+#[allow(clippy::module_inception)]
 mod constraint;
 mod constraint_metadata;
 

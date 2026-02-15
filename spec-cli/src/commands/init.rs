@@ -26,7 +26,7 @@ pub fn execute_init(path: String) -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(&spec_dir)?;
     fs::create_dir_all(spec_dir.join("scripts"))?;
 
-    // Create empty specs.json with proper SpecGraph structure
+    // Create empty specs.json with proper SpecGraph structure (legacy format for storage)
     let specs_file = spec_dir.join("specs.json");
     let empty_graph = SpecGraph::new();
     let store = FileStore::new(&specs_file);

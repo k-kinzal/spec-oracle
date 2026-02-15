@@ -2,7 +2,6 @@
 ///
 /// Valid formats: "U0", "U1", "U2", etc.
 /// Layer must be a non-negative integer.
-
 use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use std::fmt;
 use crate::formal::IdError;

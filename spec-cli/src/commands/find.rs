@@ -1,7 +1,7 @@
 use crate::proto::{self, spec_oracle_client::SpecOracleClient};
 use crate::{format_formality_layer};
 use tonic::Request;
-use spec_core::{Store, NodeKind as CoreNodeKind};
+use spec_core::{Store, NodeKind as CoreNodeKind, SpecRepository};
 
 /// Execute Find command in standalone mode
 pub async fn execute_find_standalone(
@@ -11,9 +11,9 @@ pub async fn execute_find_standalone(
     status: Option<String>,
     max: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use spec_core::SpecGraph;
-
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let graph = SpecRepository::from_spec_graph(&spec_graph);
 
     // Search for matching specifications
     let mut results = graph.search(query);

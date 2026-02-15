@@ -2,11 +2,11 @@
 ///
 /// This is the core data structure that implements the theoretical foundation
 /// of specORACLE as described in conversation.md and motivation.md.
-
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use crate::formal::*;
-use crate::{SpecGraph, InferredSpecification, RustExtractor};
+use crate::{InferredSpecification, RustExtractor};
+use crate::data::SpecRepository;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UDAFModel {
@@ -28,6 +28,11 @@ pub struct UDAFModel {
 
     /// Metadata for extensibility
     pub metadata: Metadata,
+
+    /// Prover instance for formal verification (not serialized)
+    #[serde(skip)]
+    #[cfg(feature = "z3-solver")]
+    prover: Prover,
 }
 
 impl UDAFModel {
@@ -38,6 +43,8 @@ impl UDAFModel {
             admissible_sets: HashMap::new(),
             transforms: HashMap::new(),
             metadata: Metadata::new(),
+            #[cfg(feature = "z3-solver")]
+            prover: Prover::new(),
         };
 
         // Always create U0 (root universe)
@@ -84,12 +91,12 @@ impl UDAFModel {
     ///
     /// This is the core operation that realizes the theoretical model.
     /// Returns the newly extracted InferredSpecification objects that should be ingested into the graph.
-    pub fn construct_u0(&mut self, graph: &SpecGraph) -> Result<Vec<InferredSpecification>, String> {
+    pub fn construct_u0(&mut self, graph: &SpecRepository) -> Result<Vec<InferredSpecification>, String> {
         // Collect all newly extracted specifications from projection universes
         let mut newly_created_specs = Vec::new();
 
         // For each projection universe (U1, U2, U3...)
-        for (universe_id, _universe) in &self.universes {
+        for universe_id in self.universes.keys() {
             if universe_id.layer() == 0 {
                 continue;  // Skip U0 itself
             }
@@ -111,7 +118,7 @@ impl UDAFModel {
     fn execute_transform(
         &self,
         transform: &TransformFunction,
-        graph: &SpecGraph,
+        graph: &SpecRepository,
     ) -> Result<Vec<InferredSpecification>, String> {
         match &transform.strategy {
             TransformStrategy::ASTAnalysis { language, extractor_config } => {
@@ -137,7 +144,7 @@ impl UDAFModel {
     fn execute_rust_ast_analysis(
         &self,
         config: &HashMap<String, String>,
-        graph: &SpecGraph,
+        graph: &SpecRepository,
     ) -> Result<Vec<InferredSpecification>, String> {
         use std::path::Path;
 
@@ -179,7 +186,7 @@ impl UDAFModel {
     fn find_rust_source_files(
         &self,
         config: &HashMap<String, String>,
-        graph: &SpecGraph,
+        graph: &SpecRepository,
     ) -> Result<Vec<String>, String> {
         // If source_files specified in config, use those
         if let Some(files_str) = config.get("source_files") {
@@ -191,11 +198,10 @@ impl UDAFModel {
         for node in graph.list_nodes(None) {
             // Note: graph nodes still use HashMap<String, String> for metadata
             // so we use the string key directly
-            if let Some(source_file) = node.metadata.get(MetadataKey::SourceFile.as_str()) {
-                if source_file.ends_with(".rs") {
+            if let Some(source_file) = node.metadata.get(MetadataKey::SourceFile.as_str())
+                && source_file.ends_with(".rs") {
                     source_files.insert(source_file.clone());
                 }
-            }
         }
 
         if source_files.is_empty() {
@@ -207,65 +213,48 @@ impl UDAFModel {
 
     /// Detect contradictions: A1 ∩ A2 = ∅
     ///
-    /// Returns pairs of admissible sets that are mutually exclusive
-    pub fn detect_contradictions(&self) -> Vec<(String, String, String)> {
-        let mut contradictions = Vec::new();
+    /// Returns pairs of admissible sets that are mutually exclusive.
+    /// This method uses the Prover to perform formal verification.
+    #[cfg(feature = "z3-solver")]
+    pub fn detect_contradictions(&mut self) -> Vec<super::verify::Contradiction> {
+        self.detect_contradictions_with_prover(&mut self.prover.clone())
+    }
 
-        let admissible_ids: Vec<_> = self.admissible_sets.keys().cloned().collect();
-
-        for i in 0..admissible_ids.len() {
-            for j in (i+1)..admissible_ids.len() {
-                let id_a = &admissible_ids[i];
-                let id_b = &admissible_ids[j];
-
-                if let (Some(a), Some(b)) = (
-                    self.admissible_sets.get(id_a),
-                    self.admissible_sets.get(id_b),
-                ) {
-                    // Check if they're marked as contradicting
-                    // Try new field first, fall back to old field
-                    let a_contradicts_b = if let Some(proof_data) = &a.proof_data {
-                        proof_data.contradicts.contains(id_b)
-                    } else if let Some(contradicts) = &a.contradicts {
-                        contradicts.contains(id_b)
-                    } else {
-                        false
-                    };
-
-                    let b_contradicts_a = if let Some(proof_data) = &b.proof_data {
-                        proof_data.contradicts.contains(id_a)
-                    } else if let Some(contradicts) = &b.contradicts {
-                        contradicts.contains(id_a)
-                    } else {
-                        false
-                    };
-
-                    if a_contradicts_b || b_contradicts_a {
-                        contradictions.push((
-                            id_a.as_str().to_string(),
-                            id_b.as_str().to_string(),
-                            "Marked as contradicting".to_string(),
-                        ));
-                    }
-
-                    // TODO: Implement SMT-based satisfiability check
-                    // Check if ∃x. (x ∈ A1 ∧ x ∈ A2) is unsatisfiable
-                }
-            }
+    /// Verify satisfiability of a specification: ∃x. x ∈ A
+    ///
+    /// Attempts to prove that at least one implementation satisfies the spec.
+    /// Uses Z3 SMT solver for formal verification.
+    #[cfg(feature = "z3-solver")]
+    pub fn verify_satisfiability(&mut self, spec_id: &SpecId) -> Option<Proof> {
+        if let Some(spec) = self.admissible_sets.get(spec_id) {
+            Some(self.prover.prove_satisfiability(spec))
+        } else {
+            None
         }
+    }
 
-        contradictions
+    /// Prove consistency between two specifications
+    ///
+    /// Wrapper method that uses the embedded Prover to check consistency.
+    #[cfg(feature = "z3-solver")]
+    pub fn prove_consistency(&mut self, spec_a_id: &SpecId, spec_b_id: &SpecId) -> Option<Proof> {
+        if let (Some(spec_a), Some(spec_b)) = (
+            self.admissible_sets.get(spec_a_id),
+            self.admissible_sets.get(spec_b_id),
+        ) {
+            Some(self.prover.prove_consistency(spec_a, spec_b))
+        } else {
+            None
+        }
     }
 
     /// Detect omissions: Domains without coverage
     ///
-    /// Returns domains where D \ D_S ≠ ∅ (intended domain minus specified domain)
-    pub fn detect_omissions(&self) -> Vec<String> {
-        self.domains
-            .values()
-            .filter(|domain| domain.has_gaps())
-            .map(|domain| domain.id.as_str().to_string())
-            .collect()
+    /// Returns domains where D \ D_S ≠ ∅ (intended domain minus specified domain).
+    /// This method uses the Prover to perform formal verification.
+    #[cfg(feature = "z3-solver")]
+    pub fn detect_omissions(&mut self) -> Vec<super::verify::Omission> {
+        self.detect_omissions_with_prover(&mut self.prover.clone())
     }
 
     /// Extract constraints from natural language text
@@ -277,7 +266,16 @@ impl UDAFModel {
     /// - "between X and Y" → range constraints
     ///
     /// Returns a vector of extracted constraints.
+    ///
+    /// NOTE: This method now delegates to the consolidated implementation in constraint.rs
+    #[allow(dead_code)]
     pub(crate) fn extract_constraints_from_text(&self, text: &str) -> Vec<Constraint> {
+        super::constraint::extract_constraints_from_text(text)
+    }
+
+    /// DEPRECATED: Old implementation - use extract_constraints_from_text instead
+    #[allow(dead_code)]
+    fn extract_constraints_from_text_old(&self, text: &str) -> Vec<Constraint> {
         let mut constraints = Vec::new();
         let lower_text = text.to_lowercase();
 
@@ -547,15 +545,14 @@ impl UDAFModel {
                 domain.universe_id.as_ref().map(|id| id.as_str())
             };
 
-            if let Some(uid_str) = universe_id_str {
-                if !valid_universe_ids.contains(uid_str) {
+            if let Some(uid_str) = universe_id_str
+                && !valid_universe_ids.contains(uid_str) {
                     errors.push(format!(
                         "Domain {} references non-existent universe: {}",
                         domain_id.as_str(),
                         uid_str
                     ));
                 }
-            }
 
             // Check that all covered_by specs exist (try proof_data first, fall back to old field)
             let covered_by = if let Some(proof_data) = &domain.proof_data {
@@ -602,15 +599,14 @@ impl UDAFModel {
                 admissible_set.universe_id.as_ref()
             };
 
-            if let Some(uid) = universe_id_ref {
-                if !valid_universe_ids.contains(uid.as_str()) {
+            if let Some(uid) = universe_id_ref
+                && !valid_universe_ids.contains(uid.as_str()) {
                     errors.push(format!(
                         "AdmissibleSet {} references non-existent universe: {}",
                         spec_id.as_str(),
                         uid.as_str()
                     ));
                 }
-            }
 
             // Check that all contradicts references exist (try proof_data first, fall back to old field)
             let contradicts = if let Some(proof_data) = &admissible_set.proof_data {

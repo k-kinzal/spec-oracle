@@ -1,7 +1,7 @@
 use crate::proto::{self, spec_oracle_client::SpecOracleClient};
 use crate::{handle_ai_query, node_kind_name, format_formality_layer};
 use tonic::Request;
-use spec_core::Store;
+use spec_core::{Store, SpecRepository};
 
 /// Execute Query command in standalone mode
 pub async fn execute_query_standalone(
@@ -9,8 +9,6 @@ pub async fn execute_query_standalone(
     query: &str,
     ai: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use spec_core::SpecGraph;
-
     let search_query = if ai {
         println!("Enhancing query with AI...");
         handle_ai_query(query, "claude").await?
@@ -18,7 +16,9 @@ pub async fn execute_query_standalone(
         query.to_string()
     };
 
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let graph = SpecRepository::from_spec_graph(&spec_graph);
 
     // Search for matching specifications
     let results = graph.search(&search_query);

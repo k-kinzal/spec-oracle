@@ -1,18 +1,96 @@
 {
   "date": "2026-02-15",
+  "failure_policy": "none",
+  "none_semantics": "must",
   "extraction_mode": "automatic_regex_no_manual_edit_offline_snapshot_replay",
   "network_required": false,
   "n_real_projects": 3,
   "n_real_consistent": 3,
   "n_real_contradictory": 0,
-  "mutation_total": 3,
-  "mutation_detected": 3,
+  "n_real_inconclusive": 0,
+  "raw_judgement_distribution": {
+    "consistent": 3,
+    "contradictory": 0,
+    "inconclusive": 0
+  },
+  "policy_judgement_distribution": {
+    "consistent": 3,
+    "contradictory": 0
+  },
+  "n_u0_support_indicator": 3,
+  "n_u0_unfalsified_indicator": 3,
+  "n_u0_unknown_only": 0,
+  "avg_support_ratio": 0.7777777777777777,
+  "avg_unknown_ratio": 0.2222222222222222,
+  "avg_invalid_interval_ratio": 0.0,
+  "support_frequency": {
+    "requirement": 3,
+    "api": 3,
+    "code": 1
+  },
+  "unknown_frequency": {
+    "requirement": 0,
+    "api": 0,
+    "code": 2
+  },
+  "invalid_interval_frequency": {
+    "requirement": 0,
+    "api": 0,
+    "code": 0
+  },
+  "mutation_total": 6,
+  "mutation_detected_by_expectation": 6,
+  "mutation_expected_contradictory_total": 3,
+  "mutation_detected_contradictory": 3,
+  "mutation_expected_change_total": 3,
+  "mutation_detected_change": 3,
+  "mutation_skipped": 0,
+  "parse_issue_count": 0,
+  "parse_issues": [],
   "real_results": [
     {
       "project": "PostgreSQL identifier length",
       "consistent": true,
+      "policy_judgement": "consistent",
+      "judgement": "consistent",
       "intersection_lower": 1,
       "intersection_upper": 63,
+      "consistency_reason": "interval_intersection",
+      "has_parse_issue": false,
+      "u0_support_indicator": true,
+      "u0_unfalsified_indicator": true,
+      "u0_unknown_only": false,
+      "support_count": 2,
+      "unknown_count": 1,
+      "invalid_interval_count": 0,
+      "support_ratio": 0.6666666666666666,
+      "unknown_ratio": 0.3333333333333333,
+      "invalid_interval_ratio": 0.0,
+      "u0_support_layers": [
+        "requirement",
+        "api"
+      ],
+      "u0_unknown_layers": [
+        "code"
+      ],
+      "u0_invalid_interval_layers": [],
+      "layer_status": {
+        "requirement": "supported",
+        "api": "supported",
+        "code": "unknown"
+      },
+      "lifted_membership": {
+        "must": {
+          "requirement": true,
+          "api": true,
+          "code": false
+        },
+        "may": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        }
+      },
       "artifacts": {
         "name": "PostgreSQL identifier length",
         "requirement": {
@@ -38,15 +116,52 @@
     {
       "project": "zlib compression level",
       "consistent": true,
+      "policy_judgement": "consistent",
+      "judgement": "consistent",
       "intersection_lower": -1,
       "intersection_upper": 9,
+      "consistency_reason": "interval_intersection",
+      "has_parse_issue": false,
+      "u0_support_indicator": true,
+      "u0_unfalsified_indicator": true,
+      "u0_unknown_only": false,
+      "support_count": 3,
+      "unknown_count": 0,
+      "invalid_interval_count": 0,
+      "support_ratio": 1.0,
+      "unknown_ratio": 0.0,
+      "invalid_interval_ratio": 0.0,
+      "u0_support_layers": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "u0_unknown_layers": [],
+      "u0_invalid_interval_layers": [],
+      "layer_status": {
+        "requirement": "supported",
+        "api": "supported",
+        "code": "supported"
+      },
+      "lifted_membership": {
+        "must": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        },
+        "may": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        }
+      },
       "artifacts": {
         "name": "zlib compression level",
         "requirement": {
           "lower": -1,
           "upper": 9,
           "source": "https://www.zlib.net/manual.html",
-          "note": "manual: Z_DEFAULT_COMPRESSION or [0,9]"
+          "note": "manual: Z_DEFAULT_COMPRESSION or [0,9]."
         },
         "api": {
           "lower": -1,
@@ -65,8 +180,46 @@
     {
       "project": "SQLite page size",
       "consistent": true,
+      "policy_judgement": "consistent",
+      "judgement": "consistent",
       "intersection_lower": 512,
       "intersection_upper": 65536,
+      "consistency_reason": "interval_intersection",
+      "has_parse_issue": false,
+      "u0_support_indicator": true,
+      "u0_unfalsified_indicator": true,
+      "u0_unknown_only": false,
+      "support_count": 2,
+      "unknown_count": 1,
+      "invalid_interval_count": 0,
+      "support_ratio": 0.6666666666666666,
+      "unknown_ratio": 0.3333333333333333,
+      "invalid_interval_ratio": 0.0,
+      "u0_support_layers": [
+        "requirement",
+        "api"
+      ],
+      "u0_unknown_layers": [
+        "code"
+      ],
+      "u0_invalid_interval_layers": [],
+      "layer_status": {
+        "requirement": "supported",
+        "api": "supported",
+        "code": "unknown"
+      },
+      "lifted_membership": {
+        "must": {
+          "requirement": true,
+          "api": true,
+          "code": false
+        },
+        "may": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        }
+      },
       "artifacts": {
         "name": "SQLite page size",
         "requirement": {
@@ -93,24 +246,174 @@
   "mutation_results": [
     {
       "project": "PostgreSQL identifier length",
-      "expected_contradictory": true,
-      "detected_contradictory": true,
+      "mutation_id": "stale_requirement_lower",
+      "expected_outcome": "raw_judgement=contradictory",
+      "detected_expectation": true,
+      "expectation_satisfied": true,
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
       "mutated_intersection_lower": 64,
-      "mutated_intersection_upper": 63
+      "mutated_intersection_upper": 63,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_support_indicator": true,
+      "mutated_u0_unfalsified_indicator": true,
+      "mutated_support_count": 1,
+      "mutated_unknown_count": 1,
+      "mutated_invalid_interval_count": 1,
+      "mutated_u0_support_layers": [
+        "api"
+      ],
+      "mutated_u0_unknown_layers": [
+        "code"
+      ],
+      "mutated_u0_invalid_interval_layers": [
+        "requirement"
+      ],
+      "skipped": false
+    },
+    {
+      "project": "PostgreSQL identifier length",
+      "mutation_id": "unit_mismatch_upper_scale_down_1024",
+      "expected_outcome": "intersection_upper_at_most_floor_baseline_div_1024",
+      "expected_upper_threshold": 0,
+      "detected_expectation": true,
+      "expectation_satisfied": true,
+      "detection_basis": [
+        "intersection_upper_le_floor_baseline_div_1024"
+      ],
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
+      "mutated_intersection_lower": 1,
+      "mutated_intersection_upper": 0,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_support_indicator": true,
+      "mutated_u0_unfalsified_indicator": true,
+      "mutated_support_count": 1,
+      "mutated_unknown_count": 1,
+      "mutated_invalid_interval_count": 1,
+      "mutated_u0_support_layers": [
+        "api"
+      ],
+      "mutated_u0_unknown_layers": [
+        "code"
+      ],
+      "mutated_u0_invalid_interval_layers": [
+        "requirement"
+      ],
+      "skipped": false
     },
     {
       "project": "zlib compression level",
-      "expected_contradictory": true,
-      "detected_contradictory": true,
+      "mutation_id": "stale_requirement_lower",
+      "expected_outcome": "raw_judgement=contradictory",
+      "detected_expectation": true,
+      "expectation_satisfied": true,
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
       "mutated_intersection_lower": 10,
-      "mutated_intersection_upper": 9
+      "mutated_intersection_upper": 9,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_support_indicator": true,
+      "mutated_u0_unfalsified_indicator": true,
+      "mutated_support_count": 2,
+      "mutated_unknown_count": 0,
+      "mutated_invalid_interval_count": 1,
+      "mutated_u0_support_layers": [
+        "api",
+        "code"
+      ],
+      "mutated_u0_unknown_layers": [],
+      "mutated_u0_invalid_interval_layers": [
+        "requirement"
+      ],
+      "skipped": false
+    },
+    {
+      "project": "zlib compression level",
+      "mutation_id": "unit_mismatch_upper_scale_down_1024",
+      "expected_outcome": "intersection_upper_at_most_floor_baseline_div_1024",
+      "expected_upper_threshold": 0,
+      "detected_expectation": true,
+      "expectation_satisfied": true,
+      "detection_basis": [
+        "intersection_upper_le_floor_baseline_div_1024"
+      ],
+      "policy_judgement": "consistent",
+      "judgement": "consistent",
+      "mutated_intersection_lower": -1,
+      "mutated_intersection_upper": 0,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_support_indicator": true,
+      "mutated_u0_unfalsified_indicator": true,
+      "mutated_support_count": 3,
+      "mutated_unknown_count": 0,
+      "mutated_invalid_interval_count": 0,
+      "mutated_u0_support_layers": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "mutated_u0_unknown_layers": [],
+      "mutated_u0_invalid_interval_layers": [],
+      "skipped": false
     },
     {
       "project": "SQLite page size",
-      "expected_contradictory": true,
-      "detected_contradictory": true,
+      "mutation_id": "stale_requirement_lower",
+      "expected_outcome": "raw_judgement=contradictory",
+      "detected_expectation": true,
+      "expectation_satisfied": true,
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
       "mutated_intersection_lower": 65537,
-      "mutated_intersection_upper": 65536
+      "mutated_intersection_upper": 65536,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_support_indicator": true,
+      "mutated_u0_unfalsified_indicator": true,
+      "mutated_support_count": 1,
+      "mutated_unknown_count": 1,
+      "mutated_invalid_interval_count": 1,
+      "mutated_u0_support_layers": [
+        "api"
+      ],
+      "mutated_u0_unknown_layers": [
+        "code"
+      ],
+      "mutated_u0_invalid_interval_layers": [
+        "requirement"
+      ],
+      "skipped": false
+    },
+    {
+      "project": "SQLite page size",
+      "mutation_id": "unit_mismatch_upper_scale_down_1024",
+      "expected_outcome": "intersection_upper_at_most_floor_baseline_div_1024",
+      "expected_upper_threshold": 64,
+      "detected_expectation": true,
+      "expectation_satisfied": true,
+      "detection_basis": [
+        "intersection_upper_le_floor_baseline_div_1024"
+      ],
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
+      "mutated_intersection_lower": 512,
+      "mutated_intersection_upper": 64,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_support_indicator": true,
+      "mutated_u0_unfalsified_indicator": true,
+      "mutated_support_count": 1,
+      "mutated_unknown_count": 1,
+      "mutated_invalid_interval_count": 1,
+      "mutated_u0_support_layers": [
+        "api"
+      ],
+      "mutated_u0_unknown_layers": [
+        "code"
+      ],
+      "mutated_u0_invalid_interval_layers": [
+        "requirement"
+      ],
+      "skipped": false
     }
   ],
   "source_lock": [

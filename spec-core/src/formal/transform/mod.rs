@@ -1,5 +1,6 @@
 //! Transform module: Mappings between universes
 
+#[allow(clippy::module_inception)]
 mod transform;
 mod transform_id;
 mod transform_metadata;

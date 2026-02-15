@@ -1,7 +1,7 @@
 use crate::proto::{self, spec_oracle_client::SpecOracleClient};
 use crate::{format_node_kind, format_edge_kind};
 use tonic::Request;
-use spec_core::Store;
+use spec_core::{Store, SpecRepository};
 use std::collections::HashMap;
 
 /// Execute Trace command in standalone mode
@@ -10,9 +10,9 @@ pub async fn execute_trace_standalone(
     id: &str,
     depth: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use spec_core::SpecGraph;
-
-    let graph = store.load()?;
+    // Load from store and convert to repository
+    let spec_graph = store.load()?;
+    let graph = SpecRepository::from_spec_graph(&spec_graph);
 
     // Resolve short ID to full UUID if needed
     let full_id = if id.len() == 8 {

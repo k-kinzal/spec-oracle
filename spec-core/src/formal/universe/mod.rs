@@ -1,5 +1,6 @@
 //! Universe module: The space in which specifications are defined
 
+#[allow(clippy::module_inception)]
 mod universe;
 mod universe_id;
 mod universe_metadata;

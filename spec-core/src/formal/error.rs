@@ -1,5 +1,4 @@
 /// Error type for ID parsing and validation
-
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

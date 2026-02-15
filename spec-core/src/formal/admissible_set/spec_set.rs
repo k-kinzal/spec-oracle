@@ -2,7 +2,6 @@
 ///
 /// Internally stores HashSet<String> for serialization compatibility,
 /// but enforces type safety through the API.
-
 use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use std::collections::HashSet;
 use super::SpecId;

@@ -9,7 +9,6 @@
 /// - Layer 1: Identifier (`id`)
 /// - Layer 2: Proof Data (`proof_data`) - formal domain boundaries, coverage tracking
 /// - Layer 3: Metadata (`meta`) - human-readable info, organizational structure
-
 use serde::{Deserialize, Serialize};
 use super::{DomainId, DomainMetadata, DomainSet};
 use crate::formal::universe::UniverseId;

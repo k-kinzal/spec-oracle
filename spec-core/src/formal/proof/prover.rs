@@ -7,6 +7,7 @@ use super::types::*;
 use super::z3_backend::Z3Backend;
 
 /// Prover: The core verification engine
+#[derive(Debug, Clone)]
 pub struct Prover {
     /// All proofs in the system
     proofs: HashMap<String, Proof>,
