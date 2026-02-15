@@ -1,0 +1,298 @@
+Implement the following plan:
+
+# Refactoring Plan: Reorganize spec-core into formal/ Directory
+
+## Context
+
+The user requested to refactor spec-core by:
+1. Moving all code into `spec-core/src/formal/` (formal verification layer)
+2. Splitting large files (udaf.rs: 1,536 LOC, prover/mod.rs: 1,238 LOC) into smaller modules
+3. Following Rust best practices with clear directory structure
+4. **Key insight**: `formal/` IS the UDA/f space itself, not a wrapper around `udaf/`
+5. **Important**: Each concept (U/D/A/f) should have its own directory with ID types included
+
+### Current Problems
+
+- udaf.rs (1,536 LOC) - too large, mixes all UDA/f concepts
+- prover/mod.rs (1,238 LOC) - too large, mixes proof types and implementation
+- IDs are separated in udaf/ids.rs instead of living with their models
+- Metadata scattered across files
+- No clear conceptual organization
+
+---
+
+## Target Directory Structure
+
+Each UDA/f concept gets its own directory. ID types live with their models.
+
+```
+formal/
+  mod.rs                        # Entry point, re-exports
+
+  universe/                     # U (Universe)
+    mod.rs
+    universe.rs                 # Universe type
+    universe_id.rs              # UniverseId
+    universe_metadata.rs        # UniverseMetadata
+
+  domain/                       # D (Domain)
+    mod.rs
+    domain.rs                   # Domain + DomainProofData
+    domain_id.rs                # DomainId
+    domain_metadata.rs          # DomainMetadata
+    domain_set.rs               # DomainSet reference collection
+
+  admissible_set/               # A (Admissible Set)
+    mod.rs
+    admissible_set.rs           # AdmissibleSet + ProofData
+    spec_id.rs                  # SpecId
+    spec_set.rs                 # SpecSet reference collection
+    admissible_set_metadata.rs  # Metadata
+
+  constraint/
+    mod.rs
+    constraint.rs               # Constraint + ConstraintKind
+    constraint_metadata.rs      # ConstraintMetadata
+
+  transform/                    # f (Transform Functions)
+    mod.rs
+    transform.rs                # TransformFunction + Kind + Strategy
+    transform_id.rs             # TransformId
+    transform_metadata.rs       # TransformMetadata
+
+  model/                        # UDAFModel orchestrator
+    mod.rs
+    model.rs                    # Core UDAFModel struct + methods
+    populate.rs                 # populate_from_graph logic
+    serde_helpers.rs            # Serialization helpers
+
+  metadata/                     # Shared metadata infrastructure
+    mod.rs
+    metadata_key.rs             # MetadataKey enum
+    metadata.rs                 # Base Metadata type
+
+  proof/                        # Proof mechanisms
+    mod.rs
+    types.rs                    # Proof, Property, ProofStatus, etc.
+    prover.rs                   # Prover implementation
+    underspec.rs                # Underspecification detection
+    z3_backend.rs               # Z3 integration
+```
+
+---
+
+## Migration Strategy
+
+### Phase 1: Create Directory Structure
+
+```bash
+cd spec-core/src/formal
+mkdir -p universe domain admissible_set constraint transform model metadata proof
+```
+
+### Phase 2: Extract and Split Universe
+
+Extract from `src/udaf.rs` lines 29-84 (Universe) and `src/udaf/ids.rs` (UniverseId):
+
+- `formal/universe/universe.rs` - Universe type
+- `formal/universe/universe_id.rs` - UniverseId from ids.rs
+- `formal/universe/universe_metadata.rs` - From udaf/metadata.rs
+- `formal/universe/mod.rs` - Re-exports
+
+### Phase 3: Extract and Split Domain
+
+Extract from `src/udaf.rs` lines 87-250 (Domain):
+
+- `formal/domain/domain.rs` - Domain + DomainProofData
+- `formal/domain/domain_id.rs` - DomainId from ids.rs
+- `formal/domain/domain_set.rs` - From udaf/refs.rs
+- `formal/domain/domain_metadata.rs` - From udaf/metadata.rs
+- `formal/domain/mod.rs` - Re-exports
+
+### Phase 4: Extract and Split AdmissibleSet
+
+Extract from `src/udaf.rs` lines 252-411:
+
+- `formal/admissible_set/admissible_set.rs` - AdmissibleSet + ProofData
+- `formal/admissible_set/spec_id.rs` - SpecId from ids.rs
+- `formal/admissible_set/spec_set.rs` - From udaf/refs.rs
+- `formal/admissible_set/admissible_set_metadata.rs` - From udaf/metadata.rs
+- `formal/admissible_set/mod.rs` - Re-exports
+
+### Phase 5: Extract and Split Constraint
+
+Extract from `src/udaf.rs` lines 413-463:
+
+- `formal/constraint/constraint.rs` - Constraint + ConstraintKind
+- `formal/constraint/constraint_metadata.rs` - From udaf/metadata.rs
+- `formal/constraint/mod.rs` - Re-exports
+
+### Phase 6: Extract and Split Transform
+
+Extract from `src/udaf.rs` lines 465-585:
+
+- `formal/transform/transform.rs` - TransformFunction + Kind + Strategy
+- `formal/transform/transform_id.rs` - TransformId from ids.rs
+- `formal/transform/transform_metadata.rs` - From udaf/metadata.rs
+- `formal/transform/mod.rs` - Re-exports
+
+### Phase 7: Extract and Split UDAFModel
+
+Extract from `src/udaf.rs` lines 587-1536:
+
+- `formal/model/model.rs` - UDAFModel struct + core methods (~600 LOC)
+- `formal/model/populate.rs` - populate_from_graph logic (~250 LOC)
+- `formal/model/serde_helpers.rs` - Serde helper modules (~150 LOC)
+- `formal/model/mod.rs` - Re-exports
+
+### Phase 8: Create Metadata Module
+
+Extract shared metadata infrastructure:
+
+- `formal/metadata/metadata_key.rs` - MetadataKey enum
+- `formal/metadata/metadata.rs` - Base Metadata type
+- `formal/metadata/mod.rs` - Re-exports
+
+### Phase 9: Extract and Split Prover
+
+Extract from `src/prover/mod.rs`:
+
+- `formal/proof/types.rs` - Proof, Property, ProofStatus, ProofStep (lines 20-125)
+- `formal/proof/prover.rs` - Main Prover implementation (~600 LOC)
+- `formal/proof/underspec.rs` - detect_underspecification + UnderspecificationReport (~200 LOC)
+- `formal/proof/z3_backend.rs` - Move from src/prover/z3_backend.rs
+- `formal/proof/mod.rs` - Re-exports
+
+### Phase 10: Create formal/mod.rs
+
+Create top-level module with re-exports of all public types.
+
+### Phase 11: Update lib.rs
+
+```rust
+// OLD:
+pub mod udaf;
+pub mod prover;
+
+// NEW:
+pub mod formal;
+pub use formal::{
+    Universe, UniverseId, Domain, DomainId, AdmissibleSet, SpecId,
+    Constraint, TransformFunction, TransformId, UDAFModel,
+    Prover, Proof, Property, ProofStatus,
+    // ... all public types
+};
+```
+
+### Phase 12: Update Dependent Files
+
+Update imports in:
+- `src/graph.rs` - `use crate::udaf::*` → `use crate::formal::*`
+- `src/extract.rs` - Check and update
+- `src/store.rs` - Check and update
+
+### Phase 13: Remove Old Files
+
+```bash
+rm src/udaf.rs
+rm -rf src/udaf/
+rm -rf src/prover/
+```
+
+### Phase 14: Verify
+
+```bash
+cargo test --all-features
+cargo clippy --all-features
+cargo fmt --check
+```
+
+---
+
+## Critical Files to Modify
+
+**Source files to split:**
+1. `src/udaf.rs` (1,536 LOC) → Split into universe/, domain/, admissible_set/, constraint/, transform/, model/
+2. `src/udaf/ids.rs` (392 LOC) → Split UniverseId, DomainId, SpecId, TransformId into respective directories
+3. `src/udaf/metadata.rs` (525 LOC) → Split into respective *_metadata.rs files
+4. `src/udaf/refs.rs` (388 LOC) → Split SpecSet, DomainSet into respective directories
+5. `src/prover/mod.rs` (1,238 LOC) → Split into proof/{types.rs, prover.rs, underspec.rs}
+6. `src/prover/z3_backend.rs` (965 LOC) → Move to formal/proof/z3_backend.rs
+
+**Files to update:**
+7. `src/lib.rs` - Module declarations and re-exports
+8. `src/graph.rs` - Import paths
+9. `src/extract.rs` - Import paths (if any)
+10. `src/store.rs` - Import paths (if any)
+
+---
+
+## Key Import Pattern Changes
+
+**Old structure:**
+```rust
+use crate::udaf::{Universe, Domain, AdmissibleSet, Constraint, UDAFModel};
+use crate::udaf::ids::{UniverseId, DomainId, SpecId};
+use crate::prover::{Prover, Proof};
+```
+
+**New structure:**
+```rust
+use crate::formal::{
+    Universe, UniverseId,
+    Domain, DomainId,
+    AdmissibleSet, SpecId,
+    Constraint,
+    UDAFModel,
+    Prover, Proof,
+};
+```
+
+---
+
+## Backward Compatibility
+
+**Public API unchanged via lib.rs re-exports:**
+- `spec_core::Universe` still works
+- `spec_core::UDAFModel` still works
+- `spec_core::Prover` still works
+- All types accessible from crate root
+
+External crates won't break.
+
+---
+
+## Verification Checklist
+
+After each phase:
+- [ ] `cargo check --all-features` passes
+- [ ] No unused import warnings
+
+After Phase 14:
+- [ ] All tests pass
+- [ ] Clippy has no warnings
+- [ ] Documentation builds
+- [ ] Public API unchanged
+
+---
+
+## Expected Outcome
+
+**Benefits:**
+- Clear directory organization by concept (U/D/A/f)
+- ID types live with their models (not centralized)
+- Smaller, focused files (<300 LOC each)
+- Better discoverability and maintainability
+- Follows Rust module best practices
+
+**Estimated effort:** 6-8 hours
+**Risk level:** Low (incremental, verifiable)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/ab/.claude/projects/-Users-ab-Projects-spec-oracle/07efa27c-1bf6-4dbc-8073-31814c6d60f8.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.
+
+---
+
+変更内容のコミットをお願いします。
