@@ -1,66 +1,92 @@
 #!/usr/bin/env python3
-"""
-Analyze isolated specifications to understand what needs to be connected.
-"""
+"""Analyze isolated specifications to determine their nature."""
 
-import json
+import yaml
+import subprocess
 from pathlib import Path
 from collections import defaultdict
 
-def main():
-    specs_path = Path('.spec/specs.json')
+def get_isolated_spec_ids():
+    """Get list of isolated spec IDs from detect-omissions."""
+    result = subprocess.run(
+        ["./target/release/spec", "detect-omissions"],
+        capture_output=True,
+        text=True,
+        cwd=Path.home() / "Projects/spec-oracle"
+    )
 
-    with open(specs_path, 'r') as f:
-        data = json.load(f)
+    # Extract short IDs from output like "- [33912c9c] Scenario: ..."
+    ids = []
+    for line in result.stdout.split('\n') + result.stderr.split('\n'):
+        if '[' in line and ']' in line:
+            start = line.find('[') + 1
+            end = line.find(']')
+            short_id = line[start:end]
+            if len(short_id) == 8:
+                ids.append(short_id)
 
-    nodes = data['graph']['nodes']
-    edges = data['graph']['edges']
+    return list(set(ids))
 
-    # Find nodes with edges
-    nodes_with_edges = set()
-    for edge in edges:
-        source_idx, target_idx, _ = edge
-        nodes_with_edges.add(source_idx)
-        nodes_with_edges.add(target_idx)
+def analyze_isolated_specs():
+    """Analyze isolated specifications."""
+    nodes_dir = Path.home() / "Projects/spec-oracle/.spec/nodes"
+    isolated_ids = get_isolated_spec_ids()
 
-    # Find isolated nodes
-    isolated_by_source = defaultdict(list)
-    isolated_by_extractor = defaultdict(int)
+    print(f"📊 Found {len(isolated_ids)} isolated specifications\n")
 
-    for idx, node in enumerate(nodes):
-        if idx not in nodes_with_edges:
-            source_file = node.get('metadata', {}).get('source_file', 'manual')
-            extractor = node.get('metadata', {}).get('extractor', 'manual')
+    # Categorize by kind and metadata
+    by_kind = defaultdict(list)
+    test_data = []
+    real_specs = []
 
-            isolated_by_source[source_file].append({
-                'id': node['id'][:8],
-                'kind': node['kind'],
-                'content': node['content'][:80]
-            })
+    for short_id in isolated_ids:
+        # Find full file
+        matching_files = list(nodes_dir.glob(f"{short_id}*.yaml"))
+        if not matching_files:
+            print(f"  ⚠️  File not found for {short_id}")
+            continue
 
-            if node.get('metadata', {}).get('inferred') == 'true':
-                isolated_by_extractor[extractor] += 1
+        with open(matching_files[0], 'r') as f:
+            spec = yaml.safe_load(f)
 
-    # Report
-    print(f"📊 Isolated Specification Analysis")
-    print(f"=" * 60)
+        kind = spec.get('kind', 'Unknown')
+        is_example = spec.get('metadata', {}).get('is_example') == 'true'
+        is_test_data = spec.get('metadata', {}).get('example_purpose') == 'test_data'
+        content = spec.get('content', '')[:80]
+
+        by_kind[kind].append(short_id)
+
+        if is_example or is_test_data:
+            test_data.append((short_id, kind, content))
+        else:
+            real_specs.append((short_id, kind, content))
+
+    # Print results
+    print("📋 By Kind:")
+    for kind, specs in sorted(by_kind.items()):
+        print(f"  {kind}: {len(specs)} specs")
     print()
 
-    print(f"Total isolated: {sum(len(v) for v in isolated_by_source.values())}")
+    print(f"🧪 Test Data / Examples: {len(test_data)}")
+    for short_id, kind, content in test_data:
+        print(f"  [{short_id}] {kind}: {content}...")
     print()
 
-    print("By source file:")
-    for source, specs in sorted(isolated_by_source.items(), key=lambda x: len(x[1]), reverse=True):
-        print(f"  {source}: {len(specs)} specs")
-        for spec in specs[:3]:
-            print(f"    - [{spec['id']}] {spec['kind']}: {spec['content']}")
-        if len(specs) > 3:
-            print(f"    ... and {len(specs) - 3} more")
-        print()
+    print(f"📝 Real Specifications: {len(real_specs)}")
+    for short_id, kind, content in real_specs:
+        print(f"  [{short_id}] {kind}: {content}...")
+    print()
 
-    print("By extractor:")
-    for extractor, count in sorted(isolated_by_extractor.items(), key=lambda x: x[1], reverse=True):
-        print(f"  {extractor}: {count} specs")
+    return test_data, real_specs
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    test_data, real_specs = analyze_isolated_specs()
+
+    print("\n💡 Recommendation:")
+    if test_data:
+        print(f"  - {len(test_data)} test data specs are correctly isolated (Definition kind)")
+        print("  - These should remain isolated as they are examples, not requirements")
+
+    if real_specs:
+        print(f"  - {len(real_specs)} real specs need connections")
+        print("  - These should be connected to appropriate parent specifications")

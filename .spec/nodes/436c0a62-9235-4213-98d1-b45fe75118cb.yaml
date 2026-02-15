@@ -1,7 +1,0 @@
-id: 436c0a62-9235-4213-98d1-b45fe75118cb
-content: TransformStrategy::ASTAnalysis executes RustExtractor to extract specifications from Rust source code
-kind: Assertion
-metadata: {}
-created_at: 1771065078
-modified_at: 1771065078
-formality_layer: 0

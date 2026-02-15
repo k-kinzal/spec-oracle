@@ -52,12 +52,6 @@
   kind: Formalizes
   metadata: {}
   created_at: 1771062100
-- source: 8a79071d-6eac-42c5-97ff-539bade167e5
-  target: 97578131-68b3-4d13-be53-12f0c4da819d
-  id: b6c7d8e9-f0a1-4567-8901-find002find002
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771062101
 - source: 93651986-ff74-43f7-9600-980616db6649
   target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
   id: c7d8e9f0-a1b2-4567-8901-trace01trace01
@@ -91,13 +85,6 @@
   metadata:
     reason: Depth limiting refines trace command functionality
   created_at: 1771070002
-- source: 257745aa-0960-4d04-b34b-69d1b3739c3b
-  target: dbc5525f-ec05-42fa-8823-dddd359567ed
-  id: refines-refines-session44-001
-  kind: Refines
-  metadata:
-    reason: Test specification refines standalone mode requirement
-  created_at: 1771062892
 - source: ee493f23-22d4-483c-8afe-2926a0ec1f73
   target: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
   id: refines-refines-session44-002
@@ -133,19 +120,13 @@
   metadata:
     reason: Formalizes edges are the mechanism for cross-layer refinement
   created_at: 1771062897
-- source: e9b11d11-68f5-4b68-ae21-1967f155fd50
-  target: dbc5525f-ec05-42fa-8823-dddd359567ed
-  id: refines-refines-session44-007
-  kind: Refines
-  metadata:
-    reason: Project-local .spec/ storage enables standalone mode operation
-  created_at: 1771062898
 - source: 81afa3f5-4a41-4b04-b958-224d1037d76f
   target: f6953636-fe61-4381-9856-940f797a1e9b
   id: refines-refines-session44-008
   kind: Refines
   metadata:
-    reason: Multi-layer management is the mechanism for ORACLE's single source of truth
+    reason: Multi-layer management is the mechanism for ORACLE's single source of
+      truth
   created_at: 1771062899
 - source: 41052fda-aef8-4443-991f-80e5165991c7
   target: 81afa3f5-4a41-4b04-b958-224d1037d76f
@@ -182,13 +163,6 @@
   metadata:
     reason: Refines edge semantics refine the general concept of cross-layer refinement
   created_at: 1771062939
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 257745aa-0960-4d04-b34b-69d1b3739c3b
-  id: refines-final-session44-002
-  kind: DerivesFrom
-  metadata:
-    reason: Password constraint is an example used in standalone mode testing
-  created_at: 1771062940
 - source: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
   target: c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d
   id: session44-to-session43
@@ -310,12 +284,6 @@
   kind: DerivesFrom
   metadata: {}
   created_at: 1771068323
-- source: 436c0a62-9235-4213-98d1-b45fe75118cb
-  target: 1e955f81-63d7-4ecd-b861-d41548852010
-  id: 02bfeb1b-be9c-4dcf-a744-49fb94708a80
-  kind: Refines
-  metadata: {}
-  created_at: 1771068324
 - source: ac7787f6-2eaf-46a0-bc5b-7017d3282886
   target: ed13a14c-da83-405c-82a4-473bf07d8c83
   id: a90e47d8-182e-4e56-84ff-39c60be707b9
@@ -472,24 +440,12 @@
   kind: DerivesFrom
   metadata: {}
   created_at: 1771069206
-- source: d79603df-d239-4d3f-af09-868ed2935374
-  target: dfc54a77-23c3-4531-a9e9-a8038809036b
-  id: query-time-session56
-  kind: DerivesFrom
-  metadata: {}
-  created_at: 1771069207
 - source: ce999406-30cc-424e-8bac-8efe06025a3f
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
   id: diff-time-session56
   kind: DerivesFrom
   metadata: {}
   created_at: 1771069208
-- source: a7f8e9d0-c1b2-4a3c-9d8e-7f6a5b4c3d2e
-  target: dfc54a77-23c3-4531-a9e9-a8038809036b
-  id: node-hist-session56
-  kind: DerivesFrom
-  metadata: {}
-  created_at: 1771069209
 - source: 4c26a83d-01d5-4aff-acb6-154cf3729d6f
   target: dfc54a77-23c3-4531-a9e9-a8038809036b
   id: init-cmd-session56
@@ -629,7 +585,8 @@
   id: edge-122-27-formalizes
   kind: Formalizes
   metadata:
-    note: Layer label display requirement (U0) formalized by find command implementation (U3)
+    note: Layer label display requirement (U0) formalized by find command implementation
+      (U3)
   created_at: 1771075492
 - source: 6b8373d8-0f4e-46aa-87be-09a6e6249c57
   target: ea15885e-98ff-45f6-a8b7-3e130accc425
@@ -673,8 +630,8 @@
   kind: Formalizes
   metadata:
     method: semantic_keyword_match
-    confidence: '0.6636363636363636'
     auto_inferred: 'true'
+    confidence: '0.6636363636363636'
   created_at: 1771077954
 - source: ee493f23-22d4-483c-8afe-2926a0ec1f73
   target: 8a79071d-6eac-42c5-97ff-539bade167e5
@@ -682,17 +639,17 @@
   kind: Formalizes
   metadata:
     auto_inferred: 'true'
-    confidence: '0.62'
     method: semantic_keyword_match
+    confidence: '0.62'
   created_at: 1771077954
 - source: 81afa3f5-4a41-4b04-b958-224d1037d76f
   target: 386b1821-73e9-4b1c-90e4-618204cbad0e
   id: 5fa64f56-f9d4-4299-a658-900d53eaae9d
   kind: Formalizes
   metadata:
-    confidence: '0.5904761904761905'
-    method: semantic_keyword_match
     auto_inferred: 'true'
+    method: semantic_keyword_match
+    confidence: '0.5904761904761905'
   created_at: 1771077970
 - source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
   target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
@@ -703,31 +660,22 @@
     confidence: '0.5818181818181818'
     method: semantic_keyword_match
   created_at: 1771077970
-- source: dbc5525f-ec05-42fa-8823-dddd359567ed
-  target: 386b1821-73e9-4b1c-90e4-618204cbad0e
-  id: 980c9534-96b0-40e5-8f5f-a30d949b4d85
-  kind: Formalizes
-  metadata:
-    method: semantic_keyword_match
-    auto_inferred: 'true'
-    confidence: '0.5739130434782609'
-  created_at: 1771077970
 - source: 49f551db-6fa3-40d2-9e36-bdb5e90a687b
   target: 386b1821-73e9-4b1c-90e4-618204cbad0e
   id: 545419c5-00f0-488e-9d99-438f7a1d075f
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '0.5599999999999999'
     method: semantic_keyword_match
+    auto_inferred: 'true'
   created_at: 1771077970
 - source: dfc54a77-23c3-4531-a9e9-a8038809036b
   target: 8c2c0d20-cbbe-4eb1-ab7b-85e964dd9b80
   id: 3c49520d-bae0-4476-a6c8-5cf8891367e1
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '0.5173913043478261'
+    auto_inferred: 'true'
     method: semantic_keyword_match
   created_at: 1771077970
 - source: e901ead6-a9af-4d96-bf6c-6bdd8e31e021
@@ -735,24 +683,24 @@
   id: 2bffc506-574e-4f08-b658-114053856745
   kind: Refines
   metadata:
-    session: '96'
     auto_connected: 'true'
+    session: '96'
   created_at: 1771079949
 - source: b6face50-4f4f-4c5e-9380-e839f42b24cc
   target: 386b1821-73e9-4b1c-90e4-618204cbad0e
   id: 33e3d61e-ddf6-491d-bbd1-fda9be86dcfb
   kind: Refines
   metadata:
-    auto_connected: 'true'
     session: '96'
+    auto_connected: 'true'
   created_at: 1771079949
 - source: 0d5c15ec-fb7e-41c5-8e1a-2f284b9e226e
   target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
   id: caa78b87-bf75-45db-b870-2058908e69d3
   kind: Refines
   metadata:
-    auto_connected: 'true'
     session: '96'
+    auto_connected: 'true'
   created_at: 1771079949
 - source: ca5d9013-4c58-4f08-87a5-59414ee50601
   target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
@@ -775,24 +723,16 @@
   id: ec9cb364-b7ee-4273-9f0b-9a8da8d466bf
   kind: Refines
   metadata:
-    session: '96'
     auto_connected: 'true'
+    session: '96'
   created_at: 1771080017
 - source: 81afa3f5-4a41-4b04-b958-224d1037d76f
   target: e901ead6-a9af-4d96-bf6c-6bdd8e31e021
   id: 81afa3f5-e901ead6-formalizes
   kind: Formalizes
   metadata:
+    auto_inferred: 'true'
     confidence: '0.75'
-    auto_inferred: 'true'
-  created_at: 1771084159
-- source: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  target: e29eda14-0925-4ff4-a139-51d5937c0593
-  id: 81afa3f5-e29eda14-formalizes
-  kind: Formalizes
-  metadata:
-    confidence: '0.50'
-    auto_inferred: 'true'
   created_at: 1771084159
 - source: 81afa3f5-4a41-4b04-b958-224d1037d76f
   target: b6face50-4f4f-4c5e-9380-e839f42b24cc
@@ -815,16 +755,16 @@
   id: c8f23449-0d5c15ec-formalizes
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '0.75'
+    auto_inferred: 'true'
   created_at: 1771084159
 - source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
   target: ca5d9013-4c58-4f08-87a5-59414ee50601
   id: c8f23449-ca5d9013-formalizes
   kind: Formalizes
   metadata:
-    auto_inferred: 'true'
     confidence: '0.75'
+    auto_inferred: 'true'
   created_at: 1771084159
 - source: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
   target: c54e4333-50f8-4226-9fc4-80aec5894832
@@ -847,8 +787,8 @@
   id: 81afa3f5-b1e1d371-formalizes
   kind: Formalizes
   metadata:
-    confidence: '0.50'
     auto_inferred: 'true'
+    confidence: '0.50'
   created_at: 1771084159
 - source: 81afa3f5-4a41-4b04-b958-224d1037d76f
   target: 4d8465c2-e1cb-48d9-8be6-aa000da4369d
@@ -863,24 +803,8 @@
   id: 724bc4c0-df41c4f6-formalizes
   kind: Formalizes
   metadata:
-    confidence: '1.00'
-    auto_inferred: 'true'
-  created_at: 1771084159
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: ba2882a1-a8d2-4018-b67c-81330c111736
-  id: 9e1a2dce-ba2882a1-formalizes
-  kind: Formalizes
-  metadata:
     auto_inferred: 'true'
     confidence: '1.00'
-  created_at: 1771084159
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 7bcc1eca-271a-4276-bb95-87ce375a8379
-  id: 9e1a2dce-7bcc1eca-formalizes
-  kind: Formalizes
-  metadata:
-    confidence: '1.00'
-    auto_inferred: 'true'
   created_at: 1771084159
 - source: 724bc4c0-aa15-4ce4-969a-b153079559b6
   target: 83d7d395-6223-46e8-90e8-e2b189cbd3db
@@ -890,21 +814,13 @@
     confidence: '1.00'
     auto_inferred: 'true'
   created_at: 1771084159
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 48b035be-35d3-4103-b7bf-53f5f2e680d3
-  id: 9e1a2dce-48b035be-formalizes
-  kind: Formalizes
-  metadata:
-    auto_inferred: 'true'
-    confidence: '1.00'
-  created_at: 1771084159
 - source: 257745aa-0960-4d04-b34b-69d1b3739c3b
   target: f432d0e9-8076-4df8-a02c-a365a916aadf
   id: 257745aa-f432d0e9-formalizes
   kind: Formalizes
   metadata:
-    confidence: '0.50'
     auto_inferred: 'true'
+    confidence: '0.50'
   created_at: 1771084159
 - source: e009137a-645b-4c3b-96c4-af884b4359d6
   target: 835ce953-5c40-4c7d-a778-c904dd88ab4d
@@ -919,8 +835,8 @@
   id: 2b68b299-0eb92ed0-formalizes
   kind: Formalizes
   metadata:
-    confidence: '0.80'
     manual_connection: 'true'
+    confidence: '0.80'
     auto_inferred: 'true'
   created_at: 1771084396
 - source: 2b68b299-73ba-46e4-b910-1c5287379bc5
@@ -928,17 +844,17 @@
   id: 2b68b299-4d8465c2-formalizes
   kind: Formalizes
   metadata:
+    auto_inferred: 'true'
     manual_connection: 'true'
     confidence: '0.80'
-    auto_inferred: 'true'
   created_at: 1771084396
 - source: 2b68b299-73ba-46e4-b910-1c5287379bc5
   target: cdd049cc-cbfd-42e4-af54-80241118fdde
   id: 2b68b299-cdd049cc-formalizes
   kind: Formalizes
   metadata:
-    confidence: '0.80'
     auto_inferred: 'true'
+    confidence: '0.80'
     manual_connection: 'true'
   created_at: 1771084396
 - source: bc00dd37-b590-4e0c-93e0-25747da4beca
@@ -946,10 +862,10 @@
   id: 82854a84-2625-4bc1-b747-6ff58ed34b5c
   kind: DerivesFrom
   metadata:
-    auto_generated: 'true'
     similarity: '0.16666666666666666'
-    date: 2026-02-15
+    auto_generated: 'true'
     reconnection: 'true'
+    date: 2026-02-15
   created_at: 1771087906
 - source: 4633bc90-2622-4a7b-baa3-bcd1055627f8
   target: 81afa3f5-4a41-4b04-b958-224d1037d76f
@@ -957,9 +873,9 @@
   kind: DerivesFrom
   metadata:
     date: 2026-02-15
+    reconnection: 'true'
     auto_generated: 'true'
     similarity: '0.15384615384615385'
-    reconnection: 'true'
   created_at: 1771087906
 - source: d1440e64-1492-4b38-8730-93c9c87f7cc2
   target: c8f23449-3f4c-40b1-a8f4-6dc2c93444b1
@@ -976,76 +892,68 @@
   id: 3ca0b77b-27c1-4117-b2b5-05c326529738
   kind: DerivesFrom
   metadata:
-    auto_generated: 'true'
+    date: 2026-02-15
     similarity: '0.16666666666666666'
     reconnection: 'true'
-    date: 2026-02-15
+    auto_generated: 'true'
   created_at: 1771087906
 - source: 92c11261-07fd-4d87-b246-2db9897e0dee
   target: 448066d8-f6a2-41bb-9ad3-c98a8194a262
   id: 0f8710a5-027b-4a19-95dc-e8286c257310
   kind: DerivesFrom
   metadata:
-    similarity: '0.16666666666666666'
-    date: 2026-02-15
-    reconnection: 'true'
     auto_generated: 'true'
+    similarity: '0.16666666666666666'
+    reconnection: 'true'
+    date: 2026-02-15
   created_at: 1771087906
 - source: ccc0d2d0-877a-4af8-b30d-a8e46e7987df
   target: 12ed3e49-c896-493b-97eb-c9599e3107ba
   id: e498c612-69cb-4ca2-8de3-c1e4bbe0ed35
   kind: DerivesFrom
   metadata:
-    similarity: '0.16666666666666666'
-    reconnection: 'true'
     auto_generated: 'true'
     date: 2026-02-15
+    similarity: '0.16666666666666666'
+    reconnection: 'true'
   created_at: 1771087906
 - source: 394bac8d-966a-4861-a1b2-0856785d5e16
   target: 3e602132-2f60-4c9f-bced-f40e0482679e
   id: 41e95467-ceb4-41fa-9fc0-ef82973bd6d4
   kind: DerivesFrom
   metadata:
-    reconnection: 'true'
-    date: 2026-02-15
     auto_generated: 'true'
+    date: 2026-02-15
     similarity: '0.17647058823529413'
-  created_at: 1771087906
-- source: a9ed83fe-5c0c-405b-aa92-ebdc89c80e96
-  target: 60f8242f-1fc7-4b4c-8f63-afc106cb4a3d
-  id: 61ae293b-cdf2-4190-8184-23a984399394
-  kind: DerivesFrom
-  metadata:
-    similarity: '0.15'
     reconnection: 'true'
-    date: 2026-02-15
-    auto_generated: 'true'
   created_at: 1771087906
 - source: bd0b8011-478c-4258-8326-b027364722b9
   target: 948d4e48-d0c2-4464-8d9c-60a0d438867b
   id: 028134d0-309e-4cc2-80f9-c921bea81ce5
   kind: DerivesFrom
   metadata:
-    auto_generated: 'true'
-    date: 2026-02-15
     reconnection: 'true'
     similarity: '0.15789473684210525'
+    date: 2026-02-15
+    auto_generated: 'true'
   created_at: 1771087906
 - source: 69e3e6cc-4507-4744-8a50-b93b30a3adc8
   target: 98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5
   id: 84145819-9ea4-4bcc-b142-6dc88dc8e315
   kind: DerivesFrom
   metadata:
+    reason: Connect proto_rpc 'AI-powered relationship inference' to U0 'Cross-layer
+      edge inference'
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'AI-powered relationship inference' to U0 'Cross-layer edge inference'
   created_at: 1771090244
 - source: 617996d9-eb49-4abf-9dc7-88ec4e87f188
   target: 98e02ebd-a0b4-4aeb-96cb-9302e48aa2a5
   id: 4fdd8f08-3d23-4e2b-9566-28ab6ddbdabf
   kind: DerivesFrom
   metadata:
+    reason: Connect proto_rpc 'Automatic relationship inference' to U0 'Cross-layer
+      edge inference'
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Automatic relationship inference' to U0 'Cross-layer edge inference'
   created_at: 1771090244
 - source: ff0a505f-1d9d-418b-9a0b-af8bd28760eb
   target: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
@@ -1060,8 +968,8 @@
   id: 15bff7fd-59c3-493e-b821-69ca56a728f1
   kind: DerivesFrom
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'compliance' to U0 'verify-layers command checks multi-layer'
+    created_by: connect_isolated_proto_rpc.py
   created_at: 1771090244
 - source: 7807965f-40b8-4412-8848-7d09658f0965
   target: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
@@ -1077,38 +985,34 @@
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'
+    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal
+      verification'
   created_at: 1771090244
 - source: dfbd8aef-7dfd-4272-b97a-c22733dac4b7
   target: 0dc100e8-5514-4ab8-9cb5-3a067aac5536
   id: cf1abf10-0c4b-4b60-a2b1-dcef8de580b5
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'
     created_by: connect_isolated_proto_rpc.py
+    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal
+      verification'
   created_at: 1771090244
 - source: 7807965f-40b8-4412-8848-7d09658f0965
   target: 0dc100e8-5514-4ab8-9cb5-3a067aac5536
   id: a0dea57b-0004-44bf-bd49-313bafa8a7f4
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal verification'
+    reason: Connect proto_rpc 'compliance' to U0 'verify-layers command provides formal
+      verification'
     created_by: connect_isolated_proto_rpc.py
-  created_at: 1771090244
-- source: 9212713c-0da1-42f9-bccf-5be3cb38860c
-  target: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  id: b1f768e6-8e8f-49aa-9992-b2217948293e
-  kind: DerivesFrom
-  metadata:
-    created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Layer-aware operations' to U0 'specORACLE manages multi-layered specifications'
   created_at: 1771090244
 - source: 9212713c-0da1-42f9-bccf-5be3cb38860c
   target: e009137a-645b-4c3b-96c4-af884b4359d6
   id: bc693850-7ea4-43ab-ac66-6a7d5c7a8e20
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'Layer-aware operations' to U0 'Specifications at different formality layers'
+    reason: Connect proto_rpc 'Layer-aware operations' to U0 'Specifications at different
+      formality layers'
     created_by: connect_isolated_proto_rpc.py
   created_at: 1771090244
 - source: a6c844d5-8c7e-4199-8e70-07c9804c0d7f
@@ -1116,7 +1020,8 @@
   id: 1829bed3-77a6-4816-9027-94b250a08e90
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'Set node universe' to U0 'Universe struct represents the space'
+    reason: Connect proto_rpc 'Set node universe' to U0 'Universe struct represents
+      the space'
     created_by: connect_isolated_proto_rpc.py
   created_at: 1771090244
 - source: f3b07262-2e70-4e13-a492-252c48632372
@@ -1124,16 +1029,16 @@
   id: 41a5953c-c154-4c5f-9eb1-99d8de0542d8
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'
     created_by: connect_isolated_proto_rpc.py
+    reason: Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'
   created_at: 1771090244
 - source: f3b07262-2e70-4e13-a492-252c48632372
   target: 1e955f81-63d7-4ecd-b861-d41548852010
   id: c2a2e8cc-f15b-4f2e-81bf-dad60ef927cc
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'
     created_by: connect_isolated_proto_rpc.py
+    reason: Connect proto_rpc 'Inter-universe consistency' to U0 'UDAFModel.construct_u0()'
   created_at: 1771090244
 - source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
   target: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
@@ -1148,16 +1053,16 @@
   id: f72ff793-e101-4597-8d06-5c5e1113e314
   kind: Refines
   metadata:
-    reason: Connect proto_rpc 'Temporal queries' to U0 'Query'
     created_by: connect_isolated_proto_rpc.py
+    reason: Connect proto_rpc 'Temporal queries' to U0 'Query'
   created_at: 1771090244
 - source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
   target: ab5e4dd1-3dfd-4921-aa63-6703af6d5db0
   id: 54164333-d79b-47c1-95c6-fdf698888325
   kind: Refines
   metadata:
-    reason: Connect proto_rpc 'Temporal queries' to U0 'Query'
     created_by: connect_isolated_proto_rpc.py
+    reason: Connect proto_rpc 'Temporal queries' to U0 'Query'
   created_at: 1771090244
 - source: 800bb928-1d54-4f37-b062-fd962b6687df
   target: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
@@ -1180,8 +1085,8 @@
   id: 28070883-e2ac-42f2-a53d-1c5656aae45e
   kind: Refines
   metadata:
-    reason: Connect proto_rpc 'node history' to U0 'Query'
     created_by: connect_isolated_proto_rpc.py
+    reason: Connect proto_rpc 'node history' to U0 'Query'
   created_at: 1771090244
 - source: 8ec5b8c5-ab85-4113-af10-ff1cb5288400
   target: 784f3567-19fd-45b3-993e-aca0e11b1f40
@@ -1189,7 +1094,8 @@
   kind: DerivesFrom
   metadata:
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Executable contracts' to U0 'AdmissibleSet struct symbolically represents'
+    reason: Connect proto_rpc 'Executable contracts' to U0 'AdmissibleSet struct symbolically
+      represents'
   created_at: 1771090244
 - source: a52e97be-acd3-487a-8bea-b72af975f799
   target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
@@ -1220,8 +1126,8 @@
   id: 12b3f5c5-2bf9-43cd-8b42-e23f5317c0b5
   kind: DerivesFrom
   metadata:
-    created_by: connect_isolated_proto_rpc.py
     reason: Connect proto_rpc 'Find formalizations' to U0 'Formalizes edge'
+    created_by: connect_isolated_proto_rpc.py
   created_at: 1771090244
 - source: 2aa02359-7f35-413f-9a1c-91666c776b9b
   target: c7d747fe-407f-4ff6-a3f7-ed06ad6a5b4d
@@ -1236,64 +1142,18 @@
   id: f642578f-317a-4628-9a8f-7c1757216150
   kind: DerivesFrom
   metadata:
+    reason: Connect proto_rpc 'Find formalizations' to U0 'Multi-layer specification
+      tracking'
     created_by: connect_isolated_proto_rpc.py
-    reason: Connect proto_rpc 'Find formalizations' to U0 'Multi-layer specification tracking'
   created_at: 1771090244
 - source: 922d3d6c-de1b-4fdf-8dfc-1e5f67fe083d
   target: ee493f23-22d4-483c-8afe-2926a0ec1f73
   id: 05948ac4-f894-4d7d-ba5e-2aca70094ae6
   kind: DerivesFrom
   metadata:
-    reason: Connect proto_rpc 'Query and analysis' to U0 'find command provides semantic search'
     created_by: connect_remaining_proto_rpc.py
-  created_at: 1771090327
-- source: b3949bb3-1013-40a0-9c6e-18a723e25133
-  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-  id: a8c3e77b-f813-4c72-89db-d37c36085009
-  kind: DerivesFrom
-  metadata:
-    created_by: connect_remaining_proto_rpc.py
-    reason: Connect proto_rpc 'Semantic normalization' to U0 'AI-powered'
-  created_at: 1771090327
-- source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: ee493f23-22d4-483c-8afe-2926a0ec1f73
-  id: 15cdba5c-bbb9-4d0e-823e-ecbdacc39c5c
-  kind: DerivesFrom
-  metadata:
-    created_by: connect_remaining_proto_rpc.py
-    reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
-  created_at: 1771090327
-- source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-  id: 29a837cf-cecf-4e26-915e-36101641af35
-  kind: DerivesFrom
-  metadata:
-    reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
-    created_by: connect_remaining_proto_rpc.py
-  created_at: 1771090327
-- source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: 2b68b299-73ba-46e4-b910-1c5287379bc5
-  id: de3ed124-4c22-4746-a879-00d80943a043
-  kind: DerivesFrom
-  metadata:
-    reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
-    created_by: connect_remaining_proto_rpc.py
-  created_at: 1771090327
-- source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: d79603df-d239-4d3f-af09-868ed2935374
-  id: 5685b8e5-9053-4081-a5c5-b47fad73f6c5
-  kind: DerivesFrom
-  metadata:
-    reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
-    created_by: connect_remaining_proto_rpc.py
-  created_at: 1771090327
-- source: ae990806-4fa6-441b-9ea0-7992115418f4
-  target: ce999406-30cc-424e-8bac-8efe06025a3f
-  id: c434be91-ca15-431f-b23c-02906fcec765
-  kind: DerivesFrom
-  metadata:
-    created_by: connect_remaining_proto_rpc.py
-    reason: Connect proto_rpc 'Terminology resolution' to U0 'semantic'
+    reason: Connect proto_rpc 'Query and analysis' to U0 'find command provides semantic
+      search'
   created_at: 1771090327
 - source: 8aa01435-a76b-4561-8550-ea1d3a1f65df
   target: dc19e858-b074-44bc-b125-ae3e8dc1d30e
@@ -1302,14 +1162,6 @@
   metadata:
     auto_connected: 'true'
     script: connect_isolated_proto_rpcs.py
-  created_at: 1771086000
-- source: ee97d8f2-7874-4988-bf9a-6d838368d1be
-  target: 9886c3bc-da3f-48db-b5e0-9d922db3fef8
-  id: c1931393-8435-4868-8b3b-9ff4c744f9ed
-  kind: Refines
-  metadata:
-    script: connect_isolated_proto_rpcs.py
-    auto_connected: 'true'
   created_at: 1771086000
 - source: ee97d8f2-7874-4988-bf9a-6d838368d1be
   target: e70a5ebe-9770-437e-8a45-2df485ff0a0b
@@ -1332,8 +1184,8 @@
   id: 7cfa62a9-093b-4b3e-9ff2-6d0101e6e8ac
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_isolated_proto_rpcs.py
+    auto_connected: 'true'
   created_at: 1771086000
 - source: 0e01afc7-1685-4e95-ade3-1149f4f614aa
   target: c3a22518-a340-45b2-9e94-2d00d99e657d
@@ -1356,8 +1208,8 @@
   id: 462eb0fe-2340-4d33-b776-303fcbf5033f
   kind: Formalizes
   metadata:
-    auto_connected: 'true'
     script: connect_remaining_isolated.py
+    auto_connected: 'true'
   created_at: 1771086100
 - source: ca9f0b06-8a5a-4097-bd47-d787ce7c381c
   target: 386b1821-73e9-4b1c-90e4-618204cbad0e
@@ -1372,24 +1224,16 @@
   id: 6d205638-c59c-497d-9dea-af94576d6c7b
   kind: Formalizes
   metadata:
-    auto_connected: 'true'
     script: connect_remaining_isolated.py
-  created_at: 1771086100
-- source: a9ffc107-d901-48ae-afb0-da3b9a5f8b6a
-  target: 81afa3f5-4a41-4b04-b958-224d1037d76f
-  id: 5cacda2e-4206-4163-8d2a-6d152f823c8b
-  kind: Refines
-  metadata:
     auto_connected: 'true'
-    script: connect_remaining_isolated.py
   created_at: 1771086100
 - source: ea3f4e7a-e577-465b-810d-ea4247d5ec48
   target: c6920b06-7459-4481-aa79-698820c48a11
   id: bf0a0517-16f5-4938-b5a4-4aa8060b5c60
   kind: DependsOn
   metadata:
-    script: connect_remaining_isolated.py
     auto_connected: 'true'
+    script: connect_remaining_isolated.py
   created_at: 1771086100
 - source: ac78bcec-f784-49aa-a201-30f4641fdc16
   target: 8aff5987-e979-435b-b08d-9b4705c6aef4
@@ -1404,24 +1248,24 @@
   id: 95825574-7382-46a9-ad71-4c6f1d22c16f
   kind: Refines
   metadata:
-    script: connect_final_four.py
     auto_connected: 'true'
+    script: connect_final_four.py
   created_at: 1771086200
 - source: b706e529-3eff-49e0-890c-6e68e31456bb
   target: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
   id: c9612a57-8308-4c5d-9afe-ffa14489a4ba
   kind: Refines
   metadata:
-    script: connect_final_four.py
     auto_connected: 'true'
+    script: connect_final_four.py
   created_at: 1771086200
 - source: 04dd5a76-ac6b-41f1-99f6-bfd56dd0ee5f
   target: fb2ff2ba-a5a2-4f03-bf2d-3aca8aaafee2
   id: c355bb25-9e58-471b-be88-5f3f01a90cee
   kind: Refines
   metadata:
-    auto_connected: 'true'
     script: connect_final_four.py
+    auto_connected: 'true'
   created_at: 1771086200
 - source: dfaf4bdb-7e7c-45f2-871a-89924255d267
   target: c6119c42-7493-4de4-8474-967ff94e89c6
@@ -1429,21 +1273,9 @@
   kind: Formalizes
   metadata: {}
   created_at: 1771091955
-- source: e9c466e9-73c7-4865-914c-ee6b8c6f5992
-  target: dc8ca253-2697-4787-b43b-c4d33da13336
-  id: 8b243319-2a4a-4a13-8852-ff461c8555e3
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771092955
 - source: c2f9b469-f182-4e76-8fef-4168feb10dd6
   target: 9f8de6af-d9d3-4ce5-8351-445bc1c12f34
   id: 26885045-02c6-44fd-94c5-74c2beb670ef
-  kind: Refines
-  metadata: {}
-  created_at: 1771093451
-- source: e33e97b5-f089-4146-b8c1-4d3a9a97f613
-  target: ac78bcec-f784-49aa-a201-30f4641fdc16
-  id: 5745adc6-a080-4dc9-a0f3-191b4b622e8e
   kind: Refines
   metadata: {}
   created_at: 1771093451
@@ -1460,13 +1292,6 @@
   metadata:
     auto_generated: session_105
   created_at: 1771094499
-- source: 436c0a62-9235-4213-98d1-b45fe75118cb
-  target: 0a26c5b6-4ba6-4a62-afe1-40c7020aca27
-  id: auto-54-195
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
 - source: 1e80df99-7c36-49dd-b30a-175bb44c5f54
   target: 69af9728-29c3-4294-ba84-78799a10cad6
   id: auto-47-196
@@ -1474,135 +1299,9 @@
   metadata:
     auto_generated: session_105
   created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: e61c0d6d-9c2e-48d7-9d80-d673912d2f5e
-  id: auto-1-197
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 48efd51f-cda9-45ed-9a76-f46cd45ef2bd
-  id: auto-1-198
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 5fb5017a-8b69-445f-9f3a-c2067460844d
-  id: auto-1-199
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 33912c9c-5a29-4720-b4f6-d1251547ffd9
-  id: auto-1-200
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 4abf7c4c-1341-4742-986f-55687a8e09de
-  id: auto-1-201
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 26f7f710-4e23-4bff-819d-1ed0a46b6e7f
-  id: auto-1-202
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 41d13458-48a5-451d-8503-87ba087f38b9
-  id: auto-1-203
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: bd57b941-758b-43da-ae75-ec1026c5e514
-  id: auto-1-204
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
 - source: 81afa3f5-4a41-4b04-b958-224d1037d76f
   target: a28cee0b-5b58-4442-87f1-8bf4545bd075
   id: auto-2-205
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 14ba122f-e329-4a37-b900-69b61d61953a
-  id: auto-1-206
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 50ed58d6-cd77-4df5-8013-01cda9ce083a
-  id: auto-1-207
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 2e91fd85-2064-4b9e-8c89-9214ec1060a6
-  id: auto-1-208
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: e72d7fd3-fcb5-4dfe-893b-68a8b55db2b1
-  id: auto-1-209
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 543a0d34-6fda-4953-9ff7-67b2c40dbf3b
-  id: auto-1-210
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 489f4790-94e6-4290-9426-6b231aba44ac
-  id: auto-1-211
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 417b1306-aa9e-4c21-ab6d-529a5b53bc65
-  id: auto-1-212
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  target: 6fd5d103-36fc-4f92-aa21-e2bf355916fe
-  id: auto-1-213
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 436c0a62-9235-4213-98d1-b45fe75118cb
-  target: b549f3a8-d094-4f57-b67e-6048b3a09704
-  id: auto-54-214
-  kind: DerivesFrom
-  metadata:
-    auto_generated: session_105
-  created_at: 1771094499
-- source: 436c0a62-9235-4213-98d1-b45fe75118cb
-  target: 364af100-c886-4535-820f-b3a42ed7f599
-  id: auto-54-215
   kind: DerivesFrom
   metadata:
     auto_generated: session_105
@@ -1664,12 +1363,6 @@
   metadata:
     reason: Defines the essence of governance as U3/U0 contradiction detection
   created_at: 1771098670
-- source: 6e66772d-9021-4ad9-9180-d49d1381f77e
-  target: b706e529-3eff-49e0-890c-6e68e31456bb
-  id: f12aeff7-955d-41c4-a72f-f7be34c483d0
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771104255
 - source: c0192b90-862e-49ad-83d8-d27f4205a0d9
   target: b706e529-3eff-49e0-890c-6e68e31456bb
   id: b690b704-cd9a-44a3-b92f-520fffca307d
@@ -1682,18 +1375,6 @@
   kind: Refines
   metadata: {}
   created_at: 1771104490
-- source: d26341fb-a813-4ea6-a987-97d258de8529
-  target: 5e77e1b4-bce3-4c50-b5c5-8b0098dd81e7
-  id: 85ed270f-ed7b-4c66-9e95-5bcd23f521f9
-  kind: Refines
-  metadata: {}
-  created_at: 1771105158
-- source: fbf3767e-6241-428d-912c-887b8e1990dd
-  target: e33e97b5-f089-4146-b8c1-4d3a9a97f613
-  id: 055c2f37-74dc-4a5c-bc7c-8741a03e7881
-  kind: Refines
-  metadata: {}
-  created_at: 1771106056
 - source: fbf3767e-6241-428d-912c-887b8e1990dd
   target: ec5f2497-a3ac-4162-8f75-c5da40436bc5
   id: f04a3e3a-2694-43fd-a3bc-497f968a80fc
@@ -1713,12 +1394,6 @@
   metadata: {}
   created_at: 1771106065
 - source: eb677d27-3d43-46ce-9bc4-52cc9196d24d
-  target: e33e97b5-f089-4146-b8c1-4d3a9a97f613
-  id: b83125f7-10e1-4987-ba80-25459c8e0e06
-  kind: Refines
-  metadata: {}
-  created_at: 1771106634
-- source: eb677d27-3d43-46ce-9bc4-52cc9196d24d
   target: 2059e2c0-3520-4a2f-a05c-49878c559659
   id: 99f75e33-438d-4da5-aad6-b28d30c2e316
   kind: Refines
@@ -1730,20 +1405,6 @@
   kind: Refines
   metadata: {}
   created_at: 1771106644
-- source: 6fe50517-3363-41db-aa33-ad98d271b5ca
-  target: 436c0a62-9235-4213-98d1-b45fe75118cb
-  id: 6fe50517-refines-436c0a62
-  kind: Refines
-  metadata:
-    description: PHPTestExtractor extends extraction pattern to PHP language
-  created_at: 1739590000
-- source: 49b943da-7eed-4859-9402-6a3355e4ea55
-  target: d79603df-d239-4d3f-af09-868ed2935374
-  id: 49b943da-demonstrates-d79603df
-  kind: Refines
-  metadata:
-    description: f₀₃⁻¹ for PHP demonstrates language-agnostic extraction
-  created_at: 1739590000
 - source: 0d10ca75-a053-467c-bff5-cb7c0a5c94e9
   target: fbf3767e-6241-428d-912c-887b8e1990dd
   id: 0d10ca75-refines-fbf3767e
@@ -1785,16 +1446,16 @@
   id: dd54f1d7-cb44-4f1d-ba4b-ded3763086a5
   kind: Refines
   metadata:
-    session: '124'
     reason: Session 123 achievement refines omission detection requirement
+    session: '124'
   created_at: 1771110427
 - source: be6b449e-9b87-4356-9b7a-14148460d120
   target: 5e3afc70-1aa1-4e9c-8eb4-445fe406f75e
   id: 5122f668-5f64-4bbf-963a-5488e13a0502
   kind: Refines
   metadata:
-    session: '124'
     reason: Core concept achievement refines self-governance requirement
+    session: '124'
   created_at: 1771110427
 - source: 56dea38e-0282-477c-9882-c30268072a92
   target: 3c7619aa-cbeb-4ecb-be4e-86fa766fb48b
@@ -1817,24 +1478,24 @@
   id: c5e94a55-30f0-4899-9c33-6a33e1544764
   kind: Refines
   metadata:
-    session: '124'
     reason: Metadata display refines RPC GetNode specification
+    session: '124'
   created_at: 1771110473
 - source: 1149b1d2-d3b1-473f-a8b6-03aac5a5e960
   target: 194a46a7-fed0-4e65-8b0f-4f60813edd62
   id: cd3b0498-e7be-41f0-9491-dc64f0db93c7
   kind: Refines
   metadata:
-    session: '124'
     reason: Session 124 work refines omission detection by connecting isolated specs
+    session: '124'
   created_at: 1771110539
 - source: 1149b1d2-d3b1-473f-a8b6-03aac5a5e960
   target: ab1ce8ca-6711-4d2d-942b-8621985acd9a
   id: cd22ebcf-0249-4f28-a0bd-85ffed77d74a
   kind: Refines
   metadata:
-    reason: Session 124 builds upon Session 123 achievements
     session: '124'
+    reason: Session 124 builds upon Session 123 achievements
   created_at: 1771110539
 - source: ffdad8db-04aa-4588-9b98-86020f52cbff
   target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
@@ -1845,12 +1506,6 @@
 - source: dd829647-7a16-4762-b0db-67b7be4f88a8
   target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
   id: d0d45f10-ee5d-409a-b128-96b24347d0e1
-  kind: Refines
-  metadata: {}
-  created_at: 1771111248
-- source: c33cc117-900d-40ee-95ea-97a1bd02ee91
-  target: 6442e8e2-b17c-423d-b6e3-ae7fb9ce5a11
-  id: 3ae9780a-0d9b-4ee0-b083-6fbf1fa1113c
   kind: Refines
   metadata: {}
   created_at: 1771111248
@@ -1932,45 +1587,143 @@
   kind: Refines
   metadata: {}
   created_at: 1771113505
-- source: 70b7abb4-8d6f-4ada-bf5d-9ffcc9258b53
-  target: de30ff78-04a1-4f75-9a1f-063f970e8b5e
-  id: ba2062ad-af78-419b-965c-eccee549e386
-  kind: Formalizes
-  metadata: {}
-  created_at: 1771115279
 - source: 6b8373d8-0f4e-46aa-87be-09a6e6249c57
   target: de30ff78-04a1-4f75-9a1f-063f970e8b5e
   id: 83607552-fedc-4664-a167-2ec76ec08f64
   kind: Formalizes
   metadata: {}
   created_at: 1771115295
-- source: 0473109f-0f0a-42d0-95c5-9f7ff67824a4
-  target: 9e1a2dce-558a-44e3-890f-d4d1f5c0840b
-  id: 8479e7ed-d219-4df3-8173-c89a2f292ac7
-  kind: Refines
-  metadata: {}
-  created_at: 1771116122
-- source: 86c27166-c4f8-4569-8f54-ca2ed5a520de
-  target: e33e97b5-f089-4146-b8c1-4d3a9a97f613
-  id: 44a08fcb-42ad-44f6-8408-e33b0287317b
-  kind: Refines
-  metadata: {}
-  created_at: 1771116123
-- source: ea53dd5e-ead2-46ae-a097-0bb19e5cca8f
-  target: 0473109f-0f0a-42d0-95c5-9f7ff67824a4
-  id: 9a89a5a1-532e-422f-beab-af8823b54831
-  kind: Refines
-  metadata: {}
-  created_at: 1771116123
-- source: d6f5068e-297a-4fc4-9512-7342fbfa6a0b
-  target: ea53dd5e-ead2-46ae-a097-0bb19e5cca8f
-  id: 948e3911-85cf-4825-b447-8333ecf36946
-  kind: Refines
-  metadata: {}
-  created_at: 1771116760
 - source: d6f5068e-297a-4fc4-9512-7342fbfa6a0b
   target: 0473109f-0f0a-42d0-95c5-9f7ff67824a4
   id: 90bc96af-c988-47ba-be8e-81a29e0e87c9
   kind: Refines
   metadata: {}
   created_at: 1771116762
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 14ba122f-e329-4a37-b900-69b61d61953a
+  id: 0aa8b725-1ec4-47c5-a33f-52fcef84ed35
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 50ed58d6-cd77-4df5-8013-01cda9ce083a
+  id: 22e718e6-a53b-4c7e-9f3c-2b0048e1adcf
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 7bcc1eca-271a-4276-bb95-87ce375a8379
+  id: 346f1545-a346-450f-b0d9-ccd27f9338f4
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 48b035be-35d3-4103-b7bf-53f5f2e680d3
+  id: 49e3cc7d-2cc7-47c8-9345-4c41486408d2
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 33912c9c-5a29-4720-b4f6-d1251547ffd9
+  id: 2f7bab7e-4245-441d-a74b-69e149cdedcc
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: ba2882a1-a8d2-4018-b67c-81330c111736
+  id: 5374bab8-be7c-48a0-8c49-0980ae85a636
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 364af100-c886-4535-820f-b3a42ed7f599
+  id: 2096662d-5c8c-4a22-b8f1-1f09eaec30e4
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: b549f3a8-d094-4f57-b67e-6048b3a09704
+  id: 448693e7-d181-4698-95f1-52f2ff5db19a
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 49b943da-7eed-4859-9402-6a3355e4ea55
+  id: 7986aa4f-bca2-4180-a04a-5124c178d449
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 6fe50517-3363-41db-aa33-ad98d271b5ca
+  id: a3783008-1656-4007-803b-0a93716a7297
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 0a26c5b6-4ba6-4a62-afe1-40c7020aca27
+  id: 008ef90e-7644-4b9b-bfe2-650f26867ad4
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: e9b11d11-68f5-4b68-ae21-1967f155fd50
+  id: 420c54d6-3d77-4dd9-a760-d10c60213a04
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: e9c466e9-73c7-4865-914c-ee6b8c6f5992
+  id: 5d5c1031-83c4-4eff-ba7d-66a51149df83
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: c6119c42-7493-4de4-8474-967ff94e89c6
+  target: 41d13458-48a5-451d-8503-87ba087f38b9
+  id: 12953d33-101f-4def-a9cb-812b25557eaa
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 2e91fd85-2064-4b9e-8c89-9214ec1060a6
+  id: dcce5eeb-cea0-46e4-9e2f-daebb30e6a25
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent
+- source: bc5ad960-81ea-4b8f-b322-8d529a27e018
+  target: 86c27166-c4f8-4569-8f54-ca2ed5a520de
+  id: fb30e6b9-29ea-4a33-809d-03632ea376c2
+  kind: Refines
+  created_at: 1771118273
+  metadata:
+    auto_generated: 'true'
+    reason: Connect isolated spec to parent

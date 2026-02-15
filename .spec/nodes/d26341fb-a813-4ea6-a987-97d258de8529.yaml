@@ -1,7 +1,0 @@
-id: d26341fb-a813-4ea6-a987-97d258de8529
-content: The CLI architecture (spec-cli/src/main.rs at 531 lines) now meets the separation of concerns specification [b706e529] which requires separate modules and a main.rs file under 1000 lines
-kind: Assertion
-metadata: {}
-created_at: 1771098274
-modified_at: 1771098274
-formality_layer: 0

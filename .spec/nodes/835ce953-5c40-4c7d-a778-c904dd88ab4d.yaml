@@ -3,11 +3,11 @@ content: 'Scenario: diff timestamps detects added nodes'
 kind: Scenario
 metadata:
   source_line: '2128'
+  confidence: '0.9'
   inferred: 'true'
   test_function: diff_timestamps_detects_added_nodes
-  extractor: test
-  confidence: '0.9'
   source_file: spec-core/src/graph.rs
+  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

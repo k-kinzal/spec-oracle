@@ -1,7 +1,0 @@
-id: 70b7abb4-8d6f-4ada-bf5d-9ffcc9258b53
-content: The system must export specification graphs in DOT format for Graphviz visualization
-kind: Assertion
-metadata: {}
-created_at: 1771115260
-modified_at: 1771115260
-formality_layer: 0

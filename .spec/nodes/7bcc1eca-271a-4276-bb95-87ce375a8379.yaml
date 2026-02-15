@@ -3,10 +3,10 @@ content: 'Scenario: detect inter universe inconsistencies with transform'
 kind: Scenario
 metadata:
   source_line: '2269'
-  confidence: '0.9'
-  inferred: 'true'
   test_function: detect_inter_universe_inconsistencies_with_transform
+  confidence: '0.9'
   extractor: test
+  inferred: 'true'
   source_file: spec-core/src/graph.rs
 created_at: 1771077123
 modified_at: 1771077123

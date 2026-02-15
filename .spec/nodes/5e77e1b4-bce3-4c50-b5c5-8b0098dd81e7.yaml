@@ -1,7 +1,0 @@
-id: 5e77e1b4-bce3-4c50-b5c5-8b0098dd81e7
-content: A CLI main.rs file must not exceed 1000 lines of code to maintain separation of concerns
-kind: Assertion
-metadata: {}
-created_at: 1771104297
-modified_at: 1771104297
-formality_layer: 0

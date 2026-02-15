@@ -2,13 +2,13 @@ id: e72d7fd3-fcb5-4dfe-893b-68a8b55db2b1
 content: 'Violation: Amount must be greater than zero'
 kind: Definition
 metadata:
-  example_purpose: test_data
-  confidence: '0.85'
+  is_example: 'true'
   source_file: spec-core/src/extract.rs
   inferred: 'true'
-  is_example: 'true'
-  extractor: panic
+  confidence: '0.85'
   source_line: '985'
+  example_purpose: test_data
+  extractor: panic
   panic: Amount must be greater than zero
 created_at: 1771093752
 modified_at: 1771093752
