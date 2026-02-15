@@ -10,7 +10,7 @@ Code, Tests, Docs, Proto, Contracts, Types → [f₀ᵢ⁻¹] → U0
 
 U0 serves as the baseline for governing multi-layered defenses. Humans express intent. The system infers everything else.
 
-**Status**: Core concept realized. 251 specifications managed (29.9% auto-extracted), zero contradictions, zero omissions, complete graph connectivity.
+**Status**: Core concept realized. 253 specifications managed (29.6% auto-extracted), zero contradictions, zero omissions, complete graph connectivity.
 
 ## Architecture
 
@@ -154,8 +154,8 @@ $ spec check
   ✓ No isolated specifications
 
 📊 Summary:
-  Total specs:        251
-  Extracted specs:    75 (29.9%)
+  Total specs:        253
+  Extracted specs:    75 (29.6%)
   Contradictions:     0
   Isolated specs:     0
 
@@ -164,16 +164,16 @@ $ spec check
 # Get overview
 $ spec summary
 📊 Specification Summary
-Total Specifications: 251
+Total Specifications: 253
 
 By Kind:
-  Assertions: 168
+  Assertions: 170
   Constraints: 39
   Scenarios: 33
   Definitions: 11
 
 By Formality Layer:
-  U0: 129  (Natural Language Requirements)
+  U0: 131  (Natural Language Requirements)
   U2: 65   (Interface Definitions - gRPC proto)
   U3: 56   (Implementation - extracted from code)
   U1: 1    (Formal Specifications)
@@ -194,8 +194,8 @@ $ dot -Tpng specs.dot -o specs.png
 ```
 
 **Real achievements**:
-- **251 specifications** across 4 formality layers
-- **29.9% auto-extracted** from code/proto (reverse mapping engine working)
+- **253 specifications** across 4 formality layers
+- **29.6% auto-extracted** from code/proto (reverse mapping engine working)
 - **Zero contradictions** (Z3-verified formal proofs)
 - **Zero omissions** (complete graph connectivity)
 - **Self-governance**: specORACLE detected and reported its own CLI architecture violations
