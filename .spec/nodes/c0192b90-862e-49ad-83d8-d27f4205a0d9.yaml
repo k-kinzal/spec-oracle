@@ -2,14 +2,14 @@ id: c0192b90-862e-49ad-83d8-d27f4205a0d9
 content: spec-cli/src/main.rs contains 4 functions, 1 structs, 5 modules
 kind: Assertion
 metadata:
-  extractor: architecture
-  property: module_structure
   source_file: spec-cli/src/main.rs
-  function_count: '4'
-  struct_count: '1'
   inferred: 'true'
-  source_line: '0'
+  property: module_structure
+  function_count: '4'
   module_count: '5'
+  source_line: '0'
+  struct_count: '1'
+  extractor: architecture
   confidence: '0.95'
 created_at: 1771104181
 modified_at: 1771104181

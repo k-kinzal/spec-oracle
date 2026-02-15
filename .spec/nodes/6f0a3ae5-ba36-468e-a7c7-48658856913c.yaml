@@ -4,9 +4,9 @@ kind: Constraint
 metadata:
   source_file: README.md
   source_line: '13'
-  confidence: '0.85'
-  extractor: documentation
   inferred: 'true'
+  extractor: documentation
+  confidence: '0.85'
 created_at: 1771095538
 modified_at: 1771095538
 formality_layer: 0

@@ -3,11 +3,11 @@ content: 'RPC: Get node'
 kind: Assertion
 metadata:
   source_file: proto/spec_oracle.proto
-  rpc_name: GetNode
-  inferred: 'true'
   extractor: proto_rpc
+  rpc_name: GetNode
   confidence: '0.95'
   source_line: '8'
+  inferred: 'true'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2
