@@ -1450,12 +1450,24 @@
 
 ### Low
 
-- [ ] **READMEとCLIヘルプの情報が不足**
+- [x] **READMEとCLIヘルプの情報が不足** ✅ **解決済み (2026-02-15, Session 131)**
   - **発見日**: 2026-02-14
   - **詳細**: 多層仕様管理の使い方、formality_layerの意味、formalizes/transform関係の説明が不足。
   - **影響範囲**: ユーザーが機能を理解できない
-  - **解決策案**: ドキュメント整備、チュートリアル追加
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ **docs/concepts.md作成** - 包括的な概念ガイド (366行)
+      - 多層仕様管理の詳細説明 (U0-U3)
+      - formality_layerの意味と例
+      - 全ての関係タイプの説明 (Refines, Formalizes, Transform, etc.)
+      - U/D/A/fモデルの解説
+      - Self-governanceの実例
+    - ✅ **README.md更新** - ドキュメントへのリンク追加
+    - ✅ **CLI help実装** - 全コマンドに適切なヘルプテキスト
+  - **検証結果**:
+    - docs/concepts.md: 包括的な解説 (Getting Started, Examples, Theory)
+    - README.md: "New to specORACLE? Start here" セクションで誘導
+    - CLI: `spec --help`, `spec <command> --help` が機能
+  - **解決状況**: ✅ **完了** - 必要なドキュメントが整備され、ユーザーが概念を理解可能
 
 ---
 

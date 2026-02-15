@@ -10,7 +10,7 @@ Code, Tests, Docs, Proto, Contracts, Types → [f₀ᵢ⁻¹] → U0
 
 U0 serves as the baseline for governing multi-layered defenses. Humans express intent. The system infers everything else.
 
-**Status**: Core concept realized. 253 specifications managed (29.6% auto-extracted), zero contradictions, zero omissions, complete graph connectivity.
+**Status**: Core concept realized. 256 specifications managed (29.3% auto-extracted), zero contradictions, zero omissions, complete graph connectivity.
 
 ## Documentation
 
