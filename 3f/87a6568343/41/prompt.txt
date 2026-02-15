@@ -1,0 +1,489 @@
+Implement the following plan:
+
+# Architectural Refactoring: Separate Formal Layer from Data Layer
+
+## Context
+
+The user identified a critical architectural issue in spec-core: **SpecGraph (data layer) performs formal verification, which should be UDAFModel's (formal layer) responsibility.**
+
+### Current Problems
+
+1. **SpecGraph (graph.rs, 2792 lines)** mixes responsibilities:
+   - Data persistence (nodes, edges, serialization) ✓ Correct
+   - **Formal verification** (detect_contradiction_via_z3, Prover usage) ✗ Wrong layer
+   - Imports `formal::{AdmissibleSet, Constraint, Prover}` - layer violation
+
+2. **UDAFModel has incomplete verification**:
+   - Line 252: `// TODO: Implement SMT-based satisfiability check`
+   - `detect_contradictions()` is a stub (only checks marked contradictions)
+   - Prover exists but not integrated into UDAFModel
+
+3. **Duplicate logic**:
+   - `SpecGraph::extract_constraints_from_content()` (lines 900-1018)
+   - `UDAFModel::extract_constraints_from_text()` (model.rs lines 280-461)
+   - Nearly identical implementations
+
+4. **Confusing naming**:
+   - "SpecGraph" sounds like specification logic, but should be data-only
+   - Layer boundaries unclear
+
+### User Requirements
+
+- **SpecGraph should be purely for persisting UAD/f model data** (graph representation)
+- **Formal verification should be in formal/ layer only**
+- **Consider renaming** to clarify purpose
+- **Separate "formal world" from "data world"**
+
+### Theoretical Foundation
+
+Per UAD/f theory (docs/conversation.md):
+- **U/D/A/f model**: Universe, Domain, Admissible Set, Transform Functions
+- **Formal verification**: Proving ∃x. (x ∈ A₁ ∧ x ∈ A₂), checking A₁ ∩ A₂ = ∅
+- **SpecGraph should be**: Data representation for persistence
+- **UDAFModel should be**: Verification authority for formal proofs
+
+---
+
+## Proposed Architecture
+
+### Layer Separation
+
+```
+┌─────────────────────────────────────────────────┐
+│                  CLI Commands                    │
+└────────────┬────────────────────────┬────────────┘
+             │                        │
+             ▼                        ▼
+┌────────────────────┐    ┌──────────────────────┐
+│  SpecRepository    │◄───│   ModelSync (Bridge)  │
+│  (Data Layer)      │    └──────────┬───────────┘
+│                    │               │
+│ - Node/Edge CRUD   │               ▼
+│ - Graph queries    │    ┌──────────────────────┐
+│ - Serialization    │    │   UDAFModel          │
+│ - Temporal         │    │   (Formal Layer)     │
+└────────────────────┘    │                      │
+                          │ - Universe/Domain/A  │
+                          │ - Prover integration │
+                          │ - Constraint extract │
+                          │ - Contradiction det  │
+                          │ - Omission detection │
+                          └──────────────────────┘
+```
+
+### Naming Changes
+
+| Current | New | Purpose |
+|---------|-----|---------|
+| `SpecGraph` | `SpecRepository` | Data storage/persistence |
+| `UDAFModel` | Keep as-is | Formal verification authority |
+| `populate_from_graph` | `ModelSync` | Bridge between layers |
+
+---
+
+## Method Migration Map
+
+### Data Layer (SpecRepository)
+
+**Keep these methods** (pure data operations):
+- `add_node()`, `remove_node()`, `list_nodes()`, `get_node()`
+- `add_edge()`, `remove_edge()`, `list_edges()`
+- `search()`, `trace_relationships()`, `find_formalizations()`
+- `query_at_timestamp()`, `diff_timestamps()`, `get_node_history()`
+- `export_dot()`, serialization methods
+
+### Formal Layer (UDAFModel)
+
+**Move these methods** (formal verification):
+- `detect_contradictions()` - from SpecGraph to UDAFModel
+- `detect_omissions()` - from SpecGraph to UDAFModel
+- `detect_layer_inconsistencies()` - from SpecGraph to UDAFModel
+- `detect_inter_universe_inconsistencies()` - from SpecGraph to UDAFModel
+
+**Delete duplicate**:
+- `SpecGraph::extract_constraints_from_content()` - use UDAFModel version only
+
+**Implement TODO (line 252)**:
+- `UDAFModel::detect_contradictions()` with Prover integration
+- `UDAFModel::verify_satisfiability()`
+- `UDAFModel::prove_consistency()`
+
+### Critical Code Locations
+
+**graph.rs lines to refactor:**
+- Lines 10-12: Remove `use crate::formal::{Prover, ProofStatus}`
+- Lines 900-1018: Delete `extract_constraints_from_content()` (duplicate)
+- Lines 1027-1103: Remove `detect_contradiction_via_z3()` (move to UDAFModel)
+- Lines 338-479: Refactor `detect_contradictions()` (delegate to UDAFModel)
+
+**formal/model/model.rs lines to enhance:**
+- Line 252: Implement `// TODO: Implement SMT-based satisfiability check`
+- Add verification methods with Prover integration
+- Add `sync_from_repository()` (replaces populate_from_graph)
+
+---
+
+## File Structure Changes
+
+### Current Structure
+```
+spec-core/src/
+  graph.rs              (2792 lines - mixed responsibilities)
+  formal/
+    model/
+      model.rs          (UDAFModel - incomplete verification)
+      populate.rs       (one-way sync)
+```
+
+### New Structure
+```
+spec-core/src/
+  data/
+    repository.rs       (SpecRepository - pure data)
+    node.rs             (SpecNode, NodeKind)
+    edge.rs             (SpecEdge, EdgeKind)
+    temporal.rs         (versioning)
+    query.rs            (search, trace)
+    mod.rs              (re-exports)
+
+  formal/
+    model/
+      model.rs          (UDAFModel core - enhanced)
+      verify.rs         (NEW: contradiction/omission detection)
+      constraint.rs     (constraint extraction - consolidated)
+      sync.rs           (ModelSync - bidirectional, formerly populate.rs)
+      mod.rs            (re-exports)
+    proof/
+      prover.rs         (Prover - integrate with UDAFModel)
+      types.rs          (Proof, ProofStatus, etc.)
+      z3_backend.rs     (Z3 integration)
+      mod.rs            (re-exports)
+    (universe/, domain/, admissible_set/, etc. unchanged)
+
+  lib.rs                (update re-exports)
+```
+
+---
+
+## Implementation Plan
+
+This refactoring will be executed in a **single comprehensive pass** to achieve clean layer separation without gradual migration complexity.
+
+### Step 1: Create New File Structure
+
+**Create data/ module** (extracted from graph.rs):
+- `spec-core/src/data/mod.rs` - Module definition and re-exports
+- `spec-core/src/data/repository.rs` - SpecRepository struct (pure data layer)
+- `spec-core/src/data/node.rs` - SpecNode, SpecNodeData, NodeKind
+- `spec-core/src/data/edge.rs` - SpecEdge, SpecEdgeData, EdgeKind
+- `spec-core/src/data/temporal.rs` - TemporalSnapshot, NodeHistory, etc.
+- `spec-core/src/data/query.rs` - Search, trace, relationship queries
+
+**Create formal/model/ enhancements**:
+- `spec-core/src/formal/model/verify.rs` - Verification methods (contradictions, omissions)
+- `spec-core/src/formal/model/constraint.rs` - Consolidated constraint extraction
+- `spec-core/src/formal/model/sync.rs` - Repository ↔ UDAFModel synchronization
+
+### Step 2: Implement Pure Data Layer (SpecRepository)
+
+**Extract from graph.rs** (lines to keep):
+- Data structures: SpecNode, SpecEdge, NodeKind, EdgeKind
+- CRUD operations: add_node, remove_node, add_edge, remove_edge
+- Query methods: search, trace_relationships, find_formalizations
+- Temporal methods: query_at_timestamp, diff_timestamps, get_node_history
+- Serialization: to_json, from_json, export_dot
+
+**Delete from graph.rs** (architectural violations):
+- Lines 10-12: Remove `use crate::formal::{Prover, ProofStatus}` imports
+- Lines 900-1018: Delete `extract_constraints_from_content()` (119 lines) - duplicate logic
+- Lines 1027-1103: Delete `detect_contradiction_via_z3()` (77 lines) - formal layer logic
+- Lines 338-479: Delete formal verification logic from `detect_contradictions()` (142 lines)
+
+**Result**: SpecRepository has ZERO imports from `formal::` module - pure data persistence.
+
+### Step 3: Implement Formal Verification Layer (UDAFModel)
+
+**formal/model/verify.rs** (NEW FILE):
+```rust
+impl UDAFModel {
+    pub fn detect_contradictions(&self) -> Vec<ContradictionProof> {
+        let mut results = Vec::new();
+        let spec_ids: Vec<_> = self.admissible_sets.keys().collect();
+
+        for i in 0..spec_ids.len() {
+            for j in (i+1)..spec_ids.len() {
+                let proof = self.prover.prove_consistency(
+                    &self.admissible_sets[spec_ids[i]],
+                    &self.admissible_sets[spec_ids[j]]
+                );
+
+                if proof.status == ProofStatus::Refuted {
+                    results.push(ContradictionProof {
+                        spec_a: spec_ids[i].clone(),
+                        spec_b: spec_ids[j].clone(),
+                        proof,
+                    });
+                }
+            }
+        }
+
+        results
+    }
+
+    pub fn detect_omissions(&self) -> Vec<OmissionReport> {
+        // Detect underspecified regions using Prover
+        self.prover.detect_underspecification(self)
+    }
+}
+```
+
+**formal/model/model.rs** enhancements:
+- Add `prover: Prover` field (with `#[serde(skip)]`)
+- Implement line 252 TODO: SMT-based satisfiability check
+- Add `verify_satisfiability()` method
+- Add `prove_consistency()` wrapper
+
+**formal/model/constraint.rs** (NEW FILE):
+- Move `extract_constraints_from_text()` from model.rs (lines 280-461)
+- Consolidate duplicate logic from graph.rs
+- Single authoritative constraint extraction implementation
+
+**formal/model/sync.rs** (NEW FILE, replaces populate.rs):
+```rust
+pub struct ModelSync;
+
+impl ModelSync {
+    pub fn sync_from_repository(model: &mut UDAFModel, repo: &SpecRepository) {
+        // Convert repository nodes → UDAFModel components
+    }
+
+    pub fn export_proof_metadata(model: &UDAFModel, repo: &mut SpecRepository) {
+        // Write verification results back as node metadata
+    }
+}
+```
+
+### Step 4: Update CLI Commands
+
+Update all CLI commands to use new architecture:
+
+**spec-cli/src/commands/contradictions.rs**:
+```rust
+// OLD: graph.detect_contradictions()
+// NEW:
+let mut model = UDAFModel::new();
+ModelSync::sync_from_repository(&mut model, &repo);
+let contradictions = model.detect_contradictions();
+ModelSync::export_proof_metadata(&model, &mut repo);
+```
+
+**Files to update**:
+- `spec-cli/src/commands/contradictions.rs`
+- `spec-cli/src/commands/prover.rs`
+- `spec-cli/src/commands/omissions.rs`
+- All other commands: update `SpecGraph` → `SpecRepository`
+
+### Step 5: Update Public API
+
+**spec-core/src/lib.rs**:
+```rust
+// Data layer
+pub mod data;
+pub use data::{SpecRepository, SpecNode, SpecEdge, NodeKind, EdgeKind};
+pub use data::{TemporalSnapshot, TemporalDiff, NodeHistory, HistoryEvent};
+
+// Formal layer (unchanged re-exports)
+pub use formal::{UDAFModel, Universe, Domain, AdmissibleSet, TransformFunction};
+pub use formal::{Constraint, ConstraintKind, Proof, ProofStatus, Prover};
+
+// Synchronization
+pub use formal::ModelSync;
+```
+
+Remove: `pub mod graph;` and all graph re-exports.
+
+### Step 6: Delete Old Files
+
+- Delete `spec-core/src/graph.rs` (2792 lines - replaced by data/ module)
+- Delete `spec-core/src/formal/model/populate.rs` (replaced by sync.rs)
+
+---
+
+## Quality Assurance
+
+### Architectural Validation
+
+**Layer separation correctness**:
+- [ ] SpecRepository has ZERO imports from `formal::` - verified by `grep "use crate::formal" spec-core/src/data/`
+- [ ] No circular dependencies - verified by `cargo check --all-features`
+- [ ] Data flows unidirectionally: Repository → ModelSync → UDAFModel → Verification
+- [ ] Formal verification ONLY in UDAFModel, not in data layer
+
+**UAD/f model integrity**:
+- [ ] All verification uses Prover (not ad-hoc Z3 calls)
+- [ ] UDAFModel is single source of truth for formal proofs
+- [ ] Constraint extraction is consolidated (no duplicates)
+- [ ] Line 252 TODO is fully implemented with tests
+
+### Functional Correctness
+
+**Verification behavior preservation**:
+```bash
+# Create test snapshot of current behavior
+cargo test --all-features -- --test-threads=1 > before.txt
+
+# After refactoring
+cargo test --all-features -- --test-threads=1 > after.txt
+
+# Compare outputs (should be identical)
+diff before.txt after.txt
+```
+
+**Test coverage requirements**:
+- [ ] All existing tests pass without modification
+- [ ] Z3 verification tests pass (`cargo test --features z3-solver`)
+- [ ] Serialization roundtrip tests pass (repository persistence)
+- [ ] CLI commands produce identical outputs
+
+**New test additions**:
+- [ ] Test SpecRepository has no formal verification (unit test)
+- [ ] Test UDAFModel.detect_contradictions() with Prover (integration test)
+- [ ] Test ModelSync bidirectional conversion (unit test)
+- [ ] Test constraint extraction consolidation (no duplicates)
+
+### Performance Validation
+
+**Benchmark critical paths**:
+```bash
+# Before refactoring
+cargo bench --bench verification_bench > bench_before.txt
+
+# After refactoring
+cargo bench --bench verification_bench > bench_after.txt
+
+# Performance should be equivalent or better
+```
+
+**Performance requirements**:
+- [ ] Contradiction detection: no regression (±5% tolerance)
+- [ ] Repository serialization: no regression
+- [ ] Constraint extraction: same or faster (no duplicate work)
+
+### Code Quality
+
+**Rust best practices**:
+- [ ] No compiler warnings (`cargo clippy --all-features`)
+- [ ] All public APIs documented
+- [ ] Error handling uses proper Result types
+- [ ] No `unwrap()` in production code paths
+
+**Semantic correctness**:
+- [ ] UDAFModel owns Prover instance (embedded, not passed)
+- [ ] ModelSync is stateless (pure functions)
+- [ ] SpecRepository is oblivious to formal semantics
+- [ ] Type safety: SpecId, UniverseId, DomainId are distinct
+
+### Integration Validation
+
+**End-to-end workflows**:
+```bash
+# Test full workflow: ingest → verify → export
+spec ingest code examples/
+spec verify contradictions
+spec verify omissions
+spec export dot output.dot
+
+# Verify .spec/ directory structure unchanged
+ls -la .spec/
+cat .spec/specs.json  # Schema unchanged
+```
+
+**CLI command equivalence**:
+- [ ] `spec list` - same output before/after
+- [ ] `spec verify contradictions` - same results
+- [ ] `spec verify omissions` - same results
+- [ ] `spec search <term>` - same results
+- [ ] `spec trace <node-id>` - same results
+
+---
+
+## Critical Files to Modify
+
+**Data Layer (NEW)**:
+- `/Users/ab/Projects/spec-oracle/spec-core/src/data/mod.rs` (CREATE)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/data/repository.rs` (CREATE - pure CRUD/query)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/data/node.rs` (CREATE - data structures)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/data/edge.rs` (CREATE - data structures)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/data/temporal.rs` (CREATE - versioning)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/data/query.rs` (CREATE - search/trace)
+
+**Formal Layer (ENHANCE)**:
+- `/Users/ab/Projects/spec-oracle/spec-core/src/formal/model/model.rs` (ADD prover field, implement line 252)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/formal/model/verify.rs` (CREATE - verification methods)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/formal/model/constraint.rs` (CREATE - consolidated extraction)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/formal/model/sync.rs` (CREATE - replaces populate.rs)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/formal/proof/prover.rs` (INTEGRATE with UDAFModel)
+
+**CLI (UPDATE)**:
+- `/Users/ab/Projects/spec-oracle/spec-cli/src/commands/contradictions.rs` (USE UDAFModel)
+- `/Users/ab/Projects/spec-oracle/spec-cli/src/commands/prover.rs` (USE UDAFModel)
+- `/Users/ab/Projects/spec-oracle/spec-cli/src/commands/omissions.rs` (USE UDAFModel)
+- All other command files: Update imports
+
+**Public API (UPDATE)**:
+- `/Users/ab/Projects/spec-oracle/spec-core/src/lib.rs` (Re-export data::, formal::)
+
+**DELETE**:
+- `/Users/ab/Projects/spec-oracle/spec-core/src/graph.rs` (2792 lines - replaced)
+- `/Users/ab/Projects/spec-oracle/spec-core/src/formal/model/populate.rs` (replaced by sync.rs)
+
+---
+
+## Verification Checklist
+
+**Compilation**:
+- [ ] `cargo check --all-features` passes
+- [ ] `cargo clippy --all-features` no warnings
+- [ ] `cargo build --release --all-features` succeeds
+
+**Testing**:
+- [ ] `cargo test --all-features` all tests pass
+- [ ] `cargo test --features z3-solver` Z3 tests pass
+- [ ] `cargo test --no-default-features` core tests pass
+- [ ] No test modifications required (behavior preserved)
+
+**Architecture**:
+- [ ] Zero `formal::` imports in `data/` module (verified by grep)
+- [ ] No circular dependencies (verified by compilation)
+- [ ] UDAFModel owns Prover (verified by reading model.rs)
+- [ ] ModelSync is stateless (verified by reading sync.rs)
+
+**Semantic Correctness**:
+- [ ] Line 252 TODO fully implemented with Z3
+- [ ] No duplicate constraint extraction logic
+- [ ] All verification uses Prover (no ad-hoc Z3 calls)
+- [ ] Repository persistence unchanged (.spec/ format)
+
+**Performance**:
+- [ ] Benchmark results equivalent (±5%)
+- [ ] No memory leaks (valgrind or similar)
+- [ ] Large graph handling unchanged
+
+**Integration**:
+- [ ] All CLI commands work identically
+- [ ] .spec/ files load/save correctly
+- [ ] Documentation updated
+- [ ] No regressions in user workflows
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/ab/.claude/projects/-Users-ab-Projects-spec-oracle/4af4f91e-8ab5-4cba-8b53-98ae08168d62.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.
+
+---
+
+私は後方互換は不要であるとしました。Future Cleanupを全て完遂してください。
+
+---
+
+ありがとうございます。ここまでの変更内容をコミットしてください。
