@@ -1,0 +1,2505 @@
+GOAL:
+- Independent third-party strict review focused on internal consistency between paper text and executable PoC artifacts.
+
+CONTEXT:
+- Check consistency among manuscript claims, `external_validation.py`, and `external_validation_results.json`.
+- Prior risk areas: U0 usefulness, 3-valued semantics clarity, mutation metric honesty.
+
+TASK:
+- Determine if there are any remaining major blockers.
+
+OUTPUT:
+- Begin with `VERDICT: OK` or `VERDICT: NG`.
+- If NG, list blockers only (with path/section).
+- If OK, include 3-5 minor improvement suggestions.
+
+
+# Context files
+
+--- BEGIN FILE: paper/manuscript/uadf_u0_spec_proof.md ---
+# UAD/fにおける根被覆基準の構成: 射影逆像に基づく `U0`/`U∧` 二演算カーネル
+
+## 0. 問題設定と研究目的
+### 0.1 問題設定
+本稿が対象とする問題は、**多層防御における層横断比較基準の欠如**である。  
+ここで「層」とは、要求仕様・API仕様・型・契約・テスト・実装など、異なる抽象度で記述された仕様アーティファクトを指す。  
+各層 `i` は root 空間 `Ω` から層空間 `β_i` への部分射影 `proj_i : Ω → Option β_i` により接続される（詳細は §2）。
+要求仕様、API仕様、型、契約、テスト、実装はそれぞれ局所的には正しさを主張できるが、層が独立に進化すると全体として次が起きる。
+
+1. 層間矛盾: 例として同一制約（パスワード長など）が層ごとに食い違う
+2. 保証の隙間: 個別手法は通っても、層横断の整合が未検証のまま残る
+3. 変更波及の断絶: 上位仕様変更が下位層へ一貫して反映されない
+
+すなわち問題は、多様な保証手法を横断して比較・監査するための共通基準が欠けることである。
+
+本稿の立場は、**理想的な根仕様 `U*`（root の完全仕様）を人間が網羅的・無矛盾に直接記述することは現実的でない**、という点にある。  
+したがって `U*` そのものを先に与えるのでなく、層と root を結ぶ部分射影 `f_{0i}`（`proj_i`）から逆像で**根被覆基準 `U0`**を構成する。  
+ここでの主価値は「矛盾検出」それ自体ではなく、**層横断比較の共通基準を root 側に構成すること**である（矛盾検出はその副産物）。  
+`U0` は拘束仕様（hard constraint）ではなく、被覆側の比較基準（over-approx envelope）として扱う。
+
+導入例（同一意図の層別表現）:
+- アプリ層: 「データAを取得する」
+- API層: 「システムAのAPIを呼び出して取得する」
+- HTTP層: 「`GET /A`」
+- 通信層: 「接続・再送・順序制御」
+
+同じ意図が層ごとに異なる記述として現れるため、層間比較の共通基準を root 側で構成する必要がある。
+
+### 0.2 研究目的
+本稿の到達目標は次の3点である。
+
+1. 多層仕様比較の最小核として `U,D,A,f` を型付きで定義し、root を「記述」ではなく「射影逆像で構成」する形式を与える。
+2. 運用上の2用途を分離する。  
+   - **root 被覆仕様**としての join 演算（`U0`）  
+   - 同時満足・矛盾判定のための補助演算としての meet（`U∧`）
+3. Lean4で中核定理を機械検証し、実アーティファクト抽出パイプラインの再実行可能性を示す。
+
+### 0.3 貢献範囲
+- 研究者: 暗黙仮定（随伴の成立、層間伝播仮定、抽出同値仮定）を明示し、議論可能にする。
+- 実務者: `U0`（被覆合成 / over-approximation）と `U∧`（同時満足）の使い分け定義、および抽出パイプラインの**技術的再実行可能性デモ**を得る（一般適用性は未評価）。
+- 再現性: Lean証明・抽出スクリプト・ソースロックを同梱し、第三者検証可能にする。
+- 評価範囲: 実OSS評価は convenience sample（`n=3`）による PoC であり、母集団推定を目的としない。
+
+## 1. 研究課題（RQ）
+本稿のRQは、上記の比較基準課題を「定義可能性」「証明可能性」「再現可能性」に分解したものである。
+
+- `RQ1`: 層ごと異型 (`carrier : I → Type`) でも一貫した逆像定義を与えられるか。
+- `RQ2`: `A(i) ⊆ D(i)` を root 側の証人妥当性に持ち上げられるか。
+- `RQ3`: join側 (`U0`) と meet側 (`U∧`) を同一モデル上で整合的に定義できるか。
+- `RQ4`: 層間伝播・層間合成の仮定を型付きで明示し、機械検証できるか。
+- `RQ5 (theory)`: 抽象抽出関係 `E : Ω → β_i → Prop` に対し、抽出適合を `↔` だけでなく one-sided（sound / complete）にも分解できるか。
+- `RQ6 (practice)`: 実OSSアーティファクト抽出パイプラインの**技術的再実行可能性**を確保できるか。
+
+### 1.1 主要RQ
+本稿の中心主張に直接対応する主要RQは次の3つである。
+
+1. `RQ3`: `U0`（join）と `U∧`（meet）を同一モデル上で分離定義できるか。
+2. `RQ4`: 層間伝播/合成の成立条件を仮定込みで機械検証できるか。
+3. `RQ5`: 抽出適合を one-sided（sound / complete）へ分解して運用判断へ接続できるか。
+
+`RQ1`/`RQ2` はモデル基盤（型付き定義と `A(i) ⊆ D(i)`）を固定する補助RQ、`RQ6` は PoC 実行可能性確認である。
+
+### 1.2 評価軸
+| 軸 | 内容 | 指標 |
+|---|---|---|
+| 定義妥当性 | 型整合・記法整合 | §2, §3 と `paper/lean/UadfU0/Definitions/Model.lean` |
+| 理論妥当性 | RQ対応定理 | §4 の中核定理群 |
+| 非自明性 | Lean化で顕在化した欠落仮定 | §5（設計判断1〜4） |
+| 再現可能性 | build/抽出再実行性 | §7.3, §7.4 |
+| 抽出パイプライン実行可能性デモ | source-lock 付き再実行（PoC限定: n=3, 数値境界制約のみ, 抽出正当性は対象外） | §6.2（3 OSS, source-lock 再実行） |
+
+## 2. 型付き UAD/f モデル（自己完結定義）
+### 2.1 記法表
+| 数学記法 | Lean実装 | 意味 |
+|---|---|---|
+| `Ω` | `α` | ルート空間 |
+| `I` | `ι` | 層インデックス |
+| `β_i` | `M.carrier i : Type w` | 層 `i` の搬送型（`carrier : ι → Type w` の `i` への適用結果） |
+| `D_i` | `D i : SpecSet (carrier i)` | 層 `i` の対象領域 |
+| `A_i` | `A i : SpecSet (carrier i)` | 層 `i` の許容集合 |
+| `f_{0i}` | `proj i : Ω → Option β_i` | 部分射影 |
+
+本文では数学記法 `A(i)` を用い、Lean実装名 `A i` に対応づける。
+
+`D(i)` を分離する理由:
+- `carrier i` は型レベルの対象空間全体を表し、`D(i)` はその上の対象領域述語（値レベル制約）を表す。
+- `A(i)` だけでは「仕様が語る対象範囲（`D(i)`）」と「その範囲内で許容される条件（`A(i)`）」が混在する。
+- `A(i) ⊆ D(i)` を明示することで、root 側証人が `carrier i` のうち domain 述語 `D(i)` を満たすこと（RQ2）を定理として追跡できる。
+- 実アーティファクト抽出でも、境界値・単位・包含性の前提を `D(i)` 側に置き、`A(i)` は許容条件に限定できる。
+- ただし §6.2 の現行抽出デモは `A(i)` 候補生成に主眼があり、`D(i)` 分離の実運用実証までは到達していない（限界 §9）。
+
+### 2.2 逆像の誘導定義
+\[
+f^{-1}_{0i}(S)
+:= \{x\in Ω \mid \exists y\in β_i,\ proj_i(x)=some(y) \land y\in S\}
+\]
+
+Lean（`paper/lean/UadfU0/Definitions/Model.lean`）:
+
+```lean
+def preimage (M : Model ι α) (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+```
+
+### 2.3 順序の固定（定理語彙の一意化）
+本稿で join / meet / LUB / GLB と呼ぶときの順序は、**包含順序 `⊆` のみ**とする。
+
+1. join（最小上界） = `∪`
+2. meet（最大下界） = `∩`
+
+仕様の強弱は補助的な直観として扱う。  
+許容集合が大きい仕様ほど弱く、小さい仕様ほど強い。  
+この意味で `U0`（`∪`）は各層を被覆する over-approximation であり、`U∧`（`∩`）は同時満足を与える。
+
+### 2.4 Lean 記述抜粋（定義と定理）
+```lean
+def lifted (M : Model ι α) (i : ι) : SpecSet α :=
+  M.preimage i (M.A i)
+
+def U0 (M : Model ι α) : SpecSet α :=
+  fun x : α => ∃ i : ι, x ∈ M.lifted i
+
+def UAndOn (active : ι → Prop) : SpecSet α :=
+  fun x : α => ∀ i : ι, active i → x ∈ M.lifted i
+
+theorem UAndOn_antitone {J K : ι → Prop}
+    (hJK : ∀ i : ι, J i → K i) :
+    M.UAndOn K ⊆ M.UAndOn J
+```
+
+### 2.5 `Ω`（root空間）の実体化テンプレート
+`Ω` は「誰かが完全列挙した実体集合」ではなく、層横断比較のための意味領域（挙動宇宙）として置く。  
+ただし本稿では工学的実体を曖昧にしないため、次の2つの具体インスタンスを明示する。
+
+1. `Ω_trace = Trace`（アプリイベント列・HTTPメッセージ列・TCPイベント列を持つ構造体）
+2. `Ω_art = Γ_req × Γ_api × Γ_code`（同一時点で取得したartifact束。PoCで採用）
+3. `β_i` は各層IR型で、`proj_i : Ω → Option β_i`
+4. `proj_i(x)=none` は「その `x` から当該層観測を確定できない」を意味する
+
+すなわち本稿が要求するのは `Ω` の全列挙ではなく、`x ∈ lifted(i)` の membership 判定手続きを実装可能にすることである。
+
+### 2.6 `proj` と抽出器（artifact空間 `Γ`）の分離
+査読での主要質問（`Ω` と `proj` を誰がどう定義するか）に対し、本稿は次の分離を採る。
+
+1. artifact 空間 `Γ_i`（要求文書・API文書・コード断片など）
+2. 抽出器 `extract_i : Γ_i → Option β_i`（NL/文書/コードから層IRを抽出）
+3. root 観測 `obs_i : Ω → Option Γ_i`（root 挙動に対応する層artifact断片を取得）
+4. 合成により `proj_i(x) := Option.bind (obs_i x) extract_i`
+
+これにより「artifact→IR 抽出」と「root→layer 射影」を混同せず扱える。  
+また §4.2 の合成定理（`preimage_compose`）はこの分解に直接適用できる。
+具体化例は `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean` に実装している。
+
+### 2.7 NL入口と中間表現（IR）
+実務では自由記述自然言語（NL）を入口から排除できない。  
+本稿は NL を禁止せず、次の分離で扱う。
+
+1. 生テキスト（NL）は証拠・説明として保持する。
+2. 形式判定に使うのは `β_req` 上の中間表現（IR）とする。
+3. 抽出器（規則ベース/LLM含む）は NL→IR の候補生成器（`A(i)` 候補生成器）として扱う。
+4. IR項目には原文スパン（引用位置）を保持し、抽出結果の追跡性を確保する。
+5. 抽出器の正当性は `RQ5 (theory)` の one-sided adequacy（sound / complete）で管理する。
+
+IR最小スキーマ（例）:
+- `actor : String`
+- `operation : String`
+- `bound : {lower : Int?, upper : Int?, inclusiveLower : Bool, inclusiveUpper : Bool}`
+- `unit : String?`
+- `condition : String?`
+- `exception : String?`
+- `evidence_span : {source : URL, span_id : String}`
+
+対応例（要求文）:
+- NL: "`identifier length must be at most 63 bytes`"
+- IR: `operation=identifier_length`, `bound.upper=63`, `inclusiveUpper=true`, `unit=bytes`
+- `evidence_span.span_id`: `req-12:line3-18`
+
+したがって、本稿モデルは「NLを直接形式意味に同一視する」のでなく、「NL入口を許容しつつ、IR層で機械検証に接続する」立場である。
+なお、§6 の実装PoCは意味解析器ではなく **pattern-based regex 抽出**であり、一般NL理解を主張しない。
+
+## 3. `U0` と `U∧` の役割分離
+本稿では `U0` を root 側の被覆仕様（join）として定義し、`U∧` は整合性診断のための別演算（meet）として扱う。  
+両者は一般には一致せず、目的も異なる。
+
+### 3.1 join側（被覆合成）
+\[
+lifted(i) := f^{-1}_{0i}(A(i)),\quad
+U0 := \bigcup_{i\in I} lifted(i)
+\]
+
+`U0` は「どれかの層で許容される root 状態」の集合であり、包含順序 `⊆` での join（最小上界）である。  
+ゆえに `U0` は各層を被覆する over-approximation であり、仕様強弱の直観では各層より弱い（許容集合が大きい）統合として解釈する。
+
+運用ミニシナリオ（変更波及の説明）:
+1. 新規層 `k` を追加したとき、`U0` は被覆集合として追跡対象を保ちやすい。
+2. 同時に `U∧` が空になれば、「新規層の制約追加で既存層との同時満足が崩れた」と診断できる。
+3. このとき `U0` と `U∧` の差分は「被覆は維持されるが同時満足が壊れた」ことを示す。  
+   ただし原因層の最小化（MUS/unsat core 抽出）は本稿の証明範囲外であり、§3.4で診断問題として定義のみ与える。
+
+### 3.2 meet側（同時満足統合）
+有効層集合 `active : I → Prop` に対し
+\[
+U^\wedge_{active}(x) := \forall i,\ active(i) \to x\in lifted(i)
+\]
+
+Lean:
+- `UAndOn` / `UAnd`: `paper/lean/UadfU0/U0Spec/Construction.lean`
+- GLB定理群: `paper/lean/UadfU0/U0Spec/Minimality.lean`
+
+### 3.3 join と meet の接続
+整合/矛盾は以下で定義する。
+\[
+Consistent(i,j) :\Leftrightarrow \exists x,\ x\in lifted(i)\land x\in lifted(j)
+\]
+\[
+Contradictory(i,j) :\Leftrightarrow \forall x,\ x\in lifted(i)\to x\in lifted(j)\to False
+\]
+
+- `UAndOn_subset_U0On`: 非空な `active` では `U∧ ⊆ U0`。
+- `consistent_iff_exists_UAndOn_pair`: 2層整合は「その2層に対する `U∧` の非空性」と同値。
+- `UAndOn_antitone`: `active` を増やすと `U∧` は反単調に小さくなる（要件が厳しくなる）。
+- `UAndOn_empty_eq_univ`: `active=∅` では vacuous truth により `U∧=Ω` となるため、運用上は `∃i, active i` を要求する。
+
+これにより、`U0`（OR）と整合性判定（AND）を別演算として明示し、意味論的混線を解消する。
+本稿の既定意味論は must（`none` は除外）であり、may 変種は感度分析として §4.7 に分離して扱う。
+
+### 3.4 診断問題の定義（本稿は定義まで）
+`active : I → Prop` に対して
+\[
+Inconsistent(active) :\Leftrightarrow \forall x,\ x \in U^\wedge_{active} \to False
+\]
+と定義する。
+
+さらに、`active' ⊊ active` を
+\[
+active' \subsetneq active :\Leftrightarrow
+\left(\forall i,\ active'(i)\to active(i)\right)\ \land\
+\left(\exists j,\ active(j)\land \neg active'(j)\right)
+\]
+で定義し、
+\[
+MUS(active) :\Leftrightarrow Inconsistent(active)\ \land\
+\forall active',\ active' \subsetneq active \to \neg Inconsistent(active')
+\]
+を最小不整合集合（MUS）とする。
+
+本稿は `U0`/`U∧` とその性質を機械検証する基礎段階であり、MUS抽出アルゴリズムの正当性証明は今後課題とする。
+
+### 3.5 理想根 `U*` との関係（仮定付き）
+`U0` を「理想根 `U*` そのもの」と同一視しないため、本稿では **部分射影に整合した必要仮定**で関係を置く。  
+以下は本稿が導出した主張ではなく、`U*` と層仕様を結ぶために型付きで明示した仮定依存の定理である。
+`U* : SpecSet Ω` を意図上の理想根仕様とし、`proj_i` の定義域を
+\[
+Dom_i := \{x \in Ω \mid \exists y,\ proj_i(x)=some(y)\}
+\]
+とおく。active 層全体の可観測領域は
+\[
+Dom_{active} := \{x \in Ω \mid \forall i,\ active(i)\to x\in Dom_i\}
+\]
+である。
+
+must 側では、各 active 層について
+\[
+U^* \cap Dom_i \subseteq lifted(i)
+\]
+（観測できる範囲で必要条件を課す）を仮定し、
+\[
+U^* \cap Dom_{active} \subseteq U^\wedge_{active}
+\]
+を得る。さらに active 非空なら
+\[
+U^* \cap Dom_{active} \subseteq U^\wedge_{active} \subseteq U0_{active}
+\]
+が成り立つ。
+
+may 側では
+\[
+\forall i,\ active(i)\to U^* \subseteq lifted^{may}(i)
+\]
+を仮定すれば
+\[
+U^* \subseteq U^{\wedge,may}_{active}
+\]
+を得る。
+
+注記: `U^* \cap Dom_i \subseteq lifted(i)` は「弱化主張」ではなく、部分射影下で観測可能領域を明示した必要条件仮定である。  
+すなわち本稿はこの仮定を導出したのでなく、`UStar` と `hNecessaryOnDom` を仮定引数として Lean 上で追跡可能にした。
+
+Lean（`paper/lean/UadfU0/U0Spec/IdealRoot.lean`）:
+- `projDom`, `projDomOn`
+- `UStar_inter_projDomOn_subset_UAndOn`
+- `UStar_inter_projDomOn_subset_U0On_of_nonempty_active`
+- `UStar_subset_UAndMayOn`
+- （理想化強仮定版）`UStar_subset_UAndOn`, `UStar_subset_U0On_of_nonempty_active`, `UStar_subset_UAnd`
+
+この意味で `U0` は理想根の同値定義ではなく、理想根を外側から包む root coverage baseline（被覆基準）として位置づける。
+
+## 4. 中核定理（主結果）
+本稿の主結果は「定義展開で終わる補題」より、以下の仮定明示型定理を中心に置く。
+
+### 4.1 層間伝播の十分条件（同一点 `x` の連結仮定）
+`R : β_i → β_j → Prop` とし、次を仮定する。
+
+1. (`hproj` in Lean) `∀ x yj, proj_j x = some yj → ∃ yi, proj_i x = some yi ∧ R yi yj`
+2. (`hA` in Lean) `∀ yi yj, R yi yj → yj∈A(j) → yi∈A(i)`
+
+このとき `lifted(j) ⊆ lifted(i)`。
+
+Lean: `lifted_transfer` in `paper/lean/UadfU0/InterLayer/Transfer.lean`。
+
+### 4.2 層間合成則（`pullbackVia` を明示）
+`g : β_i → Option β_j`（`β_i` から `β_j` への部分写像）に対して
+\[
+pullbackVia_g(S) := \{yi \mid \exists yj,\ g(yi)=some(yj)\land yj\in S\}
+\]
+
+`∀ x, proj_j x = Option.bind (proj_i x) g` なら
+\[
+f^{-1}_{0j}(S)=f^{-1}_{0i}(pullbackVia_g(S)).
+\]
+
+Lean: `preimage_compose` in `paper/lean/UadfU0/InterLayer/Composition.lean`。
+
+### 4.3 抽出適合の one-sided 分解
+`E : Ω → β_i → Prop` に対し、次を機械検証した。
+以下の定理は**抽象関係 `E` に対する一般結果**であり、特定抽出器（regex/LLM等）へ適用するには、その抽出器が soundness/completeness 前提を満たすことの別証明が必要である。
+
+- Soundnessのみ: `preimage ⊆ semanticPullback`
+  - Lean: `preimage_subset_semanticPullback_of_sound`
+- Completenessのみ: `semanticPullback ⊆ preimage`
+  - Lean: `semanticPullback_subset_preimage_of_complete`
+- 両方向成立時: `preimage = semanticPullback`
+  - Lean: `preimage_eq_semanticPullback`
+- may側の同型比較:
+  - `preimageMay ⊆ semanticPullbackMay`: `preimageMay_subset_semanticPullbackMay_of_sound`
+  - `semanticPullbackMay ⊆ preimageMay`: `semanticPullbackMay_subset_preimageMay_of_complete`
+  - `preimageMay = semanticPullbackMay`: `preimageMay_eq_semanticPullbackMay`
+
+これにより、`proj_i(x)=some(y) ↔ E(x,y)` の強仮定を分解し、現実抽出器への接続を段階化した。
+ここでの `E` は抽象関係であり、regex 抽出器の意味保存性をこの節で証明したことを意味しない。
+
+運用上の帰結:
+（以下は `hSound` / `hComplete` などの抽象仮定が成立する場合の形式的帰結）
+- 偽陽性（存在しない整合を報告）を避ける側に効くのは soundness 側 (`preimage ⊆ semanticPullback`) である。
+- 偽陰性（見逃し）を避ける側に効くのは completeness 側 (`semanticPullback ⊆ preimage`) である。
+- `U∧` の空判定でどちらの側を安全性基準に置くかは運用要件に依存するため、判定ポリシー（偽陽性抑制 / 偽陰性抑制）を先に固定する必要がある。
+- 実抽出器（regex/LLM等）がこれらの仮定を満たすこと自体は RQ6 の対象外であり、別証明を要する。
+
+### 4.4 部分射影下での非随伴性
+`∃x0, proj_i(x0)=none` なら、`preimage_i` は冪集合上の左随伴を持たない。
+
+Lean: `no_left_adjoint_of_partial` in `paper/lean/UadfU0/RelatedWork/Galois.lean`。
+
+これは「逆像なら常に随伴がある」という暗黙仮定を否定し、部分性を含むモデルで追加仮定が必要であることを示す。
+
+### 4.5 meet側のGLB特性
+- `UAndOn_lower_bound`
+- `below_UAndOn_of_lower_bounds`
+- `UAndOn_greatest_lower_bound_iff`
+
+により、`U∧` が active 層の greatest lower bound であることを示した。
+
+### 4.6 基礎補題（背景）
+以下は背景補題として扱う。
+
+- `preimage_monotone`（逆像単調性）
+- `preimage_union`（逆像の和保存）
+- `U0_least_upper_bound_iff`（`U0` の LUB）
+- `contradictory_iff_not_consistent`（双対）
+
+### 4.7 `proj_i(x)=none` の解釈（must / may）
+本稿の既定（must）は
+\[
+x\in f^{-1}_{0i}(S) \iff \exists y,\ proj_i(x)=some(y)\land y\in S
+\]
+であり、`none` は membership 不成立として扱う（must 寄り）。
+
+may解釈では
+\[
+x\in f^{-1,may}_{0i}(S)
+\iff
+proj_i(x)=none\ \lor\ \exists y,\ proj_i(x)=some(y)\land y\in S
+\]
+を採る。
+
+Lean（`paper/lean/UadfU0/U0Spec/Construction.lean`）:
+```lean
+def preimageMay (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => M.proj i x = none ∨ ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+
+theorem UAndOn_subset_UAndMayOn {active : ι → Prop} :
+    M.UAndOn active ⊆ M.UAndMayOn active
+
+theorem UAndMayOn_empty_implies_UAndOn_empty {active : ι → Prop}
+    (hEmptyMay : ∀ x : α, x ∈ M.UAndMayOn active → False) :
+    ∀ x : α, x ∈ M.UAndOn active → False
+```
+
+解釈上の含意:
+- must解釈: `none` は観測不能/適用外として除外する（判定は厳しくなる）。
+- may解釈: `none` は判断保留として許容側に倒す（判定は緩くなる）。
+- `UAndOn ⊆ UAndMayOn` より、must空判定は may より矛盾を出しやすい。  
+  逆に `UAndMayOn_empty_implies_UAndOn_empty` により、mayで矛盾なら mustでも矛盾である。
+
+偽陽性/偽陰性の基準:
+- must基準: `semanticPullback(E,S) := {x | ∃y, E(x,y) ∧ y∈S}`
+- may基準:  
+  \[
+  semanticPullbackMay(E,S)
+  := \{x \mid proj_i(x)=none \lor \exists y,\ E(x,y)\land y\in S\}
+  \]
+- 比較は must 同士 / may 同士で行う（`preimage` と `semanticPullback`、`preimageMay` と `semanticPullbackMay`）。
+
+抽象定理（adequacy inclusion）から得られる誤り方向:
+- 判定 `REPORT_CONSISTENT`（`U∧` 非空を報告）を主対象にする場合:
+  - sound 側 inclusion は「偽の整合報告（false consistency）」を抑える方向
+  - complete 側 inclusion は「整合見逃し（missed consistency）」を抑える方向
+- 判定 `REPORT_CONTRADICTORY`（`U∧` 空を報告）を主対象にする場合:
+  - complete 側 inclusion は「偽の矛盾報告（false contradiction）」を抑える方向
+  - sound 側 inclusion は under-approximation により矛盾報告が増える方向に働き得る
+
+運用ポリシー（三値→最終判定射影）:
+- must/may は above の inclusion 関係そのものを変えるのではなく、`inconclusive` を最終判定へどう射影するかを決める運用ポリシーである。
+- 本稿PoCでは `judgement ∈ {consistent, contradictory, inconclusive}` を保持し、`policy_judgement`（must/may）を別に記録する。
+
+運用選択の目安:
+| 優先目標 | 推奨設定 | 典型シナリオ |
+|---|---|---|
+| 偽整合報告の抑制 | sound 側 + must | 監査で「整合と言い切る誤り」を避けたい場合 |
+| 偽矛盾報告の抑制 | complete 側 + may | CI運用で「矛盾アラート過多」を避けたい場合 |
+| 初期導入（失敗解析重視） | fail-fast + must | 抽出器の壊れ方を早期に特定したい場合 |
+| 継続運用（可用性重視） | graceful + may | 一部抽出失敗でも全体パイプラインを止めたくない場合 |
+
+したがって運用時は、(i) 基準集合の種類（must/may）、(ii) 抽出仮定（sound/complete）、(iii) `none` 方針（must/may）をセットで宣言する必要がある。
+
+## 5. 形式化エンジニアリング上の設計判断
+本稿の主たる貢献は、UAD/f 最小コアの参照 mechanization を通じて、必要仮定を明示化した点にある。
+以下は本稿が初出の数学的主張であることを意図せず、UAD/f 文脈での実装可能な設計判断として提示する。
+
+### 判断1: 「統合」の二義性を演算分離で扱う
+初稿では `U0` を統合仕様と呼んでいたが、形式化により `U0` は join（OR）であり、同時満足（AND）は `U∧` として別演算であるべきことが明確化した。
+
+### 判断2: 伝播定理には同一点連結仮定が必要
+`R` だけでは不十分で、`proj_j x` と `proj_i x` を同じ root 点 `x` で結ぶ仮定（`hproj`）が必要であることが分かった。
+この仮定が破れる場合、`lifted(j) ⊆ lifted(i)` の全域主張は一般に得られない。
+
+### 判断3: 抽出適合は `↔` 一発でなく段階化する
+現実抽出器では sound/complete が非対称になり得るため、one-sided inclusion を先に定理化すべきであることが明確化した。
+
+### 判断4: 部分性は随伴構造を壊し得る
+`none` が存在するだけで left adjoint が失われる。したがって、抽象解釈系の直観をそのまま移植できない。
+
+## 6. ケーススタディ（抽出パイプライン実行可能性デモ）
+### 6.1 Lean内ケース（パスワード長制約）
+`paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean` で
+
+\[
+check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
+\]
+
+を証明した（`checkConsistent_iff_allThree`）。
+
+このケースで主張するのは「閉形式判定式と存在証人判定の同値」であり、一般産業有効性ではない。
+
+### 6.1.1 `Ω=ArtifactBundle` の mechanization 例
+§2.6 の `obs/extract/proj=bind` 分解を、Lean で最小具体化した。
+
+- 実装: `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean`
+- `Ω_art = ArtifactBundle`（`reqDoc/apiDoc/codeDoc` の束）
+- `obs_i`: 束から層artifactを取り出す射影
+- `extract_i`: artifact から層IRへ（区間妥当性を検査し `Option` で返す）
+- `proj_i = Option.bind (obs_i) (extract_i)` を定義し `proj_bind_decomposition` で確認
+- `goodBundle ∈ U0` と `goodBundle ∈ UAnd` を証明
+- `brokenReqBundle` で `lifted` 非所属かつ `liftedMay` 所属を示し、must/may 差を具体化
+
+### 6.2 実OSS抽出パイプラインデモ（PostgreSQL / zlib / SQLite）
+`paper/case-study/real_projects/external_validation.py` は以下を自動実行する。
+
+**重要（RQ5/RQ6境界）**: 本節は `RQ6 (practice)`（技術的再実行可能性）を対象とする。  
+`RQ5 (theory)` の adequacy（§4.3）で使う抽象関係 `E` について、regex抽出器が意味保存性を満たすことは本節で証明していない。
+
+PoCにおけるモデル接続（§2.6の具体化）:
+- `Ω_art := Γ_req × Γ_api × Γ_code`（同一時点で取得した3層artifact束）
+- `obs_i` は `Ω_art` からの成分射影
+- `extract_i` は現行regex抽出器
+- `proj_i = Option.bind obs_i extract_i`
+
+本節のスクリプトは、主として `extract_i` の実行可能性を検証する。`obs_i` は source-lock された3層artifact束の対応づけとして実装的に固定される。
+
+1. 公式ドキュメント/公式ソースを取得
+2. 正規表現で境界値を抽出
+3. `Ω_art` の各成分に対応づけて `requirement / api / code` の3層制約を構成
+4. `U∧` 判定は三値 `judgement ∈ {consistent, contradictory, inconclusive}` で評価し、運用ポリシーとして `policy_judgement`（must/may）を付加
+5. 各層 `lifted` の成立可否（must/may）と `U0` membership（`u0_membership_must`, `u0_membership_may`）を出力し、被覆比較基準を可視化
+6. 変異試験を2種類実行（`stale_requirement_lower`, `unit_mismatch_upper_scale_down_1024`）
+
+スクリプト実行モード:
+- `--failure-policy fail-fast`（既定）: 抽出失敗時に停止
+- `--failure-policy none --none-semantics must`: 失敗を `none` に落とし、未定義を矛盾側へ倒す
+- `--failure-policy none --none-semantics may`: 失敗を `none` に落とし、未定義を保留側へ倒す
+
+**重要**: 本節の `n=3` は技術的実行可能性デモであり、矛盾発生率の推定や母集団代表性の主張を意図しない。  
+選定は「3層公開・数値境界制約・URL固定取得可能」という実行要件に基づく convenience sample である。
+
+デモ実行結果（2026-02-15）:
+- `n_real_projects = 3`
+- `raw_judgement_distribution = {consistent: 3, contradictory: 0, inconclusive: 0}`
+- `policy_judgement_distribution = {consistent: 3, contradictory: 0}`
+- `n_u0_membership_must = 3`, `n_u0_membership_may = 3`
+- `avg_coverage_ratio_must = 1.0`, `avg_coverage_ratio_may = 1.0`
+- `support_frequency_must = {requirement: 3, api: 3, code: 3}`
+- `mutation_detected_by_expectation = 6 / 6`
+  - 矛盾化期待（`stale_requirement_lower`）: `3 / 3`
+  - 出力変化期待（`unit_mismatch_upper_scale_down_1024`）: `3 / 3`
+
+変異検出ログ（実行出力）:
+- `paper/case-study/real_projects/logs/external_validation_offline.log`
+- スクリプト内部では `judgement`（三値）と `policy_judgement`（must/may）を併記する。
+- 変異は `stale_requirement_lower` と `unit_mismatch_upper_scale_down_1024` の2種を注入する（`external_validation.py` の `run` 関数）。
+- 実際の変異結果は `external_validation_results.json` に次として記録される。
+
+| Project | mutation_id | expected_outcome | mutated_intersection | detected_expectation |
+|---|---|---|---|---|
+| PostgreSQL identifier length | stale_requirement_lower | `policy_judgement=contradictory` | `[64, 63]` | true |
+| PostgreSQL identifier length | unit_mismatch_upper_scale_down_1024 | `policy_or_interval_or_coverage_change` | `[1, 0]` | true |
+| zlib compression level | stale_requirement_lower | `policy_judgement=contradictory` | `[10, 9]` | true |
+| zlib compression level | unit_mismatch_upper_scale_down_1024 | `policy_or_interval_or_coverage_change` | `[-1, 0]` | true（basis: `intersection_changed`） |
+| SQLite page size | stale_requirement_lower | `policy_judgement=contradictory` | `[65537, 65536]` | true |
+| SQLite page size | unit_mismatch_upper_scale_down_1024 | `policy_or_interval_or_coverage_change` | `[512, 64]` | true |
+
+区間交差判定:
+| Project | lower | upper | 判定 |
+|---|---:|---:|---|
+| PostgreSQL identifier length | 1 | 63 | consistent |
+| zlib compression level | -1 | 9 | consistent |
+| SQLite page size | 512 | 65536 | consistent |
+
+`U0` 可視化（baseline出力）:
+- `real_results[*].lifted_membership.must/may` に層ごとの membership を保持
+- `real_results[*].u0_membership_must/may` に root 被覆基準 membership を保持
+- `real_results[*].coverage_count_*`, `coverage_ratio_*`, `u0_support_layers_*` に被覆寄与層と被覆率を保持
+- `mutation_results[*].mutated_coverage_count_*` を出力し、`U0` 真偽が不変でも被覆寄与が変化した層を追跡可能にする
+- これにより PoC でも `U∧` 判定だけでなく `U0`（被覆比較基準）を直接観測できる
+
+選定理由とバイアス管理:
+- 3件はいずれも「要求文書・API文書・実装ソース」の3層が公開され、URL固定取得が可能な代表例として選定した convenience sample である。
+- 制約種別はいずれも数値境界制約である。識別子長（言語仕様）、圧縮レベル（アルゴリズムパラメータ）、ページサイズ（ストレージ設定）という文脈の異なる3件で、同一の数値抽出処理が技術的に再実行できるかを確認する目的で選んだ。
+- したがって本結果は contradiction 発生率を推定する統計研究ではなく、抽出から判定までの**パイプライン実行可能性デモ**として解釈する。
+- 版固定情報（URL/SHA256/UTC時刻）は `external_validation_sources.lock.json` に記録し、結果追試で同一入力を再構成できるようにした。
+
+入力マッピング上の仮定:
+- 各プロジェクトで抽出した `lower/upper` は、運用上の入力候補として区間制約に整形する。
+- `D(i)` は「数値・単位・包含性が解釈可能な区間値」という対象領域として置き、`A(i)` はその中での許容区間に限定する（`A(i) ⊆ D(i)` の実務対応）。
+- 交差判定 `max(lower_i) ≤ min(upper_i)` は、3層区間制約の整合判定実装である。
+- ただし本稿は regex 抽出そのものの soundness/completeness を証明していない。  
+  したがって「抽出結果が `A(i)` を正しく表す」ことは未検証であり、定理4.3を本デモへ直接適用したとは主張しない。
+- 明示的に言えば、regex 抽出層は本稿で証明対象ではなく、機械検証済みモデルの前段入力生成層として扱う。
+
+### 6.3 何が分かったか（結果と解釈の分離）
+- スコープ明示: 本PoCが検証するのは「regex抽出 + 区間整合判定」の技術的実行可能性であり、`U0→U1→U2→U3` 全体運用の実証ではない。
+- 結果: 実データ3件は raw/policy とも整合 (`consistent`)。  
+  変異は「矛盾化期待 3件」「出力変化期待 3件」の計6件を期待どおり検出した（`mutation_detected_by_expectation = 6/6`）。
+- `U0` 観測: baseline では `U0` membership は全件 true だが、変異後は `mutated_coverage_count` が `3→2` へ低下するケース（5/6）が観測され、`U0` を単純真偽ではなく被覆寄与ベクトルとして使う必要が確認できた。
+- `U∧` 観測: `stale_requirement_lower` は全件で矛盾化し、`unit_mismatch` は project により「矛盾化」か「交差幅変化のみ」に分岐する。  
+  したがって mutation の検出基準は「矛盾化のみ」ではなく「出力変化」まで含めて定義する必要がある。
+- 解釈: 本節が示すのは「既存仕様の不具合発見率」ではなく、**実アーティファクト抽出からJSON出力・交差判定までを source-lock 付きで再実行できること**。
+- ただし抽出器自体（regex層）の正当性保証は本稿の範囲外であり、抽出 soundness/completeness は仮定として扱う。
+- したがって本節は `RQ6 (practice)` の実行可能性確認を対象とし、`RQ5 (theory)` の実抽出器適用（意味保存証明）は対象外である。
+- 変異試験の意味: `stale_requirement_lower`（境界逆転）と `unit_mismatch_upper_scale_down_1024`（単位解釈差）の2種で、実装判定の感度を確認する sanity check であり、理論の外的妥当性や現実バグ有病率を示すものではない。
+- 限界: 対象は数値境界制約に限定。構造制約・時間制約は未評価。
+- 運用ポリシーの目安: 偽陽性抑制を優先する場合は soundness 側、偽陰性抑制を優先する場合は completeness 側を重視して抽出器要件を定める。
+
+### 6.4 負例（抽出揺れ）: 正規表現ドリフト
+本負例は、`external_validation.py` が実際に依存している抽出規則の脆弱性をそのまま使う。  
+SQLite 抽出では次の固定パターンを使っている。
+
+- `between ([0-9]+) and 65536 inclusive`
+- `between [0-9]+ and ([0-9]+) inclusive`
+
+したがって、文書更新で "inclusive" が削除されて
+`between 512 and 65536 bytes` のような表現に変わると、`parse_first_int` が `ValueError` を送出しパイプラインは停止する（fail-fast）。
+再現ログは `paper/case-study/real_projects/logs/regex_drift_failure.log` に保存した。
+
+同一ドリフト入力に対して `--failure-policy none` を使うと、抽出失敗は `parse_issues` として記録され、`none` として後段へ伝播する。
+- `--none-semantics must`: 未定義境界を矛盾側へ倒す
+- `--none-semantics may`: 未定義境界を保留側へ倒す
+
+比較ログ:
+- `paper/case-study/real_projects/logs/regex_drift_graceful_must.log`
+- `paper/case-study/real_projects/logs/regex_drift_graceful_may.log`
+- ドリフト再現用 lock: `paper/case-study/real_projects/logs/regex_drift_lock.json`
+- 同一ドリフト入力での実測差: 両モードとも `judgement=inconclusive`（SQLite）だが、policy は graceful+must で `contradictory`、graceful+may で `consistent` になる。
+
+この負例が示す点:
+1. 負例は「実装済み抽出器が起こしうる失敗形」であり、構成的な架空例ではない。
+2. fail-fast は再現性重視（入力不正を即停止）として有効だが、運用時の可用性を下げる。
+3. graceful+must は `inconclusive` を矛盾寄りに、graceful+may は整合寄りに写像するという形で、§4.7 の理論選択を実装ポリシーへ写像できる。
+4. したがって、抽出器運用では `failure_policy` と `none_semantics` を明示契約として固定する必要がある。
+
+追加の境界挙動ログ:
+- `paper/case-study/real_projects/logs/check_consistent_edge_cases.log`
+- 判定関数（`classify_uand` / `apply_none_policy`）の代表ケース（`min>max`, `min=max`, 負値含む, 境界欠損）を記録し、挙動を明示した。
+
+### 6.5 妥当性への脅威（PoC評価）
+1. **選定バイアス**: 対象3件は「公式文書と公式ソースが公開され、数値境界制約が明示される」条件で選んだ convenience sample であり、母集団代表ではない。
+2. **抽出一般性**: 本PoCは project-specific regex に依存する pattern-based 抽出であり、一般NL理解器の性能を示さない。
+3. **ドキュメントドリフト**: 表現変更で抽出が失敗しうる（§6.4）。graceful モードで継続可能だが、must/may によって判定特性が変わるため運用契約が必要である。
+4. **変異試験の限界**: 現在の mutation は `lower > upper` と単位解釈差（`upper/1024`）の sanity check に留まり、境界包含/排他や暗黙デフォルトへの感度は測っていない。
+5. **人手妥当化不足**: 抽出結果に対するドメイン専門家レビュー（human validation）は本稿で実施していない。
+
+## 7. 再現可能性
+### 7.1 Lean 再現
+```bash
+cd paper/lean
+~/.elan/bin/lake build
+```
+
+### 7.2 環境と依存
+- Lean4: `leanprover/lean4:v4.27.0`
+- Lake: `5.0.0-src+db93fe1`
+- Python: `3.9.6`
+- OS (検証実行): `Darwin 23.5.0`
+- `lean-toolchain`: `paper/lean/lean-toolchain`
+- `lakefile`: `paper/lean/lakefile.lean`
+- `manifest`: `paper/lean/lake-manifest.json`
+- `manifest SHA256`: `8c098d788704fb7c279c7004a1f492723bd892acf2500483665ae39e7a00a6e7`
+- 外部パッケージ: `packages = []`（mathlib 非依存、Lean標準ライブラリのみ）
+- 抽出デモスクリプト: Python標準ライブラリのみ（追加pip依存なし）
+- 抽出デモのオンライン実行はネットワーク接続を要する（公式URL取得のため）
+
+### 7.3 論理基盤の明示
+- `SpecSet α := α → Prop` を採用。
+- 集合外延は `set_ext`（`funext` + `propext`）で実装。
+- 明示的に使用している原理は `funext` と `propext`。`open Classical` は導入していない。
+
+### 7.4 規模と成果物
+- Lean LOC（`paper/lean/UadfU0`）: 1502
+- Lean LOC（`paper/lean` 全体）: 1538
+- `theorem` 宣言数（`paper/lean/UadfU0`）: 59
+- 計測コマンド:
+  - `rg -n '^theorem ' paper/lean/UadfU0 | wc -l`
+  - `wc -l $(rg --files paper/lean/UadfU0 | tr '\n' ' ')`
+- 定理分布:
+  - `Definitions`: 3
+  - `U0Spec`: 32
+  - `InterLayer`: 13
+  - `RelatedWork`: 1
+  - `CaseStudy`: 4
+  - `Examples`: 6
+- 構成内訳（LOC）:
+  - 定義基盤 (`Definitions`): 100（6.7%）
+  - 証明本体 (`U0Spec` + `InterLayer` + `RelatedWork` + `CaseStudy`): 933（62.1%）
+  - 具体例 (`Examples`): 469（31.2%）
+- 中核ファイル:
+  - `paper/lean/UadfU0/U0Spec/Construction.lean`
+  - `paper/lean/UadfU0/U0Spec/Minimality.lean`
+  - `paper/lean/UadfU0/U0Spec/IdealRoot.lean`
+  - `paper/lean/UadfU0/InterLayer/Transfer.lean`
+  - `paper/lean/UadfU0/InterLayer/Composition.lean`
+  - `paper/lean/UadfU0/InterLayer/Adequacy.lean`
+  - `paper/lean/UadfU0/RelatedWork/Galois.lean`
+  - `paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean`
+  - `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean`
+
+上記59定理の役割は「定理数そのもの」ではなく、§5の設計判断（二演算分離、同一点連結仮定、one-sided adequacy、部分性と随伴破綻）を機械検証可能な依存構造として固定した点にある。
+
+### 7.5 抽出デモのロック情報
+実OSS抽出デモは次を出力する。
+- `paper/case-study/real_projects/external_validation_results.json`
+- `paper/case-study/real_projects/external_validation_sources.lock.json`
+- `paper/case-study/real_projects/snapshots/*`
+- `paper/case-study/real_projects/logs/*`
+
+`source_lock` には URL, SHA256, 取得UTC時刻, snapshot path を記録し、抽出再現の証跡とする。
+抽出スクリプトは Python標準ライブラリのみを使用し、追加pip依存を必要としない。
+`snapshots/*` は本リポジトリに同梱し、オフライン追試時の入力として利用する。
+再実行入口として `paper/case-study/real_projects/reproduce.sh` を用意し、offline fail-fast / graceful must / graceful may の3モードを一括実行できる。
+
+追試手順（オンライン/オフライン）:
+1. オンライン再取得: `python external_validation.py` を引数なしで実行し、`results` / `source_lock` / `snapshots` を再生成する（既存 lock/snapshot があってもオンライン取得を行う。ネットワーク必要）。
+2. オフライン追試（既定 fail-fast）: `python external_validation.py --offline-lock external_validation_sources.lock.json` を実行し、各 snapshot 読み込み時に lock 記録との SHA256 整合を検証しながら同じ抽出処理を再実行する（ネットワーク不要）。
+3. graceful must 追試: `python external_validation.py --offline-lock external_validation_sources.lock.json --failure-policy none --none-semantics must`。
+4. graceful may 追試: `python external_validation.py --offline-lock external_validation_sources.lock.json --failure-policy none --none-semantics may`。
+5. SHA256 検証は `paper/case-study/real_projects/external_validation.py` の `fetch_text` オフライン分岐で実装している（不一致時は例外停止）。
+6. オフライン追試で SHA256 不一致が発生した場合は、論文実行時と異なる入力であり再現性が保証されないことを意味するため、同梱 snapshot と lock の一致状態を復元して再実行する。
+7. 長期保存に関しては、ソース固定アーカイブ（例: DOI付きリポジトリアーカイブ）とURL失効時フォールバック（例: Wayback参照）を推奨する。
+
+### 7.6 本文-Lean 対応表（主要定理）
+| 本文節 | 主張 | Lean対応 |
+|---|---|---|
+| §3.5 | `U*` と可観測領域付き包含関係 | `paper/lean/UadfU0/U0Spec/IdealRoot.lean` の `projDom`, `projDomOn`, `UStar_inter_projDomOn_subset_UAndOn`, `UStar_inter_projDomOn_subset_U0On_of_nonempty_active`, `UStar_subset_UAndMayOn` |
+| §4.1 | 層間伝播 `lifted(j) ⊆ lifted(i)` | `paper/lean/UadfU0/InterLayer/Transfer.lean` の `lifted_transfer` |
+| §4.2 | 合成則 `preimage_compose` | `paper/lean/UadfU0/InterLayer/Composition.lean` の `preimage_compose` |
+| §4.3 | one-sided adequacy（must/may） | `paper/lean/UadfU0/InterLayer/Adequacy.lean` の `preimage_subset_semanticPullback_of_sound`, `semanticPullback_subset_preimage_of_complete`, `preimage_eq_semanticPullback`, `preimageMay_subset_semanticPullbackMay_of_sound`, `semanticPullbackMay_subset_preimageMay_of_complete`, `preimageMay_eq_semanticPullbackMay`（注: いずれも抽象関係 `E` に対する定理。実抽出器への適用は別証明） |
+| §4.4 | 部分性による非随伴 | `paper/lean/UadfU0/RelatedWork/Galois.lean` の `no_left_adjoint_of_partial` |
+| §4.5 | meet の GLB | `paper/lean/UadfU0/U0Spec/Minimality.lean` の `UAndOn_greatest_lower_bound_iff` |
+| §4.7 | must/may 関係 | `paper/lean/UadfU0/U0Spec/Construction.lean` の `preimageMay`, `UAndOn_subset_UAndMayOn`, `UAndMayOn_empty_implies_UAndOn_empty` |
+| §6.1.1 | `Ω=ArtifactBundle` 具体化 | `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean` の `proj_bind_decomposition`, `goodBundle`/`brokenReqBundle` 例 |
+
+## 8. 関連研究と位置づけ
+本稿は既存理論の代替ではなく、UAD/f 最小コアの mechanization を目的とする。
+
+- 抽象解釈（Cousot & Cousot）:
+  逆像単調性は整合するが、標準的議論は総写像・随伴成立を前提に置く場合が多い。  
+  本稿では部分射影（`Option`）下でその前提が崩れることを `no_left_adjoint_of_partial`（`paper/lean/UadfU0/RelatedWork/Galois.lean`）で示す。
+- Institution（Goguen & Burstall）:
+  言語横断満足移送を扱う一般理論に対し、本稿は root 演算 `U0`/`U∧` の具体的機械化に焦点を限定。  
+  相違は、(i) `Option` による部分射影の一次表現、(ii) root 空間での join/meet 演算の明示、(iii) Lean 上での実行可能証明資産にある。
+- システム仕様形式手法（TLA+ など）:
+  全体系挙動ではなく、層横断統合カーネルの定義整備と証明再利用に焦点を当てる。
+- インターフェース理論（Interface Automata）:
+  入出力仮定/保証による合成互換性の形式化を与える。  
+  本稿はそれを置換せず、`Option` 部分射影と root 演算 `U0`/`U∧` の明示化に焦点を絞る。
+- 精緻化計算（Refinement Calculus）:
+  段階的詳細化の一般枠組みに対し、本稿は包含順序を定理語彙として固定しつつ、仕様強弱解釈を補助的に併記して root 比較演算を具体的に機械化した位置づけである。
+- ViewPoints / inconsistency management:
+  分散視点の整合管理は要求工学の古典課題であり、本稿の「層が独立進化する」問題設定と整合する。  
+  本稿は調停手続き自体よりも、比較基準となる root 演算核を Lean で固定する点に焦点を置く。
+- 多ビュー整合（pullback 系）:
+  ビュー整合を pullback 構成で説明する系譜に対し、本稿は `Option` 部分射影と join/meet を一次表現した最小核 mechanization を与える。
+- BX / モデル同期（TGG 等）:
+  層間伝播・合成は双方向同期の問題意識と重なる。  
+  本稿は完全同期器の構成ではなく、同一点連結仮定の明示と one-sided adequacy の分離を主眼とする。  
+  不整合許容型の部分的BX議論とも接続可能である。
+- 異種仕様統合（Hets/Institution 実装系）:
+  多言語仕様を横断する一般基盤に対し、本稿は UAD/f 文脈での root 比較演算を小さく mechanize した位置づけである。
+- 要求形式化（EARS/FRET/ACE/Property Patterns）:
+  NL入口を完全排除しない実務系譜に対し、本稿は NL→IR→判定の接続点を one-sided adequacy で管理する立場を採る。
+- 仕様マイニング（Daikon 系）:
+  `A(i)` 候補の生成源は NL抽出だけでなく、トレース由来不変条件推定も取り得る。  
+  本稿は生成源に中立で、`proj` と逆像の整合性条件を核として扱う。
+- LLM × Requirements Engineering:
+  LLM を直接証明器とみなさず、抽出器候補として位置づけ、誤り特性を sound/complete 分解で管理する方針を採る。
+- NL要求→形式論理翻訳（LLM）:
+  LLMによる NL→LTL 翻訳は有望だが、失敗解析と改善ループが必要であることが報告されている。  
+  本稿は一撃翻訳を前提にせず、候補生成と adequacy 管理を分離する。
+- INCOSE系の対話的形式化:
+  対話的に NL から形式仕様へ導く系譜と整合し、本稿はその入力管理側（抽出器管理と root 比較基準）を担う位置づけである。
+
+使い分け指針:
+- root 空間上で join/meet を明示分離し、部分射影の未定義点まで追跡したい場合: 本稿の UAD/f コア。
+- 言語間満足移送を公理的に比較したい場合: Institution。
+- 時相的ふるまいやシステム遷移を主対象にする場合: TLA+ などの時相仕様手法。
+
+本稿のコア証明（§2〜§7）で直接検証した範囲を超える一般化（colimit統合、institution射の完全機械化、仮想フェデレーション/Δ駆動運用）は、主張から切り離し、今後課題として §9 に限定して記述する。
+
+## 9. 限界と脅威
+1. 抽出器の意味保存証明は一般形では未完（§4.3 は抽象関係 `E` に対する接続定理）。
+2. 外部評価は convenience sample の3プロジェクト・数値境界制約に限定（母集団代表性は未保証）。
+3. 変異試験は感度確認であり、現実バグ分布の推定ではない。
+4. regex 抽出の soundness/completeness（抽出漏れ・誤抽出率）は本稿で定量評価していない。
+5. 現在のケースは層間合成連鎖や one-sided adequacy の実プロジェクト実証まで到達していない。
+6. mathlib非依存のため、既存ライブラリ比較の網羅性は今後の課題。
+7. 層間伝播定理（§4.1）は十分条件を与えるが、必要条件は未証明である。
+8. `none` の must 解釈（§4.7）は矛盾判定の偽陽性リスクを持ち得るが、本稿では数値境界制約のみを対象としたため定量評価していない。
+9. 抽出デモの長期保存戦略（永続アーカイブ DOI, Wayback など）は運用上の推奨事項として残しており、現時点で制度化していない。
+10. colimit 構成・institution 射・`Δ` 駆動 CPR の完全機械化は本稿の範囲外であり、将来拡張候補として位置づける。
+11. `artifact -> IR -> proj` 連結のうち、`extract_i` の意味保存保証は一般形で未証明である。
+12. MUS/unsat core 抽出は §3.4 で問題定義のみ与え、アルゴリズム検証は未着手である。
+13. PoC は `Ω_art`（artifact束）での具体化であり、実行時トレース `Ω=Trace` への直接拡張は未検証である。
+
+## 10. 結論
+本稿は、UAD/f の root 統合問題を
+
+- `U0`（join: root 被覆仕様）
+- `U∧`（meet: 同時満足診断）
+
+に分離し、同一の型付き部分射影モデルで Lean4 機械検証した。  
+ここで root 側の基準として採用するのは `U0`（root coverage baseline）であり、`U∧` は整合性評価演算である。  
+理想根 `U*` は別概念として保持し、must 側では可観測領域つきで `U* ∩ Dom_active ⊆ U∧ ⊆ U0`、may 側では `U* ⊆ UAndMay` を与える（§3.5）。
+
+本稿の主たる増分は、集合論の再掲ではなく、UAD/f 最小コア mechanization に必要な仮定を形式的に明示した点にある。
+
+1. 統合演算の二義性（OR/AND）の分離必要性
+2. 伝播定理の同一点連結仮定（関係 `R` だけでは不足）
+3. 抽出適合の one-sided 分解（`↔` 一発主張の分解）
+4. 部分性による随伴不成立条件（総写像前提の破綻）
+
+さらに、実OSSアーティファクト抽出をソースロック付きで再実行可能にし、前段入力生成パイプラインとしての PoC 基盤を示した。
+
+拡張方向（colimit 統合、institution 射、仮想フェデレーション、`Δ` 駆動運用、LLM候補生成器分担）は、コア mechanization の直接成果とは分離し、将来課題として整理した（§9）。
+
+RQ対応の要約:
+- `RQ1`: §2.2 の型付き `preimage` 定義と `Definitions/Model.lean` で解決。
+- `RQ2`: §2.1 と `paper/lean/UadfU0/U0Spec/Construction.lean` の `lifted_subset_preimage_domain`, `U0_witness_projects_to_some_domain` で解決。
+- `RQ3`: §3 と §4.5（`U0`/`U∧` の join/meet 分離と GLB/LUB 性質）で解決。
+- `RQ4`: §4.1, §4.2（`lifted_transfer`, `preimage_compose`）で仮定明示の上で解決。
+- `RQ5 (theory)`: §4.3（sound-only / complete-only / equality）で抽象関係 `E` に対する分解を定式化して解決。実抽出器への適用には抽出層の意味保存証明が別途必要（限界 §9）。
+- `RQ6 (practice)`: §6.2, §7.5 で source-lock 付き抽出パイプラインの技術的再実行可能性を確認して解決。抽出正当性（soundness/completeness）は RQ6 の対象外であり、限界 §9 に記載。
+
+---
+### 参考文献
+- Patrick Cousot and Radhia Cousot, “Abstract Interpretation: A Unified Lattice Model for Static Analysis of Programs by Construction or Approximation of Fixpoints,” *Proceedings of the 4th ACM SIGACT-SIGPLAN Symposium on Principles of Programming Languages (POPL 1977)*, pp. 238-252, 1977.
+- Joseph A. Goguen and Rod M. Burstall, “Introducing Institutions,” in *Logics of Programs*, Lecture Notes in Computer Science 164, Springer, pp. 221-256, 1984.
+- Leslie Lamport, *Specifying Systems: The TLA+ Language and Tools for Hardware and Software Engineers*, Addison-Wesley, 2002.
+- Luca de Alfaro and Thomas A. Henzinger, “Interface Automata,” *Proceedings of the 9th ACM SIGSOFT International Symposium on Foundations of Software Engineering (FSE 2001)*, pp. 109-120, 2001.
+- Ralph-Johan Back and Joakim von Wright, *Refinement Calculus: A Systematic Introduction*, Springer, 1998.
+- Bashar Nuseibeh, Jeff Kramer, Anthony Finkelstein, “A Framework for Expressing the Relationships Between Multiple Views in Requirements Specification,” IEEE TSE, 1994. URL: https://www.cs.toronto.edu/~sme/papers/1994/csrp333.pdf
+- Martin Wirsing and Alexander Knapp, “View Consistency in Software Development,” in *RADICAL 2004* (Springer LNCS), 2004. URL: https://link.springer.com/chapter/10.1007/978-3-540-24626-8_24
+- Yingfei Xiong et al., “Model Synchronization Based on Triple Graph Grammars,” *Software and Systems Modeling*, 2012. URL: https://xiongyingfei.github.io/papers/Sosym12.pdf
+- Till Mossakowski et al., “The Heterogeneous Tool Set (Hets),” CEUR-WS. URL: https://ceur-ws.org/Vol-259/paper11.pdf
+- Alistair Mavin, Philip Wilkinson, Adrian Harwood, Mark Novak, “Easy Approach to Requirements Syntax (EARS),” RE'09 workshop. URL: https://www.researchgate.REDACTED
+- NASA Formal Requirements Elicitation Tool (FRET/FRETish) Tutorial, NASA Technical Reports Server, 2022. URL: https://ntrs.nasa.gov/citations/20220009659
+- Norbert E. Fuchs et al., *Attempto Controlled English (ACE) Manual*, University of Zurich / Attempto project. URL: https://attempto.ifi.uzh.ch/site/pubs/papers/ace3manual.pdf
+- Matthew B. Dwyer, George S. Avrunin, James C. Corbett, “Patterns in Property Specifications for Finite-State Verification,” ICSE 1999. URL: https://ext.math.umass.edu/~avrunin/papers/dwyer99-icse-patterns.pdf
+- Michael D. Ernst et al., “The Daikon system for dynamic detection of likely invariants,” *Science of Computer Programming*, 2007. URL: https://web.eecs.umich.edu/~weimerw/2024-481F/readings/daikon-tool-scp2007.pdf
+- “Large Language Models (LLMs) for Requirements Engineering (RE): A Systematic Literature Review,” arXiv preprint, 2025. URL: https://arxiv.org/abs/2509.11446
+- “Learning from Failures: Translation of Natural Language Requirements into Linear Temporal Logic by LLMs,” East China Normal University repository page. URL: https://pure.ecnu.edu.cn/en/publications/learning-from-failures-translation-of-natural-language-requiremen/
+- “Transforming Natural Language Requirements to Formalism (interactive workflow),” INCOSE Systems Engineering. URL: https://incose.onlinelibrary.wiley.com/doi/10.1002/sys.70023
+- “Bidirectionally tolerating inconsistency: partial bidirectional transformations,” FoSSaCS/FASE era reference. URL: https://groups.inf.ed.ac.uk/bx/fase14.pdf
+- “Automated formalization of structured natural language requirements,” *Information and Software Technology*. URL: https://www.sciencedirect.com/science/article/abs/pii/S0950584921000707
+
+
+
+
+## 11. 付録A: 論文展開に必要な Lean 抜粋
+本付録は、本文の論理展開を追跡するために必要な最小コードのみを掲載する。  
+完全実装は `paper/lean` 配下（§13）を参照。
+
+### 11.1 型付きコア定義（`Definitions/Model.lean` + `U0Spec/Construction.lean`）
+```lean
+abbrev SpecSet (α : Type v) : Type v := α → Prop
+
+structure Layer (β : Type w) where
+  D : SpecSet β
+  A : SpecSet β
+  admissible_subset_domain : A ⊆ D
+
+structure Model (ι : Type u) (α : Type v) where
+  carrier : ι → Type w
+  layer : (i : ι) → Layer (carrier i)
+  proj : (i : ι) → α → Option (carrier i)
+
+namespace Model
+
+def preimage (M : Model ι α) (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+
+def lifted (M : Model ι α) (i : ι) : SpecSet α :=
+  M.preimage i (M.A i)
+
+def U0 (M : Model ι α) : SpecSet α :=
+  fun x : α => ∃ i : ι, x ∈ M.lifted i
+
+def UAndOn (M : Model ι α) (active : ι → Prop) : SpecSet α :=
+  fun x : α => ∀ i : ι, active i → x ∈ M.lifted i
+
+def preimageMay (M : Model ι α) (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => M.proj i x = none ∨ ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+```
+
+### 11.2 理想根と可観測領域（`U0Spec/IdealRoot.lean`）
+```lean
+def projDom (M : Model ι α) (i : ι) : SpecSet α :=
+  fun x => ∃ y : M.carrier i, M.proj i x = some y
+
+def projDomOn (M : Model ι α) (active : ι → Prop) : SpecSet α :=
+  fun x => ∀ i : ι, active i → x ∈ M.projDom i
+
+theorem UStar_inter_projDomOn_subset_UAndOn
+    {active : ι → Prop}
+    (UStar : SpecSet α)
+    (hNecessaryOnDom :
+      ∀ i : ι, active i →
+        (fun x : α => x ∈ UStar ∧ x ∈ M.projDom i) ⊆ M.lifted i) :
+    (fun x : α => x ∈ UStar ∧ x ∈ M.projDomOn active) ⊆ M.UAndOn active
+```
+
+### 11.3 adequacy（must/may 同型比較, `InterLayer/Adequacy.lean`）
+```lean
+def semanticPullback
+    {i : ι}
+    (E : α → M.carrier i → Prop)
+    (S : SpecSet (M.carrier i)) :
+    SpecSet α :=
+  fun x => ∃ y : M.carrier i, E x y ∧ y ∈ S
+
+def semanticPullbackMay
+    {i : ι}
+    (E : α → M.carrier i → Prop)
+    (S : SpecSet (M.carrier i)) :
+    SpecSet α :=
+  fun x => M.proj i x = none ∨ ∃ y : M.carrier i, E x y ∧ y ∈ S
+
+theorem preimage_subset_semanticPullback_of_sound ...
+theorem semanticPullback_subset_preimage_of_complete ...
+theorem preimage_eq_semanticPullback ...
+theorem preimageMay_subset_semanticPullbackMay_of_sound ...
+theorem semanticPullbackMay_subset_preimageMay_of_complete ...
+theorem preimageMay_eq_semanticPullbackMay ...
+```
+
+### 11.4 `Ω_art` 具体化（`Examples/ArtifactBundleExample.lean`）
+```lean
+def projFromObsExtract (i : LayerTag) (x : ArtifactBundle) : Option (Beta i) :=
+  Option.bind (obs i x) (extract i)
+
+theorem proj_bind_decomposition (i : LayerTag) (x : ArtifactBundle) :
+    artifactBundleModel.proj i x = Option.bind (obs i x) (extract i) := by
+  rfl
+
+example : goodBundle ∈ artifactBundleModel.U0 := by ...
+example : goodBundle ∈ artifactBundleModel.UAnd := by ...
+example : brokenReqBundle ∉ artifactBundleModel.lifted LayerTag.req := by ...
+example : brokenReqBundle ∈ artifactBundleModel.liftedMay LayerTag.req := by ...
+```
+
+## 12. 付録B: 論文展開に必要な PoC スクリプト抜粋
+完全実装は `paper/case-study/real_projects/external_validation.py` を参照。
+
+### 12.1 判定モデル（fail-fast/graceful, must/may, 三値判定）
+```python
+FailurePolicy = Literal["fail-fast", "none"]
+NoneSemantics = Literal["must", "may"]
+Judgement = Literal["consistent", "contradictory", "inconclusive"]
+
+def classify_uand(*layers: LayerBounds, undefined_from_parse: bool = False):
+    if undefined_from_parse:
+        return "inconclusive", None, None, "parse_issue"
+    lowers = [x.lower for x in layers if x.lower is not None]
+    uppers = [x.upper for x in layers if x.upper is not None]
+    if not lowers or not uppers:
+        return "inconclusive", None, None, "insufficient_bounds"
+    lower, upper = max(lowers), min(uppers)
+    if lower <= upper:
+        return "consistent", lower, upper, "interval_intersection"
+    return "contradictory", lower, upper, "interval_intersection"
+
+def apply_none_policy(judgement: Judgement, none_semantics: NoneSemantics) -> Judgement:
+    if judgement != "inconclusive":
+        return judgement
+    return "contradictory" if none_semantics == "must" else "consistent"
+```
+
+### 12.2 `U0` 可視化と mutation（`run` 関数抜粋）
+```python
+lifted_must = {...}
+lifted_may = {...}
+u0_membership_must = any(lifted_must.values())
+u0_membership_may = any(lifted_may.values())
+coverage_count_must = coverage_count(lifted_must)
+coverage_count_may = coverage_count(lifted_may)
+coverage_ratio_must = coverage_ratio(lifted_must)
+coverage_ratio_may = coverage_ratio(lifted_may)
+
+judgement, lower, upper, reason = classify_uand(...)
+policy_judgement = apply_none_policy(judgement, none_semantics)
+
+real_results.append({
+  "judgement": judgement,
+  "policy_judgement": policy_judgement,
+  "u0_membership_must": u0_membership_must,
+  "u0_membership_may": u0_membership_may,
+  "coverage_count_must": coverage_count_must,
+  "coverage_count_may": coverage_count_may,
+  "coverage_ratio_must": coverage_ratio_must,
+  "coverage_ratio_may": coverage_ratio_may,
+  "u0_support_layers_must": support_layers(lifted_must),
+  "u0_support_layers_may": support_layers(lifted_may),
+  "lifted_membership": {"must": lifted_must, "may": lifted_may},
+  ...
+})
+
+# mutation 1: stale lower bound
+# mutation 2: unit mismatch (upper / 1024)
+mutation_results.append({
+  "mutation_id": "stale_requirement_lower",
+  "expected_outcome": "policy_judgement=contradictory",
+  "detected_expectation": ...,
+  "mutated_coverage_count_must": ...,
+  "mutated_u0_support_layers_must": ...,
+  ...
+})
+mutation_results.append({
+  "mutation_id": "unit_mismatch_upper_scale_down_1024",
+  "expected_outcome": "policy_or_interval_or_coverage_change",
+  "detected_expectation": ...,
+  "detection_basis": [...],
+  ...
+})
+
+summary = {
+  "raw_judgement_distribution": {...},
+  "policy_judgement_distribution": {...},
+  "avg_coverage_ratio_must": ...,
+  "mutation_detected_by_expectation": ...,
+  "mutation_detected_contradictory": ...,
+  "mutation_detected_change": ...,
+  ...
+}
+```
+
+## 13. 付録C: 完全成果物と実行コマンド
+### 13.1 完全成果物（参照先）
+- Lean project root: `paper/lean`
+- Core Lean files:
+  - `paper/lean/UadfU0/Definitions/Model.lean`
+  - `paper/lean/UadfU0/U0Spec/Construction.lean`
+  - `paper/lean/UadfU0/U0Spec/Minimality.lean`
+  - `paper/lean/UadfU0/U0Spec/IdealRoot.lean`
+  - `paper/lean/UadfU0/InterLayer/Transfer.lean`
+  - `paper/lean/UadfU0/InterLayer/Composition.lean`
+  - `paper/lean/UadfU0/InterLayer/Adequacy.lean`
+  - `paper/lean/UadfU0/RelatedWork/Galois.lean`
+  - `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean`
+- PoC script:
+  - `paper/case-study/real_projects/external_validation.py`
+  - `paper/case-study/real_projects/reproduce.sh`
+
+### 13.2 実行コマンド
+```bash
+# Lean build
+cd paper/lean
+~/.elan/bin/lake build
+
+# External validation (offline, fail-fast must)
+cd ../case-study/real_projects
+python external_validation.py --offline-lock external_validation_sources.lock.json
+
+# External validation (3モード一括再実行)
+./reproduce.sh
+
+# External validation (offline, graceful must)
+python external_validation.py --offline-lock external_validation_sources.lock.json --failure-policy none --none-semantics must
+
+# External validation (offline, graceful may)
+pyth
+--- END FILE: paper/manuscript/uadf_u0_spec_proof.md (TRUNCATED) ---
+
+--- BEGIN FILE: paper/case-study/real_projects/external_validation.py ---
+#!/usr/bin/env python3
+"""External validation on real OSS artifacts for UAD/f interval consistency.
+
+Design goals:
+- Fully automatic extraction (no manual post-editing)
+- Reproducible source lock with URL + SHA256 + retrieval timestamp
+- Layered consistency check using interval intersection
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import html
+import json
+import re
+import urllib.request
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Literal, Optional
+
+FailurePolicy = Literal["fail-fast", "none"]
+NoneSemantics = Literal["must", "may"]
+Judgement = Literal["consistent", "contradictory", "inconclusive"]
+
+
+@dataclass(frozen=True)
+class LayerBounds:
+    lower: Optional[int]
+    upper: Optional[int]
+    source: str
+    note: str
+
+
+@dataclass(frozen=True)
+class ProjectArtifacts:
+    name: str
+    requirement: LayerBounds
+    api: LayerBounds
+    code: LayerBounds
+
+
+@dataclass(frozen=True)
+class SourceRecord:
+    url: str
+    sha256: str
+    retrieved_at_utc: str
+    snapshot_file: str
+
+
+def slugify(url: str) -> str:
+    cleaned = re.sub(r"^https?://", "", url)
+    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "_", cleaned)
+    return cleaned.strip("_")[:180]
+
+
+def fetch_text(
+    url: str,
+    snapshots_dir: Path,
+    source_records: dict[str, SourceRecord],
+    offline_records: Optional[dict[str, SourceRecord]] = None,
+) -> str:
+    if offline_records is not None:
+        record = offline_records.get(url)
+        if record is None:
+            raise ValueError(f"url not found in offline lock: {url}")
+        snapshot_path = snapshots_dir.parent / record.snapshot_file
+        if not snapshot_path.exists():
+            raise FileNotFoundError(f"snapshot not found for offline replay: {snapshot_path}")
+        raw = snapshot_path.read_bytes()
+        sha = hashlib.sha256(raw).hexdigest()
+        if sha != record.sha256:
+            raise ValueError(
+                "snapshot SHA256 mismatch for offline replay: "
+                f"url={url}, expected={record.sha256}, actual={sha}"
+            )
+        source_records[url] = record
+        return raw.decode("utf-8", errors="replace")
+
+    req = urllib.request.Request(url, headers={"User-Agent": "spec-oracle/1.0"})
+    with urllib.request.urlopen(req, timeout=30) as res:
+        raw = res.read()
+
+    sha = hashlib.sha256(raw).hexdigest()
+    ts = datetime.now(timezone.utc).isoformat()
+
+    snapshots_dir.mkdir(parents=True, exist_ok=True)
+    snapshot_name = f"{slugify(url)}.txt"
+    snapshot_path = snapshots_dir / snapshot_name
+    snapshot_path.write_bytes(raw)
+
+    source_records[url] = SourceRecord(
+        url=url,
+        sha256=sha,
+        retrieved_at_utc=ts,
+        snapshot_file=str(snapshot_path.relative_to(snapshots_dir.parent)),
+    )
+    return raw.decode("utf-8", errors="replace")
+
+
+def load_offline_records(lock_path: Path) -> dict[str, SourceRecord]:
+    payload = json.loads(lock_path.read_text(encoding="utf-8"))
+    items = payload.get("source_lock", [])
+    records: dict[str, SourceRecord] = {}
+    for item in items:
+        record = SourceRecord(
+            url=item["url"],
+            sha256=item["sha256"],
+            retrieved_at_utc=item["retrieved_at_utc"],
+            snapshot_file=item["snapshot_file"],
+        )
+        records[record.url] = record
+    return records
+
+
+def html_to_text(raw: str) -> str:
+    text = re.sub(r"<script.*?</script>", " ", raw, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<style.*?</style>", " ", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = html.unescape(text)
+    text = re.sub(r"\s+", " ", text)
+    return text
+
+
+def record_issue(
+    issues: list[dict],
+    *,
+    project: str,
+    layer: str,
+    field: str,
+    reason: str,
+    pattern: str,
+) -> None:
+    issues.append(
+        {
+            "project": project,
+            "layer": layer,
+            "field": field,
+            "reason": reason,
+            "pattern": pattern,
+        }
+    )
+
+
+def parse_first_int(
+    pattern: str,
+    text: str,
+    label: str,
+    *,
+    project: str,
+    layer: str,
+    field: str,
+    failure_policy: FailurePolicy,
+    issues: list[dict],
+) -> tuple[Optional[int], Optional[str]]:
+    m = re.search(pattern, text, flags=re.IGNORECASE)
+    if not m:
+        record_issue(
+            issues,
+            project=project,
+            layer=layer,
+            field=field,
+            reason="regex_no_match",
+            pattern=pattern,
+        )
+        if failure_policy == "fail-fast":
+            raise ValueError(f"failed to parse {label} with pattern: {pattern}")
+        return None, None
+    return int(m.group(1)), m.group(0)
+
+
+def require_phrase(
+    phrase: str,
+    text: str,
+    label: str,
+    *,
+    project: str,
+    layer: str,
+    field: str,
+    failure_policy: FailurePolicy,
+    issues: list[dict],
+) -> bool:
+    if phrase in text:
+        return True
+    record_issue(
+        issues,
+        project=project,
+        layer=layer,
+        field=field,
+        reason="phrase_not_found",
+        pattern=phrase,
+    )
+    if failure_policy == "fail-fast":
+        raise ValueError(f"failed to locate {label}")
+    return False
+
+
+def classify_uand(
+    *layers: LayerBounds,
+    undefined_from_parse: bool = False,
+) -> tuple[Judgement, Optional[int], Optional[int], str]:
+    if undefined_from_parse:
+        return "inconclusive", None, None, "parse_issue"
+
+    lowers = [x.lower for x in layers if x.lower is not None]
+    uppers = [x.upper for x in layers if x.upper is not None]
+    if not lowers or not uppers:
+        return "inconclusive", None, None, "insufficient_bounds"
+
+    lower = max(lowers)
+    upper = min(uppers)
+    if lower <= upper:
+        return "consistent", lower, upper, "interval_intersection"
+    return "contradictory", lower, upper, "interval_intersection"
+
+
+def apply_none_policy(judgement: Judgement, none_semantics: NoneSemantics) -> Judgement:
+    if judgement != "inconclusive":
+        return judgement
+    return "contradictory" if none_semantics == "must" else "consistent"
+
+
+def layer_membership(
+    layer: LayerBounds,
+    *,
+    layer_has_parse_issue: bool,
+    none_semantics: NoneSemantics,
+) -> bool:
+    if layer_has_parse_issue:
+        return none_semantics == "may"
+    if layer.lower is not None and layer.upper is not None:
+        return layer.lower <= layer.upper
+    return True
+
+
+def compute_lifted_membership(
+    requirement: LayerBounds,
+    api: LayerBounds,
+    code: LayerBounds,
+    *,
+    layer_issue_flags: dict[str, bool],
+    none_semantics: NoneSemantics,
+) -> dict[str, bool]:
+    return {
+        "requirement": layer_membership(
+            requirement,
+            layer_has_parse_issue=layer_issue_flags["requirement"],
+            none_semantics=none_semantics,
+        ),
+        "api": layer_membership(
+            api,
+            layer_has_parse_issue=layer_issue_flags["api"],
+            none_semantics=none_semantics,
+        ),
+        "code": layer_membership(
+            code,
+            layer_has_parse_issue=layer_issue_flags["code"],
+            none_semantics=none_semantics,
+        ),
+    }
+
+
+def coverage_count(lifted_membership: dict[str, bool]) -> int:
+    return sum(1 for ok in lifted_membership.values() if ok)
+
+
+def coverage_ratio(lifted_membership: dict[str, bool]) -> float:
+    total = len(lifted_membership)
+    return float(coverage_count(lifted_membership)) / float(total) if total > 0 else 0.0
+
+
+def support_layers(lifted_membership: dict[str, bool]) -> list[str]:
+    return [name for name, ok in lifted_membership.items() if ok]
+
+
+def postgres_artifacts(
+    source_records: dict[str, SourceRecord],
+    snapshots_dir: Path,
+    offline_records: Optional[dict[str, SourceRecord]],
+    failure_policy: FailurePolicy,
+    issues: list[dict],
+) -> tuple[ProjectArtifacts, list[dict]]:
+    name = "PostgreSQL identifier length"
+    req_url = "https://www.postgresql.org/docs/current/runtime-config-preset.html"
+    api_url = "https://www.postgresql.org/docs/current/sql-syntax-lexical.html"
+    code_url = "https://raw.githubusercontent.com/postgres/postgres/master/src/include/pg_config_manual.h"
+
+    req_txt = html_to_text(fetch_text(req_url, snapshots_dir, source_records, offline_records))
+    api_txt = html_to_text(fetch_text(api_url, snapshots_dir, source_records, offline_records))
+    code_txt = fetch_text(code_url, snapshots_dir, source_records, offline_records)
+
+    req_max, req_hit = parse_first_int(
+        r"max_identifier_length\s+is\s+([0-9]+)\s+bytes",
+        req_txt,
+        "postgres requirement max",
+        project=name,
+        layer="requirement",
+        field="upper",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    api_max, api_hit = parse_first_int(
+        r"maximum identifier length is\s+([0-9]+)\s+bytes",
+        api_txt,
+        "postgres api max",
+        project=name,
+        layer="api",
+        field="upper",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    namedatalen, code_hit = parse_first_int(
+        r"#define\s+NAMEDATALEN\s+([0-9]+)",
+        code_txt,
+        "postgres NAMEDATALEN",
+        project=name,
+        layer="code",
+        field="namedatalen",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+
+    patterns = [
+        {"field": "requirement.upper", "pattern": r"max_identifier_length\\s+is\\s+([0-9]+)\\s+bytes", "match": req_hit},
+        {"field": "api.upper", "pattern": r"maximum identifier length is\\s+([0-9]+)\\s+bytes", "match": api_hit},
+        {"field": "code.namedatalen", "pattern": r"#define\\s+NAMEDATALEN\\s+([0-9]+)", "match": code_hit},
+    ]
+
+    return (
+        ProjectArtifacts(
+            name=name,
+            requirement=LayerBounds(
+                lower=1 if req_max is not None else None,
+                upper=req_max,
+                source=req_url,
+                note="max_identifier_length documented default.",
+            ),
+            api=LayerBounds(
+                lower=1 if api_max is not None else None,
+                upper=api_max,
+                source=api_url,
+                note="SQL lexical maximum identifier length.",
+            ),
+            code=LayerBounds(
+                lower=None,
+                upper=(namedatalen - 1) if namedatalen is not None else None,
+                source=code_url,
+                note="NAMEDATALEN-1 from source constant.",
+            ),
+        ),
+        patterns,
+    )
+
+
+def zlib_artifacts(
+    source_records: dict[str, SourceRecord],
+    snapshots_dir: Path,
+    offline_records: Optional[dict[str, SourceRecord]],
+    failure_policy: FailurePolicy,
+    issues: list[dict],
+) -> tuple[ProjectArtifacts, list[dict]]:
+    name = "zlib compression level"
+    req_url = "https://www.zlib.net/manual.html"
+    api_url = "https://docs.python.org/3/library/zlib.html"
+    code_url = "https://raw.githubusercontent.com/madler/zlib/master/zlib.h"
+
+    req_txt = html_to_text(fetch_text(req_url, snapshots_dir, source_records, offline_records))
+    api_txt = html_to_text(fetch_text(api_url, snapshots_dir, source_records, offline_records))
+    code_txt = fetch_text(code_url, snapshots_dir, source_records, offline_records)
+
+    req_phrase = "between 0 and 9"
+    api_phrase = "integer from 0 to 9 or -1"
+    req_found = require_phrase(
+        req_phrase,
+        req_txt,
+        "zlib requirement interval",
+        project=name,
+        layer="requirement",
+        field="interval",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    api_found = require_phrase(
+        api_phrase,
+        api_txt,
+        "python-zlib api interval",
+        project=name,
+        layer="api",
+        field="interval",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+
+    z_no, no_hit = parse_first_int(
+        r"#define\s+Z_NO_COMPRESSION\s+(-?[0-9]+)",
+        code_txt,
+        "zlib Z_NO_COMPRESSION",
+        project=name,
+        layer="code",
+        field="z_no",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    z_best, best_hit = parse_first_int(
+        r"#define\s+Z_BEST_COMPRESSION\s+(-?[0-9]+)",
+        code_txt,
+        "zlib Z_BEST_COMPRESSION",
+        project=name,
+        layer="code",
+        field="z_best",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    z_default, def_hit = parse_first_int(
+        r"#define\s+Z_DEFAULT_COMPRESSION\s+\((-?[0-9]+)\)",
+        code_txt,
+        "zlib Z_DEFAULT_COMPRESSION",
+        project=name,
+        layer="code",
+        field="z_default",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+
+    patterns = [
+        {"field": "requirement.interval", "pattern": req_phrase, "match": req_phrase if req_found else None},
+        {"field": "api.interval", "pattern": api_phrase, "match": api_phrase if api_found else None},
+        {"field": "code.z_no", "pattern": r"#define\\s+Z_NO_COMPRESSION\\s+(-?[0-9]+)", "match": no_hit},
+        {"field": "code.z_best", "pattern": r"#define\\s+Z_BEST_COMPRESSION\\s+(-?[0-9]+)", "match": best_hit},
+        {"field": "code.z_default", "pattern": r"#define\\s+Z_DEFAULT_COMPRESSION\\s+\\((-?[0-9]+)\\)", "match": def_hit},
+    ]
+
+    z_candidates = [x for x in [z_no, z_default] if x is not None]
+    req_lower: Optional[int]
+    if req_found and z_default is not None:
+        req_lower = min(0, z_default)
+    elif req_found:
+        req_lower = 0
+    else:
+        req_lower = None
+
+    return (
+        ProjectArtifacts(
+            name=name,
+            requirement=LayerBounds(
+                lower=req_lower,
+                upper=9 if req_found else None,
+                source=req_url,
+                note="manual: Z_DEFAULT_COMPRESSION or [0,9].",
+            ),
+            api=LayerBounds(
+                lower=-1 if api_found else None,
+                upper=9 if api_found else None,
+                source=api_url,
+                note="python zlib API interval.",
+            ),
+            code=LayerBounds(
+                lower=min(z_candidates) if z_candidates else None,
+                upper=z_best,
+                source=code_url,
+                note="zlib.h constants.",
+            ),
+        ),
+        patterns,
+    )
+
+
+def sqlite_artifacts(
+    source_records: dict[str, SourceRecord],
+    snapshots_dir: Path,
+    offline_records: Optional[dict[str, SourceRecord]],
+    failure_policy: FailurePolicy,
+    issues: list[dict],
+) -> tuple[ProjectArtifacts, list[dict]]:
+    name = "SQLite page size"
+    req_url = "https://www.sqlite.org/pragma.html#pragma_page_size"
+    api_url = "https://www.sqlite.org/fileformat.html"
+    code_url = "https://www.sqlite.org/src/doc/tip/src/sqliteLimit.h"
+
+    req_txt = html_to_text(fetch_text(req_url, snapshots_dir, source_records, offline_records))
+    api_txt = html_to_text(fetch_text(api_url, snapshots_dir, source_records, offline_records))
+    code_txt = html_to_text(fetch_text(code_url, snapshots_dir, source_records, offline_records))
+
+    req_min, req_min_hit = parse_first_int(
+        r"between ([0-9]+) and 65536 inclusive",
+        req_txt,
+        "sqlite requirement min",
+        project=name,
+        layer="requirement",
+        field="min",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    req_max, req_max_hit = parse_first_int(
+        r"between [0-9]+ and ([0-9]+) inclusive",
+        req_txt,
+        "sqlite requirement max",
+        project=name,
+        layer="requirement",
+        field="max",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    api_min, api_min_hit = parse_first_int(
+        r"between ([0-9]+) and 65536 inclusive",
+        api_txt,
+        "sqlite api min",
+        project=name,
+        layer="api",
+        field="min",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    api_max, api_max_hit = parse_first_int(
+        r"between [0-9]+ and ([0-9]+) inclusive",
+        api_txt,
+        "sqlite api max",
+        project=name,
+        layer="api",
+        field="max",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    code_max, code_max_hit = parse_first_int(
+        r"SQLITE_MAX_PAGE_SIZE ([0-9]+)",
+        code_txt,
+        "sqlite code max",
+        project=name,
+        layer="code",
+        field="max",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+    code_default, code_def_hit = parse_first_int(
+        r"SQLITE_DEFAULT_PAGE_SIZE ([0-9]+)",
+        code_txt,
+        "sqlite default page size",
+        project=name,
+        layer="code",
+        field="default",
+        failure_policy=failure_policy,
+        issues=issues,
+    )
+
+    patterns = [
+        {"field": "requirement.min", "pattern": r"between ([0-9]+) and 65536 inclusive", "match": req_min_hit},
+        {"field": "requirement.max", "pattern": r"between [0-9]+ and ([0-9]+) inclusive", "match": req_max_hit},
+        {"field": "api.min", "pattern": r"between ([0-9]+) and 65536 inclusive", "match": api_min_hit},
+        {"field": "api.max", "pattern": r"between [0-9]+ and ([0-9]+) inclusive", "match": api_max_hit},
+        {"field": "code.max", "pattern": r"SQLITE_MAX_PAGE_SIZE ([0-9]+)", "match": code_max_hit},
+        {"field": "code.default", "pattern": r"SQLITE_DEFAULT_PAGE_SIZE ([0-9]+)", "match": code_def_hit},
+    ]
+
+    return (
+        ProjectArtifacts(
+            name=name,
+            requirement=LayerBounds(
+                lower=req_min,
+                upper=req_max,
+                source=req_url,
+                note="PRAGMA page_size range in docs.",
+            ),
+            api=LayerBounds(
+                lower=api_min,
+                upper=api_max,
+                source=api_url,
+                note="file-format documented range.",
+            ),
+            code=LayerBounds(
+                lower=None,
+                upper=code_max,
+                source=code_url,
+                note=f"sqliteLimit.h max/default = {code_max}/{code_default}.",
+            ),
+        ),
+        patterns,
+    )
+
+
+def run(
+    offline_lock_path: Optional[Path] = None,
+    failure_policy: FailurePolicy = "fail-fast",
+    none_semantics: NoneSemantics = "must",
+) -> dict:
+    if failure_policy == "fail-fast" and none_semantics != "must":
+        raise ValueError("none-semantics=may requires --failure-policy none")
+
+    base_dir = Path(__file__).resolve().parent
+    snapshots_dir = base_dir / "snapshots"
+    source_records: dict[str, SourceRecord] = {}
+    run_date = datetime.now(timezone.utc).date().isoformat()
+    offline_records: Optional[dict[str, SourceRecord]] = None
+    if offline_lock_path is not None:
+        offline_records = load_offline_records(offline_lock_path)
+
+    parse_issues: list[dict] = []
+    projects_and_patterns = [
+        postgres_artifacts(source_records, snapshots_dir, offline_records, failure_policy, parse_issues),
+        zlib_artifacts(source_records, snapshots_dir, offline_records, failure_policy, parse_issues),
+        sqlite_artifacts(source_records, snapshots_dir, offline_records, failure_policy, parse_issues),
+    ]
+
+    real_results = []
+    mutation_results = []
+    extraction_patterns = {}
+
+    for p, patterns in projects_and_patterns:
+        extraction_patterns[p.name] = patterns
+        layer_issue_flags = {
+            "requirement": any(
+                issue["project"] == p.name and issue["layer"] == "requirement" for issue in parse_issues
+            ),
+            "api": any(issue["project"] == p.name and issue["layer"] == "api" for issue in parse_issues),
+            "code": any(issue["project"] == p.name and issue["layer"] == "code" for issue in parse_issues),
+        }
+        has_project_parse_issue = any(layer_issue_flags.values())
+
+        lifted_must = compute_lifted_membership(
+            p.requirement,
+            p.api,
+            p.code,
+            layer_issue_flags=layer_issue_flags,
+            none_semantics="must",
+        )
+        lifted_may = compute_lifted_membership(
+            p.requirement,
+            p.api,
+            p.code,
+            layer_issue_flags=layer_issue_flags,
+            none_semantics="may",
+        )
+        u0_membership_must = any(lifted_must.values())
+        u0_membership_may = any(lifted_may.values())
+        coverage_count_must = coverage_count(lifted_must)
+        coverage_count_may = coverage_count(lifted_may)
+        coverage_ratio_must = coverage_ratio(lifted_must)
+        coverage_ratio_may = coverage_ratio(lifted_may)
+
+        judgement, lower, upper, reason = classify_uand(
+            p.requirement,
+            p.api,
+            p.code,
+            undefined_from_parse=has_project_parse_issue,
+        )
+        policy_judgement = apply_none_policy(judgement, none_semantics)
+
+        real_results.append(
+            {
+                "project": p.name,
+                "consistent": policy_judgement == "consistent",
+                "policy_judgement": policy_judgement,
+                "judgement": judgement,
+                "intersection_lower": lower,
+                "intersection_upper": upper,
+                "consistency_reason": reason,
+                "has_parse_issue": has_project_parse_issue,
+                "u0_membership_must": u0_membership_must,
+                "u0_membership_may": u0_membership_may,
+                "coverage_count_must": coverage_count_must,
+                "coverage_count_may": coverage_count_may,
+                "coverage_ratio_must": coverage_ratio_must,
+                "coverage_ratio_may": coverage_ratio_may,
+                "u0_support_layers_must": support_layers(lifted_must),
+                "u0_support_layers_may": support_layers(lifted_may),
+                "lifted_membership": {
+                    "must": lifted_must,
+                    "may": lifted_may,
+                },
+                "artifacts": asdict(p),
+            }
+        )
+
+        if lower is None or upper is None:
+            mutation_results.append(
+                {
+                    "project": p.name,
+                    "mutation_id": "stale_requirement_lower",
+                    "expected_outcome": "policy_judgement=contradictory",
+                    "detected_expectation": None,
+                    "skipped": True,
+                    "reason": "mutation_skipped_missing_intersection_bounds",
+                }
+            )
+            mutation_results.append(
+                {
+                    "project": p.name,
+                    "mutation_id": "unit_mismatch_upper_scale_down_1024",
+                    "expected_outcome": "policy_or_interval_or_coverage_change",
+                    "detected_expectation": None,
+                    "skipped": True,
+                    "reason": "mutation_skipped_missing_intersection_bounds",
+                }
+            )
+            continue
+
+        stale_lower_requirement = LayerBounds(
+            lower=upper + 1,
+            upper=p.requirement.upper,
+            source=p.requirement.source,
+            note="mutation: stale requirement lower bound exceeds implementation/API upper bound",
+        )
+        stale_judgement, stale_lower, stale_upper, stale_reason = classify_uand(
+            stale_lower_requirement,
+            p.api,
+            p.code,
+            undefined_from_parse=has_project_parse_issue,
+        )
+        stale_policy_judgement = apply_none_policy(stale_judgement, none_semantics)
+        stale_lifted_must = compute_lifted_membership(
+            stale_lower_requirement,
+            p.api,
+            p.code,
+            layer_issue_flags=layer_issue_flags,
+            none_semantics="must",
+        )
+        stale_lifted_may = compute_lifted_membership(
+            stale_lower_requirement,
+            p.api,
+            p.code,
+            layer_issue_flags=layer_issue_flags,
+            none_semantics="may",
+        )
+        stale_coverage_count_must = coverage_count(stale_lifted_must)
+        stale_coverage_count_may = coverage_count(stale_lifted_may)
+        mutation_results.append(
+            {
+                "project": p.name,
+                "mutation_id": "stale_requirement_lower",
+                "expected_outcome": "policy_judgement=contradictory",
+                "detected_expectation": stale_policy_judgement == "contradictory",
+                "policy_judgement": stale_policy_judgement,
+                "judgement": stale_judgement,
+                "mutated_intersection_lower": stale_lower,
+                "mutated_intersection_upper": stale_upper,
+                "consistency_reason": stale_reason,
+                "mutated_u0_membership_must": any(stale_lifted_must.values()),
+                "mutated_u0_membership_may": any(stale_lifted_may.values()),
+                "mutated_coverage_count_must": stale_coverage_count_must,
+                "mutated_coverage_count_may": stale_coverage_count_may,
+                "mutated_u0_support_layers_must": support_layers(stale_lifted_must),
+                "mutated_u0_support_layers_may": support_layers(stale_lifted_may),
+                "skipped": False,
+            }
+        )
+
+        scaled_upper = None
+        if p.requirement.upper is not None:
+            scaled_upper = max(0, p.requirement.upper // 1024)
+        unit_mismatch_requirement = LayerBounds(
+            lower=p.requirement.lower,
+            upper=scaled_upper,
+            source=p.requirement.source,
+            note="mutation: unit mismatch (upper bound scaled down by 1024)",
+        )
+        unit_judgement, unit_lower, unit_upper, unit_reason = classify_uand(
+            unit_mismatch_requirement,
+            p.api,
+            p.code,
+            undefined_from_parse=has_project_parse_issue,
+        )
+        unit_policy_judgement = apply_none_policy(unit_judgement, none_semantics)
+        unit_lifted_must = compute_lifted_membership(
+            unit_mismatch_requirement,
+            p.api,
+            p.code,
+            layer_issue_flags=layer_issue_flags,
+            none_semantics="must",
+        )
+        unit_lifted_may = compute_lifted_membership(
+            unit_mismatch_requirement,
+            p.api,
+            p.code,
+            layer_issue_flags=layer_issue_flags,
+            none_semantics="may",
+        )
+        unit_coverage_count_must = coverage_count(unit_lifted_must)
+        unit_coverage_count_may = coverage_count(unit_lifted_may)
+        unit_detected_fields = []
+        if unit_policy_judgement != policy_judgement:
+            unit_detected_fields.append("policy_judgement_changed")
+        if unit_judgement != judgement:
+            unit_detected_fields.append("raw_judgement_changed")
+        if unit_lower != lower or unit_upper != upper:
+            unit_detected_fields.append("intersection_changed")
+        if unit_coverage_count_must != coverage_count_must:
+            unit_detected_fields.append("coverage_count_must_changed")
+        if unit_coverage_count_may != coverage_count_may:
+            unit_detected_fields.append("coverage_count_may_changed")
+        if any(unit_lifted_must.values()) != u0_membership_must:
+            unit_detected_fields.append("u0_membership_must_changed")
+        if any(unit_lifted_may.values()) != u0_membership_may:
+            unit_detected_fields.append("u0_membership_may_changed")
+        mutation_results.append(
+            {
+                "project": p.name,
+                "mutation_id": "unit_mismatch_upper_scale_down_1024",
+                "expected_outcome": "policy_or_interval_or_coverage_change",
+                "detected_expectation": len(unit_detected_fields) > 0,
+                "detection_basis": unit_detected_fields,
+                "policy_judgement": unit_policy_judgement,
+                "judgement": unit_judgement,
+                "mutated_intersection_lower": unit_lower,
+                "mutated_intersection_upper": unit_upper,
+                "consistency_reason": unit_reason,
+                "mutated_u0_membership_must": any(unit_lifted_must.values()),
+                "mutated_u0_membership_may": any(unit_lifted_may.values()),
+                "mutated_coverage_count_must": unit_coverage_count_must,
+                "mutated_coverage_count_may": unit_coverage_count_may,
+                "mutated_u0_support_layers_must": support_layers(unit_lifted_must),
+                "mutated_u0_support_layers_may": support_layers(unit_lifted_may),
+                "skipped": False,
+            }
+        )
+
+    raw_distribution = {
+        "consistent": sum(1 for x in real_results if x["judgement"] == "consistent"),
+        "contradictory": sum(1 for x in real_results if x["judgement"] == "contradictory"),
+        "inconclusive": sum(1 for x in real_results if x["judgement"] == "inconclusive"),
+    }
+    policy_distribution = {
+        "consistent": sum(1 for x in real_results if x["policy_judgement"] == "consistent"),
+        "contradictory": sum(1 for x in real_results if x["policy_judgement"] == "contradictory"),
+    }
+    layer_names = ["requirement", "api", "code"]
+    support_frequency_must = {
+        layer: sum(1 for x in real_results if x["lifted_membership"]["must"][layer]) for layer in layer_names
+    }
+    support_frequency_may = {
+        layer: sum(1 for x in real_results if x["lifted_membership"]["may"][layer]) for layer in layer_names
+    }
+
+    summary = {
+        "date": run_date,
+        "failure_policy": failure_policy,
+        "none_semantics": none_semantics,
+        "extraction_mode": (
+            "automatic_regex_no_manual_edit_offline_snapshot_replay"
+            if offline_records is not None
+            else "automatic_regex_no_manual_edit_online_fetch"
+        ),
+        "network_required": offline_records is None,
+        "n_real_projects": len(real_results),
+        "n_real_consistent": policy_distribution["consistent"],
+        "n_real_contradictory": policy_distribution["contradictory"],
+        "n_real_inconclusive": raw_distribution["inconclusive"],
+        "raw_judgement_distribution": raw_distribution,
+        "policy_judgement_distribution": policy_distribution,
+        "n_u0_membership_must": sum(1 for x in real_results if x["u0_membership_must"]),
+        "n_u0_membership_may": sum(1 for x in real_results if x["u0_membership_may"]),
+        "avg_coverage_ratio_must": (
+            sum(x["coverage_ratio_must"] for x in real_results) / len(real_results) if real_results else 0.0
+        ),
+        "avg_coverage_ratio_may": (
+            sum(x["coverage_ratio_may"] for x in real_results) / len(real_results) if real_results else 0.0
+        ),
+        "support_frequency_must": support_frequency_must,
+        "support_frequency_may": support_frequency_may,
+        "mutation_total": len(mutation_results),
+        "mutation_detected_by_expectation": sum(
+            1 for x in mutation_results if x.get("detected_expectation") is True
+        ),
+        "mutation_expected_contradictory_total": sum(
+            1 for x in mutation_results if x.get("expected_outcome") == "policy_judgement=contradictory"
+        ),
+        "mutation_detected_contradictory": sum(
+            1
+            for x in mutation_results
+            if x.get("expected_outcome") == "policy_judgement=contradictory"
+            and x.get("detected_expectation") is True
+        ),
+        "mutation_expected_change_total": sum(
+            1 for x in mutation_results if x.get("expected_outcome") == "policy_or_interval_or_coverage_change"
+        ),
+        "mutation_detected_change": sum(
+            1
+            for x in mutation_results
+            if x.get("expected_outcome") == "policy_or_interval_or_coverage_change"
+            and x.get("detected_expectation") is True
+        ),
+        "mutation_skipped": sum(1 for x in mutation_results if x.get("skipped")),
+        "parse_issue_count": len(parse_issues),
+        "parse_issues": parse_issues,
+        "real_results": real_results,
+        "mutation_results": mutation_results,
+        "source_lock": [asdict(x) for x in source_records.values()],
+        "extraction_patterns": extraction_patterns,
+    }
+    return summary
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="External validation runner for UAD/f interval consistency.")
+    parser.add_argument(
+        "--offline-lock",
+        type=Path,
+        default=None,
+        help="Path to external_validation_sources.lock.json for offline snapshot replay.",
+    )
+    parser.add_argument(
+        "--failure-policy",
+        choices=["fail-fast", "none"],
+        default="fail-fast",
+        help="Extraction failure handling: fail-fast (raise) or none (propagate undefined).",
+    )
+    parser.add_argument(
+        "--none-semantics",
+        choices=["must", "may"],
+        default="must",
+        help="Consistency policy when undefined bounds exist (used with --failure-policy none).",
+    )
+    args = parser.parse_args()
+
+    base_dir = Path(__file__).resolve().parent
+    result = run(args.offline_lock, args.failure_policy, args.none_semantics)
+
+    out_path = base_dir / "external_validation_results.json"
+    out_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+
+    lock_path = base_dir / "external_validation_sources.lock.json"
+    lock_payload = {
+        "date": result["date"],
+        "source_lock": result["source_lock"],
+    }
+    lock_path.write_text(json.dumps(lock_payload, indent=2), encoding="utf-8")
+
+    print(json.dumps(result, indent=2))
+
+
+if __name__ == "__main__":
+    main()
+--- END FILE: paper/case-study/real_projects/external_validation.py ---
+
+--- BEGIN FILE: paper/case-study/real_projects/external_validation_results.json ---
+{
+  "date": "2026-02-15",
+  "failure_policy": "fail-fast",
+  "none_semantics": "must",
+  "extraction_mode": "automatic_regex_no_manual_edit_offline_snapshot_replay",
+  "network_required": false,
+  "n_real_projects": 3,
+  "n_real_consistent": 3,
+  "n_real_contradictory": 0,
+  "n_real_inconclusive": 0,
+  "raw_judgement_distribution": {
+    "consistent": 3,
+    "contradictory": 0,
+    "inconclusive": 0
+  },
+  "policy_judgement_distribution": {
+    "consistent": 3,
+    "contradictory": 0
+  },
+  "n_u0_membership_must": 3,
+  "n_u0_membership_may": 3,
+  "avg_coverage_ratio_must": 1.0,
+  "avg_coverage_ratio_may": 1.0,
+  "support_frequency_must": {
+    "requirement": 3,
+    "api": 3,
+    "code": 3
+  },
+  "support_frequency_may": {
+    "requirement": 3,
+    "api": 3,
+    "code": 3
+  },
+  "mutation_total": 6,
+  "mutation_detected_by_expectation": 6,
+  "mutation_expected_contradictory_total": 3,
+  "mutation_detected_contradictory": 3,
+  "mutation_expected_change_total": 3,
+  "mutation_detected_change": 3,
+  "mutation_skipped": 0,
+  "parse_issue_count": 0,
+  "parse_issues": [],
+  "real_results": [
+    {
+      "project": "PostgreSQL identifier length",
+      "consistent": true,
+      "policy_judgement": "consistent",
+      "judgement": "consistent",
+      "intersection_lower": 1,
+      "intersection_upper": 63,
+      "consistency_reason": "interval_intersection",
+      "has_parse_issue": false,
+      "u0_membership_must": true,
+      "u0_membership_may": true,
+      "coverage_count_must": 3,
+      "coverage_count_may": 3,
+      "coverage_ratio_must": 1.0,
+      "coverage_ratio_may": 1.0,
+      "u0_support_layers_must": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "u0_support_layers_may": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "lifted_membership": {
+        "must": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        },
+        "may": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        }
+      },
+      "artifacts": {
+        "name": "PostgreSQL identifier length",
+        "requirement": {
+          "lower": 1,
+          "upper": 63,
+          "source": "https://www.postgresql.org/docs/current/runtime-config-preset.html",
+          "note": "max_identifier_length documented default."
+        },
+        "api": {
+          "lower": 1,
+          "upper": 63,
+          "source": "https://www.postgresql.org/docs/current/sql-syntax-lexical.html",
+          "note": "SQL lexical maximum identifier length."
+        },
+        "code": {
+          "lower": null,
+          "upper": 63,
+          "source": "https://raw.githubusercontent.com/postgres/postgres/master/src/include/pg_config_manual.h",
+          "note": "NAMEDATALEN-1 from source constant."
+        }
+      }
+    },
+    {
+      "project": "zlib compression level",
+      "consistent": true,
+      "policy_judgement": "consistent",
+      "judgement": "consistent",
+      "intersection_lower": -1,
+      "intersection_upper": 9,
+      "consistency_reason": "interval_intersection",
+      "has_parse_issue": false,
+      "u0_membership_must": true,
+      "u0_membership_may": true,
+      "coverage_count_must": 3,
+      "coverage_count_may": 3,
+      "coverage_ratio_must": 1.0,
+      "coverage_ratio_may": 1.0,
+      "u0_support_layers_must": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "u0_support_layers_may": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "lifted_membership": {
+        "must": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        },
+        "may": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        }
+      },
+      "artifacts": {
+        "name": "zlib compression level",
+        "requirement": {
+          "lower": -1,
+          "upper": 9,
+          "source": "https://www.zlib.net/manual.html",
+          "note": "manual: Z_DEFAULT_COMPRESSION or [0,9]."
+        },
+        "api": {
+          "lower": -1,
+          "upper": 9,
+          "source": "https://docs.python.org/3/library/zlib.html",
+          "note": "python zlib API interval."
+        },
+        "code": {
+          "lower": -1,
+          "upper": 9,
+          "source": "https://raw.githubusercontent.com/madler/zlib/master/zlib.h",
+          "note": "zlib.h constants."
+        }
+      }
+    },
+    {
+      "project": "SQLite page size",
+      "consistent": true,
+      "policy_judgement": "consistent",
+      "judgement": "consistent",
+      "intersection_lower": 512,
+      "intersection_upper": 65536,
+      "consistency_reason": "interval_intersection",
+      "has_parse_issue": false,
+      "u0_membership_must": true,
+      "u0_membership_may": true,
+      "coverage_count_must": 3,
+      "coverage_count_may": 3,
+      "coverage_ratio_must": 1.0,
+      "coverage_ratio_may": 1.0,
+      "u0_support_layers_must": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "u0_support_layers_may": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "lifted_membership": {
+        "must": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        },
+        "may": {
+          "requirement": true,
+          "api": true,
+          "code": true
+        }
+      },
+      "artifacts": {
+        "name": "SQLite page size",
+        "requirement": {
+          "lower": 512,
+          "upper": 65536,
+          "source": "https://www.sqlite.org/pragma.html#pragma_page_size",
+          "note": "PRAGMA page_size range in docs."
+        },
+        "api": {
+          "lower": 512,
+          "upper": 65536,
+          "source": "https://www.sqlite.org/fileformat.html",
+          "note": "file-format documented range."
+        },
+        "code": {
+          "lower": null,
+          "upper": 65536,
+          "source": "https://www.sqlite.org/src/doc/tip/src/sqliteLimit.h",
+          "note": "sqliteLimit.h max/default = 65536/4096."
+        }
+      }
+    }
+  ],
+  "mutation_results": [
+    {
+      "project": "PostgreSQL identifier length",
+      "mutation_id": "stale_requirement_lower",
+      "expected_outcome": "policy_judgement=contradictory",
+      "detected_expectation": true,
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
+      "mutated_intersection_lower": 64,
+      "mutated_intersection_upper": 63,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_membership_must": true,
+      "mutated_u0_membership_may": true,
+      "mutated_coverage_count_must": 2,
+      "mutated_coverage_count_may": 2,
+      "mutated_u0_support_layers_must": [
+        "api",
+        "code"
+      ],
+      "mutated_u0_support_layers_may": [
+        "api",
+        "code"
+      ],
+      "skipped": false
+    },
+    {
+      "project": "PostgreSQL identifier length",
+      "mutation_id": "unit_mismatch_upper_scale_down_1024",
+      "expected_outcome": "policy_or_interval_or_coverage_change",
+      "detected_expectation": true,
+      "detection_basis": [
+        "policy_judgement_changed",
+        "raw_judgement_changed",
+        "intersection_changed",
+        "coverage_count_must_changed",
+        "coverage_count_may_changed"
+      ],
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
+      "mutated_intersection_lower": 1,
+      "mutated_intersection_upper": 0,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_membership_must": true,
+      "mutated_u0_membership_may": true,
+      "mutated_coverage_count_must": 2,
+      "mutated_coverage_count_may": 2,
+      "mutated_u0_support_layers_must": [
+        "api",
+        "code"
+      ],
+      "mutated_u0_support_layers_may": [
+        "api",
+        "code"
+      ],
+      "skipped": false
+    },
+    {
+      "project": "zlib compression level",
+      "mutation_id": "stale_requirement_lower",
+      "expected_outcome": "policy_judgement=contradictory",
+      "detected_expectation": true,
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
+      "mutated_intersection_lower": 10,
+      "mutated_intersection_upper": 9,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_membership_must": true,
+      "mutated_u0_membership_may": true,
+      "mutated_coverage_count_must": 2,
+      "mutated_coverage_count_may": 2,
+      "mutated_u0_support_layers_must": [
+        "api",
+        "code"
+      ],
+      "mutated_u0_support_layers_may": [
+        "api",
+        "code"
+      ],
+      "skipped": false
+    },
+    {
+      "project": "zlib compression level",
+      "mutation_id": "unit_mismatch_upper_scale_down_1024",
+      "expected_outcome": "policy_or_interval_or_coverage_change",
+      "detected_expectation": true,
+      "detection_basis": [
+        "intersection_changed"
+      ],
+      "policy_judgement": "consistent",
+      "judgement": "consistent",
+      "mutated_intersection_lower": -1,
+      "mutated_intersection_upper": 0,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_membership_must": true,
+      "mutated_u0_membership_may": true,
+      "mutated_coverage_count_must": 3,
+      "mutated_coverage_count_may": 3,
+      "mutated_u0_support_layers_must": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "mutated_u0_support_layers_may": [
+        "requirement",
+        "api",
+        "code"
+      ],
+      "skipped": false
+    },
+    {
+      "project": "SQLite page size",
+      "mutation_id": "stale_requirement_lower",
+      "expected_outcome": "policy_judgement=contradictory",
+      "detected_expectation": true,
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
+      "mutated_intersection_lower": 65537,
+      "mutated_intersection_upper": 65536,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_membership_must": true,
+      "mutated_u0_membership_may": true,
+      "mutated_coverage_count_must": 2,
+      "mutated_coverage_count_may": 2,
+      "mutated_u0_support_layers_must": [
+        "api",
+        "code"
+      ],
+      "mutated_u0_support_layers_may": [
+        "api",
+        "code"
+      ],
+      "skipped": false
+    },
+    {
+      "project": "SQLite page size",
+      "mutation_id": "unit_mismatch_upper_scale_down_1024",
+      "expected_outcome": "policy_or_interval_or_coverage_change",
+      "detected_expectation": true,
+      "detection_basis": [
+        "policy_judgement_changed",
+        "raw_judgement_changed",
+        "intersection_changed",
+        "coverage_count_must_changed",
+        "coverage_count_may_changed"
+      ],
+      "policy_judgement": "contradictory",
+      "judgement": "contradictory",
+      "mutated_intersection_lower": 512,
+      "mutated_intersection_upper": 64,
+      "consistency_reason": "interval_intersection",
+      "mutated_u0_membership_must": true,
+      "mutated_u0_membership_may": true,
+      "mutated_coverage_count_must": 2,
+      "mutated_coverage_count_may": 2,
+      "mutated_u0_support_layers_must": [
+        "api",
+        "code"
+      ],
+      "mutated_u0_support_layers_may": [
+        "api",
+        "code"
+      ],
+      "skipped": false
+    }
+  ],
+  "source_lock": [
+    {
+      "url": "https://www.postgresql.org/docs/current/runtime-config-preset.html",
+      "sha256": "efb6ae6f496ed534c740b8390a7472087805201bbcf9dffaedd7c40dbf936800",
+      "retrieved_at_utc": "2026-02-14T15:34:07.636762+00:00",
+      "snapshot_file": "snapshots/www.postgresql.org_docs_current_runtime-config-preset.html.txt"
+    },
+    {
+      "url": "https://www.postgresql.org/docs/current/sql-syntax-lexical.html",
+      "sha256": "5f68376d49662e77c4818e59e0a9a1622ede826be60ad0d5f47d07b93e6b5e41",
+      "retrieved_at_utc": "2026-02-14T15:34:08.780711+00:00",
+      "snapshot_file": "snapshots/www.postgresql.org_docs_current_sql-syntax-lexical.html.txt"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/postgres/postgres/master/src/include/pg_config_manual.h",
+      "sha256": "e7d51b0a07dd33e884e05820f88e412c374a1580f3ec14b73b906773c463f1eb",
+      "retrieved_at_utc": "2026-02-14T15:34:08.830554+00:00",
+      "snapshot_file": "snapshots/raw.githubusercontent.com_postgres_postgres_master_src_include_pg_config_manual.h.txt"
+    },
+    {
+      "url": "https://www.zlib.net/manual.html",
+      "sha256": "5e5c72f4f30e417c56f2c0018bfdac871fdaa33df8bdf9349d0a11dcf9228ae8",
+      "retrieved_at_utc": "2026-02-14T15:34:09.834833+00:00",
+      "snapshot_file": "snapshots/www.zlib.net_manual.html.txt"
+    },
+    {
+      "url": "https://docs.python.org/3/library/zlib.html",
+      "sha256": "7d8635934049af4533492ee368129dc84a074d0d3c1055ef63385ddc0c3e099e",
+      "retrieved_at_utc": "2026-02-14T15:34:09.949951+00:00",
+      "snapshot_file": "snapshots/docs.python.org_3_library_zlib.html.txt"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/madler/zlib/master/zlib.h",
+      "sha256": "8a5579af72ea4f427ff00a4150f0ccb3fc5c1e4379f726e101133b1ab9fc600c",
+      "retrieved_at_utc": "2026-02-14T15:34:10.014149+00:00",
+      "snapshot_file": "snapshots/raw.githubusercontent.com_madler_zlib_master_zlib.h.txt"
+    },
+    {
+      "url": "https://www.sqlite.org/pragma.html#pragma_page_size",
+      "sha256": "054868f5909b8b20ffe819d01b99b862407a6eb52f919841d555813774bdb980",
+      "retrieved_at_utc": "2026-02-14T15:34:11.216069+00:00",
+      "snapshot_file": "snapshots/www.sqlite.org_pragma.html_pragma_page_size.txt"
+    },
+    {
+      "url": "https://www.sqlite.org/fileformat.html",
+      "sha256": "9023a978089762e458f4d1905f6f3a6c89d833b440dda9e48204ed216c8701ea",
+      "retrieved_at_utc": "2026-02-14T15:34:12.450587+00:00",
+      "snapshot_file": "snapshots/www.sqlite.org_fileformat.html.txt"
+    },
+    {
+      "url": "https://www.sqlite.org/src/doc/tip/src/sqliteLimit.h",
+      "sha256": "edf3fafd3cf43061928fe8896021820e34658c34eb206bbc0a442680ece7b40f",
+      "retrieved_at_utc": "2026-02-14T15:34:13.338728+00:00",
+      "snapshot_file": "snapshots/www.sqlite.org_src_doc_tip_src_sqliteLimit.h.txt"
+    }
+  ],
+  "extraction_patterns": {
+    "PostgreSQL identifier length": [
+      {
+        "field": "requirement.upper",
+        "pattern": "max_identifier_length\\\\s+is\\\\s+([0-9]+)\\\\s+bytes",
+        "match": "max_identifier_length is 63 bytes"
+      },
+      {
+        "field": "api.upper",
+        "pattern": "maximum identifier length is\\\\s+([0-9]+)\\\\s+bytes",
+        "match": "maximum identifier length is 63 bytes"
+      },
+      {
+        "field": "code.namedatalen",
+        "pattern": "#define\\\\s+NAMEDATALEN\\\\s+([0-9]+)",
+        "match": "#define NAMEDATALEN 64"
+      }
+    ],
+    "zlib compression level": [
+      {
+        "field": "requirement.interval",
+        "pattern": "between 0 and 9",
+        "match": "between 0 and 9"
+      },
+      {
+        "field": "api.interval",
+        "pattern": "integer from 0 to 9 or -1",
+        "match": "integer from 0 to 9 or -1"
+      },
+      {
+        "field": "code.z_no",
+        "pattern": "#define\\\\s+Z_NO_COMPRESSION\\\\s+(-?[0-9]+)",
+        "match": "#define Z_NO_COMPRESSION         0"
+      },
+      {
+        "field": "code.z_best",
+        "pattern": "#define\\\\s+Z_BEST_COMPRESSION\\\\s+(-?[0-9]+)",
+        "match": "#define Z_BEST_COMPRESSION       9"
+      },
+      {
+        "field": "code.z_default",
+        "pattern": "#define\\\\s+Z_DEFAULT_COMPRESSION\\\\s+\\\\((-?[0-9]+)\\\\)",
+        "match": "#define Z_DEFAULT_COMPRESSION  (-1)"
+      }
+    ],
+    "SQLite page size": [
+      {
+        "field": "requirement.min",
+        "pattern": "between ([0-9]+) and 65536 inclusive",
+        "match": "between 512 and 65536 inclusive"
+      },
+      {
+        "field": "requirement.max",
+        "pattern": "between [0-9]+ and ([0-9]+) inclusive",
+        "match": "between 512 and 65536 inclusive"
+      },
+      {
+        "field": "api.min",
+        "pattern": "between ([0-9]+) and 65536 inclusive",
+        "match": "between 512 and 65536 inclusive"
+      },
+      {
+        "field": "api.max",
+        "pattern": "between [0-9]+ and ([0-9]+) inclusive",
+        "match": "between 512 and 65536 inclusive"
+      },
+      {
+        "field": "code.max",
+        "pattern": "SQLITE_MAX_PAGE_SIZE ([0-9]+)",
+        "match": "SQLITE_MAX_PAGE_SIZE 65536"
+      },
+      {
+        "field": "code.default",
+        "pattern": "SQLITE_DEFAULT_PAGE_SIZE ([0-9]+)",
+        "match": "SQLITE_DEFAULT_PAGE_SIZE 4096"
+      }
+    ]
+  }
+}
+--- END FILE: paper/case-study/real_projects/external_validation_results.json ---

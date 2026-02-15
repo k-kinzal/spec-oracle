@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "3f87a6568343",
+  "session_id": "a7b0a8a5-cecf-4058-8358-2063fc3c6d12",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-15T07:19:00.933497Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "spec-core/src/udaf.rs",
+    "spec-core/src/udaf/ids.rs",
+    "spec-core/src/udaf/metadata.rs",
+    "spec-core/src/udaf/refs.rs"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 2,
+    "cache_creation_tokens": 55717,
+    "cache_read_tokens": 2318,
+    "output_tokens": 2,
+    "api_call_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-15T07:19:00.729206Z",
+    "agent_lines": 0,
+    "human_added": 0,
+    "human_modified": 2978,
+    "human_removed": 0,
+    "total_committed": 0,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/a7b0a8a5-cecf-4058-8358-2063fc3c6d12.jsonl"
+}
