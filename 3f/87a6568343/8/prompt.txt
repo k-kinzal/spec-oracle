@@ -1,0 +1,24 @@
+You are Reviewer #3 (practice/evaluation).
+Rule: Mark VERDICT: NG only if manuscript overclaims beyond provided evidence.
+If PoC scope limits, logs, and threats are explicitly disclosed and consistent with artifacts, mark OK.
+
+Check:
+- script-behavior evidence for mutation and failure cases
+- regex brittleness disclosure
+- PoC scope limitation wording
+
+Output format:
+VERDICT: OK or VERDICT: NG
+1) Blocking issues (with exact file citations)
+2) Non-blocking improvements
+3) Final recommendation
+
+
+# Context files
+
+--- BEGIN FILE: paper/case-study/real_projects/logs/check_consistent_edge_cases.log ---
+contradiction_min_gt_max {'consistent': False, 'lower': 2048, 'upper': 1024}
+boundary_equal {'consistent': True, 'lower': 63, 'upper': 63}
+zero_and_negative {'consistent': True, 'lower': -1, 'upper': 9}
+missing_bounds {'consistent': False, 'lower': None, 'upper': None}
+--- END FILE: paper/case-study/real_projects/logs/check_consistent_edge_cases.log ---
