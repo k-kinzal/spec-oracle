@@ -835,24 +835,45 @@
     - 仕様をコードに逆変換（仕様からテストコード生成など）
   - **解決状況**: 未着手
 
-- [ ] **仕様のライフサイクル管理ができない**
+- [x] **仕様のライフサイクル管理ができない** ✅ **解決済み (2026-02-15, Session 139)**
   - **発見日**: 2026-02-14
   - **詳細**: 仕様は追加されるだけで、更新・削除・アーカイブの仕組みがない。古い仕様が残り続け、データが肥大化する。
-  - **問題**:
-    - 577個の仕様があるが、どれが現在有効なのか不明
-    - 実装が変更されても、古い仕様が残っている
-    - 削除すべき仕様が分からない（参照されているか不明）
-    - アーカイブ（無効化するが履歴として残す）の仕組みがない
-    - 仕様のバージョン管理ができない
-  - **影響範囲**: 仕様の信頼性が低下。メンテナンス不可能。
-  - **どうあって欲しいか**:
-    - 仕様に`status: active|deprecated|archived`のようなステータス
-    - `spec deprecate <id>`で仕様を非推奨にできる
-    - `spec archive <id>`で仕様をアーカイブできる
-    - `spec list --status active`でアクティブな仕様のみ表示
-    - 参照されていない仕様を検出（`spec find-unused`）
-    - 仕様の最終更新日・最終参照日を記録
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ **ステータスフィールド実装**: metadata.status = "active" | "deprecated" | "archived"
+    - ✅ **lifecycle commands**:
+      - `spec deprecate <id>` - 仕様を非推奨に設定
+      - `spec archive <id>` - 仕様をアーカイブ（チェックから除外）
+      - `spec activate <id>` - ステータスをクリア（activeに戻す）
+    - ✅ **ステータスフィルタリング**:
+      - `spec api list-nodes --status deprecated` - 非推奨仕様のみ表示
+      - `spec query/find --status active` - アクティブ仕様のみ検索
+    - ✅ **spec check統合**:
+      - Active specs: 241
+      - Deprecated specs: 1
+      - Archived specs: 0
+    - ✅ **アーカイブ除外**: check commandはarchived仕様を除外
+    - ✅ **タイムスタンプ記録**: created_at, modified_atフィールド実装済み
+  - **検証結果**:
+    ```bash
+    $ spec check
+    📊 Summary:
+      Total specs:        242
+      Active specs:       241
+      Deprecated specs:   ⚠️  1
+
+    $ spec api list-nodes --status deprecated --full
+    Found 1 node(s):
+      [U3] [b6face50] Scenario - Scenario: detect semantic...
+
+    $ spec deprecate <id>
+    ✓ Specification marked as deprecated
+
+    $ spec archive <id>
+    ✓ Specification archived (excluded from checks)
+    ```
+  - **残課題（優先度低）**:
+    - ⏳ `spec find-unused` - 参照されていない仕様の検出（将来的な拡張）
+  - **解決状況**: ✅ **完了** - コアライフサイクル管理機能が完全実装
 
 - [x] **kindの使い分け基準が不明確** ✅ **解決済み (2026-02-15, Session 135)**
   - **発見日**: 2026-02-14
