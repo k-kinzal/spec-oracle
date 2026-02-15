@@ -15,10 +15,25 @@ pub fn execute_check_standalone(
 
     println!("🔍 Checking specifications...\n");
 
-    // Collect statistics
+    // Collect statistics and filter by lifecycle status
     let all_nodes = graph.list_nodes(None);
     let total_nodes = all_nodes.len();
-    let inferred_nodes: Vec<_> = all_nodes.iter()
+
+    // Count by lifecycle status
+    let archived_nodes: Vec<_> = all_nodes.iter()
+        .filter(|n| n.metadata.get("status").map(|s| s.as_str()) == Some("archived"))
+        .collect();
+    let deprecated_nodes: Vec<_> = all_nodes.iter()
+        .filter(|n| n.metadata.get("status").map(|s| s.as_str()) == Some("deprecated"))
+        .collect();
+    let active_nodes: Vec<_> = all_nodes.iter()
+        .filter(|n| {
+            let status = n.metadata.get("status").map(|s| s.as_str());
+            status.is_none() || status == Some("active")
+        })
+        .collect();
+
+    let inferred_nodes: Vec<_> = active_nodes.iter()
         .filter(|n| n.metadata.get("inferred").map(|s| s.as_str()) == Some("true"))
         .collect();
     let inferred_count = inferred_nodes.len();
@@ -65,10 +80,30 @@ pub fn execute_check_standalone(
     // Summary
     println!("\n📊 Summary:");
     println!("  Total specs:        {}", total_nodes);
+    println!("  Active specs:       {}", active_nodes.len());
+    if !deprecated_nodes.is_empty() {
+        println!("  Deprecated specs:   ⚠️  {}", deprecated_nodes.len());
+    }
+    if !archived_nodes.is_empty() {
+        println!("  Archived specs:     {} (excluded from checks)", archived_nodes.len());
+    }
     println!("  Extracted specs:    {} ({:.1}%)", inferred_count,
-        (inferred_count as f64 / total_nodes as f64) * 100.0);
+        (inferred_count as f64 / active_nodes.len().max(1) as f64) * 100.0);
     println!("  Contradictions:     {}", contradictions.len());
     println!("  Isolated specs:     {}", omissions.len());
+
+    // Show deprecated specs warning
+    if !deprecated_nodes.is_empty() {
+        println!("\n⚠️  Deprecated specifications:");
+        for (i, node) in deprecated_nodes.iter().take(5).enumerate() {
+            println!("  {}. [{}] {}", i + 1, &node.id[..8],
+                node.content.chars().take(60).collect::<String>());
+        }
+        if deprecated_nodes.len() > 5 {
+            println!("  ... and {} more", deprecated_nodes.len() - 5);
+        }
+        println!("  💡 Consider updating or archiving these specifications");
+    }
 
     let total_issues = contradictions.len() + omissions.len();
     let exit_code = if total_issues == 0 {
