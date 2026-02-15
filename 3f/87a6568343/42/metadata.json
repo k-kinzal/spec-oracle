@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "3f87a6568343",
+  "session_id": "2ac9d3d2-52f5-4ca9-b0ab-80a1bd7fbc45",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-15T10:30:29.874127Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "paper/reviews/reviewer1_round38.md",
+    "paper/reviews/reviewer2_round38.md",
+    "paper/reviews/reviewer3_round38.md",
+    "paper/reviews/round38_summary.md",
+    "tasks/session-142-u0-reverse-mapping-improvements.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 256,
+    "cache_creation_tokens": 187895,
+    "cache_read_tokens": 2633846,
+    "output_tokens": 8367,
+    "api_call_count": 30
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-15T10:30:29.009477Z",
+    "agent_lines": 0,
+    "human_added": 1158,
+    "human_modified": 209,
+    "human_removed": 0,
+    "total_committed": 1367,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/2ac9d3d2-52f5-4ca9-b0ab-80a1bd7fbc45.jsonl"
+}
