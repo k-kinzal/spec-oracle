@@ -41,3 +41,7 @@ Analyzing the conversation chronologically:
 - I began implementing Phase 1-6: creating formal/ structure with Universe, Domain, AdmissibleSet, Constraint, Transform modules
 - Created initial commit with these ch...
 
+### Prompt 6
+
+残タスクがあるということは終わっていないですね。またz3ライブラリが環境にインストールができていないということは検証が何もできていないということになります。インストールを行なってフェーズを完了してください。
+
