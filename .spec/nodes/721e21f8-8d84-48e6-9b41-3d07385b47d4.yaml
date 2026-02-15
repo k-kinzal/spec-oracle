@@ -1,0 +1,7 @@
+id: 721e21f8-8d84-48e6-9b41-3d07385b47d4
+content: Specification status is stored in metadata.status field with values deprecated or archived, where active specifications have no status field
+kind: Assertion
+metadata: {}
+created_at: 1771123829
+modified_at: 1771123829
+formality_layer: 0

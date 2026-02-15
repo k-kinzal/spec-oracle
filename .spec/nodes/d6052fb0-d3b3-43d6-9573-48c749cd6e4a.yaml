@@ -1,0 +1,7 @@
+id: d6052fb0-d3b3-43d6-9573-48c749cd6e4a
+content: Lifecycle management is fully implemented with deprecate, archive, and activate commands supporting status filtering across all query operations
+kind: Assertion
+metadata: {}
+created_at: 1771123824
+modified_at: 1771123824
+formality_layer: 0
