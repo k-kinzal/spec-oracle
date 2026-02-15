@@ -1,0 +1,7 @@
+id: 0a9c5e9d-b290-48f4-8a7c-134486ede10c
+content: The find command must support --status filtering to allow users to search within active, deprecated, or archived specifications
+kind: Constraint
+metadata: {}
+created_at: 1771123347
+modified_at: 1771123347
+formality_layer: 0

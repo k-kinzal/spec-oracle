@@ -2,11 +2,11 @@ id: ca5d9013-4c58-4f08-87a5-59414ee50601
 content: 'Scenario: detect omission domain without refinements'
 kind: Scenario
 metadata:
-  test_function: detect_omission_domain_without_refinements
+  confidence: '0.9'
   source_line: '1666'
   source_file: spec-core/src/graph.rs
+  test_function: detect_omission_domain_without_refinements
   inferred: 'true'
-  confidence: '0.9'
   extractor: test
 created_at: 1771077123
 modified_at: 1771077123

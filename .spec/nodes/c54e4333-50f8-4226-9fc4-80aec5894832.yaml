@@ -2,12 +2,12 @@ id: c54e4333-50f8-4226-9fc4-80aec5894832
 content: 'Scenario: detect omission scenario without assertions'
 kind: Scenario
 metadata:
-  test_function: detect_omission_scenario_without_assertions
   source_file: spec-core/src/graph.rs
-  inferred: 'true'
-  extractor: test
   confidence: '0.9'
   source_line: '1678'
+  extractor: test
+  test_function: detect_omission_scenario_without_assertions
+  inferred: 'true'
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

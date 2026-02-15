@@ -353,6 +353,18 @@ Practical use guideline:
 \item use TLA+ when temporal behavior/refinement is the core objective.
 \end{itemize}
 
+\paragraph{Refined thesis (beyond current mechanization).}
+For heterogeneous logics, replace simple union-style integration by colimit-style synthesis over a specification diagram.
+Then $U0$ in this paper becomes a homogeneous special case.
+Projection maps can be lifted to institution morphism/comorphism-style translations
+with explicit satisfaction constraints.
+Architecturally, a virtual federation model is preferred over a monolithic physical SUM:
+keep source artifacts in their native tools and maintain links/transformations only.
+Operationally, consistency maintenance should be delta-driven (CPR-style propagation),
+with optional runtime projection guards for safety envelopes.
+In this division of labor, LLM/agents are candidate generators (NL$\to$IR, link hypotheses),
+while formal kernels enforce adequacy and consistency checks.
+
 \section{Scope and Limitations}
 \begin{enumerate}[leftmargin=2em]
 \item No full semantic correctness proof of concrete industrial extractors.
@@ -362,6 +374,7 @@ Practical use guideline:
 \item Current external cases do not yet exercise deep composition chains or one-sided adequacy in production extractors.
 \item Must-oriented handling of $none$ may induce false-contradiction risk in richer constraints; this is not quantified here.
 \item Long-term archival strategy (DOI-fixed artifacts / URL-fallback mirrors) is recommended but not institutionalized in this version.
+\item Full mechanization of colimit synthesis, institution-morphism constraints, and delta-driven CPR rules is future work.
 \end{enumerate}
 
 \section{Conclusion}
@@ -371,6 +384,9 @@ The main contribution is explicit exposure and machine-checking of
 previously implicit assumptions (operator semantics, transfer coupling,
 one-sided adequacy, and partiality-induced non-adjunction),
 plus reproducible source-locked execution of the pre-input extraction pipeline.
+We additionally provide a refined extension path:
+colimit-oriented heterogeneous integration, institution-style projection semantics,
+virtual federation architecture, and delta-driven consistency operations.
 RQ closure (navigation): RQ1 is resolved by the typed inverse-image definition;
 RQ2 by domain-lift witness lemmas; RQ3 by join/meet split plus Theorem~\ref{thm:join-meet-linkage};
 RQ4 by Theorem~\ref{thm:transfer} and Theorem~\ref{thm:composition};

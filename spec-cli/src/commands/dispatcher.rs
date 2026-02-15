@@ -39,8 +39,8 @@ pub async fn dispatch_standalone(
         crate::Commands::Api(api_cmd) => {
             dispatch_api_standalone(&mut store, api_cmd)?;
         }
-        crate::Commands::ListNodes { kind, layer, full, limit, offset } => {
-            dispatch_list_nodes_standalone(&store, kind, layer, full, limit, offset)?;
+        crate::Commands::ListNodes { kind, layer, status, full, limit, offset } => {
+            dispatch_list_nodes_standalone(&store, kind, layer, status.clone(), full, limit, offset)?;
         }
         crate::Commands::DetectContradictions => {
             commands::execute_contradictions_standalone(&store)?;
@@ -58,8 +58,8 @@ pub async fn dispatch_standalone(
         crate::Commands::ExportDot { output, layer, metadata } => {
             commands::execute_export_dot_standalone(&store, output, layer, metadata)?;
         }
-        crate::Commands::Find { query, layer, max } => {
-            commands::execute_find_standalone(&store, &query, layer, max).await?;
+        crate::Commands::Find { query, layer, status, max } => {
+            commands::execute_find_standalone(&store, &query, layer, status.clone(), max).await?;
         }
         crate::Commands::GetNode { id } => {
             eprintln!("⚠️  WARNING: 'spec get-node' is deprecated. Use 'spec api get-node' instead.");
@@ -131,8 +131,8 @@ fn dispatch_api_standalone(
         ApiCommands::GetNode { id } => {
             api::execute_get_node_standalone(store, id)?;
         }
-        ApiCommands::ListNodes { kind, layer, full, limit, offset } => {
-            api::execute_list_nodes_standalone(store, kind, layer, full, limit, offset)?;
+        ApiCommands::ListNodes { kind, layer, status, full, limit, offset } => {
+            api::execute_list_nodes_standalone(store, kind, layer, status.clone(), full, limit, offset)?;
         }
         ApiCommands::RemoveNode { id } => {
             api::execute_remove_node_standalone(store, id)?;
@@ -180,6 +180,7 @@ fn dispatch_list_nodes_standalone(
     store: &Store,
     kind: Option<String>,
     layer: Option<u8>,
+    status: Option<String>,
     full: bool,
     limit: Option<usize>,
     offset: Option<usize>,
@@ -194,6 +195,16 @@ fn dispatch_list_nodes_standalone(
     // Apply layer filter if specified
     if let Some(layer_filter) = layer {
         nodes.retain(|n| n.formality_layer == layer_filter);
+    }
+
+    // Apply status filter if specified
+    if let Some(ref status_filter) = status {
+        nodes.retain(|n| {
+            let node_status = n.metadata.get("status")
+                .map(|s| s.as_str())
+                .unwrap_or("active");
+            node_status == status_filter.as_str()
+        });
     }
 
     // Summary mode (default)
@@ -312,8 +323,8 @@ pub async fn dispatch_server(
         crate::Commands::Check => {
             commands::execute_check_server(&mut client).await?;
         }
-        crate::Commands::Find { query, layer, max } => {
-            commands::execute_find_server(&mut client, &query, layer, max).await?;
+        crate::Commands::Find { query, layer, status, max } => {
+            commands::execute_find_server(&mut client, &query, layer, status.clone(), max).await?;
         }
         crate::Commands::Trace { id, depth } => {
             commands::execute_trace_server(&mut client, &id, depth).await?;

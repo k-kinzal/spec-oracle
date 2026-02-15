@@ -2,12 +2,12 @@ id: 94aca6e6-2d47-4b1d-acab-386f59acbd33
 content: where the source has higher formality than target (should be reversed).
 kind: Assertion
 metadata:
-  inferred: 'true'
   source_line: '520'
+  confidence: '0.7'
   extractor: doc
+  inferred: 'true'
   doc_comment: 'true'
   source_file: spec-core/src/graph.rs
-  confidence: '0.7'
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 0

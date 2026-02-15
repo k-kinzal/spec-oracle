@@ -56,6 +56,10 @@ enum ApiCommands {
         #[arg(short, long)]
         layer: Option<u8>,
 
+        /// Filter by lifecycle status (active, deprecated, archived)
+        #[arg(short, long)]
+        status: Option<String>,
+
         /// Show full list instead of summary (default: summary)
         #[arg(short, long)]
         full: bool,
@@ -188,6 +192,10 @@ enum Commands {
         #[arg(short, long)]
         layer: Option<u8>,
 
+        /// Filter by lifecycle status (active, deprecated, archived)
+        #[arg(short, long)]
+        status: Option<String>,
+
         /// Show full list instead of summary (default: summary)
         #[arg(short, long)]
         full: bool,
@@ -265,6 +273,9 @@ enum Commands {
         /// Filter by formality layer (0-3)
         #[arg(short, long)]
         layer: Option<u32>,
+        /// Filter by lifecycle status (active, deprecated, archived)
+        #[arg(short, long)]
+        status: Option<String>,
         /// Maximum number of results
         #[arg(short, long, default_value = "10")]
         max: u32,

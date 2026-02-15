@@ -1,0 +1,7 @@
+id: 19bc87a4-4a57-423b-8fcf-2e7567a51c94
+content: The list-nodes command must support --status filtering to allow users to view active, deprecated, or archived specifications separately
+kind: Constraint
+metadata: {}
+created_at: 1771123387
+modified_at: 1771123387
+formality_layer: 0

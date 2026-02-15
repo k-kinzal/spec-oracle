@@ -112,6 +112,7 @@ pub fn execute_list_nodes_standalone(
     store: &Store,
     kind: Option<String>,
     layer: Option<u8>,
+    status: Option<String>,
     full: bool,
     limit: Option<usize>,
     offset: Option<usize>,
@@ -123,6 +124,16 @@ pub fn execute_list_nodes_standalone(
     // Apply layer filter if specified
     if let Some(layer_filter) = layer {
         nodes.retain(|n| n.formality_layer == layer_filter);
+    }
+
+    // Apply status filter if specified
+    if let Some(ref status_filter) = status {
+        nodes.retain(|n| {
+            let node_status = n.metadata.get("status")
+                .map(|s| s.as_str())
+                .unwrap_or("active");
+            node_status == status_filter.as_str()
+        });
     }
 
     // Summary mode (default)
@@ -174,9 +185,29 @@ pub fn execute_list_nodes_standalone(
         }
         println!();
 
+        // Group by status
+        let mut by_status = std::collections::HashMap::<String, usize>::new();
+        for node in &nodes {
+            let node_status = node.metadata.get("status")
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "active".to_string());
+            *by_status.entry(node_status).or_insert(0) += 1;
+        }
+
+        if !by_status.is_empty() {
+            println!("By Status:");
+            let mut status_vec: Vec<_> = by_status.iter().collect();
+            status_vec.sort_by_key(|(k, _)| k.as_str());
+            for (status, count) in status_vec {
+                println!("  {}: {}", status, count);
+            }
+            println!();
+        }
+
         println!("💡 Use --full to see the complete list");
         println!("💡 Use --layer <N> to filter by formality layer (0-3)");
         println!("💡 Use --kind <type> to filter by kind");
+        println!("💡 Use --status <status> to filter by status (active/deprecated/archived)");
         return Ok(());
     }
 
@@ -204,6 +235,22 @@ pub fn execute_list_nodes_standalone(
     if end < nodes.len() {
         println!();
         println!("... and {} more (use --offset {} to see next page)", nodes.len() - end, end);
+    }
+
+    // Show active filters
+    let mut filters = Vec::new();
+    if layer.is_some() {
+        filters.push(format!("layer: U{}", layer.unwrap()));
+    }
+    if kind.is_some() {
+        filters.push(format!("kind: {}", kind.as_ref().unwrap()));
+    }
+    if let Some(ref status_filter) = status {
+        filters.push(format!("status: {}", status_filter));
+    }
+    if !filters.is_empty() {
+        println!();
+        println!("(Filtered by: {})", filters.join(", "));
     }
 
     Ok(())

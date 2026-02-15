@@ -3,11 +3,11 @@ content: 'Scenario: detect inter universe inconsistencies empty'
 kind: Scenario
 metadata:
   test_function: detect_inter_universe_inconsistencies_empty
-  inferred: 'true'
   confidence: '0.9'
-  extractor: test
+  inferred: 'true'
   source_file: spec-core/src/graph.rs
   source_line: '2262'
+  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

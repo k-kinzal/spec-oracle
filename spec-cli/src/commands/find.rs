@@ -8,6 +8,7 @@ pub async fn execute_find_standalone(
     store: &Store,
     query: &str,
     layer: Option<u32>,
+    status: Option<String>,
     max: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use spec_core::SpecGraph;
@@ -25,6 +26,16 @@ pub async fn execute_find_standalone(
             } else {
                 node.formality_layer as u32 == layer_num
             }
+        });
+    }
+
+    // Filter by status if specified
+    if let Some(ref status_filter) = status {
+        results.retain(|node| {
+            let node_status = node.metadata.get("status")
+                .map(|s| s.as_str())
+                .unwrap_or("active");
+            node_status == status_filter.as_str()
         });
     }
 
@@ -66,8 +77,16 @@ pub async fn execute_find_standalone(
             );
         }
 
+        // Show active filters
+        let mut filters = Vec::new();
         if let Some(layer_num) = layer {
-            println!("\n(Filtered to layer U{})", layer_num);
+            filters.push(format!("layer U{}", layer_num));
+        }
+        if let Some(ref status_filter) = status {
+            filters.push(format!("status: {}", status_filter));
+        }
+        if !filters.is_empty() {
+            println!("\n(Filtered by: {})", filters.join(", "));
         }
     }
 
@@ -79,6 +98,7 @@ pub async fn execute_find_server(
     client: &mut SpecOracleClient<tonic::transport::Channel>,
     query: &str,
     layer: Option<u32>,
+    status: Option<String>,
     max: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Use Query RPC since there's no dedicated Find RPC
@@ -97,6 +117,16 @@ pub async fn execute_find_server(
             } else {
                 node.formality_layer == layer_num
             }
+        });
+    }
+
+    // Filter by status if specified
+    if let Some(ref status_filter) = status {
+        results.retain(|node| {
+            let node_status = node.metadata.get("status")
+                .map(|s| s.as_str())
+                .unwrap_or("active");
+            node_status == status_filter.as_str()
         });
     }
 
@@ -123,8 +153,16 @@ pub async fn execute_find_server(
             );
         }
 
+        // Show active filters
+        let mut filters = Vec::new();
         if let Some(layer_num) = layer {
-            println!("\n(Filtered to layer U{})", layer_num);
+            filters.push(format!("layer U{}", layer_num));
+        }
+        if let Some(ref status_filter) = status {
+            filters.push(format!("status: {}", status_filter));
+        }
+        if !filters.is_empty() {
+            println!("\n(Filtered by: {})", filters.join(", "));
         }
     }
 

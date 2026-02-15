@@ -3,11 +3,11 @@ content: 'RPC: Detect potential synonyms'
 kind: Assertion
 metadata:
   rpc_name: DetectPotentialSynonyms
-  confidence: '0.95'
-  source_file: proto/spec_oracle.proto
-  extractor: proto_rpc
   inferred: 'true'
+  extractor: proto_rpc
   source_line: '32'
+  source_file: proto/spec_oracle.proto
+  confidence: '0.95'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

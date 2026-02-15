@@ -3,11 +3,11 @@ content: Executable contracts
 kind: Assertion
 metadata:
   source_line: '35'
-  extractor: proto_rpc
+  rpc_name: GenerateContractTemplate
   source_file: proto/spec_oracle.proto
   inferred: 'true'
   confidence: '0.95'
-  rpc_name: GenerateContractTemplate
+  extractor: proto_rpc
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

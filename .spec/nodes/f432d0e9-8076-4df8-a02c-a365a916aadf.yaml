@@ -3,11 +3,11 @@ content: 'Scenario: coverage with tests'
 kind: Scenario
 metadata:
   confidence: '0.9'
-  inferred: 'true'
-  extractor: test
-  source_line: '1948'
   source_file: spec-core/src/graph.rs
+  source_line: '1948'
   test_function: test_coverage_with_tests
+  extractor: test
+  inferred: 'true'
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3
