@@ -3,11 +3,11 @@ content: Temporal queries
 kind: Assertion
 metadata:
   rpc_name: QueryAtTimestamp
-  confidence: '0.95'
-  extractor: proto_rpc
-  source_file: proto/spec_oracle.proto
   source_line: '43'
   inferred: 'true'
+  confidence: '0.95'
+  source_file: proto/spec_oracle.proto
+  extractor: proto_rpc
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

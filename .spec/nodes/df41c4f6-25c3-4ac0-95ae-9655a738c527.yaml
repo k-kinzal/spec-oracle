@@ -2,12 +2,12 @@ id: df41c4f6-25c3-4ac0-95ae-9655a738c527
 content: 'Scenario: generate contract template for constraint'
 kind: Scenario
 metadata:
-  test_function: generate_contract_template_for_constraint
-  inferred: 'true'
-  source_file: spec-core/src/graph.rs
-  source_line: '1867'
-  extractor: test
   confidence: '0.9'
+  inferred: 'true'
+  extractor: test
+  source_line: '1867'
+  test_function: generate_contract_template_for_constraint
+  source_file: spec-core/src/graph.rs
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

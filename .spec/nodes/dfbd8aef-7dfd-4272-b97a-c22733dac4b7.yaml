@@ -3,11 +3,11 @@ content: 'RPC: Get compliance report'
 kind: Assertion
 metadata:
   rpc_name: GetComplianceReport
+  confidence: '0.95'
   source_file: proto/spec_oracle.proto
   inferred: 'true'
-  source_line: '40'
-  confidence: '0.95'
   extractor: proto_rpc
+  source_line: '40'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

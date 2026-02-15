@@ -3,11 +3,11 @@ content: 'Scenario: authentication required'
 kind: Scenario
 metadata:
   extractor: test
-  source_file: spec-core/src/extract.rs
-  test_function: test_authentication_required
-  source_line: '977'
   inferred: 'true'
   confidence: '0.9'
+  test_function: test_authentication_required
+  source_file: spec-core/src/extract.rs
+  source_line: '977'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

@@ -4,10 +4,10 @@ kind: Scenario
 metadata:
   source_line: '2269'
   test_function: detect_inter_universe_inconsistencies_with_transform
-  confidence: '0.9'
-  extractor: test
   inferred: 'true'
   source_file: spec-core/src/graph.rs
+  confidence: '0.9'
+  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

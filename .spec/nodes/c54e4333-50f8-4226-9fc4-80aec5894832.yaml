@@ -3,10 +3,10 @@ content: 'Scenario: detect omission scenario without assertions'
 kind: Scenario
 metadata:
   test_function: detect_omission_scenario_without_assertions
-  confidence: '0.9'
-  extractor: test
   inferred: 'true'
+  confidence: '0.9'
   source_file: spec-core/src/graph.rs
+  extractor: test
   source_line: '1678'
 created_at: 1771077123
 modified_at: 1771077123

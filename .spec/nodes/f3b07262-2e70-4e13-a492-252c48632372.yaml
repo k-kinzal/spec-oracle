@@ -3,11 +3,11 @@ content: Inter-universe consistency (conversation.md U, D, A, f implementation)
 kind: Assertion
 metadata:
   confidence: '0.95'
+  source_file: proto/spec_oracle.proto
   inferred: 'true'
   source_line: '49'
-  source_file: proto/spec_oracle.proto
-  rpc_name: DetectInterUniverseInconsistencies
   extractor: proto_rpc
+  rpc_name: DetectInterUniverseInconsistencies
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

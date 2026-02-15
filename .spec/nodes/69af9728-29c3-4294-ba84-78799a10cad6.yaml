@@ -3,10 +3,10 @@ content: '- "must be" / "must not be" → boolean constraints'
 kind: Constraint
 metadata:
   source_file: spec-core/src/udaf.rs
-  source_line: '576'
-  inferred: 'true'
-  doc_comment: 'true'
   confidence: '0.8'
+  doc_comment: 'true'
+  inferred: 'true'
+  source_line: '576'
   extractor: doc
 created_at: 1771093752
 modified_at: 1771093752

@@ -2,12 +2,12 @@ id: 14ba122f-e329-4a37-b900-69b61d61953a
 content: 'Scenario: validate user authentication'
 kind: Scenario
 metadata:
-  test_function: validate_user_authentication
-  inferred: 'true'
-  extractor: test
   source_file: spec-core/src/extract.rs
+  test_function: validate_user_authentication
   source_line: '963'
   confidence: '0.9'
+  extractor: test
+  inferred: 'true'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

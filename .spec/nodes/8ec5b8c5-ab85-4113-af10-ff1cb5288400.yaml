@@ -2,12 +2,12 @@ id: 8ec5b8c5-ab85-4113-af10-ff1cb5288400
 content: Executable contracts
 kind: Assertion
 metadata:
-  extractor: proto_rpc
   source_file: proto/spec_oracle.proto
-  rpc_name: GenerateContractTemplate
-  inferred: 'true'
   source_line: '35'
+  rpc_name: GenerateContractTemplate
   confidence: '0.95'
+  extractor: proto_rpc
+  inferred: 'true'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

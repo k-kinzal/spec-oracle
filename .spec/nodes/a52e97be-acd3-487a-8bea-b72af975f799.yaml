@@ -6,8 +6,8 @@ metadata:
   inferred: 'true'
   confidence: '0.95'
   rpc_name: DetectPotentialSynonyms
-  source_line: '32'
   source_file: proto/spec_oracle.proto
+  source_line: '32'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

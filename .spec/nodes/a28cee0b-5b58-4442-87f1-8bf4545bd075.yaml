@@ -4,10 +4,10 @@ kind: Constraint
 metadata:
   inferred: 'true'
   source_line: '1209'
-  source_file: spec-core/src/extract.rs
-  confidence: '0.95'
-  assertion: detect.content, "Detect contradictions between specifications"
   extractor: assertion
+  assertion: detect.content, "Detect contradictions between specifications"
+  confidence: '0.95'
+  source_file: spec-core/src/extract.rs
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

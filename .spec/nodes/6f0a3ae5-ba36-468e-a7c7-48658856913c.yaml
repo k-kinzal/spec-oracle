@@ -2,11 +2,11 @@ id: 6f0a3ae5-ba36-468e-a7c7-48658856913c
 content: 'Graph-based specification storage (nodes: assertions, constraints, scenarios, definitions, domains)'
 kind: Constraint
 metadata:
-  extractor: documentation
-  source_file: README.md
-  inferred: 'true'
   source_line: '13'
   confidence: '0.85'
+  inferred: 'true'
+  source_file: README.md
+  extractor: documentation
 created_at: 1771095538
 modified_at: 1771095538
 formality_layer: 0
