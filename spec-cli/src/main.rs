@@ -214,6 +214,18 @@ enum Commands {
     Check,
     /// Display summary statistics of specifications
     Summary,
+    /// Export specification graph in DOT format for visualization
+    ExportDot {
+        /// Output file path (defaults to stdout if not specified)
+        #[arg(short, long)]
+        output: Option<String>,
+        /// Filter by formality layer (0-3)
+        #[arg(short, long)]
+        layer: Option<u32>,
+        /// Include metadata in node labels
+        #[arg(short, long)]
+        metadata: bool,
+    },
     /// Find specifications by semantic search (high-level interface)
     Find {
         /// Search query in natural language

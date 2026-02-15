@@ -55,6 +55,9 @@ pub async fn dispatch_standalone(
         crate::Commands::Summary => {
             commands::execute_summary_standalone(&store)?;
         }
+        crate::Commands::ExportDot { output, layer, metadata } => {
+            commands::execute_export_dot_standalone(&store, output, layer, metadata)?;
+        }
         crate::Commands::Find { query, layer, max } => {
             commands::execute_find_standalone(&store, &query, layer, max).await?;
         }
