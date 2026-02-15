@@ -2,14 +2,14 @@ id: 4abf7c4c-1341-4742-986f-55687a8e09de
 content: 'Invariant: user.is_authenticated()'
 kind: Definition
 metadata:
+  inferred: 'true'
+  is_example: 'true'
+  example_purpose: test_data
+  source_file: spec-core/src/extract.rs
   source_line: '973'
   confidence: '0.95'
-  assertion: user.is_authenticated()
-  source_file: spec-core/src/extract.rs
   extractor: assertion
-  inferred: 'true'
-  example_purpose: test_data
-  is_example: 'true'
+  assertion: user.is_authenticated()
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

@@ -3,11 +3,11 @@ content: User must be authenticated
 kind: Constraint
 metadata:
   extractor: doc
-  confidence: '0.8'
-  inferred: 'true'
   source_file: spec-core/src/extract.rs
   doc_comment: 'true'
+  inferred: 'true'
   source_line: '971'
+  confidence: '0.8'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 0

@@ -3,10 +3,10 @@ content: 'Graph-based specification storage (nodes: assertions, constraints, sce
 kind: Constraint
 metadata:
   source_line: '13'
+  confidence: '0.85'
   extractor: documentation
   inferred: 'true'
   source_file: README.md
-  confidence: '0.85'
 created_at: 1771095538
 modified_at: 1771095538
 formality_layer: 0

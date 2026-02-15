@@ -2,12 +2,12 @@ id: e901ead6-a9af-4d96-bf6c-6bdd8e31e021
 content: 'Scenario: detect explicit contradiction'
 kind: Scenario
 metadata:
-  confidence: '0.9'
   test_function: detect_explicit_contradiction
+  extractor: test
+  confidence: '0.9'
   inferred: 'true'
   source_line: '1604'
   source_file: spec-core/src/graph.rs
-  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

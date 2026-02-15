@@ -2,11 +2,11 @@ id: 6e66772d-9021-4ad9-9180-d49d1381f77e
 content: spec-cli/src/main.rs contains 531 lines of code
 kind: Assertion
 metadata:
+  extractor: architecture
+  confidence: '1'
+  source_line: '0'
   property: file_size
   line_count: '2172'
-  confidence: '1'
-  extractor: architecture
-  source_line: '0'
   inferred: 'true'
   source_file: spec-cli/src/main.rs
 created_at: 1771104181

@@ -2,10 +2,10 @@ id: 531cc76e-8c2d-4e8e-922b-bd47a32e3307
 content: 'Scenario: get node history nonexistent returns none'
 kind: Scenario
 metadata:
+  extractor: test
+  inferred: 'true'
   test_function: get_node_history_nonexistent_returns_none
   confidence: '0.9'
-  inferred: 'true'
-  extractor: test
   source_line: '2418'
   source_file: spec-core/src/graph.rs
 created_at: 1771087004

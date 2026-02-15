@@ -2,12 +2,12 @@ id: e29eda14-0925-4ff4-a139-51d5937c0593
 content: 'Scenario: detect duplicate specifications'
 kind: Scenario
 metadata:
-  confidence: '0.9'
-  source_line: '1616'
-  source_file: spec-core/src/graph.rs
   extractor: test
-  test_function: detect_duplicate_specifications
+  source_line: '1616'
   inferred: 'true'
+  source_file: spec-core/src/graph.rs
+  confidence: '0.9'
+  test_function: detect_duplicate_specifications
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

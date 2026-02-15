@@ -4,10 +4,10 @@ kind: Scenario
 metadata:
   source_line: '2280'
   confidence: '0.9'
-  source_file: spec-core/src/graph.rs
-  extractor: test
-  test_function: compliance_report_with_linked_code
   inferred: 'true'
+  test_function: compliance_report_with_linked_code
+  extractor: test
+  source_file: spec-core/src/graph.rs
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3

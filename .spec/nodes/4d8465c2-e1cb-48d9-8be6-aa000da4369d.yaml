@@ -3,11 +3,11 @@ content: 'Scenario: detect potential synonyms by structure'
 kind: Scenario
 metadata:
   source_file: spec-core/src/graph.rs
+  test_function: detect_potential_synonyms_by_structure
+  extractor: test
   confidence: '0.9'
   inferred: 'true'
-  test_function: detect_potential_synonyms_by_structure
   source_line: '1834'
-  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

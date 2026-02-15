@@ -3,11 +3,11 @@ content: 'Scenario: detect omission isolated node'
 kind: Scenario
 metadata:
   extractor: test
-  inferred: 'true'
-  test_function: detect_omission_isolated_node
   source_file: spec-core/src/graph.rs
   confidence: '0.9'
+  inferred: 'true'
   source_line: '1657'
+  test_function: detect_omission_isolated_node
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

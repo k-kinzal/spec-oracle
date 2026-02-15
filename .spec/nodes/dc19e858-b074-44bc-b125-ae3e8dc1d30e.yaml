@@ -3,11 +3,11 @@ content: 'RPC: Diff timestamps'
 kind: Assertion
 metadata:
   source_file: proto/spec_oracle.proto
-  inferred: 'true'
-  rpc_name: DiffTimestamps
   source_line: '44'
   extractor: proto_rpc
+  inferred: 'true'
   confidence: '0.95'
+  rpc_name: DiffTimestamps
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

@@ -2,8 +2,8 @@ id: c8f0f89e-be5e-4ea9-b24d-a9a1eb4d4f03
 content: Check RPC invokes DetectContradictions and DetectOmissions RPCs and returns unified results
 kind: Constraint
 metadata:
-  source_file: proto/spec_oracle.proto
   line: 19-20
+  source_file: proto/spec_oracle.proto
 created_at: 1771061935
 modified_at: 1771061935
 formality_layer: 2
