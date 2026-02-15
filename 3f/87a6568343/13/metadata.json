@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "3f87a6568343",
+  "session_id": "b52dba13-4e34-46cf-aad5-250b213db56b",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-15T04:08:54.250136Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/claude-loop.debug",
+    ".claude/claude-loop.state.json",
+    ".claude/hooks/claude-loop-hook.sh",
+    "PROBLEM.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 2,
+    "cache_creation_tokens": 36435,
+    "cache_read_tokens": 2318,
+    "output_tokens": 1,
+    "api_call_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-15T04:08:54.195681Z",
+    "agent_lines": 0,
+    "human_added": 4911,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 4911,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/b52dba13-4e34-46cf-aad5-250b213db56b.jsonl"
+}
