@@ -3,23 +3,36 @@
   "checkpoint_id": "3f87a6568343",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 31,
+  "checkpoints_count": 33,
   "files_touched": [
     ".claude/claude-loop.debug",
     ".claude/claude-loop.state.json",
     ".claude/hooks/claude-loop-hook.sh",
     "MEMO.md",
     "PROBLEM.md",
+    "paper/case-study/real_projects/logs/regex_drift_lock.json",
+    "paper/case-study/real_projects/logs/regex_drift_snapshot.txt",
     "paper/reviews/reviewer1_round12.md",
     "paper/reviews/reviewer1_round14.md",
     "paper/reviews/reviewer1_round17.md",
+    "paper/reviews/reviewer1_round18.md",
+    "paper/reviews/reviewer1_round19.md",
+    "paper/reviews/reviewer1_round20.md",
     "paper/reviews/reviewer2_round12.md",
     "paper/reviews/reviewer2_round14.md",
     "paper/reviews/reviewer2_round17.md",
+    "paper/reviews/reviewer2_round18.md",
+    "paper/reviews/reviewer2_round19.md",
+    "paper/reviews/reviewer2_round20.md",
     "paper/reviews/reviewer3_round12.md",
     "paper/reviews/reviewer3_round14.md",
     "paper/reviews/reviewer3_round17.md",
+    "paper/reviews/reviewer3_round18.md",
+    "paper/reviews/reviewer3_round19.md",
+    "paper/reviews/reviewer3_round20.md",
+    "paper/reviews/round18_summary.md",
     "scripts/connect_lifecycle_check_specs_v2.py",
+    "spec-cli/src/commands/prover.rs",
     "spec-cli/src/commands/u0.rs",
     "spec-core/src/graph.rs",
     "spec-core/src/lib.rs",
@@ -163,13 +176,20 @@
       "context": "/3f/87a6568343/18/context.md",
       "content_hash": "/3f/87a6568343/18/content_hash.txt",
       "prompt": "/3f/87a6568343/18/prompt.txt"
+    },
+    {
+      "metadata": "/3f/87a6568343/19/metadata.json",
+      "transcript": "/3f/87a6568343/19/full.jsonl",
+      "context": "/3f/87a6568343/19/context.md",
+      "content_hash": "/3f/87a6568343/19/content_hash.txt",
+      "prompt": "/3f/87a6568343/19/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 1242,
-    "cache_creation_tokens": 744059,
-    "cache_read_tokens": 14646612,
-    "output_tokens": 35258,
-    "api_call_count": 163
+    "input_tokens": 2284,
+    "cache_creation_tokens": 996945,
+    "cache_read_tokens": 29613502,
+    "output_tokens": 74391,
+    "api_call_count": 292
   }
 }

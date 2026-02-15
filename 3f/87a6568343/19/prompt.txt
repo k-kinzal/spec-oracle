@@ -1,0 +1,1203 @@
+Implement the following plan:
+
+# Implementation Plan: UDA Model Minimization + Proof Mechanisms
+
+## Context
+
+### Problem 1: UDA Model is Not Minimized
+
+Current UDAF structures mix three concerns without clear separation:
+1. **Identity** (IDs for entity identification)
+2. **Proof-essential data** (constraints, relationships needed for formal verification)
+3. **Metadata** (human-readable names, descriptions, organizational info)
+
+**Analysis shows**:
+- **Universe**: NO proof-essential fields (only organizational)
+- **Domain**: `covered_by` is proof-essential; `name`, `description` are metadata
+- **AdmissibleSet**: `constraints`, `contradicts` are proof-essential; `name`, `universe_id` are metadata
+- **Prover currently accesses metadata unnecessarily** - should only see IDs + proof data
+
+### Problem 2: Prover Doesn't Use D and U Properly
+
+The current Prover implementation only uses AdmissibleSet (A) for proofs, completely ignoring Domain (D) and Universe (U). This violates the theoretical foundation of the UDA/f model:
+
+- **Contradiction proofs** currently check `A1 ∩ A2 ≠ ∅` but should check `A1 ∩ A2 ∩ D ≠ ∅` (within domain)
+- **Leak detection** requires U (for leak A) and D (for leak B) but these are not used
+- **仕様はAの要素であり、Dがなければ定まらない** - specification cannot be determined without D
+
+The user has confirmed that while the broad concept is correct, we need to determine:
+1. Can these proofs actually be implemented?
+2. How should they be implemented?
+
+### Investigation Results
+
+**Technical Feasibility:**
+- ✅ **Implication (A1 ⊆ A2)**: Fully feasible with current Z3 infrastructure
+- ⚠️ **Completeness (D ⊆ D_S)**: Feasible IF Domain is formalized as constraints
+- ⚠️ **Underspecification (leak A)**: Only heuristically detectable (not formally provable)
+- ❌ **TransformSoundness**: Not feasible with current architecture (deferred)
+
+**Core Challenge:**
+- D (Domain) is currently only a natural language description, not a formal set
+- U (Universe) has no formal boundary definition, only organizational structure
+- **Key insight**: 漏れA（未規定）は設計上の選択であり、証明不可能。ヒューリスティック検出のみ可能。
+
+## Solution: Two-Phase Refactoring
+
+### Phase A: Minimize UDA Model (3-Layer Separation)
+### Phase B: Implement Proof Mechanisms Using Minimized Model
+
+---
+
+## Phase A: UDA Model Minimization
+
+### Design: Composition-Based 3-Layer Structure
+
+Each UDAF entity (Universe, Domain, AdmissibleSet) is restructured into:
+1. **Identifier field** (ID only)
+2. **ProofData struct** (only proof-essential fields)
+3. **Metadata struct** (everything else)
+
+**Benefits**:
+- Clear separation of concerns at struct level
+- Prover can accept only `&ProofData`, never metadata
+- Compile-time enforcement of layer boundaries
+- Minimal migration impact (composition, not replacement)
+
+### New Structure Definitions
+
+#### Universe (Minimized)
+
+**Current** (spec-core/src/udaf.rs:36-52):
+```rust
+pub struct Universe {
+    pub id: UniverseId,
+    pub name: String,
+    pub description: String,
+    pub specifications: SpecSet,
+    pub metadata: UniverseMetadata,
+}
+```
+
+**New**:
+```rust
+pub struct Universe {
+    // Layer 1: Identifier
+    pub id: UniverseId,
+
+    // Layer 2: Proof Data - NONE (Universe has no proof-essential data)
+    // (Universe is purely organizational)
+
+    // Layer 3: Metadata
+    pub meta: UniverseMetadata,
+}
+
+pub struct UniverseMetadata {
+    pub name: String,
+    pub description: String,
+    pub specifications: SpecSet,  // Organizational, not proof-relevant
+    pub extra: HashMap<String, String>,  // Extensible metadata
+}
+```
+
+#### Domain (Minimized)
+
+**Current** (spec-core/src/udaf.rs:93-114):
+```rust
+pub struct Domain {
+    pub id: DomainId,
+    pub name: String,
+    pub description: String,
+    pub universe_id: UniverseId,
+    pub covered_by: SpecSet,
+    pub subdomains: DomainSet,
+    pub metadata: DomainMetadata,
+}
+```
+
+**New**:
+```rust
+pub struct Domain {
+    // Layer 1: Identifier
+    pub id: DomainId,
+
+    // Layer 2: Proof Data
+    pub proof_data: DomainProofData,
+
+    // Layer 3: Metadata
+    pub meta: DomainMetadata,
+}
+
+pub struct DomainProofData {
+    pub constraints: Vec<Constraint>,  // NEW: Formal domain boundaries
+    pub covered_by: SpecSet,           // For completeness: D ⊆ D_S
+}
+
+pub struct DomainMetadata {
+    pub name: String,
+    pub description: String,
+    pub universe_id: UniverseId,      // Organizational
+    pub subdomains: DomainSet,        // Organizational hierarchy
+    pub extra: HashMap<String, String>,
+}
+```
+
+#### AdmissibleSet (Minimized)
+
+**Current** (spec-core/src/udaf.rs:156-173):
+```rust
+pub struct AdmissibleSet {
+    pub spec_id: SpecId,
+    pub universe_id: UniverseId,
+    pub constraints: Vec<Constraint>,
+    pub contradicts: SpecSet,
+    pub metadata: Metadata,
+}
+```
+
+**New**:
+```rust
+pub struct AdmissibleSet {
+    // Layer 1: Identifier
+    pub id: SpecId,
+
+    // Layer 2: Proof Data
+    pub proof_data: AdmissibleSetProofData,
+
+    // Layer 3: Metadata
+    pub meta: AdmissibleSetMetadata,
+}
+
+pub struct AdmissibleSetProofData {
+    pub constraints: Vec<Constraint>,
+    pub contradicts: SpecSet,  // Pre-marked contradictions
+}
+
+pub struct AdmissibleSetMetadata {
+    pub universe_id: UniverseId,  // Organizational
+    pub extra: HashMap<String, String>,
+}
+```
+
+#### Constraint (Minimized)
+
+**Current** (spec-core/src/udaf.rs:208-222):
+```rust
+pub struct Constraint {
+    pub description: String,
+    pub formal: Option<String>,
+    pub kind: ConstraintKind,
+    pub metadata: ConstraintMetadata,
+}
+```
+
+**New**:
+```rust
+pub struct Constraint {
+    // Layer 2: Proof Data (no identifier needed for constraints)
+    pub formal: Option<String>,   // SMT formula (primary proof representation)
+    pub kind: ConstraintKind,     // Universal, Existential, etc.
+
+    // Layer 3: Metadata
+    pub meta: ConstraintMetadata,
+}
+
+pub struct ConstraintMetadata {
+    pub description: String,      // Human-readable (NOT used in proofs)
+    pub pattern: Option<String>,  // Matched pattern (e.g., "at_least")
+    pub source: Option<String>,   // Original source text
+    pub extra: HashMap<String, String>,
+}
+```
+
+**Critical Change**: `Constraint.description` moves to metadata. Proofs use `Constraint.formal` only.
+- If `formal` is None, extract from `meta.description` during proof preparation
+- Prover never directly accesses `meta.description`
+
+### Migration Strategy
+
+**Step 1: Add new fields alongside old ones**
+
+```rust
+pub struct Domain {
+    // OLD (deprecated)
+    pub id: DomainId,
+    pub name: String,
+    pub description: String,
+    pub universe_id: UniverseId,
+    pub covered_by: SpecSet,
+    pub subdomains: DomainSet,
+    pub metadata: DomainMetadata,
+
+    // NEW (preferred)
+    pub proof_data: Option<DomainProofData>,  // Populated gradually
+    pub meta: Option<DomainMetadata>,         // Populated gradually
+}
+```
+
+**Step 2: Dual population** - populate both old and new during transition
+
+**Step 3: Update consumers one by one**:
+1. Prover → use `proof_data` only
+2. CLI display → use `meta` only
+3. Serialization → support both formats
+
+**Step 4: Remove old fields** once all consumers migrated
+
+### Prover Integration After Minimization
+
+**Before** (current):
+```rust
+pub fn prove_consistency(
+    &mut self,
+    spec_a: &AdmissibleSet,  // Has metadata mixed in
+    spec_b: &AdmissibleSet,
+) -> Proof
+```
+
+**After** (minimized):
+```rust
+pub fn prove_consistency(
+    &mut self,
+    spec_a_id: &SpecId,
+    spec_a_proof: &AdmissibleSetProofData,  // ONLY proof data
+    spec_b_id: &SpecId,
+    spec_b_proof: &AdmissibleSetProofData,
+) -> Proof
+```
+
+Prover **cannot compile** if it tries to access metadata - type safety enforced.
+
+---
+
+## Phase B: Implement Proof Mechanisms
+
+(Using minimized UDA model from Phase A)
+
+## Approach: Hybrid Formalization
+
+### 1. Domain Formalization (Already in Phase A)
+
+**Domain.proof_data.constraints** added in Phase A minimization:
+```rust
+pub struct DomainProofData {
+    pub constraints: Vec<Constraint>,  // Formal domain boundaries
+    pub covered_by: SpecSet,
+}
+```
+
+**Rationale**: Hybrid approach allows:
+- Optional formalization: `constraints` can be empty
+- Graceful degradation when D not formalized (falls back to A-only proofs)
+- Progressive enhancement as specifications mature
+- Clear separation: constraints in proof_data, description in metadata
+
+### 2. Three Categories of Proof Implementation
+
+#### Category A: Formal Proofs (Z3-based) ✅
+
+**1. Implication: A1 ⊆ A2**
+- Formula: `UNSAT(A1 ∧ ¬A2)`
+- Interpretation: Every implementation satisfying A1 also satisfies A2
+- Implementation: `prove_implication(A1, A2) -> Proof`
+- Status: **Highly feasible** - works with current Z3Backend
+
+**2. Consistency Within Domain: A1 ∩ A2 ∩ D ≠ ∅**
+- Formula: `SAT(A1 ∧ A2 ∧ D)`
+- Interpretation: Specifications are consistent within the domain
+- Implementation: `prove_consistency_within_domain(A1, A2, D) -> Proof`
+- Graceful degradation: If `D.constraints.is_empty()`, falls back to current `prove_consistency(A1, A2)`
+
+**3. Completeness: D ⊆ D_S**
+- Formula: `UNSAT(D ∧ ¬(A1 ∨ A2 ∨ ... ∨ An))`
+- Interpretation: Every element of domain is covered by some specification
+- Implementation: `prove_completeness(D, [A1, A2, ...An]) -> Proof`
+- Detects **漏れB（カバレッジ不足）**
+- Requires: D must be formalized
+
+#### Category B: Heuristic Analysis ⚠️
+
+**4. Underspecification Detection (Leak A)**
+- **Cannot be formally proven** - underspecification is a design choice, not an error
+- Heuristics: constraint count, free variables, domain keyword matching
+- Implementation: `detect_underspecification(A, D, U) -> UnderspecificationReport`
+- Returns: Confidence score (0.0-1.0), reasons, suggestions
+- Detects **漏れA（未規定）**
+
+#### Category C: Future Work ❌
+
+**5. TransformSoundness: f(A_source) ⊆ A_target**
+- Requires formal semantics of transform functions
+- Current architecture uses opaque strategy patterns (ASTAnalysis, NLPInference, etc.)
+- Not feasible without major architectural changes
+- **Explicitly deferred to future work**
+
+## Implementation Plan
+
+### Phase 1: Core Infrastructure (MVP)
+
+**1.1 Extend Domain Data Structure**
+
+File: `spec-core/src/udaf.rs`
+
+Add to Domain struct (line 113):
+```rust
+/// Optional formal domain boundary constraints
+/// When empty: Domain is not formalized (graceful degradation)
+/// When present: Enables formal proofs about domain coverage
+pub constraints: Vec<Constraint>,
+```
+
+Update constructors:
+- `Domain::new()`: Initialize with empty constraints
+- `Domain::with_id()`: Initialize with empty constraints
+- Add `add_constraint()` method
+
+Update serialization (domain_map_serde module).
+
+**1.2 Implement Implication Proof**
+
+File: `spec-core/src/prover/mod.rs`
+
+```rust
+/// Prove A1 ⊆ A2 (admissible set inclusion)
+/// Returns Proven if every implementation satisfying A1 also satisfies A2
+pub fn prove_implication(
+    &mut self,
+    antecedent: &AdmissibleSet,
+    consequent: &AdmissibleSet,
+) -> Proof {
+    // Formula: UNSAT(A1 ∧ ¬A2)
+    // Encode: antecedent_constraints ∧ NOT(consequent_constraints)
+    // If UNSAT → Proven (implication holds)
+    // If SAT → Refuted (counterexample exists)
+}
+```
+
+File: `spec-core/src/prover/z3_backend.rs`
+
+Add negation support:
+```rust
+/// Encode constraint with optional negation
+fn encode_constraint_with_negation<'ctx>(
+    &'ctx self,
+    description: &str,
+    var_map: &mut HashMap<String, Int<'ctx>>,
+    negate: bool,
+) -> Option<Bool<'ctx>>
+```
+
+**1.3 Implement Consistency Within Domain**
+
+File: `spec-core/src/prover/mod.rs`
+
+```rust
+/// Prove A1 ∩ A2 ∩ D ≠ ∅ (consistency within domain)
+/// Gracefully degrades to prove_consistency if D not formalized
+pub fn prove_consistency_within_domain(
+    &mut self,
+    spec_a: &AdmissibleSet,
+    spec_b: &AdmissibleSet,
+    domain: &Domain,
+) -> Proof {
+    if domain.constraints.is_empty() {
+        // Graceful degradation: fall back to A-only proof
+        let mut proof = self.prove_consistency(spec_a, spec_b);
+        proof.steps.push(ProofStep {
+            description: "Note: Domain has no formal constraints; checked A-only consistency".to_string(),
+            justification: "Graceful degradation".to_string(),
+        });
+        return proof;
+    }
+
+    // Formula: SAT(A1 ∧ A2 ∧ D)
+    // Encode all three constraint sets
+}
+```
+
+File: `spec-core/src/prover/z3_backend.rs`
+
+Add multi-source encoding:
+```rust
+/// Check satisfiability of combined constraint sets
+pub fn check_satisfiability_combined(
+    &self,
+    constraint_sets: &[&[Constraint]],
+) -> (ProofStatus, Vec<ProofStep>)
+```
+
+**1.4 Update Property Enum**
+
+File: `spec-core/src/prover/mod.rs` (lines 44-66)
+
+Add new property types:
+```rust
+pub enum Property {
+    // Existing
+    Consistency { spec_a: String, spec_b: String },
+    Satisfiability { spec: String },
+
+    // NEW
+    Implication { antecedent: String, consequent: String },
+    ConsistencyWithinDomain { spec_a: String, spec_b: String, domain: String },
+
+    // Existing (to be implemented in Phase 2)
+    Completeness { domain: String, covered_by_specs: Vec<String> },
+
+    // Deferred
+    TransformSoundness { source: String, target: String, transform: String },
+}
+```
+
+### Phase 2: Coverage Analysis
+
+**2.1 Implement Completeness Proof**
+
+File: `spec-core/src/prover/mod.rs`
+
+```rust
+/// Prove D ⊆ D_S (domain fully covered by specifications)
+/// Detects 漏れB（カバレッジ不足）
+pub fn prove_completeness(
+    &mut self,
+    domain: &Domain,
+    covering_specs: &[&AdmissibleSet],
+) -> Proof {
+    if domain.constraints.is_empty() {
+        return unknown_proof("Domain not formalized");
+    }
+
+    // Formula: UNSAT(D ∧ ¬(A1 ∨ A2 ∨ ... ∨ An))
+    // Simplified: UNSAT(D ∧ ¬A1 ∧ ¬A2 ∧ ... ∧ ¬An)
+    // If UNSAT → Proven (no gaps)
+    // If SAT → Refuted (coverage gap exists, witness provided)
+}
+```
+
+**2.2 Implement Underspecification Detection**
+
+File: `spec-core/src/prover/mod.rs`
+
+```rust
+/// Heuristically detect underspecification (漏れA)
+/// Returns confidence-scored report, not a formal proof
+pub fn detect_underspecification(
+    &self,
+    spec: &AdmissibleSet,
+    domain: &Domain,
+    universe: &Universe,
+) -> UnderspecificationReport {
+    // Heuristic 1: Constraint count
+    // Heuristic 2: Free variables (in D but not in A)
+    // Heuristic 3: Keyword matching (D mentions aspects not constrained in A)
+    // Heuristic 4: Constraint tightness
+}
+
+pub struct UnderspecificationReport {
+    pub spec_id: String,
+    pub domain_id: String,
+    pub is_likely_underspecified: bool,
+    pub confidence: f32,
+    pub reasons: Vec<String>,
+    pub suggestions: Vec<String>,
+}
+```
+
+### Phase 3: CLI Integration
+
+File: `spec-cli/src/commands/prover.rs`
+
+Add subcommands:
+- `prover implication <spec_a> <spec_b>`
+- `prover consistency-domain <spec_a> <spec_b> <domain>`
+- `prover completeness <domain>`
+- `prover underspec <spec> <domain>`
+
+## Implementation Phases
+
+### Phase A: UDA Model Minimization (Priority 1)
+
+**Week 1: Data Structure Refactoring**
+
+Files to modify:
+1. **spec-core/src/udaf.rs** (lines 36-203)
+   - Restructure Universe, Domain, AdmissibleSet, Constraint
+   - Add ProofData and Metadata sub-structs
+   - Keep old fields during migration
+
+2. **spec-core/src/udaf/ids.rs**
+   - No changes needed (IDs already separate)
+
+3. **spec-core/src/udaf/metadata.rs**
+   - Extend to support new Metadata structs
+
+4. **spec-core/src/udaf.rs** (UDAFModel impl)
+   - Update `populate_from_graph()` to populate both old and new fields
+   - Add helper methods to extract proof_data
+
+**Week 2: Prover Migration**
+
+Files to modify:
+5. **spec-core/src/prover/mod.rs** (lines 136-491)
+   - Update all methods to accept `&ProofData` instead of full entities
+   - Add compile-time checks (no access to metadata)
+
+6. **spec-core/src/prover/z3_backend.rs**
+   - Update to use `Constraint.formal` primarily
+   - Fallback to `meta.description` only during preparation phase
+
+**Week 3: CLI and Tests**
+
+Files to modify:
+7. **spec-cli/src/commands/prover.rs**
+   - Extract proof_data before calling Prover
+   - Use metadata for display only
+
+8. **spec-core/tests/integration_*.rs**
+   - Update all tests to use new structure
+
+9. **spec-cli/src/presentation/formatter.rs**
+   - Update to use metadata for display
+
+**Verification**: All existing tests pass with new structure
+
+### Phase B: Proof Mechanism Implementation (Priority 2)
+
+**Week 4-5: New Proof Methods**
+
+Files to modify (building on minimized model):
+1. **spec-core/src/prover/mod.rs**
+   - Implement `prove_implication()`
+   - Implement `prove_consistency_within_domain()`
+   - Implement `prove_completeness()`
+   - Implement `detect_underspecification()`
+
+2. **spec-core/src/prover/z3_backend.rs**
+   - Add negation support
+   - Add multi-source constraint encoding
+
+**Week 6: Integration**
+
+3. **spec-cli/src/commands/prover.rs**
+   - Add CLI commands for new proof types
+
+## Critical Files (Prioritized)
+
+**Phase A (Minimization) - Must Do First**:
+1. **spec-core/src/udaf.rs** (entire file, ~1200 lines)
+   - Core refactoring: add proof_data and meta to all entities
+
+2. **spec-core/src/prover/mod.rs** (lines 136-491)
+   - Update Prover to use proof_data only
+
+3. **spec-core/src/udaf/metadata.rs** (lines 1-400)
+   - Extend metadata system
+
+**Phase B (Proofs) - Depends on Phase A**:
+4. **spec-core/src/prover/mod.rs** (lines 44-135, Property enum)
+   - Add new proof methods
+
+5. **spec-core/src/prover/z3_backend.rs** (entire file)
+   - Extend Z3 encoding capabilities
+
+6. **spec-cli/src/commands/prover.rs** (entire file)
+   - Add CLI commands
+
+## Verification Strategy
+
+### Unit Tests
+
+File: `spec-core/src/prover/mod.rs` (tests module)
+
+```rust
+#[test]
+fn prove_implication_holds() {
+    // A1: "x >= 10", A2: "x >= 5"
+    // Expect: Proven (A1 ⊆ A2)
+}
+
+#[test]
+fn prove_implication_fails() {
+    // A1: "x >= 5", A2: "x >= 10"
+    // Expect: Refuted (counterexample: x=7)
+}
+
+#[test]
+fn prove_consistency_within_domain() {
+    // A1: "password >= 8", A2: "password <= 20", D: "1 <= password <= 100"
+    // Expect: Proven (consistent within domain)
+}
+
+#[test]
+fn prove_consistency_within_domain_no_constraints() {
+    // D.constraints.is_empty()
+    // Expect: Falls back to prove_consistency, adds note to proof steps
+}
+
+#[test]
+fn prove_completeness_no_gaps() {
+    // D: "1 <= x <= 10", Specs: ["x >= 1", "x <= 10"]
+    // Expect: Proven
+}
+
+#[test]
+fn prove_completeness_gap_exists() {
+    // D: "1 <= x <= 10", Specs: ["x >= 1 and x < 5"]
+    // Expect: Refuted (witness: x=7)
+}
+
+#[test]
+fn detect_underspecification_minimal() {
+    // A: 1 constraint, D: mentions 5 aspects
+    // Expect: High confidence underspecification
+}
+```
+
+### Integration Tests
+
+File: `spec-core/tests/integration_prover_uda.rs`
+
+End-to-end scenarios:
+1. Create Domain with constraints
+2. Create multiple AdmissibleSets covering domain
+3. Prove completeness
+4. Detect underspecification
+5. Prove implication between specs
+
+### Manual Testing
+
+```bash
+# Create domain with constraints
+spec domain create "User Auth" --constraint "username.length >= 3" \
+                                --constraint "password.length >= 8"
+
+# Prove completeness
+spec prover completeness domain-123
+
+# Detect underspecification
+spec prover underspec spec-456 domain-123
+
+# Prove implication
+spec prover implication spec-strict spec-loose
+```
+
+## Key Decisions & Rationale
+
+### Why Optional Domain.constraints?
+
+**Decision**: Make Domain.constraints optional (empty Vec by default)
+
+**Rationale**:
+- Many domains are defined informally (natural language only)
+- Forcing formalization would be impractical
+- Graceful degradation allows system to work at all maturity levels
+- Progressive enhancement: users can formalize domains as specs mature
+
+### Why Not Prove Underspecification?
+
+**Decision**: Underspecification detection is heuristic, not a formal proof
+
+**Rationale**:
+- 漏れA（未規定）は設計上の選択であり、エラーではない
+- "Too wide" is subjective - depends on intended design space
+- Cannot formally define "correct width" of admissible set
+- Heuristics provide useful guidance without false certainty
+
+### Why Defer TransformSoundness?
+
+**Decision**: Explicitly defer TransformSoundness to future work
+
+**Rationale**:
+- Requires formal semantics of transform functions
+- Current architecture uses opaque strategies (ASTAnalysis, NLPInference)
+- Would need major architectural changes (symbolic execution, program synthesis)
+- Not critical for core UDA-based proof mechanisms
+
+## Expected Outcomes
+
+### Phase 1 Deliverables
+
+- ✅ Domain.constraints field added
+- ✅ Implication proof implemented
+- ✅ Consistency-within-domain proof implemented
+- ✅ Graceful degradation when D not formalized
+
+### Phase 2 Deliverables
+
+- ✅ Completeness proof (detects 漏れB)
+- ✅ Underspecification heuristics (detects 漏れA)
+- ✅ CLI integration
+
+### Success Criteria
+
+**Technical Success**:
+1. Proofs correctly use U, D, A according to UDA/f theory
+2. Z3 formal verification works when constraints encodable
+3. Graceful degradation when formal constraints unavailable
+4. No regression in existing prove_consistency/prove_satisfiability
+
+**Theoretical Success**:
+1. 矛盾の証明 uses D and A (not just A)
+2. 漏れB検出 uses D (coverage gap detection)
+3. 漏れA検出 uses U heuristically (underspecification hints)
+4. Acknowledges fundamental limitations (Gödel, Rice's theorem)
+
+## Limitations Acknowledged
+
+### What We CAN Do
+- ✅ Formal proofs for satisfiability, consistency, implication
+- ✅ Coverage gap detection (when D formalized)
+- ✅ Heuristic underspecification analysis
+
+### What We CANNOT Do (Fundamental Limits)
+- ❌ Prove underspecification is "wrong" (it's a design choice)
+- ❌ Measure infinite set sizes (|A|, |D|, |U|)
+- ❌ Prove universal properties without bounded domains
+- ❌ Verify transform soundness without formal semantics
+
+### Graceful Degradation
+- D not formalized → Fall back to A-only proofs, note in proof steps
+- Z3 returns Unknown → Report uncertainty honestly
+- Constraints not encodable → Skip with warning, suggest manual review
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/ab/.claude/projects/-Users-ab-Projects-spec-oracle/10790b24-ee02-400b-ab70-826062d8b2e2.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.
+
+---
+
+全てのタスクを完了してください。続きをお願いします。
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+This conversation involves implementing a comprehensive two-phase refactoring plan for the specORACLE project. Let me analyze chronologically:
+
+**User Message 1**: Provided a detailed implementation plan in markdown format requesting completion of "UDA Model Minimization + Proof Mechanisms". The user said in Japanese: "全てのタスクを完了してください。続きをお願いします。" (Please complete all tasks. Please continue.)
+
+**My Implementation Approach**:
+- Created 11 tasks to track progress
+- Systematically worked through Phase A (minimization) then Phase B (proof mechanisms)
+- Fixed multiple compilation errors along the way
+- All tests passing at the end
+
+**Key Files Modified**:
+1. spec-core/src/udaf.rs - Core data structures
+2. spec-core/src/udaf/metadata.rs - Metadata system
+3. spec-core/src/prover/mod.rs - Prover implementation
+4. spec-core/src/prover/z3_backend.rs - Z3 backend
+5. spec-core/src/graph.rs - Constraint creation
+
+**Errors Encountered**:
+- Optional field access errors
+- Type mismatches
+- Test failures without z3
+- Borrow errors
+
+**Current State**: About to implement CLI integration (task 11), which was the last remaining task. I had just read the prover.rs CLI file when the summary was requested.
+
+**User Message 2**: Requested a detailed summary of the conversation.
+
+All technical details, code changes, and architectural decisions need to be captured comprehensively.
+
+Summary:
+1. Primary Request and Intent:
+   The user provided a comprehensive implementation plan for "UDA Model Minimization + Proof Mechanisms" and requested completion of all tasks in Japanese ("全てのタスクを完了してください。続きをお願いします。"). The plan consisted of two major phases:
+   
+   **Phase A: UDA Model Minimization** - Restructure Universe, Domain, AdmissibleSet, and Constraint into a 3-layer composition-based structure:
+   - Layer 1: Identifier (ID only)
+   - Layer 2: Proof Data (only fields needed for formal verification)
+   - Layer 3: Metadata (human-readable, organizational info)
+   
+   **Phase B: Implement Proof Mechanisms** - Add new proof methods that properly use U, D, A according to UDA/f theory:
+   - prove_implication(): A1 ⊆ A2
+   - prove_consistency_within_domain(): A1 ∩ A2 ∩ D ≠ ∅
+   - prove_completeness(): D ⊆ D_S (detects 漏れB - coverage gaps)
+   - detect_underspecification(): heuristic detection (detects 漏れA - underspecification)
+   
+   The migration strategy was to add new fields alongside old ones, populate both during transition, then gradually migrate consumers.
+
+2. Key Technical Concepts:
+   - UDA/f Model: Universe (U), Domain (D), Admissible Set (A), Transform Functions (f)
+   - 3-Layer Separation: Identifier, Proof Data, Metadata
+   - Graceful Degradation: Fall back to old fields when new fields not populated
+   - Dual Population: Populate both old and new fields during migration
+   - Z3 SMT Solver: Formal verification backend
+   - Proof Mechanisms: Implication, Consistency, Completeness, Underspecification
+   - 漏れA (Leak A - Underspecification): Design choice, heuristically detected
+   - 漏れB (Leak B - Coverage Gap): Formal proof detectable
+   - ProofStatus enum: Proven, Refuted, Unknown, Pending
+   - Constraint types: Universal, Existential, Implication, Equivalence
+
+3. Files and Code Sections:
+
+   **spec-core/src/udaf.rs** (Lines 36-1207)
+   - Primary file for UDA/f model implementation
+   - Modified Domain struct to add 3-layer separation:
+   ```rust
+   pub struct Domain {
+       pub id: DomainId,  // Layer 1
+       // OLD fields (deprecated, Optional for migration)
+       pub name: Option<String>,
+       pub description: Option<String>,
+       pub universe_id: Option<UniverseId>,
+       pub covered_by: Option<SpecSet>,
+       pub subdomains: Option<DomainSet>,
+       pub metadata: Option<DomainMetadata>,
+       // NEW fields (preferred)
+       pub proof_data: Option<DomainProofData>,  // Layer 2
+       pub meta: Option<DomainMetadata>,  // Layer 3
+   }
+   
+   pub struct DomainProofData {
+       pub constraints: Vec<Constraint>,  // NEW: for completeness proofs
+       pub covered_by: SpecSet,
+   }
+   ```
+   
+   - Modified AdmissibleSet similarly:
+   ```rust
+   pub struct AdmissibleSet {
+       pub spec_id: SpecId,  // Layer 1
+       // OLD fields (Optional)
+       pub universe_id: Option<UniverseId>,
+       pub constraints: Option<Vec<Constraint>>,
+       pub contradicts: Option<SpecSet>,
+       pub metadata: Option<Metadata>,
+       // NEW fields
+       pub proof_data: Option<AdmissibleSetProofData>,
+       pub meta: Option<AdmissibleSetMetadata>,
+   }
+   
+   pub struct AdmissibleSetProofData {
+       pub constraints: Vec<Constraint>,
+       pub contradicts: SpecSet,
+   }
+   ```
+   
+   - Modified Constraint struct:
+   ```rust
+   pub struct Constraint {
+       // Layer 2: Proof Data
+       pub formal: Option<String>,
+       pub kind: ConstraintKind,
+       // OLD fields (Optional)
+       pub description: Option<String>,
+       pub metadata: Option<ConstraintMetadata>,
+       // NEW field
+       pub meta: Option<ConstraintMetadata>,
+   }
+   ```
+   
+   - Updated all 8 constraint extraction patterns in extract_constraints_from_text() (lines 747-885) to populate both old and new fields
+   - Updated populate_from_graph() to use new structure
+
+   **spec-core/src/udaf/metadata.rs** (Lines 236-277)
+   - Extended DomainMetadata with get_str() method:
+   ```rust
+   pub fn get_str(&self, key: &str) -> Option<&String> {
+       self.inner.get(key)
+   }
+   ```
+
+   **spec-core/src/graph.rs** (Lines 900-985)
+   - Updated constraint creation in extract_constraints_from_content()
+   - Fixed metadata access to handle Optional fields:
+   ```rust
+   .filter_map(|c| c.metadata.as_ref()?.get_str("variable").map(|s| s.to_string()))
+   ```
+
+   **spec-core/src/prover/mod.rs** (Lines 136-1050+)
+   - Added prove_implication() method:
+   ```rust
+   pub fn prove_implication(
+       &mut self,
+       antecedent: &crate::udaf::AdmissibleSet,
+       consequent: &crate::udaf::AdmissibleSet,
+   ) -> Proof {
+       // Formula: UNSAT(A1 ∧ ¬A2)
+       let (status, steps) = self.z3_backend.check_implication(
+           constraints_a,
+           constraints_b,
+       );
+       // ...
+   }
+   ```
+   
+   - Added prove_consistency_within_domain():
+   ```rust
+   pub fn prove_consistency_within_domain(
+       &mut self,
+       spec_a: &crate::udaf::AdmissibleSet,
+       spec_b: &crate::udaf::AdmissibleSet,
+       domain: &crate::udaf::Domain,
+   ) -> Proof {
+       // Graceful degradation if domain not formalized
+       if !domain_is_formalized {
+           let mut proof = self.prove_consistency(spec_a, spec_b);
+           proof.steps.push(ProofStep {
+               description: "Note: Domain has no formal constraints...".to_string(),
+               ...
+           });
+           return proof;
+       }
+       // Formula: SAT(A1 ∧ A2 ∧ D)
+   }
+   ```
+   
+   - Added prove_completeness():
+   ```rust
+   pub fn prove_completeness(
+       &mut self,
+       domain: &crate::udaf::Domain,
+       covering_specs: &[&crate::udaf::AdmissibleSet],
+   ) -> Proof {
+       // Formula: UNSAT(D ∧ ¬A1 ∧ ¬A2 ∧ ... ∧ ¬An)
+   }
+   ```
+   
+   - Added detect_underspecification():
+   ```rust
+   pub fn detect_underspecification(
+       &self,
+       spec: &crate::udaf::AdmissibleSet,
+       domain: &crate::udaf::Domain,
+       _universe: &crate::udaf::Universe,
+   ) -> UnderspecificationReport {
+       // 4 heuristics: constraint count, free variables, keyword matching, constraint tightness
+   }
+   ```
+   
+   - Added UnderspecificationReport struct:
+   ```rust
+   pub struct UnderspecificationReport {
+       pub spec_id: String,
+       pub domain_id: String,
+       pub is_likely_underspecified: bool,
+       pub confidence: f32,
+       pub reasons: Vec<String>,
+       pub suggestions: Vec<String>,
+   }
+   ```
+   
+   - Updated prove_consistency() and prove_satisfiability() to handle Optional fields:
+   ```rust
+   let constraints_a = if let Some(proof_data) = &spec_a.proof_data {
+       &proof_data.constraints
+   } else if let Some(constraints) = &spec_a.constraints {
+       constraints
+   } else {
+       &vec![]
+   };
+   ```
+   
+   - Added get_constraint_description() helper:
+   ```rust
+   fn get_constraint_description<'a>(&self, constraint: &'a crate::udaf::Constraint) -> &'a str {
+       if let Some(meta) = &constraint.meta {
+           if let Some(desc) = meta.get_str("description") {
+               return desc;
+           }
+       }
+       if let Some(desc) = &constraint.description {
+           return desc;
+       }
+       ""
+   }
+   ```
+   
+   - Updated all test cases to use new structure and made them conditional on z3-solver feature
+
+   **spec-core/src/prover/z3_backend.rs** (Lines 1-803+)
+   - Added check_implication() and check_implication_z3():
+   ```rust
+   fn check_implication_z3(
+       &self,
+       constraints_antecedent: &[Constraint],
+       constraints_consequent: &[Constraint],
+   ) -> (ProofStatus, Vec<ProofStep>) {
+       // Encode antecedent (A1)
+       // Encode ¬A2 (negation of consequent)
+       for constraint in constraints_consequent {
+           if let Some(assertion) = self.encode_constraint(desc, &mut var_map) {
+               solver.assert(&assertion.not());  // Negate
+               encoded_not_a2 += 1;
+           }
+       }
+       // If UNSAT, then A1 ⊆ A2
+   }
+   ```
+   
+   - Added check_consistency_within_domain_z3():
+   ```rust
+   fn check_consistency_within_domain_z3(
+       &self,
+       constraints_a: &[Constraint],
+       constraints_b: &[Constraint],
+       domain_constraints: &[Constraint],
+   ) -> (ProofStatus, Vec<ProofStep>) {
+       // Encode A1, A2, and D constraints
+       // If SAT, then A ∩ B ∩ D ≠ ∅
+   }
+   ```
+   
+   - Added check_completeness_z3():
+   ```rust
+   fn check_completeness_z3(
+       &self,
+       domain_constraints: &[Constraint],
+       spec_constraints: &[&[Constraint]],
+   ) -> (ProofStatus, Vec<ProofStep>) {
+       // Encode ¬(A1 ∨ A2 ∨ ... ∨ An) = ¬A1 ∧ ¬A2 ∧ ... ∧ ¬An
+       for constraints in spec_constraints {
+           let spec_and = Bool::and(&self.context, &refs);
+           solver.assert(&spec_and.not());
+       }
+       // If UNSAT, then D ⊆ D_S (complete)
+   }
+   ```
+   
+   - Updated constraint encoding to use new structure:
+   ```rust
+   let desc = if let Some(meta) = &constraint.meta {
+       meta.get_str("description").map(|s| s.as_str())
+   } else {
+       constraint.description.as_deref()
+   }.unwrap_or("");
+   ```
+   
+   - Updated all test cases
+
+   **spec-cli/src/commands/prover.rs** (Lines 1-391)
+   - Read to understand existing CLI structure (last action before summary)
+   - Contains execute_prove_consistency_standalone() and execute_prove_satisfiability_standalone()
+   - Ready for addition of new CLI commands for new proof types
+
+4. Errors and Fixes:
+   
+   **Error 1: Optional metadata access in graph.rs**
+   - Error: `no method named 'get_str' found for enum 'Option<ConstraintMetadata>'`
+   - Location: Line 1040 in graph.rs
+   - Fix: Changed `c.metadata.get_str("variable")` to `c.metadata.as_ref()?.get_str("variable")`
+   
+   **Error 2: Domain validation with Optional fields**
+   - Error: `no method named 'as_str' found for enum 'Option<UniverseId>'`
+   - Location: Lines 1413-1417 in udaf.rs
+   - Fix: Added proper Option handling:
+   ```rust
+   let universe_id_str = if let Some(meta) = &domain.meta {
+       meta.get_str("universe_id").map(|s| s.as_str())
+   } else {
+       domain.universe_id.as_ref().map(|id| id.as_str())
+   };
+   ```
+   
+   **Error 3: Missing get_str() in DomainMetadata**
+   - Error: `no method named 'get_str' found for reference '&DomainMetadata'`
+   - Fix: Added get_str() method to DomainMetadata in metadata.rs
+   
+   **Error 4: Test failures without z3-solver feature**
+   - Error: Tests expected Proven/Refuted but got Unknown when z3 disabled
+   - Tests: prove_satisfiability_empty_constraints, prove_satisfiability_conflicting_constraints, prove_consistency_conflicting_specs
+   - Fix: Made test assertions conditional:
+   ```rust
+   #[cfg(feature = "z3-solver")]
+   {
+       assert_eq!(proof.status, ProofStatus::Proven);
+   }
+   #[cfg(not(feature = "z3-solver"))]
+   {
+       assert_eq!(proof.status, ProofStatus::Unknown);
+   }
+   ```
+   
+   **Error 5: Type mismatch in prove_completeness**
+   - Error: `expected '&[&[Constraint]]', found '&Vec<&Vec<Constraint>>'`
+   - Location: Line 461 in prover/mod.rs
+   - Fix: Changed type annotation:
+   ```rust
+   let mut all_spec_constraints: Vec<&[crate::udaf::Constraint]> = Vec::new();
+   ```
+   
+   **Error 6: Borrow error in detect_underspecification**
+   - Error: `the trait 'Borrow<&String>' is not implemented for 'String'`
+   - Location: Line 900 in prover/mod.rs
+   - Fix: Dereferenced the string: `.filter(|v| !spec_vars.contains(*v))`
+
+5. Problem Solving:
+   - **Problem**: How to maintain backward compatibility during migration
+   - **Solution**: Dual population strategy - populate both old (Optional) and new fields, with methods like add_constraint() updating both
+   
+   - **Problem**: Prover accessing metadata it shouldn't
+   - **Solution**: Extract proof data through helper methods that try new structure first, fall back to old
+   
+   - **Problem**: Domain not always formalized
+   - **Solution**: Graceful degradation - check if domain.proof_data.constraints is empty, fall back to A-only proofs with note
+   
+   - **Problem**: Tests failing without z3
+   - **Solution**: Conditional test assertions based on feature flags
+   
+   - **Problem**: How to encode completeness (D ⊆ D_S)
+   - **Solution**: Formula UNSAT(D ∧ ¬A1 ∧ ¬A2 ∧ ... ∧ ¬An), which requires negating each spec as a whole using Bool::and().not()
+   
+   - **Problem**: Underspecification is not provably wrong
+   - **Solution**: Heuristic-based detection with confidence scores, not formal proof
+
+6. All User Messages:
+   - Message 1: "Implement the following plan: [detailed implementation plan for UDA Model Minimization + Proof Mechanisms]"
+   - Message 2 (in Japanese): "全てのタスクを完了してください。続きをお願いします。" (Please complete all tasks. Please continue.)
+   - Message 3: "Your task is to create a detailed summary of the conversation so far..." [summary request]
+
+7. Pending Tasks:
+   - Task #5: Update CLI commands to use new structure (essentially same as Task #11)
+   - Task #11: Add CLI integration for new proofs (in progress)
+     - Subcommands to add:
+       - `prover implication <spec_a> <spec_b>`
+       - `prover consistency-domain <spec_a> <spec_b> <domain>`
+       - `prover completeness <domain>`
+       - `prover underspec <spec> <domain>`
+
+8. Current Work:
+   Immediately before the summary request, I was working on Task #11: CLI Integration for new proof mechanisms. I had just completed Task #10 (detect_underspecification implementation) and marked it as completed. I then:
+   
+   - Marked Task #11 as in_progress
+   - Used Glob to find spec-cli files
+   - Read spec-cli/src/commands/prover.rs (full 391 lines) to understand existing CLI structure
+   
+   The file showed two existing commands:
+   - execute_prove_consistency_standalone() - calls prover.prove_consistency()
+   - execute_prove_satisfiability_standalone() - calls prover.prove_satisfiability()
+   - execute_inspect_model_standalone() - inspects UDAFModel structure
+   
+   These commands follow a pattern of:
+   1. Load graph from store
+   2. Populate UDAFModel from graph
+   3. Get admissible sets
+   4. Call prover method
+   5. Display proof steps and results with formatted output
+   
+   The next step would be to add similar functions for the four new proof types following this same pattern.
+
+9. Optional Next Step:
+   Add CLI commands for the new proof mechanisms by creating four new functions in spec-cli/src/commands/prover.rs:
+   
+   1. `execute_prove_implication_standalone(store, antecedent, consequent)` - following the pattern from execute_prove_consistency_standalone()
+   2. `execute_prove_consistency_domain_standalone(store, spec_a, spec_b, domain)` - similar pattern but also loading domain
+   3. `execute_prove_completeness_standalone(store, domain, spec_ids)` - loading domain and multiple specs
+   4. `execute_detect_underspec_standalone(store, spec, domain)` - calling detect_underspecification() and displaying UnderspecificationReport
+   
+   This directly continues the work from the immediate context where I had just read prover.rs and was about to implement the CLI integration (Task #11), which was explicitly requested in the implementation plan under "Phase B.5: Add CLI integration for new proofs".
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/ab/.claude/projects/-Users-ab-Projects-spec-oracle/07efa27c-1bf6-4dbc-8073-31814c6d60f8.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
+
+---
+
+ありがとうございます。次に構造のリファクタリングをしましょう。これはspecORACLEのcoreにおけるformalレイヤーですなので、spec-core/src/formal/を作成しその配下に配置してください。また単一のファイルの収めすぎです。Rustのプラクティスに従って適切に配置を行なってください。
+
+---
+
+[Request interrupted by user for tool use]

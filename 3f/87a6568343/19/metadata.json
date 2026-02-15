@@ -1,0 +1,47 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "3f87a6568343",
+  "session_id": "07efa27c-1bf6-4dbc-8073-31814c6d60f8",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-15T07:04:43.060264Z",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "paper/case-study/real_projects/logs/regex_drift_lock.json",
+    "paper/case-study/real_projects/logs/regex_drift_snapshot.txt",
+    "paper/reviews/reviewer1_round18.md",
+    "paper/reviews/reviewer1_round19.md",
+    "paper/reviews/reviewer1_round20.md",
+    "paper/reviews/reviewer2_round18.md",
+    "paper/reviews/reviewer2_round19.md",
+    "paper/reviews/reviewer2_round20.md",
+    "paper/reviews/reviewer3_round18.md",
+    "paper/reviews/reviewer3_round19.md",
+    "paper/reviews/reviewer3_round20.md",
+    "paper/reviews/round18_summary.md",
+    "spec-cli/src/commands/prover.rs",
+    "spec-core/src/graph.rs",
+    "spec-core/src/prover/mod.rs",
+    "spec-core/src/prover/z3_backend.rs",
+    "spec-core/src/udaf.rs",
+    "spec-core/src/udaf/metadata.rs"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 1042,
+    "cache_creation_tokens": 252886,
+    "cache_read_tokens": 14966890,
+    "output_tokens": 39133,
+    "api_call_count": 129
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-15T07:04:41.42725Z",
+    "agent_lines": 0,
+    "human_added": 0,
+    "human_modified": 2075,
+    "human_removed": 3434,
+    "total_committed": 1693,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/07efa27c-1bf6-4dbc-8073-31814c6d60f8.jsonl"
+}
