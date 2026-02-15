@@ -1,4 +1,4 @@
-# UAD/fにおける根仕様統制の二演算意味論: `U0`(join) と `U∧`(meet) の形式化
+# UAD/fにおける根被覆基準の構成的統制: 射影逆像に基づく `U0`/`U∧` 二演算カーネル
 
 ## 0. 問題設定と研究目的
 ### 0.1 問題設定
@@ -13,8 +13,9 @@
 
 すなわち問題は、多様な保証手法を横断して統制するための共通基準が欠けることである。
 
-本稿の立場は、**根仕様（root の完全仕様）を人間が網羅的・無矛盾に直接記述することは現実的でない**、という点にある。  
-したがって根 `U` は「先に与える対象」ではなく、層と root を結ぶ部分射影 `f_{0i}`（`proj_i`）から逆像で**構成する対象**として扱う。
+本稿の立場は、**理想的な根仕様 `U*`（root の完全仕様）を人間が網羅的・無矛盾に直接記述することは現実的でない**、という点にある。  
+したがって `U*` そのものを先に与えるのでなく、層と root を結ぶ部分射影 `f_{0i}`（`proj_i`）から逆像で**根被覆基準 `U0`**を構成する。  
+ここでの主価値は「矛盾検出」それ自体ではなく、**層横断統制の共通基準を root 側に構成すること**である（矛盾検出はその副産物）。
 
 導入例（同一意図の層別表現）:
 - アプリ層: 「データAを取得する」
@@ -29,8 +30,8 @@
 
 1. 多層仕様統制の最小核として `U,D,A,f` を型付きで定義し、root を「記述」ではなく「射影逆像で構成」する形式を与える。
 2. 運用上の2用途を分離する。  
-   - 変更影響や被覆合成（over-approximation）のための join 演算（`U0`）  
-   - 同時満足・矛盾判定のための meet 演算（`U∧`）
+   - **root 被覆仕様**としての join 演算（`U0`）  
+   - 同時満足・矛盾判定のための補助演算としての meet（`U∧`）
 3. Lean4で中核定理を機械検証し、実アーティファクト抽出パイプラインの再実行可能性を示す。
 
 ### 0.3 貢献範囲
@@ -49,7 +50,16 @@
 - `RQ5 (theory)`: 抽象抽出関係 `E : Ω → β_i → Prop` に対し、抽出適合を `↔` だけでなく one-sided（sound / complete）にも分解できるか。
 - `RQ6 (practice)`: 実OSSアーティファクト抽出パイプラインの**技術的再実行可能性**を確保できるか。
 
-### 1.1 評価軸
+### 1.1 主要RQ
+本稿の中心主張に直接対応する主要RQは次の3つである。
+
+1. `RQ3`: `U0`（join）と `U∧`（meet）を同一モデル上で分離定義できるか。
+2. `RQ4`: 層間伝播/合成の成立条件を仮定込みで機械検証できるか。
+3. `RQ5`: 抽出適合を one-sided（sound / complete）へ分解して運用判断へ接続できるか。
+
+`RQ1`/`RQ2` はモデル基盤（型付き定義と `A(i) ⊆ D(i)`）を固定する補助RQ、`RQ6` は PoC 実行可能性確認である。
+
+### 1.2 評価軸
 | 軸 | 内容 | 指標 |
 |---|---|---|
 | 定義妥当性 | 型整合・記法整合 | §2, §3 と `paper/lean/UadfU0/Definitions/Model.lean` |
@@ -66,10 +76,10 @@
 | `I` | `ι` | 層インデックス |
 | `β_i` | `M.carrier i : Type w` | 層 `i` の搬送型（`carrier : ι → Type w` の `i` への適用結果） |
 | `D_i` | `D i : SpecSet (carrier i)` | 層 `i` の対象領域 |
-| `A_i` | `Ui i : SpecSet (carrier i)` | 層 `i` の許容集合 |
+| `A_i` | `A i : SpecSet (carrier i)` | 層 `i` の許容集合 |
 | `f_{0i}` | `proj i : Ω → Option β_i` | 部分射影 |
 
-本文では数学記法 `A(i)` を用い、Lean実装名 `Ui i` に対応づける。
+本文では数学記法 `A(i)` を用い、Lean実装名 `A i` に対応づける。
 
 `D(i)` を分離する理由:
 - `carrier i` は型レベルの対象空間全体を表し、`D(i)` はその上の対象領域述語（値レベル制約）を表す。
@@ -104,7 +114,7 @@ def preimage (M : Model ι α) (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α
 ### 2.4 Lean 記述抜粋（定義と定理）
 ```lean
 def lifted (M : Model ι α) (i : ι) : SpecSet α :=
-  M.preimage i (M.Ui i)
+  M.preimage i (M.A i)
 
 def U0 (M : Model ι α) : SpecSet α :=
   fun x : α => ∃ i : ι, x ∈ M.lifted i
@@ -117,17 +127,30 @@ theorem UAndOn_antitone {J K : ι → Prop}
     M.UAndOn K ⊆ M.UAndOn J
 ```
 
-### 2.5 `Ω`（root空間）の実務的解釈
+### 2.5 `Ω`（root空間）の実体化テンプレート
 `Ω` は「誰かが完全列挙した実体集合」ではなく、層横断比較のための意味領域（挙動宇宙）として置く。  
-実務上は次の近似で扱える。
+ただし本稿では工学的実体を曖昧にしないため、次の2つの具体インスタンスを明示する。
 
-1. テストやシミュレーションで生成可能な挙動集合
-2. ログ/トレースとして観測される挙動集合
-3. IR制約から構成される候補挙動集合
+1. `Ω_trace = Trace`（アプリイベント列・HTTPメッセージ列・TCPイベント列を持つ構造体）
+2. `Ω_art = Γ_req × Γ_api × Γ_code`（同一時点で取得したartifact束。PoCで採用）
+3. `β_i` は各層IR型で、`proj_i : Ω → Option β_i`
+4. `proj_i(x)=none` は「その `x` から当該層観測を確定できない」を意味する
 
-本稿が必要とするのは `Ω` の全列挙ではなく、`x ∈ lifted(i)` の membership 判定を定義できることである。
+すなわち本稿が要求するのは `Ω` の全列挙ではなく、`x ∈ lifted(i)` の membership 判定手続きを実装可能にすることである。
 
-### 2.6 NL入口と中間表現（IR）
+### 2.6 `proj` と抽出器（artifact空間 `Γ`）の分離
+査読での主要質問（`Ω` と `proj` を誰がどう定義するか）に対し、本稿は次の分離を採る。
+
+1. artifact 空間 `Γ_i`（要求文書・API文書・コード断片など）
+2. 抽出器 `extract_i : Γ_i → Option β_i`（NL/文書/コードから層IRを抽出）
+3. root 観測 `obs_i : Ω → Option Γ_i`（root 挙動に対応する層artifact断片を取得）
+4. 合成により `proj_i(x) := Option.bind (obs_i x) extract_i`
+
+これにより「artifact→IR 抽出」と「root→layer 射影」を混同せず扱える。  
+また §4.2 の合成定理（`preimage_compose`）はこの分解に直接適用できる。
+具体化例は `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean` に実装している。
+
+### 2.7 NL入口と中間表現（IR）
 実務では自由記述自然言語（NL）を入口から排除できない。  
 本稿は NL を禁止せず、次の分離で扱う。
 
@@ -137,9 +160,27 @@ theorem UAndOn_antitone {J K : ι → Prop}
 4. IR項目には原文スパン（引用位置）を保持し、抽出結果の追跡性を確保する。
 5. 抽出器の正当性は `RQ5 (theory)` の one-sided adequacy（sound / complete）で管理する。
 
+IR最小スキーマ（例）:
+- `actor : String`
+- `operation : String`
+- `bound : {lower : Int?, upper : Int?, inclusiveLower : Bool, inclusiveUpper : Bool}`
+- `unit : String?`
+- `condition : String?`
+- `exception : String?`
+- `evidence_span : {source : URL, span_id : String}`
+
+対応例（要求文）:
+- NL: "`identifier length must be at most 63 bytes`"
+- IR: `operation=identifier_length`, `bound.upper=63`, `inclusiveUpper=true`, `unit=bytes`
+- `evidence_span.span_id`: `req-12:line3-18`
+
 したがって、本稿モデルは「NLを直接形式意味に同一視する」のでなく、「NL入口を許容しつつ、IR層で機械検証に接続する」立場である。
+なお、§6 の実装PoCは意味解析器ではなく **pattern-based regex 抽出**であり、一般NL理解を主張しない。
 
 ## 3. `U0` と `U∧` の役割分離
+本稿では `U0` を root 側の被覆仕様（join）として定義し、`U∧` は整合性診断のための別演算（meet）として扱う。  
+両者は一般には一致せず、目的も異なる。
+
 ### 3.1 join側（被覆合成）
 \[
 lifted(i) := f^{-1}_{0i}(A(i)),\quad
@@ -152,7 +193,8 @@ U0 := \bigcup_{i\in I} lifted(i)
 運用ミニシナリオ（変更波及の説明）:
 1. 新規層 `k` を追加したとき、`U0` は被覆集合として追跡対象を保ちやすい。
 2. 同時に `U∧` が空になれば、「新規層の制約追加で既存層との同時満足が崩れた」と診断できる。
-3. このとき `U0` と `U∧` の差分は「被覆は維持されるが同時満足が壊れた」ことを示し、調停対象層の局所化に使える。
+3. このとき `U0` と `U∧` の差分は「被覆は維持されるが同時満足が壊れた」ことを示す。  
+   ただし原因層の最小化（MUS/unsat core 抽出）は本稿の証明範囲外であり、§3.4で診断問題として定義のみ与える。
 
 ### 3.2 meet側（同時満足統合）
 有効層集合 `active : I → Prop` に対し
@@ -179,6 +221,54 @@ Contradictory(i,j) :\Leftrightarrow \forall x,\ x\in lifted(i)\to x\in lifted(j)
 - `UAndOn_empty_eq_univ`: `active=∅` では vacuous truth により `U∧=Ω` となるため、運用上は `∃i, active i` を要求する。
 
 これにより、`U0`（OR）と整合性判定（AND）を別演算として明示し、意味論的混線を解消する。
+本稿の既定意味論は must（`none` は除外）であり、may 変種は感度分析として §4.7 に分離して扱う。
+
+### 3.4 診断問題の定義（本稿は定義まで）
+`active : I → Prop` に対して
+\[
+Inconsistent(active) :\Leftrightarrow \forall x,\ x \in U^\wedge_{active} \to False
+\]
+と定義する。
+
+さらに、`active' ⊊ active` を
+\[
+active' \subsetneq active :\Leftrightarrow
+\left(\forall i,\ active'(i)\to active(i)\right)\ \land\
+\left(\exists j,\ active(j)\land \neg active'(j)\right)
+\]
+で定義し、
+\[
+MUS(active) :\Leftrightarrow Inconsistent(active)\ \land\
+\forall active',\ active' \subsetneq active \to \neg Inconsistent(active')
+\]
+を最小不整合集合（MUS）とする。
+
+本稿は `U0`/`U∧` とその性質を機械検証する基礎段階であり、MUS抽出アルゴリズムの正当性証明は今後課題とする。
+
+### 3.5 理想根 `U*` との関係（仮定付き）
+`U0` を「理想根 `U*` そのもの」と同一視しないため、本稿では次の関係を明示する。  
+`U* : SpecSet Ω` を意図上の理想根仕様とし、active 層に対して
+\[
+\forall i,\ active(i)\to U^* \subseteq lifted(i)
+\]
+（各層仕様が `U*` の必要条件を与える）を仮定する。
+
+このとき
+\[
+U^* \subseteq U^\wedge_{active}
+\]
+が成り立つ。さらに active 非空なら
+\[
+U^* \subseteq U^\wedge_{active} \subseteq U0_{active}
+\]
+である。
+
+Lean（`paper/lean/UadfU0/U0Spec/IdealRoot.lean`）:
+- `UStar_subset_UAndOn`
+- `UStar_subset_U0On_of_nonempty_active`
+- `UStar_subset_UAnd`
+
+この意味で `U0` は理想根の同値定義ではなく、理想根を外から包む root coverage baseline（被覆基準）として位置づける。
 
 ## 4. 中核定理（主結果）
 本稿の主結果は「定義展開で終わる補題」より、以下の仮定明示型定理を中心に置く。
@@ -247,17 +337,52 @@ Lean: `no_left_adjoint_of_partial` in `paper/lean/UadfU0/RelatedWork/Galois.lean
 - `contradictory_iff_not_consistent`（双対）
 
 ### 4.7 `proj_i(x)=none` の解釈（must / may）
-本稿の `preimage` は
+本稿の既定（must）は
 \[
 x\in f^{-1}_{0i}(S) \iff \exists y,\ proj_i(x)=some(y)\land y\in S
 \]
 であり、`none` は membership 不成立として扱う（must 寄り）。
 
-運用上は別解釈もあり得る。
-- must解釈: `none` は観測不能/適用外として除外する（本稿の既定）。
-- may解釈: `none` は判断保留として、矛盾断定の根拠に使わない。
+may解釈では
+\[
+x\in f^{-1,may}_{0i}(S)
+\iff
+proj_i(x)=none\ \lor\ \exists y,\ proj_i(x)=some(y)\land y\in S
+\]
+を採る。
 
-どちらを採るかで `U∧` の空判定挙動が変わるため、適用時には偽陽性/偽陰性の優先方針と合わせて宣言する必要がある。
+Lean（`paper/lean/UadfU0/U0Spec/Construction.lean`）:
+```lean
+def preimageMay (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => M.proj i x = none ∨ ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+
+theorem UAndOn_subset_UAndMayOn {active : ι → Prop} :
+    M.UAndOn active ⊆ M.UAndMayOn active
+
+theorem UAndMayOn_empty_implies_UAndOn_empty {active : ι → Prop}
+    (hEmptyMay : ∀ x : α, x ∈ M.UAndMayOn active → False) :
+    ∀ x : α, x ∈ M.UAndOn active → False
+```
+
+解釈上の含意:
+- must解釈: `none` は観測不能/適用外として除外する（判定は厳しくなる）。
+- may解釈: `none` は判断保留として許容側に倒す（判定は緩くなる）。
+- `UAndOn ⊆ UAndMayOn` より、must空判定は may より矛盾を出しやすい。  
+  逆に `UAndMayOn_empty_implies_UAndOn_empty` により、mayで矛盾なら mustでも矛盾である。
+
+偽陽性/偽陰性の基準:
+- 基準集合は `semanticPullback(E)`（§4.3）で与える。
+- 抽出器結果（`preimage` または `preimageMay`）を、この基準集合に対して評価する。
+
+運用上の方向づけ（固定基準 `semanticPullback(E)` に対して）:
+| 抽出仮定 | `none` 方針 | 主に増えるリスク |
+|---|---|---|
+| sound-only (`preimage ⊆ semanticPullback`) | must | 偽陰性（見逃し） |
+| sound-only (`preimage ⊆ semanticPullback`) | may | 偽陰性は緩和されるが、`none` 多発時は整合側へ偏る |
+| complete-only (`semanticPullback ⊆ preimage`) | must | 偽陽性（過検出）を抑えやすいが、観測不能に敏感 |
+| complete-only (`semanticPullback ⊆ preimage`) | may | 偽陽性（過検出）方向へ寄りやすい |
+
+したがって運用時は、(i) 基準集合、(ii) 抽出仮定（sound/complete）、(iii) `none` 方針（must/may）をセットで宣言する必要がある。
 
 ## 5. 形式化エンジニアリング上の設計判断
 本稿の主たる貢献は、UAD/f 最小コアの参照 mechanization を通じて、必要仮定を明示化した点にある。
@@ -288,26 +413,56 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
 
 このケースで主張するのは「閉形式判定式と存在証人判定の同値」であり、一般産業有効性ではない。
 
+### 6.1.1 `Ω=ArtifactBundle` の mechanization 例
+§2.6 の `obs/extract/proj=bind` 分解を、Lean で最小具体化した。
+
+- 実装: `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean`
+- `Ω_art = ArtifactBundle`（`reqDoc/apiDoc/codeDoc` の束）
+- `obs_i`: 束から層artifactを取り出す射影
+- `extract_i`: artifact から層IRへ（区間妥当性を検査し `Option` で返す）
+- `proj_i = Option.bind (obs_i) (extract_i)` を定義し `proj_bind_decomposition` で確認
+- `goodBundle ∈ U0` と `goodBundle ∈ UAnd` を証明
+- `brokenReqBundle` で `lifted` 非所属かつ `liftedMay` 所属を示し、must/may 差を具体化
+
 ### 6.2 実OSS抽出パイプラインデモ（PostgreSQL / zlib / SQLite）
 `paper/case-study/real_projects/external_validation.py` は以下を自動実行する。
 
 **重要（RQ5/RQ6境界）**: 本節は `RQ6 (practice)`（技術的再実行可能性）を対象とする。  
 `RQ5 (theory)` の adequacy（§4.3）で使う抽象関係 `E` について、regex抽出器が意味保存性を満たすことは本節で証明していない。
 
+PoCにおけるモデル接続（§2.6の具体化）:
+- `Ω_art := Γ_req × Γ_api × Γ_code`（同一時点で取得した3層artifact束）
+- `obs_i` は `Ω_art` からの成分射影
+- `extract_i` は現行regex抽出器
+- `proj_i = Option.bind obs_i extract_i`
+
+本節のスクリプトは、主として `extract_i` の実行可能性を検証する。`obs_i` は source-lock された3層artifact束の対応づけとして実装的に固定される。
+
 1. 公式ドキュメント/公式ソースを取得
 2. 正規表現で境界値を抽出
-3. `requirement / api / code` の3層制約を構成
+3. `Ω_art` の各成分に対応づけて `requirement / api / code` の3層制約を構成
 4. 交差判定で整合性評価
 5. 変異試験（`requirement.lower = upper + 1`）で矛盾検出感度を確認
 
 **重要**: 本節の `n=3` は技術的実行可能性デモであり、矛盾発生率の推定や母集団代表性の主張を意図しない。  
 選定は「3層公開・数値境界制約・URL固定取得可能」という実行要件に基づく convenience sample である。
 
-デモ実行結果（2026-02-14）:
+デモ実行結果（2026-02-15）:
 - `n_real_projects = 3`
 - `n_real_consistent = 3`
 - `n_real_contradictory = 0`
 - `mutation_detected = 3 / 3`
+
+変異検出ログ（実行出力）:
+- `paper/case-study/real_projects/logs/external_validation_offline.log`
+- スクリプト内部では `check_consistent` が `lower <= upper` を判定し、変異は `requirement.lower = upper + 1` を注入する（`external_validation.py` の `run` 関数）。
+- 実際の変異結果は `external_validation_results.json` に次として記録される。
+
+| Project | mutated_intersection_lower | mutated_intersection_upper | detected_contradictory |
+|---|---:|---:|---|
+| PostgreSQL identifier length | 64 | 63 | true |
+| zlib compression level | 10 | 9 | true |
+| SQLite page size | 65537 | 65536 | true |
 
 交差区間:
 | Project | lower | upper | 判定 |
@@ -324,12 +479,14 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
 
 入力マッピング上の仮定:
 - 各プロジェクトで抽出した `lower/upper` は、運用上の入力候補として区間制約に整形する。
+- `D(i)` は「数値・単位・包含性が解釈可能な区間値」という対象領域として置き、`A(i)` はその中での許容区間に限定する（`A(i) ⊆ D(i)` の実務対応）。
 - 交差判定 `max(lower_i) ≤ min(upper_i)` は、3層区間制約の整合判定実装である。
 - ただし本稿は regex 抽出そのものの soundness/completeness を証明していない。  
   したがって「抽出結果が `A(i)` を正しく表す」ことは未検証であり、定理4.3を本デモへ直接適用したとは主張しない。
 - 明示的に言えば、regex 抽出層は本稿で証明対象ではなく、機械検証済みモデルの前段入力生成層として扱う。
 
 ### 6.3 何が分かったか（結果と解釈の分離）
+- スコープ明示: 本PoCが検証するのは「regex抽出 + 区間整合判定」の技術的実行可能性であり、`U0→U1→U2→U3` 全体統制の実証ではない。
 - 結果: 3件とも整合、変異3件は全検出。
 - 解釈: 本節が示すのは「既存仕様の不具合発見率」ではなく、**実アーティファクト抽出からJSON出力・交差判定までを source-lock 付きで再実行できること**。
 - ただし抽出器自体（regex層）の正当性保証は本稿の範囲外であり、抽出 soundness/completeness は仮定として扱う。
@@ -338,17 +495,33 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
 - 限界: 対象は数値境界制約に限定。構造制約・時間制約は未評価。
 - 運用ポリシーの目安: 偽陽性抑制を優先する場合は soundness 側、偽陰性抑制を優先する場合は completeness 側を重視して抽出器要件を定める。
 
-### 6.4 負例（抽出揺れ）: 単位解釈ミス
-本稿の数値境界系でも、抽出揺れの負例は作れる。  
-例として SQLite page size で、`65536 bytes` を誤って `64 bytes` と解釈すると、要求層区間が `[512, 64]` となり空区間になる。  
-このとき `U∧` 判定は空となり contradiction が発生する。
+### 6.4 負例（抽出揺れ）: 正規表現ドリフト
+本負例は、`external_validation.py` が実際に依存している抽出規則の脆弱性をそのまま使う。  
+SQLite 抽出では次の固定パターンを使っている。
 
-注記: 本負例は「抽出器リスクの構成的デモ」であり、実運用ログからの統計的実測値ではない。
+- `between ([0-9]+) and 65536 inclusive`
+- `between [0-9]+ and ([0-9]+) inclusive`
+
+したがって、文書更新で "inclusive" が削除されて
+`between 512 and 65536 bytes` のような表現に変わると、`parse_first_int` が `ValueError` を送出しパイプラインは停止する（fail-fast）。
+再現ログは `paper/case-study/real_projects/logs/regex_drift_failure.log` に保存した。
 
 この負例が示す点:
-1. 抽出器の単位解釈ミスは、層間矛盾を人工的に発生させ得る。
-2. したがって `RQ5 (theory)` の one-sided adequacy（sound / complete）管理は、実抽出器に対しても運用上不可欠である。
-3. 本稿の実デモは技術的再実行可能性（RQ6）に焦点を置くため、この種の抽出意味保存評価は今後課題として分離する。
+1. 負例は「実装済み抽出器が起こしうる失敗形」であり、構成的な架空例ではない。
+2. 現行スクリプトは失敗時に `none` へ倒さず停止するため、運用上は must 寄りポリシーである。
+3. `none` 許容の may ポリシーに切り替える場合は、§4.7 の `preimageMay`/`UAndMayOn` と整合する抽出失敗処理（失敗を `none` として伝播）が必要になる。
+4. 現行実装は「失敗時 graceful degradation」を提供しない。これは再実行性重視の fail-fast 設計選択であり、運用導入時は別途方針決定が必要である。
+
+追加の境界挙動ログ:
+- `paper/case-study/real_projects/logs/check_consistent_edge_cases.log`
+- `check_consistent` の代表ケース（`min>max`, `min=max`, 負値含む, 境界欠損）を記録し、判定実装の挙動を明示した。
+
+### 6.5 妥当性への脅威（PoC評価）
+1. **選定バイアス**: 対象3件は「公式文書と公式ソースが公開され、数値境界制約が明示される」条件で選んだ convenience sample であり、母集団代表ではない。
+2. **抽出一般性**: 本PoCは project-specific regex に依存する pattern-based 抽出であり、一般NL理解器の性能を示さない。
+3. **ドキュメントドリフト**: 表現変更で抽出が失敗しうる（§6.4）。よって live 文書追従性は未検証である。
+4. **変異試験の限界**: 現在の mutation は `lower > upper` 系の sanity check であり、微小差分（境界包含/排他、単位換算、暗黙デフォルト）への感度を測っていない。
+5. **人手妥当化不足**: 抽出結果に対するドメイン専門家レビュー（human validation）は本稿で実施していない。
 
 ## 7. 再現可能性
 ### 7.1 Lean 再現
@@ -360,6 +533,8 @@ cd paper/lean
 ### 7.2 環境と依存
 - Lean4: `leanprover/lean4:v4.27.0`
 - Lake: `5.0.0-src+db93fe1`
+- Python: `3.9.6`
+- OS (検証実行): `Darwin 23.5.0`
 - `lean-toolchain`: `paper/lean/lean-toolchain`
 - `lakefile`: `paper/lean/lakefile.lean`
 - `manifest`: `paper/lean/lake-manifest.json`
@@ -373,23 +548,26 @@ cd paper/lean
 - 明示的に使用している原理は `funext` と `propext`。`open Classical` は導入していない。
 
 ### 7.4 規模と成果物
-- Lean LOC: 1103
-- `theorem` 宣言数: 43
-- 定理内訳: 中核定理（本文§4対応）12、背景補題（定義展開・証明支援）26、具体例定理（`Examples`）5
+- Lean LOC（`paper/lean/UadfU0/*.lean`）: 1380
+- Lean LOC（`paper/lean` 全体）: 1410
+- `theorem` 宣言数（`paper/lean/UadfU0`）: 53
+- 定理内訳: 中核定理（本文§3.5/§4対応）15、補助定理（定義展開・証明支援）32、具体例定理（`Examples`）6
 - 構成内訳（LOC）:
-  - 定義基盤 (`Definitions`): 100（9.1%）
-  - 証明本体 (`U0Spec` + `InterLayer` + `RelatedWork` + `CaseStudy`): 693（62.8%）
-  - 具体例 (`Examples`): 310（28.1%）
+  - 定義基盤 (`Definitions`): 100（7.2%）
+  - 証明本体 (`U0Spec` + `InterLayer` + `RelatedWork` + `CaseStudy`): 811（58.8%）
+  - 具体例 (`Examples`): 469（34.0%）
 - 中核ファイル:
   - `paper/lean/UadfU0/U0Spec/Construction.lean`
   - `paper/lean/UadfU0/U0Spec/Minimality.lean`
+  - `paper/lean/UadfU0/U0Spec/IdealRoot.lean`
   - `paper/lean/UadfU0/InterLayer/Transfer.lean`
   - `paper/lean/UadfU0/InterLayer/Composition.lean`
   - `paper/lean/UadfU0/InterLayer/Adequacy.lean`
   - `paper/lean/UadfU0/RelatedWork/Galois.lean`
   - `paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean`
+  - `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean`
 
-上記43定理の役割は「定理数そのもの」ではなく、§5の設計判断（二演算分離、同一点連結仮定、one-sided adequacy、部分性と随伴破綻）を機械検証可能な依存構造として固定した点にある。
+上記53定理の役割は「定理数そのもの」ではなく、§5の設計判断（二演算分離、同一点連結仮定、one-sided adequacy、部分性と随伴破綻）を機械検証可能な依存構造として固定した点にある。
 
 ### 7.5 抽出デモのロック情報
 実OSS抽出デモは次を出力する。
@@ -407,6 +585,18 @@ cd paper/lean
 3. SHA256 検証は `paper/case-study/real_projects/external_validation.py` の `fetch_text` オフライン分岐で実装している（不一致時は例外停止）。
 4. オフライン追試で SHA256 不一致が発生した場合は、論文実行時と異なる入力であり再現性が保証されないことを意味するため、同梱 snapshot と lock の一致状態を復元して再実行する。
 5. 長期保存に関しては、ソース固定アーカイブ（例: DOI付きリポジトリアーカイブ）とURL失効時フォールバック（例: Wayback参照）を推奨する。
+
+### 7.6 本文-Lean 対応表（主要定理）
+| 本文節 | 主張 | Lean対応 |
+|---|---|---|
+| §3.5 | 仮定付き `U*` 包含関係 | `paper/lean/UadfU0/U0Spec/IdealRoot.lean` の `UStar_subset_UAndOn`, `UStar_subset_U0On_of_nonempty_active` |
+| §4.1 | 層間伝播 `lifted(j) ⊆ lifted(i)` | `paper/lean/UadfU0/InterLayer/Transfer.lean` の `lifted_transfer` |
+| §4.2 | 合成則 `preimage_compose` | `paper/lean/UadfU0/InterLayer/Composition.lean` の `preimage_compose` |
+| §4.3 | one-sided adequacy | `paper/lean/UadfU0/InterLayer/Adequacy.lean` の `preimage_subset_semanticPullback_of_sound`, `semanticPullback_subset_preimage_of_complete`, `preimage_eq_semanticPullback` |
+| §4.4 | 部分性による非随伴 | `paper/lean/UadfU0/RelatedWork/Galois.lean` の `no_left_adjoint_of_partial` |
+| §4.5 | meet の GLB | `paper/lean/UadfU0/U0Spec/Minimality.lean` の `UAndOn_greatest_lower_bound_iff` |
+| §4.7 | must/may 関係 | `paper/lean/UadfU0/U0Spec/Construction.lean` の `preimageMay`, `UAndOn_subset_UAndMayOn`, `UAndMayOn_empty_implies_UAndOn_empty` |
+| §6.1.1 | `Ω=ArtifactBundle` 具体化 | `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean` の `proj_bind_decomposition`, `goodBundle`/`brokenReqBundle` 例 |
 
 ## 8. 関連研究と位置づけ
 本稿は既存理論の代替ではなく、UAD/f 最小コアの mechanization を目的とする。
@@ -453,64 +643,7 @@ cd paper/lean
 - 言語間満足移送を公理的に比較したい場合: Institution。
 - 時相的ふるまいやシステム遷移を主対象にする場合: TLA+ などの時相仕様手法。
 
-### 8.1 自説の洗練1: `U0` の Colimit 一般化
-本稿コアは同一論理空間（同一 `Ω`）での
-\[
-U0 = \bigcup_i f^{-1}_{0i}(A_i)
-\]
-を扱った。  
-異種ロジック/異種メタモデルへ拡張する場合、単純な和集合ではなく、仕様図式 `𝒟` の **余極限（colimit）**
-\[
-U_{\mathrm{colim}} := \mathrm{colim}(\mathcal{D})
-\]
-として「統合近似」を定義するのが自然である。  
-このとき本稿の `U0` は「同一論理空間における colimit の特殊形（coproduct/quotient を伴う join 特例）」として位置づけられる。
-
-### 8.2 自説の洗練2: `proj` を Institution Morphism/Comorphism として再定義
-`proj_i` は単なる文字列翻訳ではなく、次の3層を運ぶ構造として解釈できる。
-
-1. 構文（signature/語彙）
-2. 文（sentence/論理式）
-3. モデル（意味論）
-
-さらに、満足条件（satisfaction condition）を満たす射として制約することで、「翻訳後に真なら翻訳前でも真」が保証される。  
-これにより `RQ5 (theory)` の adequacy 分解は、抽出器評価だけでなく「論理空間間の意味保存制約」の監査枠組みとしても読める。
-
-### 8.3 自説の洗練3: `U` の実装を仮想フェデレーションへ
-`U` を巨大な物理一元モデルとして保持するのでなく、**仮想統合モデル**として実装する。
-
-1. 各層仕様 `A_i` は元ツール/元表現に残す
-2. 統合側はリンク・変換規則・取得手続きを保持する
-3. 必要時に動的に射影/逆像評価して `U0`/`U∧` を計算する
-
-この方式は Vitruvius の V-SUM や OpenFlexo の FML が採る「実体集中ではなく関係編成」の思想と整合する。
-
-### 8.4 自説の洗練4: 許容集合の Δ駆動解釈
-実務では全状態再計算より、差分 `Δ` を伝播する一貫性維持が有効である。  
-そのため `f` を「状態全体写像」だけでなく、Consistency Preservation Rules (CPR) として扱う。
-
-1. 変更 `ΔA_i` が入る
-2. CPR が関連層へ `Δ` を伝播
-3. `U∧` 空判定/`U0` 被覆差分を更新
-
-さらに実行時には、操作入力を許容集合境界へ射影するシールド（runtime projection guard）として実装できる。
-
-### 8.5 AIエージェント時代での位置づけ
-手作業での `proj` 保守は高コストであるため、現在の実装戦略は次の分担が現実的である。
-
-1. LLM/エージェント: NL→IR 抽出、曖昧箇所質問、層間リンク候補生成
-2. 形式基盤（本稿コア）: adequacy 条件と整合性判定の監査
-3. モデル検査器/証明器: 反例提示と修復ループの収束判定
-
-この分担では、LLM を「完全翻訳器」とみなさず、`A(i)` 候補生成器として扱い、誤りを one-sided adequacy で管理する。
-
-### 8.6 洗練後の全体像（本稿の再定式化）
-1. 真の根仕様は直接記述対象でなく、射影ネットワークから構成される（構成主義）。
-2. 局所仕様はコンテキスト依存で記述され、`proj` は意味保存制約付き射として管理される。
-3. 実装は仮想フェデレーションで行い、物理集中型SUMを避ける。
-4. 運用は `Δ` 伝播と runtime projection で継続的一貫性を維持する。
-
-注記: §8.1〜§8.6 は本稿コア（Lean機械検証済み部分）を拡張する理論整理であり、colimit 構成や institution 射の完全機械化は今後課題である。
+本稿のコア証明（§2〜§7）で直接検証した範囲を超える一般化（colimit統合、institution射の完全機械化、仮想フェデレーション/Δ駆動運用）は、主張から切り離し、今後課題として §9 に限定して記述する。
 
 ## 9. 限界と脅威
 1. 抽出器の意味保存証明は一般形では未完（§4.3 は抽象関係 `E` に対する接続定理）。
@@ -522,15 +655,20 @@ U_{\mathrm{colim}} := \mathrm{colim}(\mathcal{D})
 7. 層間伝播定理（§4.1）は十分条件を与えるが、必要条件は未証明である。
 8. `none` の must 解釈（§4.7）は矛盾判定の偽陽性リスクを持ち得るが、本稿では数値境界制約のみを対象としたため定量評価していない。
 9. 抽出デモの長期保存戦略（永続アーカイブ DOI, Wayback など）は運用上の推奨事項として残しており、現時点で制度化していない。
-10. colimit 構成・institution 射・`Δ` 駆動 CPR の完全機械化は本稿の範囲外であり、拡張設計（§8.1〜§8.6）として提示した。
+10. colimit 構成・institution 射・`Δ` 駆動 CPR の完全機械化は本稿の範囲外であり、将来拡張候補として位置づける。
+11. `artifact -> IR -> proj` 連結のうち、`extract_i` の意味保存保証は一般形で未証明である。
+12. MUS/unsat core 抽出は §3.4 で問題定義のみ与え、アルゴリズム検証は未着手である。
+13. PoC は `Ω_art`（artifact束）での具体化であり、実行時トレース `Ω=Trace` への直接拡張は未検証である。
 
 ## 10. 結論
 本稿は、UAD/f の root 統合問題を
 
-- `U0`（join: 被覆合成）
-- `U∧`（meet: 同時満足統合）
+- `U0`（join: root 被覆仕様）
+- `U∧`（meet: 同時満足診断）
 
-に分離し、両者を同一の型付き部分射影モデルで Lean4 機械検証した。
+に分離し、同一の型付き部分射影モデルで Lean4 機械検証した。  
+ここで root 側の基準として採用するのは `U0`（root coverage baseline）であり、`U∧` は整合性評価演算である。  
+理想根 `U*` は別概念として保持し、必要条件仮定の下で `U* ⊆ U∧ ⊆ U0` を与える（§3.5）。
 
 本稿の主たる増分は、集合論の再掲ではなく、UAD/f 最小コア mechanization に必要な仮定を形式的に明示した点にある。
 
@@ -541,7 +679,7 @@ U_{\mathrm{colim}} := \mathrm{colim}(\mathcal{D})
 
 さらに、実OSSアーティファクト抽出をソースロック付きで再実行可能にし、前段入力生成パイプラインとしての PoC 基盤を示した。
 
-加えて、本稿コアを異種ロジック統合へ拡張する洗練方向として、`U0` の colimit 一般化、`proj` の institution 射解釈、仮想フェデレーション実装、`Δ` 駆動一貫性維持、LLM候補生成器との分担を提示した（§8.1〜§8.6）。
+拡張方向（colimit 統合、institution 射、仮想フェデレーション、`Δ` 駆動運用、LLM候補生成器分担）は、コア mechanization の直接成果とは分離し、将来課題として整理した（§9）。
 
 RQ対応の要約:
 - `RQ1`: §2.2 の型付き `preimage` 定義と `Definitions/Model.lean` で解決。

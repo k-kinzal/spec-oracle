@@ -4,19 +4,6 @@
 
 The goal is to create an open-source specification description tool for a new era.
 
-**Status**: The core concept has been realized. specORACLE is a functional reverse mapping engine that coordinates multi-layer defenses through self-governance.
-
-**Evidence** (Session 135):
-- ✅ 234 specifications managed (61 auto-extracted via f₀ᵢ⁻¹, 26.1%)
-- ✅ Zero contradictions (Z3 formal verification)
-- ✅ Zero isolated specs (complete connectivity)
-- ✅ Multi-language support (Rust, PHP, Proto, Markdown)
-- ✅ Multi-project management (spec-oracle + ztd-query-php)
-- ✅ Self-governance: specORACLE manages its own specifications
-- ✅ Production-ready CLI (all critical issues resolved)
-
-**Continuous Improvement**: While the essence is achieved, practical enhancements (see PROBLEM.md) remain to improve usability for wider adoption.
-
 ## Core Concept
 
 **specORACLE is a reverse mapping engine.**
@@ -33,17 +20,10 @@ Humans express intent. The system infers everything else.
 
 ## Constraints
 
-- All issues listed in @PROBLEM.md should be resolved.
 - Behavior should always be guaranteed by means such as tests, contracts, properties, or proofs. Furthermore, it should be guaranteed not just by one, but by multiple layers.
 - Specifications should always be managed using the writing tool currently being developed.
 - Commits should always be made in the smallest possible units.
 - Do not implement everything from scratch; utilize existing tools and libraries where possible.
-
-## Prohibited
-
-- The user cannot answer your questions. Asking for clarification is prohibited.
-- There is no interest in plans. Planning mode is prohibited.
-- Resolving application issues with ad hoc scripts (Python, Shell, etc.). Committing them to the repository is prohibited.
 
 ## Desirable
 

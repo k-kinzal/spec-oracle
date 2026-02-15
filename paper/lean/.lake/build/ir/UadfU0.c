@@ -1,6 +1,6 @@
 // Lean compiler output
 // Module: UadfU0
-// Imports: public import Init public import UadfU0.Definitions.Model public import UadfU0.U0Spec.Construction public import UadfU0.U0Spec.Minimality public import UadfU0.InterLayer.Consistency public import UadfU0.InterLayer.Transfer public import UadfU0.InterLayer.Composition public import UadfU0.InterLayer.Adequacy public import UadfU0.RelatedWork.Galois public import UadfU0.CaseStudy.PasswordPolicy public import UadfU0.Examples.TwoLayer public import UadfU0.Examples.ContradictoryLayers public import UadfU0.Examples.TransferExample public import UadfU0.Examples.TransferChainExample public import UadfU0.Examples.CompositionExample
+// Imports: public import Init public import UadfU0.Definitions.Model public import UadfU0.U0Spec.Construction public import UadfU0.U0Spec.Minimality public import UadfU0.U0Spec.IdealRoot public import UadfU0.InterLayer.Consistency public import UadfU0.InterLayer.Transfer public import UadfU0.InterLayer.Composition public import UadfU0.InterLayer.Adequacy public import UadfU0.RelatedWork.Galois public import UadfU0.CaseStudy.PasswordPolicy public import UadfU0.Examples.TwoLayer public import UadfU0.Examples.ContradictoryLayers public import UadfU0.Examples.TransferExample public import UadfU0.Examples.TransferChainExample public import UadfU0.Examples.CompositionExample public import UadfU0.Examples.ArtifactBundleExample
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -17,6 +17,7 @@ lean_object* initialize_Init(uint8_t builtin);
 lean_object* initialize_UadfU0Paper_UadfU0_Definitions_Model(uint8_t builtin);
 lean_object* initialize_UadfU0Paper_UadfU0_U0Spec_Construction(uint8_t builtin);
 lean_object* initialize_UadfU0Paper_UadfU0_U0Spec_Minimality(uint8_t builtin);
+lean_object* initialize_UadfU0Paper_UadfU0_U0Spec_IdealRoot(uint8_t builtin);
 lean_object* initialize_UadfU0Paper_UadfU0_InterLayer_Consistency(uint8_t builtin);
 lean_object* initialize_UadfU0Paper_UadfU0_InterLayer_Transfer(uint8_t builtin);
 lean_object* initialize_UadfU0Paper_UadfU0_InterLayer_Composition(uint8_t builtin);
@@ -28,6 +29,7 @@ lean_object* initialize_UadfU0Paper_UadfU0_Examples_ContradictoryLayers(uint8_t 
 lean_object* initialize_UadfU0Paper_UadfU0_Examples_TransferExample(uint8_t builtin);
 lean_object* initialize_UadfU0Paper_UadfU0_Examples_TransferChainExample(uint8_t builtin);
 lean_object* initialize_UadfU0Paper_UadfU0_Examples_CompositionExample(uint8_t builtin);
+lean_object* initialize_UadfU0Paper_UadfU0_Examples_ArtifactBundleExample(uint8_t builtin);
 static bool _G_initialized = false;
 LEAN_EXPORT lean_object* initialize_UadfU0Paper_UadfU0(uint8_t builtin) {
 lean_object * res;
@@ -43,6 +45,9 @@ res = initialize_UadfU0Paper_UadfU0_U0Spec_Construction(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_UadfU0Paper_UadfU0_U0Spec_Minimality(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_UadfU0Paper_UadfU0_U0Spec_IdealRoot(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_UadfU0Paper_UadfU0_InterLayer_Consistency(builtin);
@@ -76,6 +81,9 @@ res = initialize_UadfU0Paper_UadfU0_Examples_TransferChainExample(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_UadfU0Paper_UadfU0_Examples_CompositionExample(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_UadfU0Paper_UadfU0_Examples_ArtifactBundleExample(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 return lean_io_result_mk_ok(lean_box(0));

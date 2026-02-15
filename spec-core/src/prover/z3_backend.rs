@@ -399,13 +399,13 @@ mod tests {
                 description: "password must be at least 8 characters".to_string(),
                 formal: None,
                 kind: ConstraintKind::Universal,
-                metadata: HashMap::new(),
+                metadata: crate::ConstraintMetadata::new(),
             },
             Constraint {
                 description: "password must be at most 20 characters".to_string(),
                 formal: None,
                 kind: ConstraintKind::Universal,
-                metadata: HashMap::new(),
+                metadata: crate::ConstraintMetadata::new(),
             },
         ];
 
@@ -421,13 +421,13 @@ mod tests {
                 description: "password must be at least 20 characters".to_string(),
                 formal: None,
                 kind: ConstraintKind::Universal,
-                metadata: HashMap::new(),
+                metadata: crate::ConstraintMetadata::new(),
             },
             Constraint {
                 description: "password must be at most 8 characters".to_string(),
                 formal: None,
                 kind: ConstraintKind::Universal,
-                metadata: HashMap::new(),
+                metadata: crate::ConstraintMetadata::new(),
             },
         ];
 
@@ -443,7 +443,7 @@ mod tests {
                 description: "password must be at least 8 characters".to_string(),
                 formal: None,
                 kind: ConstraintKind::Universal,
-                metadata: HashMap::new(),
+                metadata: crate::ConstraintMetadata::new(),
             },
         ];
         let constraints_b = vec![
@@ -451,7 +451,7 @@ mod tests {
                 description: "password must be at most 20 characters".to_string(),
                 formal: None,
                 kind: ConstraintKind::Universal,
-                metadata: HashMap::new(),
+                metadata: crate::ConstraintMetadata::new(),
             },
         ];
 
@@ -467,7 +467,7 @@ mod tests {
                 description: "password must be at least 20 characters".to_string(),
                 formal: None,
                 kind: ConstraintKind::Universal,
-                metadata: HashMap::new(),
+                metadata: crate::ConstraintMetadata::new(),
             },
         ];
         let constraints_b = vec![
@@ -475,7 +475,7 @@ mod tests {
                 description: "password must be at most 8 characters".to_string(),
                 formal: None,
                 kind: ConstraintKind::Universal,
-                metadata: HashMap::new(),
+                metadata: crate::ConstraintMetadata::new(),
             },
         ];
 

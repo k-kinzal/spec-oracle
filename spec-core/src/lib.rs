@@ -12,4 +12,7 @@ pub use store::{FileStore, DirectoryStore, Store};
 pub use extract::{RustExtractor, ProtoExtractor, DocExtractor, ArchitectureExtractor, PHPTestExtractor, InferredSpecification, IngestionReport, EdgeSuggestion};
 pub use ai_semantic::AISemantic;
 pub use udaf::{UDAFModel, Universe, Domain, AdmissibleSet, TransformFunction, TransformStrategy, Constraint, ConstraintKind, TransformKind};
+pub use udaf::{UniverseId, DomainId, SpecId, TransformId, IdError};
+pub use udaf::{MetadataKey, Metadata, UniverseMetadata, DomainMetadata, ConstraintMetadata, TransformMetadata};
+pub use udaf::{SpecSet, DomainSet};
 pub use prover::{Prover, Proof, Property, ProofMethod, ProofStatus, ProofStep};

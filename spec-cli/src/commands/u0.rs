@@ -23,8 +23,8 @@ pub fn execute_construct_u0_standalone(
 
     println!("📊 Initial State:");
     for (universe_id, universe) in &udaf_model.universes {
-        if universe.layer > 0 {
-            println!("   {}: {} specifications", universe_id, universe.specifications.len());
+        if universe.layer() > 0 {
+            println!("   {}: {} specifications", universe_id.as_str(), universe.specifications.len());
         }
     }
     println!("   Transform functions: {}", udaf_model.transforms.len());
@@ -95,8 +95,8 @@ pub fn execute_construct_u0_standalone(
 
         for (id, transform) in &udaf_model.transforms {
             if transform.kind == spec_core::TransformKind::Inverse {
-                println!("   • {}", id);
-                println!("     {} -> {}", transform.source_universe, transform.target_universe);
+                println!("   • {}", id.as_str());
+                println!("     {} -> {}", transform.source_universe.as_str(), transform.target_universe.as_str());
                 if verbose {
                     println!("     Strategy: {:?}", transform.strategy);
                 }

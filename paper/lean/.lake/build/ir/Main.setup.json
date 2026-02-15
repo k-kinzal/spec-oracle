@@ -6,6 +6,8 @@
  "importArts":
  {"UadfU0.U0Spec.Minimality":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/Minimality.olean"],
+  "UadfU0.U0Spec.IdealRoot":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/IdealRoot.olean"],
   "UadfU0.U0Spec.Construction":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/U0Spec/Construction.olean"],
   "UadfU0.RelatedWork.Galois":
@@ -28,6 +30,8 @@
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/ContradictoryLayers.olean"],
   "UadfU0.Examples.CompositionExample":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/CompositionExample.olean"],
+  "UadfU0.Examples.ArtifactBundleExample":
+  ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/ArtifactBundleExample.olean"],
   "UadfU0.Definitions.Model":
   ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Definitions/Model.olean"],
   "UadfU0.CaseStudy.PasswordPolicy":

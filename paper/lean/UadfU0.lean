@@ -1,6 +1,7 @@
 import UadfU0.Definitions.Model
 import UadfU0.U0Spec.Construction
 import UadfU0.U0Spec.Minimality
+import UadfU0.U0Spec.IdealRoot
 import UadfU0.InterLayer.Consistency
 import UadfU0.InterLayer.Transfer
 import UadfU0.InterLayer.Composition
@@ -12,3 +13,4 @@ import UadfU0.Examples.ContradictoryLayers
 import UadfU0.Examples.TransferExample
 import UadfU0.Examples.TransferChainExample
 import UadfU0.Examples.CompositionExample
+import UadfU0.Examples.ArtifactBundleExample

@@ -155,8 +155,8 @@ impl Prover {
         spec_b: &crate::udaf::AdmissibleSet,
     ) -> Proof {
         let property = Property::Consistency {
-            spec_a: spec_a.spec_id.clone(),
-            spec_b: spec_b.spec_id.clone(),
+            spec_a: spec_a.spec_id.as_str().to_string(),
+            spec_b: spec_b.spec_id.as_str().to_string(),
         };
 
         // Try Z3 first (complete proof)
@@ -190,7 +190,7 @@ impl Prover {
             method,
             status,
             steps,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         };
 
         self.proofs.insert(proof.id.clone(), proof.clone());
@@ -210,7 +210,7 @@ impl Prover {
         spec: &crate::udaf::AdmissibleSet,
     ) -> Proof {
         let property = Property::Satisfiability {
-            spec: spec.spec_id.clone(),
+            spec: spec.spec_id.as_str().to_string(),
         };
 
         // Try Z3 first (complete proof)
@@ -234,7 +234,7 @@ impl Prover {
             method,
             status,
             steps,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         };
 
         self.proofs.insert(proof.id.clone(), proof.clone());
@@ -498,7 +498,7 @@ mod tests {
     #[test]
     fn prove_satisfiability_empty_constraints() {
         let mut prover = Prover::new();
-        let spec = AdmissibleSet::new("test-spec".to_string(), "U0".to_string());
+        let spec = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
 
         let proof = prover.prove_satisfiability(&spec);
 
@@ -509,20 +509,20 @@ mod tests {
     #[test]
     fn prove_satisfiability_consistent_constraints() {
         let mut prover = Prover::new();
-        let mut spec = AdmissibleSet::new("test-spec".to_string(), "U0".to_string());
+        let mut spec = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
 
         spec.add_constraint(Constraint {
             description: "x must be at least 5".to_string(),
             formal: None,
             kind: ConstraintKind::Universal,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         });
 
         spec.add_constraint(Constraint {
             description: "x must be at most 10".to_string(),
             formal: None,
             kind: ConstraintKind::Universal,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         });
 
         let proof = prover.prove_satisfiability(&spec);
@@ -534,20 +534,20 @@ mod tests {
     #[test]
     fn prove_satisfiability_conflicting_constraints() {
         let mut prover = Prover::new();
-        let mut spec = AdmissibleSet::new("test-spec".to_string(), "U0".to_string());
+        let mut spec = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
 
         spec.add_constraint(Constraint {
             description: "x must be at least 10".to_string(),
             formal: None,
             kind: ConstraintKind::Universal,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         });
 
         spec.add_constraint(Constraint {
             description: "x must be at most 5".to_string(),
             formal: None,
             kind: ConstraintKind::Universal,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         });
 
         let proof = prover.prove_satisfiability(&spec);
@@ -562,20 +562,20 @@ mod tests {
     fn prove_consistency_compatible_specs() {
         let mut prover = Prover::new();
 
-        let mut spec_a = AdmissibleSet::new("spec-a".to_string(), "U0".to_string());
+        let mut spec_a = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
         spec_a.add_constraint(Constraint {
             description: "password must be at least 8 characters".to_string(),
             formal: None,
             kind: ConstraintKind::Universal,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         });
 
-        let mut spec_b = AdmissibleSet::new("spec-b".to_string(), "U0".to_string());
+        let mut spec_b = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
         spec_b.add_constraint(Constraint {
             description: "password must be at most 20 characters".to_string(),
             formal: None,
             kind: ConstraintKind::Universal,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         });
 
         let proof = prover.prove_consistency(&spec_a, &spec_b);
@@ -588,20 +588,20 @@ mod tests {
     fn prove_consistency_conflicting_specs() {
         let mut prover = Prover::new();
 
-        let mut spec_a = AdmissibleSet::new("spec-a".to_string(), "U0".to_string());
+        let mut spec_a = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
         spec_a.add_constraint(Constraint {
             description: "password must be at least 10 characters".to_string(),
             formal: None,
             kind: ConstraintKind::Universal,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         });
 
-        let mut spec_b = AdmissibleSet::new("spec-b".to_string(), "U0".to_string());
+        let mut spec_b = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
         spec_b.add_constraint(Constraint {
             description: "password must be at most 8 characters".to_string(),
             formal: None,
             kind: ConstraintKind::Universal,
-            metadata: HashMap::new(),
+            metadata: crate::ConstraintMetadata::new(),
         });
 
         let proof = prover.prove_consistency(&spec_a, &spec_b);
@@ -615,9 +615,9 @@ mod tests {
     #[test]
     fn list_proofs_for_spec() {
         let mut prover = Prover::new();
-        let spec_a = AdmissibleSet::new("spec-a".to_string(), "U0".to_string());
-        let spec_b = AdmissibleSet::new("spec-b".to_string(), "U0".to_string());
-        let spec_c = AdmissibleSet::new("spec-c".to_string(), "U0".to_string());
+        let spec_a = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
+        let spec_b = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
+        let spec_c = AdmissibleSet::new(crate::SpecId::new(), crate::UniverseId::root());
 
         prover.prove_satisfiability(&spec_a);
         prover.prove_consistency(&spec_a, &spec_b);

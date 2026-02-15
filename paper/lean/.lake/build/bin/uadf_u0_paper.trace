@@ -1,9 +1,9 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
- "outputs": "fec39ba8ae7c949d",
+ "outputs": "72acddf24ca817cb",
  "log":
  [{"message":
-   ".> MACOSX_DEPLOYMENT_TARGET=99.0 /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/clang -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/bin/uadf_u0_paper /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/Main.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Definitions/Model.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/U0Spec/Construction.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/U0Spec/Minimality.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Consistency.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Transfer.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Composition.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Adequacy.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/RelatedWork/Galois.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/CaseStudy/PasswordPolicy.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/TwoLayer.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/ContradictoryLayers.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/TransferExample.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/TransferChainExample.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/CompositionExample.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0.c.o.export -L /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/lib/lean --sysroot /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0 -L /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/lib -L /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/lib/libc -fuse-ld=lld -lleancpp -lInit -lStd -lLean -lleanrt -lc++ -lLake -lgmp -luv",
+   ".> MACOSX_DEPLOYMENT_TARGET=99.0 /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/clang -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/bin/uadf_u0_paper /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/Main.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Definitions/Model.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/U0Spec/Construction.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/U0Spec/Minimality.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/U0Spec/IdealRoot.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Consistency.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Transfer.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Composition.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Adequacy.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/RelatedWork/Galois.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/CaseStudy/PasswordPolicy.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/TwoLayer.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/ContradictoryLayers.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/TransferExample.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/TransferChainExample.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/CompositionExample.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/ArtifactBundleExample.c.o.export /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0.c.o.export -L /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/lib/lean --sysroot /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0 -L /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/lib -L /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/lib/libc -fuse-ld=lld -lleancpp -lInit -lStd -lLean -lleanrt -lc++ -lLake -lgmp -luv",
    "level": "trace"}],
  "inputs":
  [["linkObjs",
@@ -15,6 +15,8 @@
      "cb84d2b2ad9fb66a"],
     ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/U0Spec/Minimality.c.o.export",
      "581a96915a09f239"],
+    ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/U0Spec/IdealRoot.c.o.export",
+     "f8e1a4aa1297b1a4"],
     ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Consistency.c.o.export",
      "5ee5e1e2e37abc36"],
     ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/InterLayer/Transfer.c.o.export",
@@ -37,11 +39,13 @@
      "8be990c81c07ed32"],
     ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/CompositionExample.c.o.export",
      "d7d67331012f485c"],
+    ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/ArtifactBundleExample.c.o.export",
+     "9d1aaf6d41be7c4e"],
     ["/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0.c.o.export",
-     "ef6e12b12cca42a7"]]],
+     "a913b2c7ad81527f"]]],
   ["linkLibs", "00000000000006bb"],
   ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
    "9a2be90fd35343e5"],
   ["traceArgs: #[]", "00000000000006bb"],
   ["arm64-apple-darwin24.6.0", "77c16133d139df5a"]],
- "depHash": "f647b015cafcd51c"}
+ "depHash": "360007af037d8016"}

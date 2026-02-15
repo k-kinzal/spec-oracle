@@ -903,28 +903,28 @@ impl SpecGraph {
         // Pattern: "must be at least N" / "minimum N" / ">= N"
         if let Some(min_val) = Self::extract_minimum_value(&content_lower) {
             if content_lower.contains("password") && (content_lower.contains("character") || content_lower.contains("length")) {
-                let mut metadata = HashMap::new();
-                metadata.insert("variable".to_string(), "password_length".to_string());
-                metadata.insert("operator".to_string(), ">=".to_string());
-                metadata.insert("value".to_string(), min_val.to_string());
+                let mut metadata_map = HashMap::new();
+                metadata_map.insert("variable".to_string(), "password_length".to_string());
+                metadata_map.insert("operator".to_string(), ">=".to_string());
+                metadata_map.insert("value".to_string(), min_val.to_string());
 
                 constraints.push(Constraint {
                     description: format!("Password must be at least {} characters", min_val),
                     formal: Some(format!("(>= password_length {})", min_val)),
                     kind: ConstraintKind::Universal,
-                    metadata,
+                    metadata: crate::ConstraintMetadata::from(metadata_map),
                 });
             } else if content_lower.contains("length") || content_lower.contains("minimum") {
                 // Generic numeric constraint
-                let mut metadata = HashMap::new();
-                metadata.insert("operator".to_string(), ">=".to_string());
-                metadata.insert("value".to_string(), min_val.to_string());
+                let mut metadata_map = HashMap::new();
+                metadata_map.insert("operator".to_string(), ">=".to_string());
+                metadata_map.insert("value".to_string(), min_val.to_string());
 
                 constraints.push(Constraint {
                     description: format!("Value must be at least {}", min_val),
                     formal: Some(format!("(>= value {})", min_val)),
                     kind: ConstraintKind::Universal,
-                    metadata,
+                    metadata: crate::ConstraintMetadata::from(metadata_map),
                 });
             }
         }
@@ -932,53 +932,53 @@ impl SpecGraph {
         // Pattern: "must be at most N" / "maximum N" / "<= N"
         if let Some(max_val) = Self::extract_maximum_value(&content_lower) {
             if content_lower.contains("password") && (content_lower.contains("character") || content_lower.contains("length")) {
-                let mut metadata = HashMap::new();
-                metadata.insert("variable".to_string(), "password_length".to_string());
-                metadata.insert("operator".to_string(), "<=".to_string());
-                metadata.insert("value".to_string(), max_val.to_string());
+                let mut metadata_map = HashMap::new();
+                metadata_map.insert("variable".to_string(), "password_length".to_string());
+                metadata_map.insert("operator".to_string(), "<=".to_string());
+                metadata_map.insert("value".to_string(), max_val.to_string());
 
                 constraints.push(Constraint {
                     description: format!("Password must be at most {} characters", max_val),
                     formal: Some(format!("(<= password_length {})", max_val)),
                     kind: ConstraintKind::Universal,
-                    metadata,
+                    metadata: crate::ConstraintMetadata::from(metadata_map),
                 });
             } else if content_lower.contains("length") || content_lower.contains("maximum") {
                 // Generic numeric constraint
-                let mut metadata = HashMap::new();
-                metadata.insert("operator".to_string(), "<=".to_string());
-                metadata.insert("value".to_string(), max_val.to_string());
+                let mut metadata_map = HashMap::new();
+                metadata_map.insert("operator".to_string(), "<=".to_string());
+                metadata_map.insert("value".to_string(), max_val.to_string());
 
                 constraints.push(Constraint {
                     description: format!("Value must be at most {}", max_val),
                     formal: Some(format!("(<= value {})", max_val)),
                     kind: ConstraintKind::Universal,
-                    metadata,
+                    metadata: crate::ConstraintMetadata::from(metadata_map),
                 });
             }
         }
 
         // Pattern: "must" / "required" (universal constraint)
         if content_lower.contains("must") && !content_lower.contains("must not") {
-            let mut metadata = HashMap::new();
-            metadata.insert("type".to_string(), "universal".to_string());
+            let mut metadata_map = HashMap::new();
+            metadata_map.insert("type".to_string(), "universal".to_string());
             constraints.push(Constraint {
                 description: content.to_string(),
                 formal: None, // Natural language only
                 kind: ConstraintKind::Universal,
-                metadata,
+                metadata: crate::ConstraintMetadata::from(metadata_map),
             });
         }
 
         // Pattern: "must not" / "forbidden" (universal prohibition)
         if content_lower.contains("must not") || content_lower.contains("forbidden") {
-            let mut metadata = HashMap::new();
-            metadata.insert("type".to_string(), "prohibition".to_string());
+            let mut metadata_map = HashMap::new();
+            metadata_map.insert("type".to_string(), "prohibition".to_string());
             constraints.push(Constraint {
                 description: content.to_string(),
                 formal: None, // Natural language only
                 kind: ConstraintKind::Universal,
-                metadata,
+                metadata: crate::ConstraintMetadata::from(metadata_map),
             });
         }
 
@@ -1005,11 +1005,11 @@ impl SpecGraph {
         // We need to clone metadata access since we'll move constraints later
         let vars_a: std::collections::HashSet<_> = constraints_a
             .iter()
-            .filter_map(|c| c.metadata.get("variable").map(|s| s.to_string()))
+            .filter_map(|c| c.metadata.get_str("variable").map(|s| s.to_string()))
             .collect();
         let vars_b: std::collections::HashSet<_> = constraints_b
             .iter()
-            .filter_map(|c| c.metadata.get("variable").map(|s| s.to_string()))
+            .filter_map(|c| c.metadata.get_str("variable").map(|s| s.to_string()))
             .collect();
 
         let common_vars: Vec<String> = vars_a.intersection(&vars_b).cloned().collect();
@@ -1019,14 +1019,15 @@ impl SpecGraph {
         }
 
         // Create admissible sets
-        let mut set_a = AdmissibleSet::new(
-            node_a.id.clone(),
-            format!("U{}", node_a.formality_layer),
-        );
-        let mut set_b = AdmissibleSet::new(
-            node_b.id.clone(),
-            format!("U{}", node_b.formality_layer),
-        );
+        let spec_id_a = crate::SpecId::parse(&node_a.id).unwrap_or_else(|_| crate::SpecId::new());
+        let universe_id_a = crate::UniverseId::parse(&format!("U{}", node_a.formality_layer))
+            .unwrap_or_else(|_| crate::UniverseId::root());
+        let mut set_a = AdmissibleSet::new(spec_id_a, universe_id_a);
+
+        let spec_id_b = crate::SpecId::parse(&node_b.id).unwrap_or_else(|_| crate::SpecId::new());
+        let universe_id_b = crate::UniverseId::parse(&format!("U{}", node_b.formality_layer))
+            .unwrap_or_else(|_| crate::UniverseId::root());
+        let mut set_b = AdmissibleSet::new(spec_id_b, universe_id_b);
 
         // Now we can move constraints into admissible sets
         for c in constraints_a {

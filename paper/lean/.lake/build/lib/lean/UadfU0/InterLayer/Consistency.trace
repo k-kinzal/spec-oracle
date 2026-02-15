@@ -15,8 +15,8 @@
        [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
       ["imports",
        [["UadfU0.U0Spec.Minimality transitive imports (legacy)",
-         "2d9f5b8f585cc3ff"],
-        ["UadfU0.U0Spec.Minimality:importAllArts", "7c3c609fa8b8a2c4"]]]]],
+         "4ec647936e58741b"],
+        ["UadfU0.U0Spec.Minimality:importAllArts", "dbd67eae672518c3"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -28,4 +28,4 @@
    "517fb02399460f01"],
   ["options", "00000000000006bb"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "41fe0c273a390b42"}
+ "depHash": "bd84204874a9ed9f"}

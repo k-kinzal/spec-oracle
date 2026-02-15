@@ -12,6 +12,17 @@
 /// Users write U1-UN (various specifications), and specORACLE constructs U0
 /// from the inverse mappings of all layers.
 
+mod ids;
+mod metadata;
+mod refs;
+
+// Re-export type-safe ID types
+pub use ids::{UniverseId, DomainId, SpecId, TransformId, IdError};
+// Re-export metadata types
+pub use metadata::{MetadataKey, Metadata, UniverseMetadata, DomainMetadata, ConstraintMetadata, TransformMetadata};
+// Re-export reference set types
+pub use refs::{SpecSet, DomainSet};
+
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -24,11 +35,8 @@ use std::collections::{HashMap, HashSet};
 /// - U1-UN: Projection universes (written by users, e.g., natural language, TLA+, code)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Universe {
-    /// Unique identifier for this universe
-    pub id: String,
-
-    /// Layer index (0 for U0, 1-N for projection universes)
-    pub layer: u8,
+    /// Unique identifier for this universe (e.g., "U0", "U1", "U2")
+    pub id: UniverseId,
 
     /// Human-readable name (e.g., "Natural Language Requirements", "TLA+ Formal Spec", "Rust Implementation")
     pub name: String,
@@ -37,36 +45,41 @@ pub struct Universe {
     pub description: String,
 
     /// Specifications that belong to this universe
-    pub specifications: HashSet<String>,  // Node IDs
+    pub specifications: SpecSet,
 
     /// Metadata for extensibility
-    pub metadata: HashMap<String, String>,
+    pub metadata: UniverseMetadata,
 }
 
 impl Universe {
     /// Create U0 (root universe) - constructed from inverse mappings
     pub fn root() -> Self {
         Self {
-            id: "U0".to_string(),
-            layer: 0,
+            id: UniverseId::root(),
             name: "Root Specification".to_string(),
             description: "The foundational universe constructed from inverse mappings of all projection universes. This represents the 'rough projection of the undefinable root specification'.".to_string(),
-            specifications: HashSet::new(),
-            metadata: HashMap::new(),
+            specifications: SpecSet::new(),
+            metadata: UniverseMetadata::new(),
         }
     }
 
     /// Create a projection universe (U1-UN)
-    pub fn projection(layer: u8, name: String, description: String) -> Self {
-        assert!(layer > 0, "U0 is reserved for root universe");
-        Self {
-            id: format!("U{}", layer),
-            layer,
+    ///
+    /// Returns Err if layer is 0 (use root() instead)
+    pub fn projection(layer: u8, name: String, description: String) -> Result<Self, IdError> {
+        let id = UniverseId::projection(layer)?;
+        Ok(Self {
+            id,
             name,
             description,
-            specifications: HashSet::new(),
-            metadata: HashMap::new(),
-        }
+            specifications: SpecSet::new(),
+            metadata: UniverseMetadata::new(),
+        })
+    }
+
+    /// Get the layer number from the universe ID
+    pub fn layer(&self) -> u8 {
+        self.id.layer()
     }
 }
 
@@ -79,7 +92,7 @@ impl Universe {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Domain {
     /// Unique identifier for this domain
-    pub id: String,
+    pub id: DomainId,
 
     /// Human-readable name
     pub name: String,
@@ -88,28 +101,42 @@ pub struct Domain {
     pub description: String,
 
     /// The universe this domain belongs to
-    pub universe_id: String,
+    pub universe_id: UniverseId,
 
     /// Specifications that cover this domain
-    pub covered_by: HashSet<String>,  // Node IDs
+    pub covered_by: SpecSet,
 
     /// Sub-domains (hierarchical structure)
-    pub subdomains: Vec<String>,  // Domain IDs
+    pub subdomains: DomainSet,
 
     /// Metadata for extensibility
-    pub metadata: HashMap<String, String>,
+    pub metadata: DomainMetadata,
 }
 
 impl Domain {
-    pub fn new(id: String, name: String, description: String, universe_id: String) -> Self {
+    /// Create a new domain with generated ID
+    pub fn new(name: String, description: String, universe_id: UniverseId) -> Self {
+        Self {
+            id: DomainId::new(),
+            name,
+            description,
+            universe_id,
+            covered_by: SpecSet::new(),
+            subdomains: DomainSet::new(),
+            metadata: DomainMetadata::new(),
+        }
+    }
+
+    /// Create a domain with specific ID (for loading from storage)
+    pub fn with_id(id: DomainId, name: String, description: String, universe_id: UniverseId) -> Self {
         Self {
             id,
             name,
             description,
             universe_id,
-            covered_by: HashSet::new(),
-            subdomains: Vec::new(),
-            metadata: HashMap::new(),
+            covered_by: SpecSet::new(),
+            subdomains: DomainSet::new(),
+            metadata: DomainMetadata::new(),
         }
     }
 
@@ -129,30 +156,30 @@ impl Domain {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdmissibleSet {
     /// The specification that defines this admissible set
-    pub spec_id: String,
+    pub spec_id: SpecId,
 
     /// The universe this admissible set belongs to
-    pub universe_id: String,
+    pub universe_id: UniverseId,
 
     /// Constraints that define membership in this set
     /// (e.g., "password.len() >= 8", "response_time < 1s")
     pub constraints: Vec<Constraint>,
 
     /// Known contradictions with other admissible sets
-    pub contradicts: HashSet<String>,  // Other AdmissibleSet IDs
+    pub contradicts: SpecSet,
 
     /// Metadata for extensibility
-    pub metadata: HashMap<String, String>,
+    pub metadata: Metadata,
 }
 
 impl AdmissibleSet {
-    pub fn new(spec_id: String, universe_id: String) -> Self {
+    pub fn new(spec_id: SpecId, universe_id: UniverseId) -> Self {
         Self {
             spec_id,
             universe_id,
             constraints: Vec::new(),
-            contradicts: HashSet::new(),
-            metadata: HashMap::new(),
+            contradicts: SpecSet::new(),
+            metadata: Metadata::new(),
         }
     }
 
@@ -162,7 +189,7 @@ impl AdmissibleSet {
     }
 
     /// Mark this admissible set as contradicting another
-    pub fn mark_contradiction(&mut self, other_id: String) {
+    pub fn mark_contradiction(&mut self, other_id: SpecId) {
         self.contradicts.insert(other_id);
     }
 
@@ -191,7 +218,7 @@ pub struct Constraint {
     pub kind: ConstraintKind,
 
     /// Metadata for extensibility
-    pub metadata: HashMap<String, String>,
+    pub metadata: ConstraintMetadata,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -218,13 +245,13 @@ pub enum ConstraintKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransformFunction {
     /// Unique identifier for this transform
-    pub id: String,
+    pub id: TransformId,
 
     /// Source universe
-    pub source_universe: String,
+    pub source_universe: UniverseId,
 
     /// Target universe
-    pub target_universe: String,
+    pub target_universe: UniverseId,
 
     /// Human-readable description of this transformation
     pub description: String,
@@ -237,7 +264,7 @@ pub struct TransformFunction {
     pub strategy: TransformStrategy,
 
     /// Metadata for extensibility
-    pub metadata: HashMap<String, String>,
+    pub metadata: TransformMetadata,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -295,36 +322,38 @@ pub enum TransformStrategy {
 impl TransformFunction {
     /// Create an inverse mapping: Ui → U0
     pub fn inverse(
-        source_universe: String,
+        source_universe: UniverseId,
         description: String,
         strategy: TransformStrategy,
     ) -> Self {
+        let id = TransformId::inverse(&source_universe);
         Self {
-            id: format!("f_{}_to_U0", source_universe),
-            source_universe: source_universe.clone(),
-            target_universe: "U0".to_string(),
+            id,
+            source_universe,
+            target_universe: UniverseId::root(),
             description,
             kind: TransformKind::Inverse,
             strategy,
-            metadata: HashMap::new(),
+            metadata: TransformMetadata::new(),
         }
     }
 
     /// Create a forward mapping: Ui → Uj
     pub fn forward(
-        source_universe: String,
-        target_universe: String,
+        source_universe: UniverseId,
+        target_universe: UniverseId,
         description: String,
         strategy: TransformStrategy,
     ) -> Self {
+        let id = TransformId::forward(&source_universe, &target_universe);
         Self {
-            id: format!("f_{}_{}", source_universe, target_universe),
+            id,
             source_universe,
             target_universe,
             description,
             kind: TransformKind::Forward,
             strategy,
-            metadata: HashMap::new(),
+            metadata: TransformMetadata::new(),
         }
     }
 }
@@ -335,20 +364,153 @@ impl TransformFunction {
 /// of specORACLE as described in conversation.md and motivation.md.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UDAFModel {
-    /// All universes in the model
-    pub universes: HashMap<String, Universe>,
+    /// All universes in the model (keyed by UniverseId)
+    #[serde(with = "universe_map_serde")]
+    pub universes: HashMap<UniverseId, Universe>,
 
-    /// All domains across all universes
-    pub domains: HashMap<String, Domain>,
+    /// All domains across all universes (keyed by DomainId)
+    #[serde(with = "domain_map_serde")]
+    pub domains: HashMap<DomainId, Domain>,
 
-    /// All admissible sets (one per specification)
-    pub admissible_sets: HashMap<String, AdmissibleSet>,
+    /// All admissible sets (one per specification, keyed by SpecId)
+    #[serde(with = "admissible_map_serde")]
+    pub admissible_sets: HashMap<SpecId, AdmissibleSet>,
 
-    /// All transform functions between universes
-    pub transforms: HashMap<String, TransformFunction>,
+    /// All transform functions between universes (keyed by TransformId)
+    #[serde(with = "transform_map_serde")]
+    pub transforms: HashMap<TransformId, TransformFunction>,
 
     /// Metadata for extensibility
-    pub metadata: HashMap<String, String>,
+    pub metadata: Metadata,
+}
+
+// Serde helpers for HashMap with typed IDs
+mod universe_map_serde {
+    use super::*;
+    use serde::de::{Deserialize, Deserializer};
+    use serde::ser::Serializer;
+
+    pub fn serialize<S>(map: &HashMap<UniverseId, Universe>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let string_map: HashMap<String, Universe> = map
+            .iter()
+            .map(|(k, v)| (k.as_str().to_string(), v.clone()))
+            .collect();
+        string_map.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<UniverseId, Universe>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string_map = HashMap::<String, Universe>::deserialize(deserializer)?;
+        string_map
+            .into_iter()
+            .map(|(k, v)| {
+                UniverseId::parse(&k)
+                    .map(|id| (id, v))
+                    .map_err(serde::de::Error::custom)
+            })
+            .collect()
+    }
+}
+
+mod domain_map_serde {
+    use super::*;
+    use serde::de::{Deserialize, Deserializer};
+    use serde::ser::Serializer;
+
+    pub fn serialize<S>(map: &HashMap<DomainId, Domain>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let string_map: HashMap<String, Domain> = map
+            .iter()
+            .map(|(k, v)| (k.as_str().to_string(), v.clone()))
+            .collect();
+        string_map.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<DomainId, Domain>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string_map = HashMap::<String, Domain>::deserialize(deserializer)?;
+        string_map
+            .into_iter()
+            .map(|(k, v)| {
+                DomainId::parse(&k)
+                    .map(|id| (id, v))
+                    .map_err(serde::de::Error::custom)
+            })
+            .collect()
+    }
+}
+
+mod admissible_map_serde {
+    use super::*;
+    use serde::de::{Deserialize, Deserializer};
+    use serde::ser::Serializer;
+
+    pub fn serialize<S>(map: &HashMap<SpecId, AdmissibleSet>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let string_map: HashMap<String, AdmissibleSet> = map
+            .iter()
+            .map(|(k, v)| (k.as_str().to_string(), v.clone()))
+            .collect();
+        string_map.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<SpecId, AdmissibleSet>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string_map = HashMap::<String, AdmissibleSet>::deserialize(deserializer)?;
+        string_map
+            .into_iter()
+            .map(|(k, v)| {
+                SpecId::parse(&k)
+                    .map(|id| (id, v))
+                    .map_err(serde::de::Error::custom)
+            })
+            .collect()
+    }
+}
+
+mod transform_map_serde {
+    use super::*;
+    use serde::de::{Deserialize, Deserializer};
+    use serde::ser::Serializer;
+
+    pub fn serialize<S>(map: &HashMap<TransformId, TransformFunction>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let string_map: HashMap<String, TransformFunction> = map
+            .iter()
+            .map(|(k, v)| (k.as_str().to_string(), v.clone()))
+            .collect();
+        string_map.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<TransformId, TransformFunction>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string_map = HashMap::<String, TransformFunction>::deserialize(deserializer)?;
+        string_map
+            .into_iter()
+            .map(|(k, v)| {
+                TransformId::parse(&k)
+                    .map(|id| (id, v))
+                    .map_err(serde::de::Error::custom)
+            })
+            .collect()
+    }
 }
 
 impl UDAFModel {
@@ -358,39 +520,42 @@ impl UDAFModel {
             domains: HashMap::new(),
             admissible_sets: HashMap::new(),
             transforms: HashMap::new(),
-            metadata: HashMap::new(),
+            metadata: Metadata::new(),
         };
 
         // Always create U0 (root universe)
-        model.universes.insert("U0".to_string(), Universe::root());
+        let u0 = Universe::root();
+        model.universes.insert(u0.id.clone(), u0);
 
         model
     }
 
     /// Add a projection universe (U1, U2, etc.)
-    pub fn add_universe(&mut self, layer: u8, name: String, description: String) -> String {
-        let universe = Universe::projection(layer, name, description);
+    ///
+    /// Returns the universe ID or an error if layer is invalid
+    pub fn add_universe(&mut self, layer: u8, name: String, description: String) -> Result<UniverseId, IdError> {
+        let universe = Universe::projection(layer, name, description)?;
         let id = universe.id.clone();
         self.universes.insert(id.clone(), universe);
-        id
+        Ok(id)
     }
 
     /// Add a domain to a universe
-    pub fn add_domain(&mut self, domain: Domain) -> String {
+    pub fn add_domain(&mut self, domain: Domain) -> DomainId {
         let id = domain.id.clone();
         self.domains.insert(id.clone(), domain);
         id
     }
 
     /// Add an admissible set for a specification
-    pub fn add_admissible_set(&mut self, admissible_set: AdmissibleSet) -> String {
+    pub fn add_admissible_set(&mut self, admissible_set: AdmissibleSet) -> SpecId {
         let id = admissible_set.spec_id.clone();
         self.admissible_sets.insert(id.clone(), admissible_set);
         id
     }
 
     /// Add a transform function
-    pub fn add_transform(&mut self, transform: TransformFunction) -> String {
+    pub fn add_transform(&mut self, transform: TransformFunction) -> TransformId {
         let id = transform.id.clone();
         self.transforms.insert(id.clone(), transform);
         id
@@ -407,13 +572,13 @@ impl UDAFModel {
         let mut newly_created_specs = Vec::new();
 
         // For each projection universe (U1, U2, U3...)
-        for (universe_id, universe) in &self.universes {
-            if universe.layer == 0 {
+        for (universe_id, _universe) in &self.universes {
+            if universe_id.layer() == 0 {
                 continue;  // Skip U0 itself
             }
 
             // Find the inverse transform for this universe
-            let inverse_transform_id = format!("f_{}_to_U0", universe_id);
+            let inverse_transform_id = TransformId::inverse(universe_id);
 
             if let Some(transform) = self.transforms.get(&inverse_transform_id) {
                 // Execute the transform strategy to extract/map specifications
@@ -508,7 +673,9 @@ impl UDAFModel {
         // Otherwise, find source files from graph nodes with source_file metadata
         let mut source_files = HashSet::new();
         for node in graph.list_nodes(None) {
-            if let Some(source_file) = node.metadata.get("source_file") {
+            // Note: graph nodes still use HashMap<String, String> for metadata
+            // so we use the string key directly
+            if let Some(source_file) = node.metadata.get(MetadataKey::SourceFile.as_str()) {
                 if source_file.ends_with(".rs") {
                     source_files.insert(source_file.clone());
                 }
@@ -542,8 +709,8 @@ impl UDAFModel {
                     // Check if they're marked as contradicting
                     if a.contradicts.contains(id_b) || b.contradicts.contains(id_a) {
                         contradictions.push((
-                            id_a.clone(),
-                            id_b.clone(),
+                            id_a.as_str().to_string(),
+                            id_b.as_str().to_string(),
                             "Marked as contradicting".to_string(),
                         ));
                     }
@@ -564,7 +731,7 @@ impl UDAFModel {
         self.domains
             .values()
             .filter(|domain| domain.has_gaps())
-            .map(|domain| domain.id.clone())
+            .map(|domain| domain.id.as_str().to_string())
             .collect()
     }
 
@@ -583,98 +750,92 @@ impl UDAFModel {
 
         // Pattern 1: "at least N"
         if let Some(min_value) = self.extract_numeric_value(&lower_text, "at least") {
+            let mut metadata = ConstraintMetadata::new();
+            metadata.set_pattern("at_least".to_string());
+            metadata.set_value(min_value.to_string());
+            metadata.set_source(text.to_string());
+
             constraints.push(Constraint {
                 description: format!("Minimum value: {}", min_value),
                 formal: Some(format!(">= {}", min_value)),
                 kind: ConstraintKind::Universal,
-                metadata: {
-                    let mut m = HashMap::new();
-                    m.insert("pattern".to_string(), "at_least".to_string());
-                    m.insert("value".to_string(), min_value.to_string());
-                    m.insert("source".to_string(), text.to_string());
-                    m
-                },
+                metadata,
             });
         }
 
         // Pattern 2: "at most N"
         if let Some(max_value) = self.extract_numeric_value(&lower_text, "at most") {
+            let mut metadata = ConstraintMetadata::new();
+            metadata.set_pattern("at_most".to_string());
+            metadata.set_value(max_value.to_string());
+            metadata.set_source(text.to_string());
+
             constraints.push(Constraint {
                 description: format!("Maximum value: {}", max_value),
                 formal: Some(format!("<= {}", max_value)),
                 kind: ConstraintKind::Universal,
-                metadata: {
-                    let mut m = HashMap::new();
-                    m.insert("pattern".to_string(), "at_most".to_string());
-                    m.insert("value".to_string(), max_value.to_string());
-                    m.insert("source".to_string(), text.to_string());
-                    m
-                },
+                metadata,
             });
         }
 
         // Pattern 3: "minimum N" / "minimum of N"
         if let Some(min_value) = self.extract_numeric_value(&lower_text, "minimum") {
+            let mut metadata = ConstraintMetadata::new();
+            metadata.set_pattern("minimum".to_string());
+            metadata.set_value(min_value.to_string());
+            metadata.set_source(text.to_string());
+
             constraints.push(Constraint {
                 description: format!("Minimum value: {}", min_value),
                 formal: Some(format!(">= {}", min_value)),
                 kind: ConstraintKind::Universal,
-                metadata: {
-                    let mut m = HashMap::new();
-                    m.insert("pattern".to_string(), "minimum".to_string());
-                    m.insert("value".to_string(), min_value.to_string());
-                    m.insert("source".to_string(), text.to_string());
-                    m
-                },
+                metadata,
             });
         }
 
         // Pattern 4: "maximum N" / "maximum of N"
         if let Some(max_value) = self.extract_numeric_value(&lower_text, "maximum") {
+            let mut metadata = ConstraintMetadata::new();
+            metadata.set_pattern("maximum".to_string());
+            metadata.set_value(max_value.to_string());
+            metadata.set_source(text.to_string());
+
             constraints.push(Constraint {
                 description: format!("Maximum value: {}", max_value),
                 formal: Some(format!("<= {}", max_value)),
                 kind: ConstraintKind::Universal,
-                metadata: {
-                    let mut m = HashMap::new();
-                    m.insert("pattern".to_string(), "maximum".to_string());
-                    m.insert("value".to_string(), max_value.to_string());
-                    m.insert("source".to_string(), text.to_string());
-                    m
-                },
+                metadata,
             });
         }
 
         // Pattern 5: "exactly N"
         if let Some(exact_value) = self.extract_numeric_value(&lower_text, "exactly") {
+            let mut metadata = ConstraintMetadata::new();
+            metadata.set_pattern("exactly".to_string());
+            metadata.set_value(exact_value.to_string());
+            metadata.set_source(text.to_string());
+
             constraints.push(Constraint {
                 description: format!("Exact value: {}", exact_value),
                 formal: Some(format!("== {}", exact_value)),
                 kind: ConstraintKind::Universal,
-                metadata: {
-                    let mut m = HashMap::new();
-                    m.insert("pattern".to_string(), "exactly".to_string());
-                    m.insert("value".to_string(), exact_value.to_string());
-                    m.insert("source".to_string(), text.to_string());
-                    m
-                },
+                metadata,
             });
         }
 
         // Pattern 6: "between X and Y"
         if let Some((min, max)) = self.extract_range(&lower_text) {
+            let mut metadata = ConstraintMetadata::new();
+            metadata.set_pattern("range".to_string());
+            metadata.set_min(min.to_string());
+            metadata.set_max(max.to_string());
+            metadata.set_source(text.to_string());
+
             constraints.push(Constraint {
                 description: format!("Range: {} to {}", min, max),
                 formal: Some(format!(">= {} && <= {}", min, max)),
                 kind: ConstraintKind::Universal,
-                metadata: {
-                    let mut m = HashMap::new();
-                    m.insert("pattern".to_string(), "range".to_string());
-                    m.insert("min".to_string(), min.to_string());
-                    m.insert("max".to_string(), max.to_string());
-                    m.insert("source".to_string(), text.to_string());
-                    m
-                },
+                metadata,
             });
         }
 
@@ -684,17 +845,16 @@ impl UDAFModel {
             if let Some(pos) = lower_text.find("must be") {
                 let after = &text[pos + 7..].trim();
                 if !after.is_empty() {
+                    let mut metadata = ConstraintMetadata::new();
+                    metadata.set_pattern("must_be".to_string());
+                    metadata.set_value(after.to_string());
+                    metadata.set_source(text.to_string());
+
                     constraints.push(Constraint {
                         description: format!("Required: {}", after),
                         formal: Some(format!("== {}", after)),
                         kind: ConstraintKind::Universal,
-                        metadata: {
-                            let mut m = HashMap::new();
-                            m.insert("pattern".to_string(), "must_be".to_string());
-                            m.insert("value".to_string(), after.to_string());
-                            m.insert("source".to_string(), text.to_string());
-                            m
-                        },
+                        metadata,
                     });
                 }
             }
@@ -706,17 +866,16 @@ impl UDAFModel {
             if let Some(pos) = lower_text.find(pattern) {
                 let after = &text[pos + pattern.len()..].trim();
                 if !after.is_empty() {
+                    let mut metadata = ConstraintMetadata::new();
+                    metadata.set_pattern("must_not_be".to_string());
+                    metadata.set_value(after.to_string());
+                    metadata.set_source(text.to_string());
+
                     constraints.push(Constraint {
                         description: format!("Forbidden: {}", after),
                         formal: Some(format!("!= {}", after)),
                         kind: ConstraintKind::Universal,
-                        metadata: {
-                            let mut m = HashMap::new();
-                            m.insert("pattern".to_string(), "must_not_be".to_string());
-                            m.insert("value".to_string(), after.to_string());
-                            m.insert("source".to_string(), text.to_string());
-                            m
-                        },
+                        metadata,
                     });
                 }
             }
@@ -773,12 +932,18 @@ impl UDAFModel {
         self.transforms.clear();
 
         // Always create U0
-        self.universes.insert("U0".to_string(), Universe::root());
+        let u0 = Universe::root();
+        self.universes.insert(u0.id.clone(), u0);
 
         // Analyze nodes and populate universes
         for node in graph.list_nodes(None) {
             let layer = node.formality_layer;
-            let universe_id = format!("U{}", layer);
+
+            // Parse universe ID - skip if invalid
+            let universe_id = match UniverseId::parse(&format!("U{}", layer)) {
+                Ok(id) => id,
+                Err(_) => continue,
+            };
 
             // Create universe if it doesn't exist
             if !self.universes.contains_key(&universe_id) && layer > 0 {
@@ -788,24 +953,34 @@ impl UDAFModel {
                     3 => ("Executable Implementations".to_string(), "Actual code implementations".to_string()),
                     _ => (format!("Layer {}", layer), format!("Layer {} specifications", layer)),
                 };
-                self.add_universe(layer, name, description);
+                // add_universe now returns Result, but we can ignore errors here since we validated layer
+                let _ = self.add_universe(layer, name, description);
             }
+
+            // Parse spec ID - skip if invalid
+            let spec_id = match SpecId::parse(&node.id) {
+                Ok(id) => id,
+                Err(_) => continue,
+            };
 
             // Add spec to universe
             if let Some(universe) = self.universes.get_mut(&universe_id) {
-                universe.specifications.insert(node.id.clone());
+                universe.specifications.insert(spec_id.clone());
             }
 
             // Create admissible set for this specification
-            let mut admissible_set = AdmissibleSet::new(node.id.clone(), universe_id.clone());
+            let mut admissible_set = AdmissibleSet::new(spec_id.clone(), universe_id.clone());
 
             // Extract constraints from content
             if node.kind == crate::NodeKind::Constraint {
+                // Convert graph metadata (HashMap<String, String>) to ConstraintMetadata
+                let metadata = ConstraintMetadata::from(node.metadata.clone());
+
                 admissible_set.add_constraint(Constraint {
                     description: node.content.clone(),
                     formal: None,
                     kind: ConstraintKind::Universal,
-                    metadata: node.metadata.clone(),
+                    metadata,
                 });
             } else {
                 // For non-Constraint nodes, extract implicit constraints from natural language
@@ -815,17 +990,17 @@ impl UDAFModel {
                 }
             }
 
-            self.admissible_sets.insert(node.id.clone(), admissible_set);
+            self.admissible_sets.insert(spec_id.clone(), admissible_set);
 
             // Create domain if this is a Domain node
             if node.kind == crate::NodeKind::Domain {
-                let domain = Domain::new(
-                    node.id.clone(),
+                let domain = Domain::with_id(
+                    DomainId::parse(&node.id).unwrap_or_else(|_| DomainId::new()),
                     node.content.clone(),
                     "Domain boundary definition".to_string(),
                     universe_id,
                 );
-                self.domains.insert(node.id.clone(), domain);
+                self.domains.insert(domain.id.clone(), domain);
             }
         }
 
@@ -837,14 +1012,23 @@ impl UDAFModel {
                 let target_node = graph.get_node(target_id);
 
                 if let (Some(source), Some(target)) = (source_node, target_node) {
-                    let source_universe = format!("U{}", source.formality_layer);
-                    let target_universe = format!("U{}", target.formality_layer);
+                    // Parse universe IDs
+                    let source_universe = match UniverseId::parse(&format!("U{}", source.formality_layer)) {
+                        Ok(id) => id,
+                        Err(_) => continue,
+                    };
+                    let target_universe = match UniverseId::parse(&format!("U{}", target.formality_layer)) {
+                        Ok(id) => id,
+                        Err(_) => continue,
+                    };
 
                     // Create forward transform
                     let transform = TransformFunction::forward(
-                        source_universe.clone(),
-                        target_universe.clone(),
-                        format!("Formalizes: {} -> {}", source.content.chars().take(30).collect::<String>(), target.content.chars().take(30).collect::<String>()),
+                        source_universe,
+                        target_universe,
+                        format!("Formalizes: {} -> {}",
+                            source.content.chars().take(30).collect::<String>(),
+                            target.content.chars().take(30).collect::<String>()),
                         TransformStrategy::Manual {
                             description: "Manual formalization via Formalizes edge".to_string(),
                         },
@@ -856,13 +1040,11 @@ impl UDAFModel {
 
         // Create inverse transforms for each projection universe to U0
         for (universe_id, _universe) in &self.universes {
-            if universe_id == "U0" {
-                continue;
+            if universe_id.layer() == 0 {
+                continue;  // Skip U0 itself
             }
 
-            let layer_num = universe_id.strip_prefix('U')
-                .and_then(|s| s.parse::<u8>().ok())
-                .unwrap_or(0);
+            let layer_num = universe_id.layer();
 
             // Create inverse transform based on layer
             let strategy = match layer_num {
@@ -880,16 +1062,139 @@ impl UDAFModel {
                     verification_config: HashMap::new(),
                 },
                 _ => TransformStrategy::Manual {
-                    description: format!("Inverse mapping from {}", universe_id),
+                    description: format!("Inverse mapping from {}", universe_id.as_str()),
                 },
             };
 
             let transform = TransformFunction::inverse(
                 universe_id.clone(),
-                format!("Inverse mapping from {} to U0", universe_id),
+                format!("Inverse mapping from {} to U0", universe_id.as_str()),
                 strategy,
             );
             self.transforms.insert(transform.id.clone(), transform);
+        }
+    }
+
+    /// Validate all reference integrity across the model
+    ///
+    /// Checks:
+    /// - Universe specifications reference valid SpecIds
+    /// - Domain universe_id references valid UniverseIds
+    /// - Domain covered_by references valid SpecIds
+    /// - Domain subdomains references valid DomainIds
+    /// - AdmissibleSet universe_id references valid UniverseIds
+    /// - AdmissibleSet contradicts references valid SpecIds
+    /// - Transform source/target universes reference valid UniverseIds
+    ///
+    /// Returns Ok(()) if all references are valid, or Err with details of invalid references
+    pub fn validate(&self) -> Result<(), String> {
+        let mut errors = Vec::new();
+
+        // Collect all valid IDs for reference checking
+        let valid_universe_ids: HashSet<String> = self.universes.keys()
+            .map(|id| id.as_str().to_string())
+            .collect();
+
+        let valid_spec_ids: HashSet<String> = self.admissible_sets.keys()
+            .map(|id| id.as_str().to_string())
+            .collect();
+
+        let valid_domain_ids: HashSet<String> = self.domains.keys()
+            .map(|id| id.as_str().to_string())
+            .collect();
+
+        // Validate Universe references
+        for (universe_id, universe) in &self.universes {
+            // Check that all specifications in the universe exist
+            let invalid_specs = universe.specifications.check_integrity(&valid_spec_ids);
+            if !invalid_specs.is_empty() {
+                errors.push(format!(
+                    "Universe {} references non-existent specifications: {:?}",
+                    universe_id.as_str(),
+                    invalid_specs
+                ));
+            }
+        }
+
+        // Validate Domain references
+        for (domain_id, domain) in &self.domains {
+            // Check that universe_id exists
+            if !valid_universe_ids.contains(domain.universe_id.as_str()) {
+                errors.push(format!(
+                    "Domain {} references non-existent universe: {}",
+                    domain_id.as_str(),
+                    domain.universe_id.as_str()
+                ));
+            }
+
+            // Check that all covered_by specs exist
+            let invalid_specs = domain.covered_by.check_integrity(&valid_spec_ids);
+            if !invalid_specs.is_empty() {
+                errors.push(format!(
+                    "Domain {} references non-existent specifications in covered_by: {:?}",
+                    domain_id.as_str(),
+                    invalid_specs
+                ));
+            }
+
+            // Check that all subdomains exist
+            let invalid_domains = domain.subdomains.check_integrity(&valid_domain_ids);
+            if !invalid_domains.is_empty() {
+                errors.push(format!(
+                    "Domain {} references non-existent subdomains: {:?}",
+                    domain_id.as_str(),
+                    invalid_domains
+                ));
+            }
+        }
+
+        // Validate AdmissibleSet references
+        for (spec_id, admissible_set) in &self.admissible_sets {
+            // Check that universe_id exists
+            if !valid_universe_ids.contains(admissible_set.universe_id.as_str()) {
+                errors.push(format!(
+                    "AdmissibleSet {} references non-existent universe: {}",
+                    spec_id.as_str(),
+                    admissible_set.universe_id.as_str()
+                ));
+            }
+
+            // Check that all contradicts references exist
+            let invalid_contradicts = admissible_set.contradicts.check_integrity(&valid_spec_ids);
+            if !invalid_contradicts.is_empty() {
+                errors.push(format!(
+                    "AdmissibleSet {} references non-existent specifications in contradicts: {:?}",
+                    spec_id.as_str(),
+                    invalid_contradicts
+                ));
+            }
+        }
+
+        // Validate Transform references
+        for (transform_id, transform) in &self.transforms {
+            // Check that source_universe exists
+            if !valid_universe_ids.contains(transform.source_universe.as_str()) {
+                errors.push(format!(
+                    "Transform {} references non-existent source universe: {}",
+                    transform_id.as_str(),
+                    transform.source_universe.as_str()
+                ));
+            }
+
+            // Check that target_universe exists
+            if !valid_universe_ids.contains(transform.target_universe.as_str()) {
+                errors.push(format!(
+                    "Transform {} references non-existent target universe: {}",
+                    transform_id.as_str(),
+                    transform.target_universe.as_str()
+                ));
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join("\n"))
         }
     }
 }

@@ -42,6 +42,29 @@ theorem preimage_union (i : ι) (S T : SpecSet (M.carrier i)) :
         rcases hxT with ⟨y, hproj, hyT⟩
         exact ⟨y, hproj, Or.inr hyT⟩
 
+/--
+May-style inverse image:
+undefined projection (`none`) is treated as "inconclusive" rather than immediate rejection.
+-/
+def preimageMay (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => M.proj i x = none ∨ ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+
+/-- Must-style inverse image is always included in may-style inverse image. -/
+theorem preimage_subset_preimageMay (i : ι) (S : SpecSet (M.carrier i)) :
+    M.preimage i S ⊆ M.preimageMay i S := by
+  intro x hx
+  rcases hx with ⟨y, hproj, hyS⟩
+  exact Or.inr ⟨y, hproj, hyS⟩
+
+/-- May-style lifted admissible set. -/
+def liftedMay (i : ι) : SpecSet α :=
+  M.preimageMay i (M.Ui i)
+
+/-- Must-style lifted admissible set is included in may-style lifted admissible set. -/
+theorem lifted_subset_liftedMay (i : ι) :
+    M.lifted i ⊆ M.liftedMay i := by
+  exact M.preimage_subset_preimageMay i (M.Ui i)
+
 /-- Because each layer satisfies `A ⊆ D`, lifted admissible points stay in lifted domains. -/
 theorem lifted_subset_preimage_domain (i : ι) :
     M.lifted i ⊆ M.preimage i (M.D i) := by
@@ -59,6 +82,10 @@ def U0On (active : ι → Prop) : SpecSet α :=
 /-- Meet-style integrated specification: all active layers must hold simultaneously. -/
 def UAndOn (active : ι → Prop) : SpecSet α :=
   fun x : α => ∀ i : ι, active i → x ∈ M.lifted i
+
+/-- Meet-style integration under may semantics for undefined projections. -/
+def UAndMayOn (active : ι → Prop) : SpecSet α :=
+  fun x : α => ∀ i : ι, active i → x ∈ M.liftedMay i
 
 /-- Global meet-style integrated specification over all layers. -/
 def UAnd : SpecSet α :=
@@ -99,6 +126,24 @@ theorem UAndOn_antitone {J K : ι → Prop}
     M.UAndOn K ⊆ M.UAndOn J := by
   intro x hx i hi
   exact hx i (hJK i hi)
+
+/-- Must-style meet is included in may-style meet for the same active set. -/
+theorem UAndOn_subset_UAndMayOn
+    {active : ι → Prop} :
+    M.UAndOn active ⊆ M.UAndMayOn active := by
+  intro x hx i hi
+  exact M.lifted_subset_liftedMay i (hx i hi)
+
+/--
+If may-style meet is empty, then must-style meet is also empty
+(safe contradiction direction under may semantics).
+-/
+theorem UAndMayOn_empty_implies_UAndOn_empty
+    {active : ι → Prop}
+    (hEmptyMay : ∀ x : α, x ∈ M.UAndMayOn active → False) :
+    ∀ x : α, x ∈ M.UAndOn active → False := by
+  intro x hxMust
+  exact hEmptyMay x (M.UAndOn_subset_UAndMayOn hxMust)
 
 /--
 With no active layers, meet-style integration is vacuously true for every root point.
