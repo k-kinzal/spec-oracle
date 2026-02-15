@@ -2,12 +2,12 @@ id: 48b035be-35d3-4103-b7bf-53f5f2e680d3
 content: 'Scenario: detect inter universe inconsistencies empty'
 kind: Scenario
 metadata:
-  extractor: test
   confidence: '0.9'
-  inferred: 'true'
+  source_line: '2262'
   test_function: detect_inter_universe_inconsistencies_empty
   source_file: spec-core/src/graph.rs
-  source_line: '2262'
+  inferred: 'true'
+  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

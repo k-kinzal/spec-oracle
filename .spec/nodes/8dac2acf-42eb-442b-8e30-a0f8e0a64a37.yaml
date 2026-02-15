@@ -1,0 +1,7 @@
+id: 8dac2acf-42eb-442b-8e30-a0f8e0a64a37
+content: spec archive <id> must mark a specification as archived and exclude it from checks
+kind: Assertion
+metadata: {}
+created_at: 1771121897
+modified_at: 1771121897
+formality_layer: 0

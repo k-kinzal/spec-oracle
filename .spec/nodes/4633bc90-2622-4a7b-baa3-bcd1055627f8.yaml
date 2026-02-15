@@ -3,11 +3,11 @@ content: 'RPC: Detect layer inconsistencies'
 kind: Assertion
 metadata:
   inferred: 'true'
-  source_line: '21'
-  source_file: proto/spec_oracle.proto
+  confidence: '0.95'
   rpc_name: DetectLayerInconsistencies
   extractor: proto_rpc
-  confidence: '0.95'
+  source_file: proto/spec_oracle.proto
+  source_line: '21'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

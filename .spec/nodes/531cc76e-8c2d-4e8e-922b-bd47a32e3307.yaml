@@ -3,11 +3,11 @@ content: 'Scenario: get node history nonexistent returns none'
 kind: Scenario
 metadata:
   test_function: get_node_history_nonexistent_returns_none
+  confidence: '0.9'
+  source_file: spec-core/src/graph.rs
   source_line: '2418'
   extractor: test
   inferred: 'true'
-  source_file: spec-core/src/graph.rs
-  confidence: '0.9'
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3

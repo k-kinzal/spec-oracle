@@ -2,12 +2,12 @@ id: ee97d8f2-7874-4988-bf9a-6d838368d1be
 content: Edge operations
 kind: Assertion
 metadata:
-  extractor: proto_rpc
   inferred: 'true'
-  confidence: '0.95'
-  rpc_name: AddEdge
   source_line: '13'
+  rpc_name: AddEdge
+  extractor: proto_rpc
   source_file: proto/spec_oracle.proto
+  confidence: '0.95'
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

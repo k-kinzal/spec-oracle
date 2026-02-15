@@ -2,12 +2,12 @@ id: cdd049cc-cbfd-42e4-af54-80241118fdde
 content: 'Scenario: no synonyms when already marked'
 kind: Scenario
 metadata:
-  test_function: no_synonyms_when_already_marked
-  confidence: '0.9'
-  source_line: '1852'
-  source_file: spec-core/src/graph.rs
-  extractor: test
   inferred: 'true'
+  source_file: spec-core/src/graph.rs
+  source_line: '1852'
+  extractor: test
+  confidence: '0.9'
+  test_function: no_synonyms_when_already_marked
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

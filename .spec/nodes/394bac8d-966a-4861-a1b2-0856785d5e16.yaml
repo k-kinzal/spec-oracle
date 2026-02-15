@@ -2,12 +2,12 @@ id: 394bac8d-966a-4861-a1b2-0856785d5e16
 content: 'Scenario: compliance report with linked code'
 kind: Scenario
 metadata:
+  source_line: '2280'
+  test_function: compliance_report_with_linked_code
+  source_file: spec-core/src/graph.rs
   inferred: 'true'
   confidence: '0.9'
-  source_line: '2280'
   extractor: test
-  source_file: spec-core/src/graph.rs
-  test_function: compliance_report_with_linked_code
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3

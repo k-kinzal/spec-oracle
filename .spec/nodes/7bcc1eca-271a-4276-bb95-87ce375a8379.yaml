@@ -2,12 +2,12 @@ id: 7bcc1eca-271a-4276-bb95-87ce375a8379
 content: 'Scenario: detect inter universe inconsistencies with transform'
 kind: Scenario
 metadata:
-  inferred: 'true'
-  extractor: test
   source_file: spec-core/src/graph.rs
-  test_function: detect_inter_universe_inconsistencies_with_transform
   confidence: '0.9'
   source_line: '2269'
+  inferred: 'true'
+  test_function: detect_inter_universe_inconsistencies_with_transform
+  extractor: test
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

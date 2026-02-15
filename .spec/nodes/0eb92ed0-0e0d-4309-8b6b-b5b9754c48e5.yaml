@@ -2,12 +2,12 @@ id: 0eb92ed0-0e0d-4309-8b6b-b5b9754c48e5
 content: 'Scenario: no duplicate detection for synonym edges'
 kind: Scenario
 metadata:
+  source_line: '1644'
+  test_function: no_duplicate_detection_for_synonym_edges
   extractor: test
   confidence: '0.9'
   source_file: spec-core/src/graph.rs
   inferred: 'true'
-  test_function: no_duplicate_detection_for_synonym_edges
-  source_line: '1644'
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

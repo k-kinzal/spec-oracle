@@ -2,12 +2,12 @@ id: ba2882a1-a8d2-4018-b67c-81330c111736
 content: 'Scenario: detect inter universe inconsistencies missing transform'
 kind: Scenario
 metadata:
-  confidence: '0.9'
+  test_function: detect_inter_universe_inconsistencies_missing_transform
   source_line: '2308'
+  inferred: 'true'
   source_file: spec-core/src/graph.rs
   extractor: test
-  test_function: detect_inter_universe_inconsistencies_missing_transform
-  inferred: 'true'
+  confidence: '0.9'
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3

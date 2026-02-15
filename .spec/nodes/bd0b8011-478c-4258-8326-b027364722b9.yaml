@@ -3,11 +3,11 @@ content: 'Scenario: get compliance trend with data'
 kind: Scenario
 metadata:
   source_line: '2434'
-  confidence: '0.9'
-  source_file: spec-core/src/graph.rs
-  test_function: get_compliance_trend_with_data
   inferred: 'true'
+  test_function: get_compliance_trend_with_data
+  confidence: '0.9'
   extractor: test
+  source_file: spec-core/src/graph.rs
 created_at: 1771087004
 modified_at: 1771087004
 formality_layer: 3
