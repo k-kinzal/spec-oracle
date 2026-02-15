@@ -9,8 +9,8 @@
 
 #[cfg(feature = "z3-solver")]
 use z3::{Config, Context, Solver, ast::{Ast, Bool, Int}};
-use crate::formal::Constraint;
-use crate::prover::{ProofStatus, ProofStep};
+use crate::formal::{Constraint, ConstraintKind};
+use super::types::{ProofStatus, ProofStep};
 use std::collections::HashMap;
 
 /// Z3-based SMT solver backend

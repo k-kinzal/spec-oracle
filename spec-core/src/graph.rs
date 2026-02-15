@@ -6,9 +6,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-// Import Z3-based formal verification modules
-use crate::udaf::{AdmissibleSet, Constraint, ConstraintKind};
-use crate::prover::{Prover, ProofStatus};
+// Import formal verification modules
+use crate::formal::{AdmissibleSet, Constraint, ConstraintKind};
+#[cfg(feature = "z3-solver")]
+use crate::formal::{Prover, ProofStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NodeKind {
@@ -908,11 +909,19 @@ impl SpecGraph {
                 metadata_map.insert("operator".to_string(), ">=".to_string());
                 metadata_map.insert("value".to_string(), min_val.to_string());
 
+                let description_text = format!("Password must be at least {} characters", min_val);
+                let mut metadata_map_with_desc = metadata_map.clone();
+                metadata_map_with_desc.insert("description".to_string(), description_text.clone());
+
                 constraints.push(Constraint {
-                    description: format!("Password must be at least {} characters", min_val),
+                    // Layer 2: Proof data
                     formal: Some(format!("(>= password_length {})", min_val)),
                     kind: ConstraintKind::Universal,
-                    metadata: crate::ConstraintMetadata::from(metadata_map),
+                    // OLD fields (for compatibility)
+                    description: Some(description_text),
+                    metadata: Some(crate::ConstraintMetadata::from(metadata_map)),
+                    // NEW field (preferred)
+                    meta: Some(crate::ConstraintMetadata::from(metadata_map_with_desc)),
                 });
             } else if content_lower.contains("length") || content_lower.contains("minimum") {
                 // Generic numeric constraint
@@ -920,11 +929,19 @@ impl SpecGraph {
                 metadata_map.insert("operator".to_string(), ">=".to_string());
                 metadata_map.insert("value".to_string(), min_val.to_string());
 
+                let description_text = format!("Value must be at least {}", min_val);
+                let mut metadata_map_with_desc = metadata_map.clone();
+                metadata_map_with_desc.insert("description".to_string(), description_text.clone());
+
                 constraints.push(Constraint {
-                    description: format!("Value must be at least {}", min_val),
+                    // Layer 2: Proof data
                     formal: Some(format!("(>= value {})", min_val)),
                     kind: ConstraintKind::Universal,
-                    metadata: crate::ConstraintMetadata::from(metadata_map),
+                    // OLD fields (for compatibility)
+                    description: Some(description_text),
+                    metadata: Some(crate::ConstraintMetadata::from(metadata_map)),
+                    // NEW field (preferred)
+                    meta: Some(crate::ConstraintMetadata::from(metadata_map_with_desc)),
                 });
             }
         }
@@ -937,11 +954,16 @@ impl SpecGraph {
                 metadata_map.insert("operator".to_string(), "<=".to_string());
                 metadata_map.insert("value".to_string(), max_val.to_string());
 
+                let description_text = format!("Password must be at most {} characters", max_val);
+                let mut metadata_map_with_desc = metadata_map.clone();
+                metadata_map_with_desc.insert("description".to_string(), description_text.clone());
+
                 constraints.push(Constraint {
-                    description: format!("Password must be at most {} characters", max_val),
                     formal: Some(format!("(<= password_length {})", max_val)),
                     kind: ConstraintKind::Universal,
-                    metadata: crate::ConstraintMetadata::from(metadata_map),
+                    description: Some(description_text),
+                    metadata: Some(crate::ConstraintMetadata::from(metadata_map)),
+                    meta: Some(crate::ConstraintMetadata::from(metadata_map_with_desc)),
                 });
             } else if content_lower.contains("length") || content_lower.contains("maximum") {
                 // Generic numeric constraint
@@ -949,11 +971,16 @@ impl SpecGraph {
                 metadata_map.insert("operator".to_string(), "<=".to_string());
                 metadata_map.insert("value".to_string(), max_val.to_string());
 
+                let description_text = format!("Value must be at most {}", max_val);
+                let mut metadata_map_with_desc = metadata_map.clone();
+                metadata_map_with_desc.insert("description".to_string(), description_text.clone());
+
                 constraints.push(Constraint {
-                    description: format!("Value must be at most {}", max_val),
                     formal: Some(format!("(<= value {})", max_val)),
                     kind: ConstraintKind::Universal,
-                    metadata: crate::ConstraintMetadata::from(metadata_map),
+                    description: Some(description_text),
+                    metadata: Some(crate::ConstraintMetadata::from(metadata_map)),
+                    meta: Some(crate::ConstraintMetadata::from(metadata_map_with_desc)),
                 });
             }
         }
@@ -962,11 +989,14 @@ impl SpecGraph {
         if content_lower.contains("must") && !content_lower.contains("must not") {
             let mut metadata_map = HashMap::new();
             metadata_map.insert("type".to_string(), "universal".to_string());
+            metadata_map.insert("description".to_string(), content.to_string());
+
             constraints.push(Constraint {
-                description: content.to_string(),
                 formal: None, // Natural language only
                 kind: ConstraintKind::Universal,
-                metadata: crate::ConstraintMetadata::from(metadata_map),
+                description: Some(content.to_string()),
+                metadata: Some(crate::ConstraintMetadata::from(metadata_map.clone())),
+                meta: Some(crate::ConstraintMetadata::from(metadata_map)),
             });
         }
 
@@ -974,11 +1004,14 @@ impl SpecGraph {
         if content_lower.contains("must not") || content_lower.contains("forbidden") {
             let mut metadata_map = HashMap::new();
             metadata_map.insert("type".to_string(), "prohibition".to_string());
+            metadata_map.insert("description".to_string(), content.to_string());
+
             constraints.push(Constraint {
-                description: content.to_string(),
                 formal: None, // Natural language only
                 kind: ConstraintKind::Universal,
-                metadata: crate::ConstraintMetadata::from(metadata_map),
+                description: Some(content.to_string()),
+                metadata: Some(crate::ConstraintMetadata::from(metadata_map.clone())),
+                meta: Some(crate::ConstraintMetadata::from(metadata_map)),
             });
         }
 
@@ -1005,11 +1038,11 @@ impl SpecGraph {
         // We need to clone metadata access since we'll move constraints later
         let vars_a: std::collections::HashSet<_> = constraints_a
             .iter()
-            .filter_map(|c| c.metadata.get_str("variable").map(|s| s.to_string()))
+            .filter_map(|c| c.metadata.as_ref()?.get_str("variable").map(|s| s.to_string()))
             .collect();
         let vars_b: std::collections::HashSet<_> = constraints_b
             .iter()
-            .filter_map(|c| c.metadata.get_str("variable").map(|s| s.to_string()))
+            .filter_map(|c| c.metadata.as_ref()?.get_str("variable").map(|s| s.to_string()))
             .collect();
 
         let common_vars: Vec<String> = vars_a.intersection(&vars_b).cloned().collect();
@@ -1038,26 +1071,34 @@ impl SpecGraph {
         }
 
         // Call Z3-based Prover
-        let mut prover = Prover::new();
-        let proof = prover.prove_consistency(&set_a, &set_b);
+        #[cfg(feature = "z3-solver")]
+        {
+            let mut prover = Prover::new();
+            let proof = prover.prove_consistency(&set_a, &set_b);
 
-        match proof.status {
-            ProofStatus::Refuted => {
-                // Contradiction formally proven by Z3
-                let vars_list = common_vars.join(", ");
-                Some(format!(
-                    "Z3-verified contradiction on variable(s): {} (formally proven inconsistent)",
-                    vars_list
-                ))
+            match proof.status {
+                ProofStatus::Refuted => {
+                    // Contradiction formally proven by Z3
+                    let vars_list = common_vars.join(", ");
+                    Some(format!(
+                        "Z3-verified contradiction on variable(s): {} (formally proven inconsistent)",
+                        vars_list
+                    ))
+                }
+                ProofStatus::Proven => {
+                    // Formally proven consistent (no contradiction)
+                    None
+                }
+                ProofStatus::Unknown | ProofStatus::Pending => {
+                    // Can't prove or refute, fallback to heuristics
+                    None
+                }
             }
-            ProofStatus::Proven => {
-                // Formally proven consistent (no contradiction)
-                None
-            }
-            ProofStatus::Unknown | ProofStatus::Pending => {
-                // Can't prove or refute, fallback to heuristics
-                None
-            }
+        }
+        #[cfg(not(feature = "z3-solver"))]
+        {
+            // Without Z3, can't formally prove contradictions
+            None
         }
     }
 
