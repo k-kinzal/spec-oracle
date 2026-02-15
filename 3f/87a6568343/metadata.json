@@ -3,7 +3,7 @@
   "checkpoint_id": "3f87a6568343",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 42,
+  "checkpoints_count": 43,
   "files_touched": [
     ".claude/claude-loop.debug",
     ".claude/claude-loop.state.json",
@@ -53,6 +53,7 @@
     "spec-core/src/formal/model/populate.rs",
     "spec-core/src/formal/model/serde_helpers.rs",
     "spec-core/src/formal/proof/mod.rs",
+    "spec-core/src/formal/proof/types.rs",
     "spec-core/src/formal/universe/universe.rs",
     "spec-core/src/graph.rs",
     "spec-core/src/lib.rs",
@@ -266,13 +267,20 @@
       "context": "/3f/87a6568343/28/context.md",
       "content_hash": "/3f/87a6568343/28/content_hash.txt",
       "prompt": "/3f/87a6568343/28/prompt.txt"
+    },
+    {
+      "metadata": "/3f/87a6568343/29/metadata.json",
+      "transcript": "/3f/87a6568343/29/full.jsonl",
+      "context": "/3f/87a6568343/29/context.md",
+      "content_hash": "/3f/87a6568343/29/content_hash.txt",
+      "prompt": "/3f/87a6568343/29/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 8539,
-    "cache_creation_tokens": 1553073,
-    "cache_read_tokens": 37965035,
-    "output_tokens": 85481,
-    "api_call_count": 384
+    "input_tokens": 8541,
+    "cache_creation_tokens": 1608600,
+    "cache_read_tokens": 37967353,
+    "output_tokens": 85483,
+    "api_call_count": 385
   }
 }
