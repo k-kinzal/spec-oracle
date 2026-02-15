@@ -2,11 +2,11 @@ id: ff0a505f-1d9d-418b-9a0b-af8bd28760eb
 content: 'RPC: Get compliance trend'
 kind: Assertion
 metadata:
-  rpc_name: GetComplianceTrend
   inferred: 'true'
+  rpc_name: GetComplianceTrend
   confidence: '0.95'
-  extractor: proto_rpc
   source_file: proto/spec_oracle.proto
+  extractor: proto_rpc
   source_line: '46'
 created_at: 1771078430
 modified_at: 1771078430

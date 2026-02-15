@@ -3,11 +3,11 @@ content: Returns the newly extracted InferredSpecification objects that should b
 kind: Assertion
 metadata:
   inferred: 'true'
-  doc_comment: 'true'
-  confidence: '0.7'
-  source_file: spec-core/src/udaf.rs
-  source_line: '404'
   extractor: doc
+  source_line: '404'
+  source_file: spec-core/src/udaf.rs
+  confidence: '0.7'
+  doc_comment: 'true'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 0

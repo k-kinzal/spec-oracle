@@ -3,13 +3,13 @@ content: 'Invariant: fetched.content, "User must authenticate"'
 kind: Definition
 metadata:
   source_line: '1780'
-  extractor: assertion
-  confidence: '0.95'
-  example_purpose: test_data
-  inferred: 'true'
-  source_file: spec-core/src/graph.rs
   assertion: fetched.content, "User must authenticate"
   is_example: 'true'
+  confidence: '0.95'
+  example_purpose: test_data
+  extractor: assertion
+  inferred: 'true'
+  source_file: spec-core/src/graph.rs
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 3

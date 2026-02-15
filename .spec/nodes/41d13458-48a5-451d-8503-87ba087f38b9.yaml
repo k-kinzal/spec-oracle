@@ -4,9 +4,9 @@ kind: Constraint
 metadata:
   source_file: spec-core/src/extract.rs
   confidence: '0.95'
-  inferred: 'true'
   extractor: assertion
   assertion: report.nodes_created, 2, "Should create 2 high-confidence nodes"
+  inferred: 'true'
   source_line: '1064'
 created_at: 1771093752
 modified_at: 1771093752
