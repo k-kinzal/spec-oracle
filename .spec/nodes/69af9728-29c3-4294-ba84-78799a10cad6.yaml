@@ -2,12 +2,12 @@ id: 69af9728-29c3-4294-ba84-78799a10cad6
 content: '- "must be" / "must not be" → boolean constraints'
 kind: Constraint
 metadata:
-  doc_comment: 'true'
-  inferred: 'true'
-  extractor: doc
-  confidence: '0.8'
   source_line: '576'
+  inferred: 'true'
   source_file: spec-core/src/udaf.rs
+  extractor: doc
+  doc_comment: 'true'
+  confidence: '0.8'
 created_at: 1771093752
 modified_at: 1771093752
 formality_layer: 0

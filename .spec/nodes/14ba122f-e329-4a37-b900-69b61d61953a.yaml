@@ -3,10 +3,10 @@ content: 'Scenario: validate user authentication'
 kind: Scenario
 metadata:
   source_file: spec-core/src/extract.rs
-  inferred: 'true'
-  extractor: test
   confidence: '0.9'
+  inferred: 'true'
   source_line: '963'
+  extractor: test
   test_function: validate_user_authentication
 created_at: 1771093752
 modified_at: 1771093752

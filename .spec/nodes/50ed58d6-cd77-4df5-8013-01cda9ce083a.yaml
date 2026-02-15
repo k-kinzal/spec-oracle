@@ -2,10 +2,10 @@ id: 50ed58d6-cd77-4df5-8013-01cda9ce083a
 content: 'Scenario: authentication required'
 kind: Scenario
 metadata:
-  extractor: test
-  confidence: '0.9'
   test_function: test_authentication_required
+  confidence: '0.9'
   source_line: '977'
+  extractor: test
   source_file: spec-core/src/extract.rs
   inferred: 'true'
 created_at: 1771093752

@@ -12,6 +12,13 @@ U0 serves as the baseline for governing multi-layered defenses. Humans express i
 
 **Status**: Core concept realized. 253 specifications managed (29.6% auto-extracted), zero contradictions, zero omissions, complete graph connectivity.
 
+## Documentation
+
+**New to specORACLE?** Start here:
+- **[Concepts Guide](docs/concepts.md)** - Understand formality layers (U0-U3), reverse mapping, and the U/D/A/f model
+- **[Motivation](docs/motivation.md)** - Why specORACLE is needed (multi-layer defense coordination)
+- **[Theoretical Foundation](docs/conversation.md)** - Deep dive into specification theory
+
 ## Architecture
 
 - **specd**: Server daemon managing the specification graph via gRPC

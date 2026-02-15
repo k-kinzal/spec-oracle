@@ -2,11 +2,11 @@ id: bc00dd37-b590-4e0c-93e0-25747da4beca
 content: 'RPC: Get test coverage'
 kind: Assertion
 metadata:
-  rpc_name: GetTestCoverage
-  inferred: 'true'
   confidence: '0.95'
+  inferred: 'true'
   source_file: proto/spec_oracle.proto
   source_line: '36'
+  rpc_name: GetTestCoverage
   extractor: proto_rpc
 created_at: 1771078430
 modified_at: 1771078430

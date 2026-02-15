@@ -2,12 +2,12 @@ id: 9212713c-0da1-42f9-bccf-5be3cb38860c
 content: Layer-aware operations
 kind: Assertion
 metadata:
-  inferred: 'true'
-  extractor: proto_rpc
-  source_line: '27'
-  confidence: '0.95'
   source_file: proto/spec_oracle.proto
   rpc_name: FilterByLayer
+  confidence: '0.95'
+  inferred: 'true'
+  source_line: '27'
+  extractor: proto_rpc
 created_at: 1771078430
 modified_at: 1771078430
 formality_layer: 2

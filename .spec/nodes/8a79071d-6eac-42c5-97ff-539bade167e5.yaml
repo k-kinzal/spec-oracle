@@ -2,8 +2,8 @@ id: 8a79071d-6eac-42c5-97ff-539bade167e5
 content: The find command must search specifications using natural language, filter by layer, and display helpful suggestions when no results found
 kind: Constraint
 metadata:
-  source_file: spec-cli/src/main.rs
   function: Commands::Find
+  source_file: spec-cli/src/main.rs
 created_at: 1771062016
 modified_at: 1771062016
 formality_layer: 3

@@ -2,11 +2,11 @@ id: f432d0e9-8076-4df8-a02c-a365a916aadf
 content: 'Scenario: coverage with tests'
 kind: Scenario
 metadata:
-  inferred: 'true'
-  confidence: '0.9'
-  source_line: '1948'
   test_function: test_coverage_with_tests
+  confidence: '0.9'
   source_file: spec-core/src/graph.rs
+  source_line: '1948'
+  inferred: 'true'
   extractor: test
 created_at: 1771077123
 modified_at: 1771077123

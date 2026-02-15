@@ -2,12 +2,12 @@ id: b1e1d371-3974-468a-b0a8-0bf3108e6165
 content: 'Scenario: detect no layer inconsistency correct direction'
 kind: Scenario
 metadata:
+  source_file: spec-core/src/graph.rs
   source_line: '1781'
   extractor: test
   confidence: '0.9'
-  test_function: detect_no_layer_inconsistency_correct_direction
-  source_file: spec-core/src/graph.rs
   inferred: 'true'
+  test_function: detect_no_layer_inconsistency_correct_direction
 created_at: 1771077123
 modified_at: 1771077123
 formality_layer: 3
