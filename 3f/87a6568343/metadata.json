@@ -3,7 +3,7 @@
   "checkpoint_id": "3f87a6568343",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 44,
+  "checkpoints_count": 45,
   "files_touched": [
     ".claude/claude-loop.debug",
     ".claude/claude-loop.state.json",
@@ -18,19 +18,23 @@
     "paper/reviews/reviewer1_round18.md",
     "paper/reviews/reviewer1_round19.md",
     "paper/reviews/reviewer1_round20.md",
+    "paper/reviews/reviewer1_round33.md",
     "paper/reviews/reviewer2_round12.md",
     "paper/reviews/reviewer2_round14.md",
     "paper/reviews/reviewer2_round17.md",
     "paper/reviews/reviewer2_round18.md",
     "paper/reviews/reviewer2_round19.md",
     "paper/reviews/reviewer2_round20.md",
+    "paper/reviews/reviewer2_round33.md",
     "paper/reviews/reviewer3_round12.md",
     "paper/reviews/reviewer3_round14.md",
     "paper/reviews/reviewer3_round17.md",
     "paper/reviews/reviewer3_round18.md",
     "paper/reviews/reviewer3_round19.md",
     "paper/reviews/reviewer3_round20.md",
+    "paper/reviews/reviewer3_round33.md",
     "paper/reviews/round18_summary.md",
+    "paper/reviews/round33_summary.md",
     "scripts/connect_lifecycle_check_specs_v2.py",
     "spec-cli/src/commands/prover.rs",
     "spec-cli/src/commands/u0.rs",
@@ -301,13 +305,20 @@
       "context": "/3f/87a6568343/31/context.md",
       "content_hash": "/3f/87a6568343/31/content_hash.txt",
       "prompt": "/3f/87a6568343/31/prompt.txt"
+    },
+    {
+      "metadata": "/3f/87a6568343/32/metadata.json",
+      "transcript": "/3f/87a6568343/32/full.jsonl",
+      "context": "/3f/87a6568343/32/context.md",
+      "content_hash": "/3f/87a6568343/32/content_hash.txt",
+      "prompt": "/3f/87a6568343/32/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 8317,
-    "cache_creation_tokens": 1630036,
-    "cache_read_tokens": 35627278,
-    "output_tokens": 88828,
-    "api_call_count": 357
+    "input_tokens": 8453,
+    "cache_creation_tokens": 1669421,
+    "cache_read_tokens": 36440218,
+    "output_tokens": 89380,
+    "api_call_count": 373
   }
 }
