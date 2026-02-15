@@ -39,8 +39,8 @@ pub async fn dispatch_standalone(
         crate::Commands::Api(api_cmd) => {
             dispatch_api_standalone(&mut store, api_cmd)?;
         }
-        crate::Commands::ListNodes { kind } => {
-            dispatch_list_nodes_standalone(&store, kind)?;
+        crate::Commands::ListNodes { kind, layer, full, limit, offset } => {
+            dispatch_list_nodes_standalone(&store, kind, layer, full, limit, offset)?;
         }
         crate::Commands::DetectContradictions => {
             commands::execute_contradictions_standalone(&store)?;
@@ -122,8 +122,8 @@ fn dispatch_api_standalone(
         ApiCommands::GetNode { id } => {
             api::execute_get_node_standalone(store, id)?;
         }
-        ApiCommands::ListNodes { kind } => {
-            api::execute_list_nodes_standalone(store, kind)?;
+        ApiCommands::ListNodes { kind, layer, full, limit, offset } => {
+            api::execute_list_nodes_standalone(store, kind, layer, full, limit, offset)?;
         }
         ApiCommands::RemoveNode { id } => {
             api::execute_remove_node_standalone(store, id)?;
@@ -170,16 +170,91 @@ fn dispatch_api_standalone(
 fn dispatch_list_nodes_standalone(
     store: &Store,
     kind: Option<String>,
+    layer: Option<u8>,
+    full: bool,
+    limit: Option<usize>,
+    offset: Option<usize>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("⚠️  WARNING: 'spec list-nodes' is deprecated. Use 'spec api list-nodes' instead.");
     eprintln!("   The command will still work but may be removed in a future version.\n");
 
     let graph = store.load()?;
     let kind_filter = kind.as_ref().map(|k| proto_to_core_kind(parse_node_kind(k)));
-    let nodes = graph.list_nodes(kind_filter);
+    let mut nodes = graph.list_nodes(kind_filter);
+
+    // Apply layer filter if specified
+    if let Some(layer_filter) = layer {
+        nodes.retain(|n| n.formality_layer == layer_filter);
+    }
+
+    // Summary mode (default)
+    if !full {
+        println!("📊 Specification Summary");
+        println!("Total: {} specifications", nodes.len());
+        println!();
+
+        // Group by formality layer
+        let mut by_layer = std::collections::HashMap::<u8, usize>::new();
+        for node in &nodes {
+            *by_layer.entry(node.formality_layer).or_insert(0) += 1;
+        }
+
+        println!("By Formality Layer:");
+        for layer_num in 0..=3 {
+            if let Some(&count) = by_layer.get(&layer_num) {
+                let layer_label = format_formality_layer(layer_num);
+                let layer_name = match layer_num {
+                    0 => "Natural Language Requirements",
+                    1 => "Formal Specifications",
+                    2 => "Interface Definitions",
+                    3 => "Implementation",
+                    _ => "Unknown",
+                };
+                println!("  {}: {} ({} specs)", layer_label, layer_name, count);
+            }
+        }
+        println!();
+
+        // Group by kind
+        let mut by_kind = std::collections::HashMap::<String, usize>::new();
+        for node in &nodes {
+            let kind_str = match node.kind {
+                CoreNodeKind::Assertion => "Assertions".to_string(),
+                CoreNodeKind::Constraint => "Constraints".to_string(),
+                CoreNodeKind::Scenario => "Scenarios".to_string(),
+                CoreNodeKind::Definition => "Definitions".to_string(),
+                CoreNodeKind::Domain => "Domains".to_string(),
+            };
+            *by_kind.entry(kind_str).or_insert(0) += 1;
+        }
+
+        println!("By Kind:");
+        let mut kind_vec: Vec<_> = by_kind.iter().collect();
+        kind_vec.sort_by_key(|(k, _)| k.as_str());
+        for (kind, count) in kind_vec {
+            println!("  {}: {}", kind, count);
+        }
+        println!();
+
+        println!("💡 Use --full to see the complete list");
+        println!("💡 Use --layer <N> to filter by formality layer (0-3)");
+        println!("💡 Use --kind <type> to filter by kind");
+        return Ok(());
+    }
+
+    // Full mode with optional pagination
+    let offset_val = offset.unwrap_or(0);
+    let limit_val = limit.unwrap_or(nodes.len());
+    let end = std::cmp::min(offset_val + limit_val, nodes.len());
+    let page_nodes: Vec<_> = nodes.iter().skip(offset_val).take(limit_val).collect();
 
     println!("Found {} node(s):", nodes.len());
-    for node in nodes {
+    if offset_val > 0 || limit.is_some() {
+        println!("Showing {} - {} of {}:", offset_val + 1, end, nodes.len());
+    }
+    println!();
+
+    for node in page_nodes {
         let kind_str = match node.kind {
             CoreNodeKind::Assertion => "assertion",
             CoreNodeKind::Constraint => "constraint",
@@ -193,8 +268,13 @@ fn dispatch_list_nodes_standalone(
             layer_label,
             &node.id[..8],
             kind_str,
-            node.content
+            node.content.chars().take(80).collect::<String>()
         );
+    }
+
+    if end < nodes.len() {
+        println!();
+        println!("... and {} more (use --offset {} to see next page)", nodes.len() - end, end);
     }
 
     Ok(())

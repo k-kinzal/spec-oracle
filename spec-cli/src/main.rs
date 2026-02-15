@@ -46,11 +46,27 @@ enum ApiCommands {
         /// Node ID
         id: String,
     },
-    /// List all nodes (optionally filtered by kind)
+    /// List all nodes (optionally filtered by kind/layer)
     ListNodes {
         /// Filter by kind: assertion, constraint, scenario, definition, domain
         #[arg(short, long)]
         kind: Option<String>,
+
+        /// Filter by formality layer: 0 (U0), 1 (U1), 2 (U2), 3 (U3)
+        #[arg(short, long)]
+        layer: Option<u8>,
+
+        /// Show full list instead of summary (default: summary)
+        #[arg(short, long)]
+        full: bool,
+
+        /// Limit number of results (only with --full)
+        #[arg(long)]
+        limit: Option<usize>,
+
+        /// Offset for pagination (only with --full)
+        #[arg(long)]
+        offset: Option<usize>,
     },
     /// Remove a node
     RemoveNode {
@@ -167,6 +183,22 @@ enum Commands {
         /// Filter by kind: assertion, constraint, scenario, definition, domain
         #[arg(short, long)]
         kind: Option<String>,
+
+        /// Filter by formality layer: 0 (U0), 1 (U1), 2 (U2), 3 (U3)
+        #[arg(short, long)]
+        layer: Option<u8>,
+
+        /// Show full list instead of summary (default: summary)
+        #[arg(short, long)]
+        full: bool,
+
+        /// Limit number of results (only with --full)
+        #[arg(long)]
+        limit: Option<usize>,
+
+        /// Offset for pagination (only with --full)
+        #[arg(long)]
+        offset: Option<usize>,
     },
     /// [DEPRECATED] Use 'spec api remove-node' instead
     #[command(hide = true)]
