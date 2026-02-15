@@ -1753,6 +1753,120 @@ fn test_scenario_{}() {{
             trend_direction,
         })
     }
+
+    /// Export the specification graph in DOT format (Graphviz).
+    /// Nodes are colored by formality layer (U0=blue, U1=green, U2=yellow, U3=red).
+    /// Edges are styled by kind (Refines, Formalizes, etc.).
+    pub fn export_dot(&self) -> String {
+        let mut dot = String::from("digraph spec_oracle {\n");
+        dot.push_str("    rankdir=LR;\n");
+        dot.push_str("    node [shape=box, style=filled];\n");
+        dot.push_str("    edge [fontsize=10];\n\n");
+
+        // Helper function to escape DOT strings
+        fn escape_dot(s: &str) -> String {
+            s.replace('\\', "\\\\")
+                .replace('"', "\\\"")
+                .replace('\n', "\\n")
+        }
+
+        // Helper function to truncate content
+        fn truncate(s: &str, max_len: usize) -> String {
+            if s.len() > max_len {
+                format!("{}...", &s[..max_len])
+            } else {
+                s.to_string()
+            }
+        }
+
+        // Helper function to get layer color
+        fn layer_color(layer: u8) -> &'static str {
+            match layer {
+                0 => "lightblue",   // U0: natural language
+                1 => "lightgreen",  // U1: structured/formal
+                2 => "lightyellow", // U2: interface/API
+                3 => "lightcoral",  // U3: implementation
+                _ => "white",
+            }
+        }
+
+        // Helper function to get layer label
+        fn layer_label(layer: u8) -> &'static str {
+            match layer {
+                0 => "U0",
+                1 => "U1",
+                2 => "U2",
+                3 => "U3",
+                _ => "U?",
+            }
+        }
+
+        // Helper function to get kind abbreviation
+        fn kind_abbr(kind: NodeKind) -> &'static str {
+            match kind {
+                NodeKind::Assertion => "A",
+                NodeKind::Constraint => "C",
+                NodeKind::Scenario => "S",
+                NodeKind::Definition => "D",
+                NodeKind::Domain => "Dom",
+            }
+        }
+
+        // Add nodes
+        for node in self.graph.node_weights() {
+            let layer = node.formality_layer;
+            let color = layer_color(layer);
+            let layer_lbl = layer_label(layer);
+            let kind_lbl = kind_abbr(node.kind);
+            let content_short = truncate(&node.content, 50);
+            let label = format!("[{}] {} {}", layer_lbl, kind_lbl, content_short);
+
+            dot.push_str(&format!(
+                "    \"{}\" [label=\"{}\", fillcolor=\"{}\"];\n",
+                escape_dot(&node.id),
+                escape_dot(&label),
+                color
+            ));
+        }
+
+        dot.push('\n');
+
+        // Add edges
+        for edge_idx in self.graph.edge_indices() {
+            if let Some((source_idx, target_idx)) = self.graph.edge_endpoints(edge_idx) {
+                if let Some(edge) = self.graph.edge_weight(edge_idx) {
+                    if let (Some(source_node), Some(target_node)) = (
+                        self.graph.node_weight(source_idx),
+                        self.graph.node_weight(target_idx),
+                    ) {
+                        let edge_style = match edge.kind {
+                            EdgeKind::Refines => "solid",
+                            EdgeKind::Formalizes => "bold",
+                            EdgeKind::DerivesFrom => "dashed",
+                            EdgeKind::Transform => "dotted",
+                            EdgeKind::Contradicts => "bold, color=red",
+                            EdgeKind::DependsOn => "dashed",
+                            EdgeKind::Synonym => "dotted, color=gray",
+                            EdgeKind::Composes => "solid",
+                        };
+
+                        let edge_label = format!("{:?}", edge.kind);
+
+                        dot.push_str(&format!(
+                            "    \"{}\" -> \"{}\" [label=\"{}\", style=\"{}\"];\n",
+                            escape_dot(&source_node.id),
+                            escape_dot(&target_node.id),
+                            edge_label,
+                            edge_style
+                        ));
+                    }
+                }
+            }
+        }
+
+        dot.push_str("}\n");
+        dot
+    }
 }
 
 #[derive(Debug, Clone)]

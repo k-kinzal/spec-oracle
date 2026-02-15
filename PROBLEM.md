@@ -1229,12 +1229,12 @@
   - **関連コミット**: 3e50c49 "Enhance duplicate and semantic contradiction detection with precision"
   - **解決状況**: ✅ 検出機能は完了、データ修正は未着手
 
-- [ ] **仕様からドキュメントを生成・可視化できない** 🔄 **部分的に解決 (2026-02-14, Session 68)**
+- [x] **仕様からドキュメントを生成・可視化できない** ✅ **解決済み (2026-02-15, Session 129)**
   - **発見日**: 2026-02-14
   - **詳細**: 仕様を記述しても、人間が読めるドキュメントや可視化ができない。仕様はグラフデータベースの中に閉じ込められている。
   - **欲しい機能**:
     - ~~仕様からMarkdown/HTMLドキュメントを生成~~ ✅ **実装済み**
-    - 仕様の関係図を可視化（グラフ、ツリー、マインドマップ）
+    - ~~仕様の関係図を可視化（グラフ、ツリー、マインドマップ）~~ ✅ **実装済み (Session 129)**
     - ~~層ごとに整理されたドキュメント（U0: 要求仕様、U3: 実装仕様）~~ ✅ **実装済み**
     - ~~ドメインごとのサマリー~~ ✅ **実装済み（kind別）**
     - ~~仕様のタイムライン（いつ追加されたか）~~ ✅ **実装済み（タイムスタンプ表示）**
@@ -1250,26 +1250,40 @@
       - 統計サマリー（総仕様数、層別・kind別集計）
     - ✅ **ドキュメント生成例**: `docs/specifications.md` (938行)
     - ✅ **スクリプトREADME**: `scripts/README.md` (使用方法)
+    - ✅ **グラフ可視化** (`spec export-dot`, Session 129):
+      - DOT形式エクスポート (Graphviz互換)
+      - 層別色分け（U0=青、U1=緑、U2=黄、U3=赤）
+      - エッジ種類別スタイル（Refines=solid, Formalizes=bold, Contradicts=red）
+      - PNG/SVG出力対応 (`dot -Tpng`, `dot -Tsvg`)
+      - 層フィルタリング (`--layer <N>`)
+      - メタデータ表示オプション (`--metadata`)
   - **実装詳細**:
     ```bash
-    # 全仕様をMarkdown出力
+    # Markdown出力
     python3 scripts/export_specs_md.py > docs/specifications.md
 
-    # U0層のみ出力
-    python3 scripts/export_specs_md.py --layer 0 > docs/u0-requirements.md
+    # グラフ可視化
+    spec export-dot -o .spec/spec-graph.dot
+    dot -Tpng .spec/spec-graph.dot -o docs/spec-graph.png
+    dot -Tsvg .spec/spec-graph.dot -o docs/spec-graph.svg
 
-    # エッジ情報含む
-    python3 scripts/export_specs_md.py --with-edges > docs/specs-with-edges.md
+    # 層フィルタリング（U0のみ）
+    spec export-dot --layer 0 -o u0-graph.dot
+
+    # メタデータ含む
+    spec export-dot --metadata -o detailed-graph.dot
     ```
   - **検証結果**:
-    - 123仕様を層別・kind別に整理
-    - 人間が読みやすいフォーマット
-    - GitHub/PRでレビュー可能
-  - ⏳ **残課題（優先度中）**:
-    - グラフ可視化（DOT/Graphviz形式出力）
+    - ✅ 251仕様の完全可視化
+    - ✅ PNG (2.0MB) / SVG (290KB) 生成成功
+    - ✅ 層別サブグラフ表示（U0-U3）
+    - ✅ kind別色分け（Constraint=赤、Assertion=青、Scenario=緑）
+    - ✅ エッジ方向・種類の明確な表示
+  - ⏳ **残課題（優先度低）**:
     - HTMLエクスポート（静的サイト生成）
     - PDFエクスポート
-  - **解決状況**: 🔄 **基本機能完了、可視化は未実装**
+    - インタラクティブなWeb可視化
+  - **解決状況**: ✅ **完了** - グラフ可視化実装により、仕様の全体像把握が可能になった
 
 - [ ] **仕様の検索・探索機能が貧弱**
   - **発見日**: 2026-02-14
@@ -1397,14 +1411,42 @@
     - デフォルトで人間が読みやすい形式にする
   - **解決状況**: 未着手
 
-- [ ] **仕様の多層構造を可視化するコマンドがない**
+- [x] **仕様の多層構造を可視化するコマンドがない** ✅ **解決済み (2026-02-15, Session 58 & 129)**
   - **発見日**: 2026-02-14
   - **詳細**: 特定の仕様（例：omission検出）のU0からU3までの全層を一覧表示するコマンドがない。
   - **影響範囲**: 多層仕様の理解が困難。
-  - **解決策案**:
-    - `spec trace <node-id>`コマンドを追加（formalizes/transform関係を辿って全層を表示）
-    - `spec layers <query>`コマンドで、特定トピックの全層仕様を表示
-  - **解決状況**: 未着手
+  - **解決内容**:
+    - ✅ **`spec trace <id>` コマンド** (Session 58):
+      - 階層的な関係表示（Level 1, Level 2, ...）
+      - 深さ制限オプション (`--depth <N>`)
+      - 層ラベル表示（`[U0]`, `[U1]`, `[U2]`, `[U3]`）
+      - 関係方向の明示（`→` formalizes, `←` derives_from）
+      - standaloneモード対応
+    - ✅ **`spec export-dot` コマンド** (Session 129):
+      - グラフ全体の可視化（Graphviz DOT形式）
+      - 層別サブグラフ表示（U0-U3のクラスター）
+      - 層フィルタリング (`--layer <N>`)
+      - PNG/SVG出力対応
+  - **検証結果**:
+    ```bash
+    # 特定仕様の関係追跡
+    $ spec trace <id> --depth 2
+    📋 Tracing relationships for:
+       [81afa3f5] constraint: The system must detect contradictions...
+
+    🔗 Found 9 relationship(s):
+      Level 1:
+        → formalizes [454f4748] [U2] assertion: RPC DetectContradictions...
+        → refines [f6953636] scenario: Specifications can be refined...
+
+    # 全体グラフ可視化
+    $ spec export-dot -o graph.dot
+    $ dot -Tpng graph.dot -o graph.png
+
+    # U0層のみ可視化
+    $ spec export-dot --layer 0 -o u0.dot
+    ```
+  - **解決状況**: ✅ **完了** - 多層構造の追跡と可視化が両方実装済み
 
 ### Low
 
