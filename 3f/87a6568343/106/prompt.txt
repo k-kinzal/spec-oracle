@@ -1,0 +1,589 @@
+GOAL:
+- Strict blocker check for revised split manuscripts.
+
+TASK:
+- Review the three documents below.
+- Output blockers only. If none, say exactly: NO_BLOCKER.
+
+OUTPUT FORMAT:
+1) BLOCKERS
+2) OPTIONAL_UPGRADES (max 5 bullets)
+
+=== FILE: paper/formal-methods/manuscript_fm.md ===
+# UAD/f Two-Operator Kernel under Partial Projections: A Lean4 Mechanization
+
+## Abstract
+We present a mechanized formal kernel for multi-layer specification comparison under partial projections (`Option`).
+The kernel separates two operators on the same typed model: `U0` (join-side root coverage baseline) and `UAnd` (meet-side conjunctive consistency).
+Our contribution is not new lattice mathematics itself, but a machine-checked, assumption-audited integration of: (1) typed reverse mapping over heterogeneous carriers, (2) explicit hypothesis tracking for transfer/composition, (3) one-sided adequacy decomposition (sound/complete), and (4) partiality-aware non-adjointness.
+All core statements are mechanized in Lean4 and traceable to concrete files.
+
+## 0. Scope and Claim Boundary
+This paper is the formal-methods part of a split strategy:
+- formal paper: typed semantics + theorem mechanization
+- engineering paper: replay pipeline and operational evidence
+
+Target quality bar: FM/ITP/CPP/TACAS/FASE/Formal Aspects.
+
+What this paper claims:
+- a self-contained typed model for multi-layer reverse mapping
+- explicit assumptions for non-trivial theorems
+- machine-checked theorem set with build-reproducible artifacts
+
+What this paper does not claim:
+- extractor correctness proofs for concrete regex/LLM extractors
+- statistical external validity from small convenience samples
+- full temporal/behavioral specification management
+
+## 1. Problem and Goal
+Multi-layer artifacts (requirements, API documents, code constraints, etc.) evolve asynchronously.
+Local checks can pass while cross-layer comparison semantics remain underspecified.
+
+The central challenge is not "prove a pre-written ideal root spec", because a complete ideal root `U*` is rarely available in practice.
+Instead, we construct a root-side comparison basis from partial projections:
+- join-side baseline `U0`
+- meet-side conjunction `UAnd`
+
+The formal objective is to make this construction assumption-auditable and machine-checkable.
+
+## 2. Typed Model
+### 2.1 Core objects
+- `Ω`: root space
+- `I`: layer index
+- `carrier : I -> Type`: heterogeneous layer carriers
+- `proj_i : Ω -> Option β_i`: partial projection
+- `D(i), A(i) : Set β_i`: domain/admissible sets
+
+Lean core:
+- `paper/lean/UadfU0/Definitions/Model.lean`
+
+### 2.2 Induced preimage and lifted sets (must semantics)
+For `S ⊆ β_i`:
+
+\[
+preimage_i(S) := \{x \in Ω \mid \exists y,\ proj_i(x)=some(y) \land y\in S\}
+\]
+
+\[
+lifted(i) := preimage_i(A(i))
+\]
+
+### 2.3 Two operators on inclusion order
+Order is fixed to inclusion `⊆` only.
+
+\[
+U0On(active) := \{x \mid \exists i,\ active(i) \land x\in lifted(i)\}
+\]
+\[
+U0 := U0On(\lambda _, True)
+\]
+\[
+UAndOn(active) := \{x \mid \forall i,\ active(i) \to x\in lifted(i)\}
+\]
+\[
+UAnd := UAndOn(\lambda _, True)
+\]
+
+Hence, under `⊆`: join = union, meet = intersection.
+`U0` is an over-approximate coverage baseline; `UAnd` is conjunctive satisfaction.
+
+### 2.4 Must/may extension
+Must is the default above.
+May variant admits undefined points:
+
+\[
+preimageMay_i(S) := \{x \mid proj_i(x)=none \lor \exists y, proj_i(x)=some(y) \land y\in S\}
+\]
+
+This distinction is used for sensitivity analysis, not to mix must and may proofs.
+
+### 2.5 Lean excerpt (core definitions)
+```lean
+def preimage (M : Model ι α) (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+
+def U0On (M : Model ι α) (active : ι → Prop) : SpecSet α :=
+  fun x => ∃ i : ι, active i ∧ x ∈ M.lifted i
+
+def UAndOn (M : Model ι α) (active : ι → Prop) : SpecSet α :=
+  fun x => ∀ i : ι, active i → x ∈ M.lifted i
+```
+
+## 3. Core Results (Assumption-Explicit)
+The main value is explicit hypothesis control. Background lemmas (monotonicity/union/LUB identities) are not front-loaded as novelty.
+
+### 3.1 Transfer theorem (`lifted_transfer`)
+Given `R : β_i -> β_j -> Prop`, assume:
+- `hproj`: same-root linkage from `proj_j x` to `proj_i x`
+- `hA`: admissibility preservation along `R`
+
+Then:
+\[
+lifted(j) \subseteq lifted(i)
+\]
+
+Lean: `paper/lean/UadfU0/InterLayer/Transfer.lean`.
+
+### 3.2 Composition theorem (`preimage_compose`)
+Given `g : β_i -> Option β_j` and pointwise equality
+\[
+proj_j(x) = Option.bind (proj_i(x))\ g
+\]
+preimages compose through pullback:
+\[
+preimage_j(S) = preimage_i(pullbackVia_g(S))
+\]
+
+Lean: `paper/lean/UadfU0/InterLayer/Composition.lean`.
+
+### 3.3 One-sided adequacy decomposition (`Adequacy.lean`)
+For abstract relation `E : Ω -> β_i -> Prop`:
+- sound-side inclusion
+- complete-side inclusion
+- equality when both hold
+
+May side is handled by same-kind comparison with `semanticPullbackMay`.
+
+Interpretation note:
+These are abstract theorems over `E`; concrete extractor obligations are separate proof obligations.
+
+### 3.4 Non-adjointness under partiality (`no_left_adjoint_of_partial`)
+If `∃x0, proj_i(x0)=none`, induced preimage need not admit a left adjoint.
+
+Lean: `paper/lean/UadfU0/RelatedWork/Galois.lean`.
+
+### 3.5 `U0`/`UAnd` order-theoretic properties
+- `U0` as LUB under inclusion
+- `UAndOn` as GLB under inclusion
+- antitone behavior of `UAndOn` under active-set extension
+
+Lean: `paper/lean/UadfU0/U0Spec/Minimality.lean`, `paper/lean/UadfU0/U0Spec/Construction.lean`.
+
+### 3.6 Ideal root relation with observability domain
+To avoid equating `U0` with ideal root `U*`, we track domain-restricted assumptions:
+\[
+Dom_i := \{x \mid \exists y, proj_i(x)=some(y)\}
+\]
+
+Under domain-restricted necessary-condition assumptions, obtain:
+\[
+U* \cap Dom_{active} \subseteq UAndOn(active) \subseteq U0On(active)
+\]
+(with non-empty `active`).
+
+Lean: `paper/lean/UadfU0/U0Spec/IdealRoot.lean`.
+
+## 4. Mechanization Integrity
+### 4.1 Artifact map
+Primary Lean files:
+- `paper/lean/UadfU0/Definitions/Model.lean`
+- `paper/lean/UadfU0/U0Spec/Construction.lean`
+- `paper/lean/UadfU0/U0Spec/Minimality.lean`
+- `paper/lean/UadfU0/U0Spec/IdealRoot.lean`
+- `paper/lean/UadfU0/InterLayer/Transfer.lean`
+- `paper/lean/UadfU0/InterLayer/Composition.lean`
+- `paper/lean/UadfU0/InterLayer/Adequacy.lean`
+- `paper/lean/UadfU0/RelatedWork/Galois.lean`
+- `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean`
+
+### 4.2 Build and integrity commands
+```bash
+cd paper/lean
+~/.elan/bin/lake build
+rg -n '^theorem ' paper/lean/UadfU0 | wc -l
+rg -n '\bsorry\b' paper/lean/UadfU0
+```
+
+Current metrics:
+- theorem count: `59`
+- `sorry`: `0`
+- LOC (`paper/lean/UadfU0`): `1502`
+
+### 4.3 Logic basis disclosure
+- Lean toolchain: `leanprover/lean4:v4.27.0`
+- `lake-manifest.json` SHA256: `8c098d788704fb7c279c7004a1f492723bd892acf2500483665ae39e7a00a6e7`
+- set extensionality implemented via `funext` + `propext`
+- no `open Classical` usage in `paper/lean/UadfU0`
+
+### 4.4 Theorem-to-file traceability table
+| Claim | Lean theorem(s) | File |
+|---|---|---|
+| transfer under same-root linkage | `lifted_transfer` | `paper/lean/UadfU0/InterLayer/Transfer.lean` |
+| composition via pullback | `preimage_compose` | `paper/lean/UadfU0/InterLayer/Composition.lean` |
+| one-sided adequacy | `preimage_subset_semanticPullback_of_sound`, `semanticPullback_subset_preimage_of_complete`, `preimage_eq_semanticPullback` | `paper/lean/UadfU0/InterLayer/Adequacy.lean` |
+| may-side adequacy | `preimageMay_subset_semanticPullbackMay_of_sound`, `semanticPullbackMay_subset_preimageMay_of_complete`, `preimageMay_eq_semanticPullbackMay` | `paper/lean/UadfU0/InterLayer/Adequacy.lean` |
+| non-adjointness under partiality | `no_left_adjoint_of_partial` | `paper/lean/UadfU0/RelatedWork/Galois.lean` |
+| GLB/LUB core | `UAndOn_greatest_lower_bound_iff`, `U0_least_upper_bound_iff` | `paper/lean/UadfU0/U0Spec/Minimality.lean` |
+
+## 5. Contribution Delta vs. Classical Facts
+A fair criticism is that many component lemmas are classical set/order facts.
+Our contribution is the mechanized integration boundary, not claiming novel lattice theory:
+
+1. single typed kernel combining join/meet separation with partial projections
+2. explicit assumption surfaces (`hproj`, `hA`, sound/complete obligations)
+3. partiality-aware failure mode (`none`) and its algebraic consequences
+4. machine-checkable dependency chain from statement to proof artifact
+
+This is the precise "what became explicit only after mechanization" claim.
+
+## 6. Claim-to-Evidence Matrix
+| Claim | Evidence | Scope |
+|---|---|---|
+| typed reverse mapping over heterogeneous carriers | `Definitions/Model.lean` + §2 formulas | formal |
+| join/meet role separation (`U0` vs `UAnd`) | `U0Spec/Construction.lean`, `U0Spec/Minimality.lean` | formal |
+| transfer requires same-root linkage assumptions | `InterLayer/Transfer.lean` (`lifted_transfer`) | formal |
+| composition through `Option.bind` pullback | `InterLayer/Composition.lean` (`preimage_compose`) | formal |
+| adequacy decomposes to one-sided inclusions | `InterLayer/Adequacy.lean` | formal |
+| partiality can break left adjoint existence | `RelatedWork/Galois.lean` (`no_left_adjoint_of_partial`) | formal |
+| mechanization integrity | `lake build`, theorem count, `sorry=0` | artifact |
+
+## 7. Related Work Positioning
+- Abstract interpretation (Cousot & Cousot): rich order-theoretic foundations; our delta is explicit partial-projection handling with theorem-level assumption tracking.
+- Institutions (Goguen & Burstall) / Hets ecosystems: language-heterogeneous satisfaction transfer; our scope is a minimal mechanized kernel on root-side operators.
+- BX/model synchronization (e.g., TGG): synchronization/completeness concerns; our transfer/composition results isolate prerequisite hypotheses under partial observability.
+- View consistency/inconsistency management (ViewPoints lineage): consistency governance motivation aligns, while our contribution is mechanized reverse-mapping kernel semantics.
+
+## 8. Limitations
+- Focused on parameter-bound constraints; temporal/state-transition semantics are out of scope.
+- Adequacy theorems are abstract in `E`; concrete extractor proofs remain external obligations.
+- No claim that engineering PoC validates formal adequacy hypotheses directly.
+
+## 9. Bridge to Engineering Paper
+Operational trust and deterministic replay are handled in:
+- `paper/engineering/manuscript_se.md`
+
+This split avoids mixed-claim ambiguity:
+- formal paper: theorem correctness + assumptions
+- engineering paper: replay discipline + operational behavior evidence
+
+## References (selection)
+- P. Cousot and R. Cousot, POPL 1977.
+- J. Goguen and R. Burstall, LNCS 164, 1984.
+- L. Lamport, _Specifying Systems_, 2002.
+- L. de Alfaro and T. Henzinger, FSE 2001.
+- R.-J. Back and J. von Wright, _Refinement Calculus_, 1998.
+- B. Nuseibeh, J. Kramer, A. Finkelstein, IEEE TSE, 1994.
+- M. Wirsing and A. Knapp, RADICAL/LNCS, 2004.
+- Y. Xiong et al., SoSyM, 2012.
+- T. Mossakowski et al., Hets (CEUR-WS).
+
+=== FILE: paper/engineering/manuscript_se.md ===
+# Engineering Trust for Multi-Layer Consistency Audits: Deterministic Replay on top of the UAD/f Kernel
+
+## Abstract
+This paper presents an engineering trust design for multi-layer consistency audits over requirements/API/code artifacts.
+Our core contribution is not formal theorem proving (handled in the companion FM paper), but an operationally reproducible pipeline with explicit uncertainty handling and machine-checkable replay acceptance.
+The pipeline fixes inputs by lock+snapshot+hash, separates raw tri-valued judgement from policy projection, and pre-registers mutation expectations.
+We report feasibility-stage evidence on three real OSS families plus a deterministic policy-ablation benchmark (21 scenarios) against a strict binary baseline.
+
+## 0. Positioning and Claim Boundary
+This manuscript is the engineering paper in a two-paper strategy:
+- formal kernel correctness: `paper/formal-methods/manuscript_fm.md`
+- engineering replay trust: this paper
+
+Target bar: SE top-conference main-track style (clear pain/goal, reproducible artifact, explicit non-goals, falsifiable evaluation contract).
+
+Non-goals in this paper:
+- no statistical population inference from `n=3` convenience sample
+- no proof that the concrete regex extractor satisfies formal adequacy hypotheses
+- no claim of full behavioral/temporal specification governance
+
+## 1. Pain, Goal, and Stakeholders
+### 1.1 Pain
+Teams maintain constraints across heterogeneous artifacts.
+Frequent failures are:
+- silent drift: same intent, different bounds across layers
+- extraction fragility: wording drift breaks parsers
+- non-replayability: reported results cannot be reconstructed from fixed inputs
+
+### 1.2 Goal
+Provide a pipeline where:
+1. reported results are replayable from pinned inputs,
+2. undefined extraction outcomes are explicit and policy-controlled,
+3. contradiction vs uncertainty are separated,
+4. mutation expectations are pre-specified and machine-checked.
+
+### 1.3 Users
+- quality/reliability engineers who must justify audit outcomes
+- platform engineers maintaining multi-layer constraints
+- reviewers/auditors who need deterministic replay evidence
+
+## 2. System Architecture
+Pipeline root: `paper/case-study/real_projects`.
+
+Core components:
+- runner/extractor: `external_validation.py`
+- replay entrypoint: `reproduce.sh`
+- replay verifier: `verify_replay.py`
+- ablation harness: `evaluate_policy_ablation.py`
+- canonical lock: `external_validation_sources.lock.json`
+- drift lock and drift snapshot:
+  - `logs/regex_drift_lock.json`
+  - `logs/regex_drift_snapshot.txt`
+
+`reproduce.sh` executes 6 sections in one run:
+1. offline fail-fast
+2. graceful must
+3. graceful may
+4. drift replay suite
+5. edge-case log generation
+6. policy-ablation benchmark generation
+
+## 3. PoC Semantics
+### 3.1 Per-layer status
+For each layer:
+- `supported`: two-sided interval extracted and well-formed (`l <= u`)
+- `invalid`: two-sided interval extracted but ill-formed (`l > u`)
+- `unknown`: parse failure or one-sided bound only
+
+Important: `invalid` is IR well-formedness failure, not semantic contradiction proof.
+
+### 3.2 Tri-valued judgement and policy projection
+- `judgement` (raw): `consistent | contradictory | inconclusive`
+- `policy_judgement`: projection of `inconclusive` under policy
+  - must: `inconclusive -> contradictory`
+  - may: `inconclusive -> consistent`
+
+This avoids conflating logical contradiction with operational uncertainty.
+
+Implementation excerpt (`external_validation.py`):
+```python
+def apply_none_policy(judgement: Judgement, none_semantics: NoneSemantics) -> Judgement:
+    if judgement != "inconclusive":
+        return judgement
+    return "contradictory" if none_semantics == "must" else "consistent"
+```
+
+### 3.3 U0-side indicators vs UAnd-side diagnosis
+PoC intentionally separates two observation paths:
+- `proj_i^{U0}` path (`interval`) for coverage-style monitoring
+- `measure_i^{UAnd}` path (`bounds`) for consistency diagnosis
+
+Operational indicators:
+- `u0_support_indicator`
+- `u0_unfalsified_indicator`
+- `u0_unknown_only`
+- `support_ratio`, `unknown_ratio`, `invalid_interval_ratio`
+
+Diagnosis outputs:
+- `judgement`
+- `policy_judgement`
+- intersection bounds when available
+
+## 4. Deterministic Replay Contract
+### 4.1 Fixed inputs
+- script: `external_validation.py`
+- canonical lock: `external_validation_sources.lock.json`
+- snapshots referenced by lock
+- drift lock + drift snapshot
+
+### 4.2 Acceptance projection (paper-level pass/fail)
+Replay acceptance uses exactly four fields:
+- `n_real_projects`
+- `raw_judgement_distribution`
+- `policy_judgement_distribution`
+- `mutation_detected_by_expectation`
+
+Rationale: these four are the publication-level acceptance projection.
+Other outputs are preserved as audit detail, not pass/fail keys.
+
+### 4.3 Determinism level
+- equality criterion: semantic equality of the four-field projection
+- key order is ignored
+- distribution keys required: `{consistent, contradictory, inconclusive}`
+- additional keys do not affect pass/fail
+- `date` and similar runtime metadata are explicitly outside pass/fail
+
+### 4.4 Machine-checkable procedure
+Python-only (stdlib) path:
+```bash
+cd paper/case-study/real_projects
+bash reproduce.sh
+python3 verify_replay.py --logs-dir logs
+```
+Pass condition:
+- process exit code `0`
+- line `OK: replay verification checks passed`
+- verification includes acceptance projection, drift split, edge-case log, and policy-ablation summary checks.
+
+Optional: `jq` probes are supported but not required.
+
+## 5. Feasibility Evidence (Current)
+### 5.1 Real-project replay (`n=3`, graceful may)
+Current replay projection:
+- `n_real_projects = 3`
+- `raw_judgement_distribution = {consistent:3, contradictory:0, inconclusive:0}`
+- `policy_judgement_distribution = {consistent:3, contradictory:0, inconclusive:0}`
+- `mutation_detected_by_expectation = 6` (`6 out of 6`)
+
+Audit-detail snapshot:
+- `avg_support_ratio = 0.7778` (`7/9`)
+- `avg_unknown_ratio = 0.2222` (`2/9`)
+- `support_frequency = {requirement:3, api:3, code:1}`
+- `unknown_frequency = {requirement:0, api:0, code:2}`
+
+Interpretation:
+- coverage evidence is partial (code-side unknown appears in 2/3),
+- this is not a failure condition by itself;
+- unknown is retained as first-class observability signal.
+
+### 5.2 Drift scenario (regex wording breakage)
+On drifted lock input:
+- fail-fast mode stops immediately
+- graceful modes continue and preserve tri-valued raw output
+
+Observed drift split:
+- must policy: one inconclusive case projected to contradiction side
+- may policy: same inconclusive case projected to consistency side
+
+This is expected and demonstrates policy transparency under extraction uncertainty.
+
+### 5.3 Policy-ablation benchmark (`n=21` scenarios)
+Generated by `evaluate_policy_ablation.py` from lock-fixed artifacts.
+Groups:
+- contradiction: 6
+- uncertainty: 9
+- benign change: 6
+
+Methods compared:
+- `policy_must`
+- `policy_may`
+- `binary_strict` baseline (fail-closed binary)
+
+Current summary:
+- contradiction detection rate: must `1.0`, may `1.0`, binary_strict `1.0`
+- false contradiction rate on non-contradiction: must `0.733`, may `0.133`, binary_strict `0.867`
+- uncertainty collapse rate: must `1.0`, may `0.0`, binary_strict `1.0`
+
+Engineering reading:
+- `policy_may` reduces contradiction-side escalation under uncertainty,
+- `policy_must` and strict binary aggressively collapse uncertainty to contradiction,
+- explicit policy design is materially better than implicit binary collapse.
+
+## 6. Why This is an Engineering Contribution
+The engineering novelty is a trustable operation contract:
+- lock + snapshot + hash chain discipline
+- explicit uncertainty channel (`inconclusive`)
+- configurable uncertainty projection (`must` / `may`)
+- pre-registered mutation expectations with machine checks
+- deterministic replay acceptance projection with executable verifier
+
+This makes audit claims inspectable and repeatable by third parties.
+
+## 7. Claim-to-Evidence Matrix
+| Claim | Evidence artifact | Scope |
+|---|---|---|
+| deterministic replay from locked inputs | `reproduce.sh`, `verify_replay.py`, lock files | operational |
+| uncertainty handled separately from contradiction | `judgement` vs `policy_judgement` outputs in logs | operational |
+| drift behavior is policy-sensitive and reproducible | `regex_drift_*.log` trio | operational |
+| acceptance is machine-checkable | Python-only verification path with exit code contract | reproducibility |
+| policy choice changes error trade-offs | `policy_ablation_report.json` (`n=21`) + strict baseline | empirical-feasibility |
+
+## 8. Threats to Validity
+- convenience sample (`n=3`) only; no population inference
+- regex extractor generalization is limited
+- current mutation families are narrow (stale-lower, unit-scaling)
+- no human-annotation validation pass yet
+- interval-domain only
+
+## 9. Roadmap to SE Top-Tier Evidence
+### Stage A (completed in this artifact)
+- deterministic replay contract
+- tri-valued + policy-projected reporting
+- drift harness
+- policy ablation with explicit baseline
+
+### Stage B (required for stronger external validity)
+- larger benchmark with published sampling protocol
+- human validation subset for extraction outputs
+- broader mutation families (inclusive/exclusive, defaults, unit aliases)
+- per-project failure taxonomy and confidence intervals
+- baseline expansion beyond strict binary policy
+
+## 10. Relationship to the FM Paper
+This engineering paper consumes the FM kernel as trusted substrate, but does not claim concrete extractor adequacy proofs.
+Formal theorems and assumptions are in:
+- `paper/formal-methods/manuscript_fm.md`
+- Lean code under `paper/lean/UadfU0/*`
+
+The split prevents mixed-claim ambiguity:
+- FM: theorem correctness and assumptions
+- SE: operational trust and replay discipline
+
+## 11. Reproducibility Pointers
+- `paper/case-study/real_projects/README.md`
+- `paper/engineering/reproducibility/replay_acceptance_contract.md`
+- `paper/case-study/real_projects/reproduce.sh`
+- `paper/case-study/real_projects/verify_replay.py`
+- `paper/case-study/real_projects/evaluate_policy_ablation.py`
+
+=== FILE: paper/engineering/reproducibility/replay_acceptance_contract.md ===
+# Replay Acceptance Contract (Engineering Paper)
+
+## 1. Fixed Inputs
+- `paper/case-study/real_projects/external_validation.py`
+- `paper/case-study/real_projects/reproduce.sh`
+- `paper/case-study/real_projects/external_validation_sources.lock.json`
+- `paper/case-study/real_projects/logs/regex_drift_lock.json`
+- `paper/case-study/real_projects/logs/regex_drift_snapshot.txt`
+- snapshots referenced by lock files
+
+## 2. Replay Entrypoint
+```bash
+cd paper/case-study/real_projects
+bash reproduce.sh
+```
+
+`reproduce.sh` executes:
+1. offline fail-fast
+2. graceful must
+3. graceful may
+4. drift replay suite
+5. edge-case log generation
+6. policy-ablation benchmark generation
+
+## 3. Acceptance Projection (Paper-level)
+Replay pass/fail uses exactly four fields from `logs/external_validation_graceful_may.log`:
+- `n_real_projects`
+- `raw_judgement_distribution`
+- `policy_judgement_distribution`
+- `mutation_detected_by_expectation`
+
+Other fields are audit detail and are not pass/fail keys.
+
+Distribution-key rule:
+- required keys: `{consistent, contradictory, inconclusive}`
+- pass/fail reads these key values only
+- extra keys do not affect pass/fail
+
+## 4. Primary Verification (Python-only)
+```bash
+cd paper/case-study/real_projects
+python3 verify_replay.py --logs-dir logs
+```
+
+Pass condition:
+- exit code `0`
+- stdout includes `OK: replay verification checks passed`
+
+The verifier checks:
+- 4-field acceptance projection
+- drift must/may split distributions
+- edge-case log structure
+- policy-ablation summary metrics
+
+## 5. Optional Probe (`jq`)
+```bash
+jq '{n_real_projects, raw_judgement_distribution, policy_judgement_distribution, mutation_detected_by_expectation}' logs/external_validation_graceful_may.log
+```
+
+`jq` is optional and not required for acceptance.
+
+## 6. Current Reference Hashes
+- `external_validation.py`: `ea820e0d86324d2c7583e963cd5e0a9e49c2f2f827e8e0a8d2f560bea8b649d7`
+- `reproduce.sh`: `29cf2cb28639ec72e459cca6e3d21ae5c4778b52ff52fc13744fffa9b351b0ef`
+- `verify_replay.py`: `1bcc19ed869b9fc4b43ae1839a99fcea485cad7f6ad2956f09f98199afde8688`
+- `evaluate_policy_ablation.py`: `651a3acc5f433c25bcabf3e452269d14758bcd80b77560208ff3e9661829eb26`
+- `external_validation_sources.lock.json`: `0c34d22165d3f032d3929f8333657fa25fa65aa55542749d83dba031f11a4793`
+- `logs/regex_drift_lock.json`: `1f31c8e65688f680abc9b4781ea41aca7f4ebe142f1838f74b7698d5e2517330`
+- `logs/regex_drift_snapshot.txt`: `0d2d319f9edd4dbf2c80351bf1bcbfd3264552999ca557ad9598ac833ea4480c`
