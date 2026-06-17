@@ -1,0 +1,94 @@
+GOAL:
+- Perform a strict pre-submission review for a split-paper strategy.
+
+CONTEXT:
+- Paper 1 is formal-methods focused (target: FM/ITP/CPP/TACAS/FASE/Formal Aspects quality bar).
+- Paper 2 is engineering-focused (target: SE top-conference main-track quality bar).
+- Claims must be bounded; no overclaim beyond evidence.
+
+TASK:
+- Review the three attached files.
+- Report only concrete blockers or high-risk weaknesses that could still fail strong review.
+- If no blockers, say explicitly "no blocker found" and list at most 5 optional upgrades.
+
+OUTPUT:
+- Sections exactly:
+  1) BLOCKERS
+  2) HIGH-RISK WEAKNESSES
+  3) OPTIONAL UPGRADES
+- Use concise bullets.
+
+
+# Context files
+
+--- BEGIN FILE: paper/engineering/reproducibility/replay_acceptance_contract.md ---
+# Replay Acceptance Contract (Engineering Paper)
+
+## 1. Fixed Inputs
+- `paper/case-study/real_projects/external_validation.py`
+- `paper/case-study/real_projects/reproduce.sh`
+- `paper/case-study/real_projects/external_validation_sources.lock.json`
+- `paper/case-study/real_projects/logs/regex_drift_lock.json`
+- `paper/case-study/real_projects/logs/regex_drift_snapshot.txt`
+- snapshots referenced by lock files
+
+## 2. Replay Entrypoint
+```bash
+cd paper/case-study/real_projects
+bash reproduce.sh
+```
+
+`reproduce.sh` executes:
+1. offline fail-fast
+2. graceful must
+3. graceful may
+4. drift replay suite
+5. edge-case log generation
+6. policy-ablation benchmark generation
+
+## 3. Acceptance Projection (Paper-level)
+Replay pass/fail uses exactly four fields from `logs/external_validation_graceful_may.log`:
+- `n_real_projects`
+- `raw_judgement_distribution`
+- `policy_judgement_distribution`
+- `mutation_detected_by_expectation`
+
+Other fields are audit detail and are not pass/fail keys.
+
+Distribution-key rule:
+- required keys: `{consistent, contradictory, inconclusive}`
+- pass/fail reads these key values only
+- extra keys do not affect pass/fail
+
+## 4. Primary Verification (Python-only)
+```bash
+cd paper/case-study/real_projects
+python3 verify_replay.py --logs-dir logs
+```
+
+Pass condition:
+- exit code `0`
+- stdout includes `OK: replay verification checks passed`
+
+The verifier checks:
+- 4-field acceptance projection
+- drift must/may split distributions
+- edge-case log structure
+- policy-ablation summary metrics
+
+## 5. Optional Probe (`jq`)
+```bash
+jq '{n_real_projects, raw_judgement_distribution, policy_judgement_distribution, mutation_detected_by_expectation}' logs/external_validation_graceful_may.log
+```
+
+`jq` is optional and not required for acceptance.
+
+## 6. Current Reference Hashes
+- `external_validation.py`: `ea820e0d86324d2c7583e963cd5e0a9e49c2f2f827e8e0a8d2f560bea8b649d7`
+- `reproduce.sh`: `29cf2cb28639ec72e459cca6e3d21ae5c4778b52ff52fc13744fffa9b351b0ef`
+- `verify_replay.py`: `1bcc19ed869b9fc4b43ae1839a99fcea485cad7f6ad2956f09f98199afde8688`
+- `evaluate_policy_ablation.py`: `651a3acc5f433c25bcabf3e452269d14758bcd80b77560208ff3e9661829eb26`
+- `external_validation_sources.lock.json`: `0c34d22165d3f032d3929f8333657fa25fa65aa55542749d83dba031f11a4793`
+- `logs/regex_drift_lock.json`: `1f31c8e65688f680abc9b4781ea41aca7f4ebe142f1838f74b7698d5e2517330`
+- `logs/regex_drift_snapshot.txt`: `0d2d319f9edd4dbf2c80351bf1bcbfd3264552999ca557ad9598ac833ea4480c`
+--- END FILE: paper/engineering/reproducibility/replay_acceptance_contract.md ---
