@@ -1,0 +1,74 @@
+GOAL:
+- Provide a strict venue-grade formal-methods review for the current formal paper.
+
+CONTEXT:
+- Target venues (must be explicit in review framing): FM / ITP / CPP / TACAS / FASE / Formal Aspects.
+- This is the formal-methods paper only (not the engineering paper).
+- Judge with standards expected for acceptance in those venues.
+- Do not assume extra context beyond attached files.
+
+TASK:
+- Review the manuscript as Reviewer #1 (strictest).
+- Focus on theorem-level contribution quality, mechanization rigor, novelty argument, assumption discipline, reproducibility contract, and claim-boundary correctness.
+- Identify only real blockers for acceptance at the target venues.
+
+OUTPUT:
+- Markdown in Japanese.
+- Sections exactly in this order:
+  1) 総合判定（Recommendation）
+  2) 強み
+  3) 主要懸念（Major concerns）
+  4) 中程度の懸念（Medium concerns）
+  5) 軽微修正（Minor / Editorial）
+  6) 必須修正チェックリスト（採択条件）
+- Keep it concrete and evidence-based. Avoid generic advice.
+
+
+# Context files
+
+--- BEGIN FILE: paper/lean/UadfU0/Examples/TotalizationCounterexample.lean ---
+import UadfU0.Definitions.Model
+
+namespace UadfU0
+namespace Examples
+
+open Model
+
+inductive One where
+  | only
+deriving DecidableEq
+
+abbrev partialModel : Model One Nat where
+  carrier := fun _ => Nat
+  layer
+  | .only =>
+      {
+        D := fun _ : Nat => True
+        A := fun n : Nat => n = 42
+        admissible_subset_domain := by
+          intro x hx
+          trivial
+      }
+  proj
+  | .only, x => if x = 0 then none else some x
+
+def totalizedProj (default : Nat) (x : Nat) : Nat :=
+  Option.getD (partialModel.proj .only x) default
+
+def totalizedPreimage (default : Nat) : SpecSet Nat :=
+  fun x => totalizedProj default x = 42
+
+theorem naive_totalization_adds_spurious_witness :
+    (0 ∈ totalizedPreimage 42) ∧
+      (0 ∉ partialModel.preimage .only (partialModel.A .only)) := by
+  constructor
+  · change totalizedProj 42 0 = 42
+    unfold totalizedProj
+    simp
+  · intro h
+    rcases h with ⟨y, hproj, _⟩
+    simp at hproj
+
+end Examples
+end UadfU0
+--- END FILE: paper/lean/UadfU0/Examples/TotalizationCounterexample.lean ---
