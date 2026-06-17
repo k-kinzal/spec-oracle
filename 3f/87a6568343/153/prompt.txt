@@ -1,0 +1,165 @@
+あなたは査読者3です。
+この論文は形式手法系トップ会議/誌への投稿対象です。
+投稿先: FM / ITP / CPP / TACAS / FASE / Formal Aspects。
+
+査読目的:
+- 「この投稿先で採択されるための査読」を行うこと。
+- 採択可否に直結する指摘のみを優先すること。
+- 余計な前提・未提示情報の仮定・話題拡張を行わないこと。
+- 与えられた本文と付録だけを根拠に判断すること。
+
+出力形式:
+1) Recommendation (Accept / Minor Revision / Major Revision / Reject)
+2) MUST (採択のために必須の修正。なければ「None」)
+3) SHOULD (強く推奨)
+4) MINOR (編集レベル)
+5) Acceptance Readiness (この投稿先群で通る確率の評価と理由を3行)
+
+条件:
+- 厳格に査読する。
+- ただし「採択可能な道筋」がある場合は明示する。
+
+
+# Context files
+
+--- BEGIN FILE: paper/formal-methods/appendix/theorem_catalog.md ---
+# Theorem Catalog (Lean Mechanization)
+
+This appendix lists theorem declarations in `paper/lean/UadfU0` for traceability.
+
+- Total theorem declarations: `59`
+
+## `paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean`
+
+- theorem count: `4`
+
+- `req_projection_adequacy`
+- `checkConsistent_true_implies_allThree`
+- `allThree_implies_checkConsistent_true`
+- `checkConsistent_iff_allThree`
+
+## `paper/lean/UadfU0/Definitions/Model.lean`
+
+- theorem count: `3`
+
+- `subset_refl`
+- `subset_trans`
+- `set_ext`
+
+## `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean`
+
+- theorem count: `1`
+
+- `proj_bind_decomposition`
+
+## `paper/lean/UadfU0/Examples/CompositionExample.lean`
+
+- theorem count: `1`
+
+- `proj_compose_holds`
+
+## `paper/lean/UadfU0/Examples/ContradictoryLayers.lean`
+
+- theorem count: `1`
+
+- `contradictoryModel_is_contradictory`
+
+## `paper/lean/UadfU0/Examples/TransferChainExample.lean`
+
+- theorem count: `2`
+
+- `transfer_code_to_api`
+- `transfer_api_to_req`
+
+## `paper/lean/UadfU0/Examples/TransferExample.lean`
+
+- theorem count: `1`
+
+- `transfer_false_to_true`
+
+## `paper/lean/UadfU0/InterLayer/Adequacy.lean`
+
+- theorem count: `6`
+
+- `preimage_subset_semanticPullback_of_sound`
+- `semanticPullback_subset_preimage_of_complete`
+- `preimage_eq_semanticPullback`
+- `preimageMay_subset_semanticPullbackMay_of_sound`
+- `semanticPullbackMay_subset_preimageMay_of_complete`
+- `preimageMay_eq_semanticPullbackMay`
+
+## `paper/lean/UadfU0/InterLayer/Composition.lean`
+
+- theorem count: `2`
+
+- `preimage_compose`
+- `lifted_subset_of_compose`
+
+## `paper/lean/UadfU0/InterLayer/Consistency.lean`
+
+- theorem count: `3`
+
+- `contradictory_iff_not_consistent`
+- `consistent_implies_U0_nonempty`
+- `contradictory_implies_no_shared_witness`
+
+## `paper/lean/UadfU0/InterLayer/Transfer.lean`
+
+- theorem count: `2`
+
+- `lifted_transfer`
+- `consistent_transport_left`
+
+## `paper/lean/UadfU0/RelatedWork/Galois.lean`
+
+- theorem count: `1`
+
+- `no_left_adjoint_of_partial`
+
+## `paper/lean/UadfU0/U0Spec/Construction.lean`
+
+- theorem count: `19`
+
+- `mem_preimage_iff`
+- `preimage_monotone`
+- `preimage_union`
+- `preimage_subset_preimageMay`
+- `lifted_subset_liftedMay`
+- `lifted_subset_preimage_domain`
+- `mem_U0_iff`
+- `U0On_monotone`
+- `U0_eq_U0On_all`
+- `UAnd_eq_UAndOn_all`
+- `UAndOn_antitone`
+- `UAndOn_subset_UAndMayOn`
+- `UAndMayOn_empty_implies_UAndOn_empty`
+- `UAndOn_empty_eq_univ`
+- `UAndOn_subset_U0On`
+- `consistent_iff_exists_UAndOn_pair`
+- `lifted_subset_U0`
+- `U0_nonempty_of_exists_layer_nonempty`
+- `U0_witness_projects_to_some_domain`
+
+## `paper/lean/UadfU0/U0Spec/IdealRoot.lean`
+
+- theorem count: `6`
+
+- `UStar_subset_UAndOn`
+- `UStar_inter_projDomOn_subset_UAndOn`
+- `UStar_subset_U0On_of_nonempty_active`
+- `UStar_inter_projDomOn_subset_U0On_of_nonempty_active`
+- `UStar_subset_UAndMayOn`
+- `UStar_subset_UAnd`
+
+## `paper/lean/UadfU0/U0Spec/Minimality.lean`
+
+- theorem count: `7`
+
+- `U0_upper_bound`
+- `U0_below_every_upper_bound`
+- `U0_least_upper_bound_iff`
+- `U0_is_supremum`
+- `UAndOn_lower_bound`
+- `below_UAndOn_of_lower_bounds`
+- `UAndOn_greatest_lower_bound_iff`
+--- END FILE: paper/formal-methods/appendix/theorem_catalog.md ---
