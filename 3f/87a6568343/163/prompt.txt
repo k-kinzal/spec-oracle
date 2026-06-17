@@ -1,0 +1,3 @@
+FM / ITP / CPP / TACAS / FASE / Formal Aspects 向けに厳格査読をしてください。
+対象は /Users/ab/Projects/spec-oracle/paper/formal-methods/manuscript_fm.md です。
+日本語で、判定・強み・主要懸念・中程度の懸念・軽微修正・必須修正チェックリストを出してください。
