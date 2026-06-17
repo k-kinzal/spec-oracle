@@ -3,7 +3,7 @@
   "checkpoint_id": "3f87a6568343",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 76,
+  "checkpoints_count": 77,
   "files_touched": [
     ".claude/claude-loop.debug",
     ".claude/claude-loop.state.json",
@@ -311,6 +311,7 @@
     "spec-cli/src/commands/init.rs",
     "spec-cli/src/commands/lifecycle.rs",
     "spec-cli/src/commands/migrate.rs",
+    "spec-cli/src/commands/project.rs",
     "spec-cli/src/commands/prover.rs",
     "spec-cli/src/commands/relationships.rs",
     "spec-cli/src/commands/u0.rs",
@@ -726,13 +727,20 @@
       "context": "/3f/87a6568343/49/context.md",
       "content_hash": "/3f/87a6568343/49/content_hash.txt",
       "prompt": "/3f/87a6568343/49/prompt.txt"
+    },
+    {
+      "metadata": "/3f/87a6568343/50/metadata.json",
+      "transcript": "/3f/87a6568343/50/full.jsonl",
+      "context": "/3f/87a6568343/50/context.md",
+      "content_hash": "/3f/87a6568343/50/content_hash.txt",
+      "prompt": "/3f/87a6568343/50/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 9832,
-    "cache_creation_tokens": 2458234,
-    "cache_read_tokens": 50556085,
-    "output_tokens": 113135,
-    "api_call_count": 549
+    "input_tokens": 9859,
+    "cache_creation_tokens": 2481778,
+    "cache_read_tokens": 50684249,
+    "output_tokens": 113354,
+    "api_call_count": 555
   }
 }
