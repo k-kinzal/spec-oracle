@@ -1,0 +1,35 @@
+あなたは査読者1です。
+投稿先は形式手法系: FM / ITP / CPP / TACAS / FASE / Formal Aspects。
+これは「その投稿先で採択されるための査読」です。
+
+査読対象（投稿物全体）:
+- paper/formal-methods/manuscript_fm.md
+- paper/formal-methods/appendix/assumption_matrix.md
+- paper/formal-methods/appendix/theorem_catalog.md
+- paper/lean/UadfU0/Definitions/Model.lean
+- paper/lean/UadfU0/U0Spec/Construction.lean
+- paper/lean/UadfU0/U0Spec/Minimality.lean
+- paper/lean/UadfU0/U0Spec/IdealRoot.lean
+- paper/lean/UadfU0/InterLayer/Transfer.lean
+- paper/lean/UadfU0/InterLayer/Composition.lean
+- paper/lean/UadfU0/InterLayer/Adequacy.lean
+- paper/lean/UadfU0/InterLayer/Consistency.lean
+- paper/lean/UadfU0/RelatedWork/Galois.lean
+- paper/lean/UadfU0/Examples/ArtifactBundleExample.lean
+- paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean
+
+厳守条件:
+- 余計な前提・未提示情報の仮定を置かない。
+- 上記対象を投稿物全体として査読する。
+- 公開URL/配布方法は評価対象外。
+
+出力形式:
+1) Recommendation (Accept / Minor Revision / Major Revision / Reject)
+2) MUST (採択に必須。なければ None)
+3) SHOULD
+4) MINOR
+5) Acceptance Readiness (3行)
+
+査読方針:
+- 厳格に査読する。
+- ただし採択可能な道筋がある場合は具体的に示す。
