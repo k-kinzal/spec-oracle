@@ -1,0 +1,504 @@
+Implement the following plan:
+
+# Architecture Reorganization Plan: specd as UDA/f Core Engine
+
+## Context - Corrected Understanding
+
+### Clarification: SpecRepository and UDAFModel are NOT Duplicates
+
+**Critical correction**: SpecRepository and UDAFModel serve DIFFERENT purposes and are BOTH necessary.
+
+#### Correct Understanding of the Architecture
+
+**SpecRepository** (spec-core/src/data/repository.rs):
+- **Role**: Data persistence layer (Storage/Retrieval)
+- **Responsibility**: Save/load specifications to/from disk (JSON, YAML, database)
+- **Interface**: CRUD operations (add_node, get_node, list_nodes, etc.)
+- **Format**: Graph structure (petgraph) - optimized for storage and retrieval
+- **Analogy**: Like a database ORM - handles data persistence
+
+**UDAFModel** (spec-core/src/formal/model/mod.rs):
+- **Role**: Formal verification layer (In-memory analysis)
+- **Responsibility**: Perform formal verification using Z3 SMT solver
+- **Interface**: Verification operations (verify_consistency, prove_implication, etc.)
+- **Format**: Semantic structure (HashMap) - optimized for formal reasoning
+- **Analogy**: Like a business logic layer - handles domain operations
+
+**ModelSync** (spec-core/src/formal/model/sync.rs):
+- **Role**: Bridge between persistence and verification
+- **Responsibility**: Load data from SpecRepository → Build UDAFModel for verification
+- **Flow**: Disk → SpecRepository → ModelSync → UDAFModel → Verification → Results
+
+#### Why Both Are Necessary
+
+```
+User Request: "Verify this specification is consistent"
+     ↓
+1. Load from disk
+   SpecRepository.load() → reads JSON/YAML files
+     ↓
+2. Build verification model
+   ModelSync.sync_from_repository() → constructs UDAFModel in memory
+     ↓
+3. Perform verification
+   UDAFModel.verify_consistency() → runs Z3 solver
+     ↓
+4. Save results
+   ModelSync.export_proof_metadata() → updates SpecRepository
+   SpecRepository.save() → writes back to disk
+```
+
+**This is NOT duplication** - it's a standard layered architecture:
+- **Persistence layer** (SpecRepository) - How data is stored
+- **Domain layer** (UDAFModel) - How data is reasoned about
+
+#### The REAL Problem: Proto API Design
+
+**Your original question hit the core issue**:
+> "Node/Edgeってなんですか？私の理解ではUDA/fモデルをデータとして扱うためにSpecRepositoryが存在していると思っています。それはNode/Edgeなのですか？"
+
+**Answer**:
+- **SpecRepository** uses Node/Edge as its internal data format (graph structure)
+- **Node/Edge are implementation details** - they are HOW SpecRepository stores data
+- **Proto should NOT expose Node/Edge** - it should expose UDA/f concepts (Universe, Domain, etc.)
+
+**Current proto.spec_oracle.proto exposes BOTH**:
+```protobuf
+service SpecOracle {
+  // ❌ LOW-LEVEL: Implementation details (SpecRepository internals)
+  rpc AddNode(AddNodeRequest) returns (AddNodeResponse);
+  rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
+  rpc AddEdge(AddEdgeRequest) returns (AddEdgeResponse);
+  // ... 25 more Node/Edge operations
+
+  // ✅ HIGH-LEVEL: UDA/f concepts (proper abstraction)
+  rpc CreateUniverse(CreateUniverseRequest) returns (CreateUniverseResponse);
+  rpc CreateDomain(CreateDomainRequest) returns (CreateDomainResponse);
+  rpc CreateAdmissibleSet(...) returns (...);
+  // ... 23 more UDA/f operations
+}
+```
+
+**The problem**: Proto exposes SpecRepository's internal Node/Edge structure as public API.
+
+**What SHOULD happen**:
+```protobuf
+service SpecOracle {
+  // ONLY expose UDA/f concepts
+  rpc CreateUniverse(...) returns (...);
+  rpc CreateDomain(...) returns (...);
+  rpc CreateAdmissibleSet(...) returns (...);
+  rpc CreateTransform(...) returns (...);
+  // ... (26 RPCs total)
+}
+
+// Node/Edge operations are INTERNAL to specd
+// Clients never see them - they only work with UDA/f concepts
+```
+
+**Internally, specd would**:
+```rust
+// When client calls CreateAdmissibleSet(...)
+pub async fn create_admissible_set(...) -> Result<...> {
+    // 1. Save to SpecRepository (as Node internally)
+    let node_id = self.repository.add_node(...);  // INTERNAL
+
+    // 2. Sync to UDAFModel for verification
+    ModelSync::sync_from_repository(&mut self.model, &self.repository);
+
+    // 3. Return UDA/f concept (not Node/Edge details)
+    Ok(AdmissibleSet { spec_id: node_id, ... })
+}
+```
+
+**Client never knows about Nodes/Edges** - they only work with Universe, Domain, AdmissibleSet, Transform.
+
+#### Summary of Three Separate Concerns
+
+**Concern 1: Data Persistence** (NOT a problem)
+- ✅ SpecRepository handles this correctly
+- ✅ Saves/loads to disk in graph format
+- ✅ This is necessary and appropriate
+
+**Concern 2: Formal Verification** (NOT a problem)
+- ✅ UDAFModel handles this correctly
+- ✅ Performs Z3-based verification
+- ✅ This is necessary and appropriate
+
+**Concern 3: Proto API Design** (THIS IS THE PROBLEM)
+- ❌ Proto exposes Node/Edge (implementation details)
+- ❌ Should only expose UDA/f concepts (abstractions)
+- ❌ This violates the original plan: "gRPC schema exposes low-level node/edge operations, not UDA/f model concepts"
+
+#### The Two Structures
+
+**SpecRepository** (spec-core/src/data/repository.rs):
+```rust
+// Uses petgraph::DiGraph
+struct SpecRepository {
+    graph: DiGraph<SpecNodeData, SpecEdgeData>,
+    // SpecNodeData: id, content, kind, formality_layer, metadata
+    // SpecEdgeData: kind (Refines, Formalizes, Transform, etc.)
+}
+```
+
+**UDAFModel** (spec-core/src/formal/model/mod.rs):
+```rust
+struct UDAFModel {
+    universes: HashMap<UniverseId, Universe>,           // U
+    domains: HashMap<DomainId, Domain>,                  // D
+    admissible_sets: HashMap<SpecId, AdmissibleSet>,     // A
+    transforms: HashMap<TransformId, TransformFunction>, // f
+    prover: Prover,  // Z3 SMT solver
+}
+```
+
+#### Current Architecture - Data Flow
+
+**How specifications are currently stored and verified**:
+
+```
+1. User adds specification
+   ↓
+2. spec-cli → specd.AddNode() or specd.CreateAdmissibleSet()
+   ↓
+3. specd writes to SpecRepository (persistence layer)
+   - Stored as SpecNodeData in petgraph::DiGraph
+   - Saved to disk as JSON/YAML files
+   ↓
+4. When verification needed:
+   ModelSync::sync_from_repository() loads SpecRepository → UDAFModel
+   ↓
+5. UDAFModel performs Z3-based verification
+   ↓
+6. ModelSync::export_proof_metadata() writes results back to SpecRepository
+   ↓
+7. SpecRepository saves updated metadata to disk
+```
+
+**This architecture is CORRECT and necessary**:
+- ✅ SpecRepository handles data persistence (disk/DB storage)
+- ✅ UDAFModel handles formal verification (Z3 solver)
+- ✅ ModelSync bridges between them
+- ✅ No duplication - they serve different purposes
+
+**The issue is NOT with this architecture - the issue is with proto API design.**
+
+## Proposed Solution: Proto API Abstraction Level
+
+### Problem Statement
+
+The current proto exposes TWO different abstraction levels:
+
+1. **Low-level operations (28 RPCs)**: Node/Edge manipulation
+   - AddNode, GetNode, ListNodes, RemoveNode
+   - AddEdge, ListEdges, RemoveEdge
+   - SetUniverse, FilterByLayer
+   - etc.
+
+2. **High-level operations (26 RPCs)**: UDA/f concepts
+   - CreateUniverse, GetUniverse, ListUniverses, DeleteUniverse
+   - CreateDomain, GetDomain, ListDomains
+   - CreateAdmissibleSet, VerifyConsistency, VerifyImplication
+   - CreateTransform, VerifyTransformSoundness
+   - ConstructU0 (reverse mapping)
+
+**The issue**: Exposing Node/Edge operations violates the principle that **specd should manage the formal world using UDA/f concepts**.
+
+**User's insight**: "Node/Edgeってなんですか？...それはNode/Edgeなのですか？"
+- Node/Edge are **implementation details** of SpecRepository
+- They should be **internal to specd**, not exposed via proto
+
+### Recommendation
+
+**Keep the current architecture** (SpecRepository + UDAFModel):
+- ✅ SpecRepository continues to handle persistence (using Node/Edge internally)
+- ✅ UDAFModel continues to handle verification (using Z3)
+- ✅ ModelSync continues to bridge between them
+
+**Change only the proto API**:
+- ❌ Remove or deprecate 28 Node/Edge RPCs from public proto
+- ✅ Keep 26 UDA/f concept RPCs + 6 Project RPCs
+- ✅ Clients work exclusively with UDA/f concepts (Universe, Domain, AdmissibleSet, Transform)
+
+### Implementation Approach
+
+**Phase 1: Mark Node/Edge RPCs as deprecated** (backward compatible)
+- Add deprecation annotations to proto
+- Update proto comments: "DEPRECATED: Use UDA/f operations instead"
+- Keep implementations working for 2-3 releases
+
+**Phase 2: Update spec-cli to use UDA/f operations**
+- Migrate all commands to use CreateUniverse, CreateDomain, etc.
+- Remove dependency on Node/Edge operations
+- `spec add "..."` → calls `CreateAdmissibleSet` instead of `AddNode`
+
+**Phase 3: Remove deprecated RPCs** (breaking change, next major version)
+- Remove Node/Edge RPC definitions from proto
+- Remove implementations from specd
+- Node/Edge operations become purely internal to SpecRepository
+
+### Internal Implementation Details
+
+**How specd implements UDA/f RPCs using SpecRepository**:
+
+```rust
+// Example: CreateAdmissibleSet RPC
+pub async fn create_admissible_set(
+    &self,
+    req: CreateAdmissibleSetRequest,
+) -> Result<CreateAdmissibleSetResponse> {
+    let project = self.project_manager.load_project(&req.project)?;
+
+    // 1. Add to UDAFModel (verification layer)
+    let spec_id = project.udaf_model.create_admissible_set(
+        req.constraints,
+    )?;
+
+    // 2. Save to SpecRepository (persistence layer) - INTERNAL use of Node
+    project.repository.add_node(SpecNodeData {
+        id: spec_id.clone(),
+        content: format!("{:?}", req.constraints),
+        kind: SpecNodeKind::AdmissibleSet,
+        formality_layer: 0,
+        metadata: HashMap::new(),
+    })?;
+
+    // 3. Save to storage
+    self.project_manager.save_project(&project)?;
+
+    // 4. Return UDA/f concept (not Node details)
+    Ok(CreateAdmissibleSetResponse {
+        admissible_set: Some(AdmissibleSet {
+            spec_id,
+            constraints: req.constraints,
+            contradicts: vec![],
+            metadata: HashMap::new(),
+        }),
+    })
+}
+```
+
+**Key insight**: Node/Edge operations are called **internally by specd** when implementing UDA/f RPCs, but **clients never see them**.
+
+### Expected Outcome
+
+After this change:
+
+**Proto API** (clean abstraction):
+```protobuf
+service SpecOracle {
+  // Project Management (6 RPCs)
+  rpc CreateProject(...) returns (...);
+  rpc ListProjects(...) returns (...);
+  rpc SwitchProject(...) returns (...);
+  rpc DeleteProject(...) returns (...);
+  rpc GetCurrentProject(...) returns (...);
+  rpc ImportProject(...) returns (...);
+
+  // UDA/f Operations (26 RPCs)
+  rpc CreateUniverse(...) returns (...);
+  rpc GetUniverse(...) returns (...);
+  rpc ListUniverses(...) returns (...);
+  rpc DeleteUniverse(...) returns (...);
+
+  rpc CreateDomain(...) returns (...);
+  rpc GetDomain(...) returns (...);
+  rpc ListDomains(...) returns (...);
+  rpc UpdateDomainConstraints(...) returns (...);
+
+  rpc CreateAdmissibleSet(...) returns (...);
+  rpc GetAdmissibleSet(...) returns (...);
+  rpc ListAdmissibleSets(...) returns (...);
+  rpc VerifyConsistency(...) returns (...);
+  rpc VerifyImplication(...) returns (...);
+
+  rpc CreateTransform(...) returns (...);
+  rpc GetTransform(...) returns (...);
+  rpc ListTransforms(...) returns (...);
+  rpc VerifyTransformSoundness(...) returns (...);
+
+  rpc ConstructU0(...) returns (...);
+  rpc SyncModel(...) returns (...);
+  rpc ValidateModel(...) returns (...);
+
+  // Node/Edge operations: REMOVED (internal to specd)
+}
+```
+
+**Client usage** (clean, conceptual):
+```bash
+# Clients work with UDA/f concepts
+spec universe create --layer 1 --name "TLA+"
+spec domain create --universe U1 --name "State Machine"
+spec add "Password must be >= 8 characters"  # Creates AdmissibleSet
+
+# Clients NEVER see Node/Edge implementation details
+```
+
+**Internal specd** (still uses SpecRepository + Node/Edge):
+```rust
+// specd uses Node/Edge internally for persistence
+repository.add_node(...)  // INTERNAL
+repository.add_edge(...)  // INTERNAL
+
+// But exposes only UDA/f concepts via proto
+CreateAdmissibleSet → internally uses add_node()
+CreateTransform → internally uses add_edge()
+```
+
+## Verification Steps
+
+After implementing this change:
+
+1. **Proto compilation**:
+   ```bash
+   # Verify proto compiles without Node/Edge RPCs
+   cd proto
+   buf build
+   ```
+
+2. **spec-cli builds**:
+   ```bash
+   # Verify spec-cli doesn't reference removed RPCs
+   cd spec-cli
+   cargo build
+   grep -r "AddNode\|GetNode\|AddEdge" src/  # Should find nothing
+   ```
+
+3. **Functional test**:
+   ```bash
+   # Start specd
+   specd
+
+   # Test UDA/f operations work
+   spec project create test --description "Test"
+   spec project use test
+   spec add "Test specification"  # Uses CreateAdmissibleSet internally
+   spec summary  # Should show 1 spec
+   ```
+
+4. **No Node/Edge exposure**:
+   ```bash
+   # Verify clients cannot call Node/Edge operations
+   spec rpc add-node "test"  # Should fail: command not found
+   ```
+
+## Critical Files
+
+Files to modify:
+
+1. **proto/spec_oracle.proto**
+   - Remove or mark deprecated: 28 Node/Edge RPC definitions
+   - Keep: 26 UDA/f RPCs + 6 Project RPCs
+   - Add deprecation comments for Phase 1
+
+2. **specd/src/service.rs**
+   - Keep Node/Edge implementations (used internally)
+   - Ensure UDA/f RPCs use them internally
+   - Example: CreateAdmissibleSet calls repository.add_node()
+
+3. **spec-cli/src/main.rs**
+   - Remove: Node/Edge commands from RpcCommands enum
+   - Keep: Only UDA/f and Project commands
+   - Verify all commands use UDA/f operations
+
+4. **spec-cli/src/commands/specd_rpc.rs**
+   - Remove: execute_add_node, execute_get_node, etc.
+   - Keep: UDA/f operation handlers
+   - Migrate any Node/Edge usage to UDA/f equivalents
+
+5. **spec-cli/src/commands/dispatcher.rs**
+   - Remove: Node/Edge command dispatch cases
+   - Keep: UDA/f command dispatch
+
+## Migration Path for Existing Users
+
+For users currently using Node/Edge operations:
+
+**Phase 1 (deprecated, still working)**:
+```bash
+spec rpc add-node "content"  # Still works, shows deprecation warning
+# "Warning: add-node is deprecated. Use UDA/f operations instead."
+```
+
+**Phase 2 (migration guide)**:
+```markdown
+# Old way (deprecated):
+spec rpc add-node "Password >= 8" --kind constraint
+
+# New way (recommended):
+spec add "Password must be at least 8 characters"
+# OR explicitly:
+spec rpc create-admissible-set --constraint "Password >= 8"
+```
+
+**Phase 3 (removed)**:
+```bash
+spec rpc add-node "content"  # Error: command not found
+# Use: spec add "..." or spec rpc create-admissible-set
+```
+
+## Benefits of This Approach
+
+1. **Clean abstraction**: Proto exposes domain concepts, not implementation details
+2. **Backward compatible**: Existing architecture unchanged (SpecRepository + UDAFModel)
+3. **No data loss**: SpecRepository continues to handle persistence using Node/Edge internally
+4. **Better UX**: Users work with meaningful concepts (Universe, Domain, AdmissibleSet) instead of generic Node/Edge
+5. **Future-proof**: Easier to change internal implementation without breaking API
+
+## Summary
+
+**What we're NOT changing**:
+- ✅ SpecRepository (keeps using Node/Edge internally for persistence)
+- ✅ UDAFModel (keeps using Z3 for verification)
+- ✅ ModelSync (keeps bridging between them)
+- ✅ Storage architecture (disk/DB persistence)
+
+**What we ARE changing**:
+- ❌ Proto API: Remove Node/Edge operations from public API
+- ✅ Proto API: Keep only UDA/f concepts (Universe, Domain, AdmissibleSet, Transform)
+- ✅ spec-cli: Use UDA/f operations instead of Node/Edge
+- ✅ Client experience: Work with domain concepts instead of implementation details
+
+**User's concern addressed**:
+> "Node/Edgeってなんですか？...それはNode/Edgeなのですか？2つの同じものを使う必要があるのですか？"
+
+**Answer**:
+- Node/Edge are SpecRepository's **internal persistence format** (necessary)
+- SpecRepository and UDAFModel are **both necessary** (different purposes)
+- But Node/Edge should be **internal only**, not exposed to clients via proto
+- Clients should work with UDA/f concepts, which specd implements using Node/Edge internally
+
+---
+
+## Alternative: Keep Node/Edge for Advanced Users (Optional)
+
+If there's a use case for direct Node/Edge manipulation (e.g., advanced users building custom tools), we could:
+
+1. **Mark as internal/advanced**:
+   ```protobuf
+   // Advanced: Direct graph manipulation (use UDA/f operations instead)
+   rpc AddNode(...) returns (...) { option deprecated = true; }
+   ```
+
+2. **Require explicit flag**:
+   ```bash
+   spec --advanced rpc add-node "..."  # Only works with --advanced flag
+   ```
+
+3. **Document as "escape hatch"**:
+   - Primary API: UDA/f operations (Universe, Domain, AdmissibleSet)
+   - Advanced API: Node/Edge operations (for tool builders, debugging)
+
+**Recommendation**: Start with complete removal, add back only if users request it.
+
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/ab/.claude/projects/-Users-ab-Projects-spec-oracle/27e5f5b0-e24c-40d0-b48d-0a194ce28a2a.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.
+
+---
+
+はい、最後まで進めてください。

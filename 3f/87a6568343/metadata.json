@@ -3,7 +3,7 @@
   "checkpoint_id": "3f87a6568343",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 141,
+  "checkpoints_count": 143,
   "files_touched": [
     ".claude/claude-loop.debug",
     ".claude/claude-loop.state.json",
@@ -262,15 +262,20 @@
     ".spec.backup-before-phase4/specs.json.backup-session61",
     ".spec.backup-before-phase4/specs.json.backup-session62",
     "ARCHITECTURE_REORGANIZATION_COMPLETE.md",
+    "ARCHITECTURE_REORGANIZATION_PHASE1_COMPLETE.md",
     "Cargo.toml",
     "MEMO.md",
+    "MIGRATION_QUICK_REFERENCE.md",
     "PHASE1_COMPLETED.md",
     "PHASE1_COMPLETE_FINAL.md",
     "PHASES_1-4_COMPLETE.md",
+    "PHASE_1_DEPRECATION_COMPLETE.md",
     "PHASE_2.2_COMPLETE.md",
+    "PHASE_2_3_COMPLETE.md",
     "PHASE_5_COMPLETE.md",
     "PROBLEM.md",
     "README.md",
+    "docs/architecture-layers.md",
     "docs/architecture.md",
     "docs/quality-report.md",
     "paper/case-study/real_projects/logs/regex_drift_lock.json",
@@ -572,8 +577,10 @@
     "proto/spec_oracle.proto",
     "scripts/connect_lifecycle_check_specs_v2.py",
     "spec-cli/Cargo.toml",
+    "spec-cli/src/commands/add.rs",
     "spec-cli/src/commands/api.rs",
     "spec-cli/src/commands/dispatcher.rs",
+    "spec-cli/src/commands/export_dot.rs",
     "spec-cli/src/commands/extract.rs",
     "spec-cli/src/commands/init.rs",
     "spec-cli/src/commands/lifecycle.rs",
@@ -583,6 +590,8 @@
     "spec-cli/src/commands/prover.rs",
     "spec-cli/src/commands/relationships.rs",
     "spec-cli/src/commands/specd_rpc.rs",
+    "spec-cli/src/commands/summary.rs",
+    "spec-cli/src/commands/trace.rs",
     "spec-cli/src/commands/u0.rs",
     "spec-cli/src/commands/udaf.rs",
     "spec-cli/src/commands/udaf_old.rs",
@@ -1343,13 +1352,20 @@
       "context": "/3f/87a6568343/95/context.md",
       "content_hash": "/3f/87a6568343/95/content_hash.txt",
       "prompt": "/3f/87a6568343/95/prompt.txt"
+    },
+    {
+      "metadata": "/3f/87a6568343/96/metadata.json",
+      "transcript": "/3f/87a6568343/96/full.jsonl",
+      "context": "/3f/87a6568343/96/context.md",
+      "content_hash": "/3f/87a6568343/96/content_hash.txt",
+      "prompt": "/3f/87a6568343/96/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 13992,
-    "cache_creation_tokens": 5366676,
-    "cache_read_tokens": 108279995,
-    "output_tokens": 198495,
-    "api_call_count": 1114
+    "input_tokens": 14388,
+    "cache_creation_tokens": 5518155,
+    "cache_read_tokens": 113690172,
+    "output_tokens": 212583,
+    "api_call_count": 1163
   }
 }
