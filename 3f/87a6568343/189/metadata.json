@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "3f87a6568343",
+  "session_id": "f944ffd6-5e94-4738-a6d3-01499360b042",
+  "strategy": "manual-commit",
+  "created_at": "2026-06-17T11:29:09.348111Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "MEMO.md",
+    "spec-cli/src/commands/api.rs",
+    "spec-cli/src/commands/extract.rs",
+    "spec-cli/src/commands/init.rs",
+    "spec-cli/src/commands/lifecycle.rs",
+    "spec-cli/src/commands/migrate.rs",
+    "spec-cli/src/commands/prover.rs",
+    "spec-cli/src/commands/relationships.rs",
+    "spec-cli/src/commands/u0.rs",
+    "spec-cli/src/persistence/mod.rs",
+    "spec-cli/src/persistence/store_router.rs"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 3,
+    "cache_creation_tokens": 58649,
+    "cache_read_tokens": 59844,
+    "output_tokens": 2,
+    "api_call_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-06-17T11:29:09.210404Z",
+    "agent_lines": 0,
+    "human_added": 50393,
+    "human_modified": 14,
+    "human_removed": 0,
+    "total_committed": 50393,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-ab-Projects-spec-oracle/f944ffd6-5e94-4738-a6d3-01499360b042.jsonl"
+}
