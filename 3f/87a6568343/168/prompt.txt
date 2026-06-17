@@ -1,0 +1,896 @@
+この論文をFM/ITP/CPP/TACAS/FASE/Formal Aspects基準で判定し、1語で返す（Accept, Minor, Major, Reject）。
+
+# UAD/f Two-Operator Kernel under Partial Projections: Assumption-Audited Lean4 Mechanization
+
+## Abstract
+We present a Lean4 mechanization kernel for multi-layer specification comparison under partial projections.
+Each layer has heterogeneous carrier type `β_i`, and root-to-layer mapping is partial (`proj_i : Ω -> Option β_i`).
+The kernel separates two root operators with different roles: `U0` (join-side coverage baseline) and `UAnd` (meet-side consistency operator).
+
+The paper's contribution is methodological and interface-level: assumptions are explicit theorem arguments, failure boundaries are mechanized as executable counterexamples, and axiom usage is disclosed per theorem.
+Key theorem families cover transfer (`hproj`/`hA` contracts), composition under `Option.bind`, and one-sided adequacy (sound/complete, must/may).
+We also formalize guardrails for partiality (non-adjointness warning) and provide auxiliary ideal-root linkage templates under observability restrictions.
+
+The artifact includes theorem-to-file traceability, assumption matrix, and replay checks.
+We do not claim extractor correctness, statistical external validity, or broad semantic-domain coverage beyond the stated interval-style formal examples.
+
+## 0. Scope, Split, and Quality Bar
+This manuscript is the formal-methods paper in a two-paper strategy.
+1. Formal paper (this file): typed semantics, theorem statements, mechanized proofs, assumption boundaries.
+2. Engineering paper: deterministic replay and operational trust pipeline (`paper/engineering/manuscript_se.md`).
+This formal manuscript is self-contained for theorem claims and does not require the engineering paper for any proof validity argument.
+
+Terminology note:
+1. "UAD/f" in this manuscript is a local name for the kernel tuple `(U, A, D, f)` used in this project.
+2. this paper does not rely on an external pre-existing UAD/f standard definition.
+
+Target quality bar for this paper: FM/ITP/CPP/TACAS/FASE/Formal Aspects.
+Fit statement:
+1. theorem novelty is modest by design,
+2. primary contribution target is methodology/library-style formalization tracks where explicit assumption interfaces and executable boundary theorems are valued as first-class results.
+
+### 0.1 Claims
+This paper claims the following.
+1. A Mathlib-free, axiom-disclosed typed UAD/f kernel with explicit partiality (`Option`) and explicit domain/admissibility separation.
+2. A semantics-level separation between `U0` (join baseline) and `UAnd` (meet consistency).
+3. Assumption-explicit theorems whose validity depends on stated premises, not on hidden intuitions.
+4. Lean4 mechanization with theorem-to-file traceability and reproducible artifact checks.
+
+### 0.2 Non-claims
+This paper does not claim the following.
+1. No proof that a concrete regex or LLM extractor satisfies adequacy assumptions.
+2. No statistical external-validity claim from convenience samples.
+3. No full temporal/state-transition specification management.
+4. No claim that behavior of the engineering-paper PoC pipeline (`paper/engineering/manuscript_se.md`) is a direct semantic proof of all formal assumptions.
+5. No claim that a single guardrail theorem (for example non-adjointness under partiality) is by itself a standalone mathematical novelty result.
+
+### 0.3 Boundary alignment with RQ5
+`RQ5` in this paper is a theorem-level decomposition over abstract relation `E`.
+Concrete extractor correctness remains outside claim boundary.
+When instantiated in practice, the paper provides proof-obligation templates, not completed extractor proofs.
+
+## 1. Problem Statement and Research Questions
+### 1.1 Problem
+In multi-layer engineering settings, artifacts evolve asynchronously.
+Even when each layer passes local checks, cross-layer comparison semantics are often implicit.
+The central difficulty is that ideal complete root specification `U*` is usually unavailable in practice, while cross-layer comparison still requires a root-side criterion.
+
+The formal direction taken here is:
+1. Do not assume complete `U*` as input.
+2. Construct root-side operators from partial projections.
+3. Keep every non-trivial theorem explicit about its assumptions.
+
+### 1.2 Formal objective
+The objective is to provide a minimal typed kernel where:
+1. root-side comparison is constructed from partial projections,
+2. join-side and meet-side roles are separated,
+3. inter-layer and adequacy theorems are proven with explicit hypotheses,
+4. all core statements are machine-checked in Lean.
+
+Methodological stance:
+1. theorem identities are mostly classical; the contribution is not "new set theory",
+2. contribution is an assumption-audited theorem-interface kernel under partial projections,
+3. `UStar` is treated parametrically as an assumption contract (not constructed in this paper), so its value is explicit auditable linkage conditions.
+
+### 1.3 Research questions
+1. `RQ1`: Can we define induced inverse images consistently with heterogeneous carriers `carrier : I -> Type`?
+2. `RQ2`: Can `A(i) ⊆ D(i)` be lifted into root-side witness validity guarantees?
+3. `RQ3`: Can `U0` (join) and `UAnd` (meet) be defined coherently in one model?
+4. `RQ4`: Can transfer/composition conditions be typed and mechanized without hidden assumptions?
+5. `RQ5`: Can adequacy be decomposed into one-sided forms (sound/complete) over abstract `E`?
+
+Primary RQs for this formal paper are `RQ3`, `RQ4`, and `RQ5`.
+`RQ1` and `RQ2` are supporting questions: they fix typed prerequisites used by the primary theorem families.
+Non-obviousness boundary for supporting questions:
+1. negative outcome for `RQ1` would force carrier-collapsing encodings or coercion-heavy reformulation before applying transfer/composition theorems,
+2. negative outcome for `RQ2` would permit root witnesses that satisfy lifted admissibility but fail layer-domain validity on projected values.
+Resolution policy for supporting questions:
+1. `RQ1` is considered resolved when heterogeneity is carried through theorem statements without universe/typing collapse (same model signature reused in transfer/composition/adequacy families, not only in isolated definitions).
+2. `RQ2` is considered resolved when `A(i) ⊆ D(i)` is consumed as witness-validity infrastructure in later theorems (`lifted_subset_preimage_domain`, `U0_witness_projects_to_some_domain`), showing root witnesses are domain-valid where projection witnesses exist.
+
+### 1.4 Evaluation criteria
+1. Definition integrity: type consistency and notation consistency.
+2. Theorem integrity: explicit assumptions and machine-checked proofs.
+3. Mechanization integrity: no `sorry`, theorem traceability, reproducible build.
+4. Claim integrity: clear separation between theorem claims and non-claims.
+5. Supporting-question integrity: `RQ1`/`RQ2` must be operationally consumed by primary theorem families, not left as isolated definitions.
+
+### 1.5 RQ-to-theorem traceability matrix
+| RQ | Answer type | Formal anchor (Lean) | Main section |
+|---|---|---|---|
+| `RQ1` heterogeneous inverse image | typed definition + operational witness | `preimage` (`paper/lean/UadfU0/Definitions/Model.lean`), `mem_preimage_iff` (`paper/lean/UadfU0/U0Spec/Construction.lean`), `heterogeneous_lifted_transfer` (`paper/lean/UadfU0/Examples/HeterogeneousTransferWitness.lean`) | §2.2, §2.3, §3.1, §5.1 |
+| `RQ2` lifting `A(i) ⊆ D(i)` to root witnesses | theorem family | `lifted_subset_preimage_domain`, `U0_witness_projects_to_some_domain` (`paper/lean/UadfU0/U0Spec/Construction.lean`) | §3.1, §3.2 |
+| `RQ3` coherent join/meet separation in one model | theorem family | `U0_least_upper_bound_iff`, `UAndOn_greatest_lower_bound_iff`, `UAndOn_subset_U0On`, `UAndOn_empty_eq_univ`, `UAndOn_antitone` | §3.2, §3.3 |
+| `RQ4` typed transfer/composition under explicit assumptions | theorem family | `lifted_transfer` (`Transfer.lean`), `preimage_compose` (`Composition.lean`) | §3.4, §3.5 |
+| `RQ5` one-sided adequacy decomposition | theorem family | `preimage_subset_semanticPullback_of_sound`, `semanticPullback_subset_preimage_of_complete`, `preimage_eq_semanticPullback`, and may-side analogues (`Adequacy.lean`) | §3.6 |
+
+### 1.6 Resolution evidence for supporting questions
+`RQ1` evidence (heterogeneous carriers are operational, not only definitional):
+1. `heterogeneous_lifted_transfer` applies `lifted_transfer` with `carrier .natL = Nat` and `carrier .boolL = Bool` in one model signature.
+2. this witnesses reuse of one theorem interface over non-identical carrier types without collapsing to a single carrier or introducing coercion wrappers.
+
+`RQ2` evidence (`A(i) ⊆ D(i)` is consumed in downstream reasoning):
+1. `lifted_subset_preimage_domain` proves lifted witnesses satisfy domain preimage conditions.
+2. `U0_witness_projects_to_some_domain` propagates this to root-side witness validity for `U0`.
+3. later sections use these as infrastructure rather than isolated lemmas (for example, witness-side interpretation in §3.2 and case theorem reading in §5.2).
+
+## 2. Typed Core Model
+### 2.1 Notation and order convention
+We encode sets as predicates.
+- `SpecSet α := α -> Prop`
+- this is a local alias in `UadfU0.Definitions.Model`, not a direct use of Mathlib `Set α`
+- design choice: this artifact keeps `lake-manifest.json` package list empty (`packages: []`) to expose all assumptions through a minimal Lean-core dependency surface; the tradeoff is reduced immediate reuse of Mathlib-specific interfaces.
+
+Order is fixed to inclusion `⊆` only.
+Under this order:
+1. join is union,
+2. meet is intersection.
+
+This fixed convention prevents semantic drift across sections.
+
+### 2.2 Layer and model structures
+Each layer has both domain and admissible predicates.
+- `Layer β`:
+  - `D : SpecSet β`
+  - `A : SpecSet β`
+  - `admissible_subset_domain : A ⊆ D`
+
+Typed UAD/f model:
+- `Model ι α`:
+  - `carrier : ι -> Type`
+  - `layer : (i : ι) -> Layer (carrier i)`
+  - `proj : (i : ι) -> α -> Option (carrier i)`
+
+This enforces per-layer heterogeneity (`β_i` may differ by index).
+
+Admissible-set alias used in theorem signatures:
+- `Ui(i) := A(i)` (compatibility alias)
+- in Lean this is `def Ui (M : Model ι α) (i : ι) := M.A i`
+- throughout this paper, `Ui` and `A` denote the same predicate at layer `i`
+
+### 2.3 Lean definition excerpt (exact file-local snippets)
+Both snippets assume surrounding declarations `variable {ι : Type u} {α : Type v}` and `variable (M : Model ι α)` as in the source files.
+
+From `paper/lean/UadfU0/Definitions/Model.lean`:
+```lean
+def preimage (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+  fun x => ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
+
+def Ui (i : ι) : SpecSet (M.carrier i) :=
+  M.A i
+
+def lifted (i : ι) : SpecSet α :=
+  M.preimage i (M.Ui i)
+
+def U0 : SpecSet α :=
+  fun x => ∃ i, x ∈ M.lifted i
+```
+
+From `paper/lean/UadfU0/U0Spec/Construction.lean`:
+```lean
+def U0On (active : ι → Prop) : SpecSet α :=
+  fun x => ∃ i, active i ∧ x ∈ M.lifted i
+
+def UAndOn (active : ι → Prop) : SpecSet α :=
+  fun x => ∀ i, active i → x ∈ M.lifted i
+
+def UAnd : SpecSet α :=
+  M.UAndOn (fun _ => True)
+```
+
+### 2.4 Induced inverse image and lifted sets (must semantics)
+For each layer `i`:
+
+\[
+preimage_i(S) := \{x \in Ω \mid \exists y \in β_i,\ proj_i(x)=some(y) \land y \in S\}
+\]
+
+Lifted admissible predicate:
+
+\[
+lifted(i) := preimage_i(A(i))
+\]
+
+### 2.5 Root-side operators
+Active-restricted operators:
+
+\[
+U0On(active) := \{x \mid \exists i,\ active(i) \land x \in lifted(i)\}
+\]
+\[
+UAndOn(active) := \{x \mid \forall i,\ active(i) \to x \in lifted(i)\}
+\]
+
+Global forms:
+
+\[
+U0 := U0On(\lambda _, True),\quad UAnd := UAndOn(\lambda _, True)
+\]
+
+Interpretation under `⊆`:
+1. `U0` is join-side least upper bound.
+2. `UAndOn` is meet-side greatest lower bound.
+
+Definition-placement note:
+1. `U0` is placed in `Definitions/Model.lean` as core root-side union operator.
+2. `UAndOn`/`UAnd` are placed in `U0Spec/Construction.lean` with active-set laws.
+3. `U0_eq_U0On_all` and `UAnd_eq_UAndOn_all` provide the explicit bridge for global forms.
+
+### 2.6 May extension
+Must excludes undefined projections from membership.
+May includes undefined projections as inconclusive-allowed branch:
+
+\[
+preimageMay_i(S) := \{x \mid proj_i(x)=none \lor \exists y,\ proj_i(x)=some(y) \land y \in S\}
+\]
+
+Derived may operators:
+- `liftedMay`
+- `UAndMayOn`
+
+Mechanized interface boundary:
+1. must and may equalities are proved in separate theorem families (`preimage_eq_semanticPullback` vs `preimageMay_eq_semanticPullbackMay`),
+2. cross-family relation is explicit only through named inclusion theorems such as `preimage_subset_preimageMay` and `UAndOn_subset_UAndMayOn`.
+
+### 2.7 Pairwise consistency predicates
+\[
+Consistent(i,j) :\Leftrightarrow \exists x,\ x\in lifted(i) \land x\in lifted(j)
+\]
+\[
+Contradictory(i,j) :\Leftrightarrow \forall x,\ x\in lifted(i) \to x\in lifted(j) \to False
+\]
+
+(Lean: `paper/lean/UadfU0/InterLayer/Consistency.lean`.)
+
+### 2.8 Root-space instantiation templates
+We distinguish two conceptual root spaces.
+1. `Ω_trace`: event/trace-level root space.
+2. `Ω_art`: artifact-bundle root space.
+
+For extractor-aware decomposition:
+1. `obs_i : Ω -> Option Γ_i`
+2. `extract_i : Γ_i -> Option β_i`
+3. `proj_i := Option.bind (obs_i) extract_i`
+
+The formal theorems are stated over abstract `proj_i`; this decomposition is a bridge template, not a hidden assumption.
+Concrete instantiation appears in §5.1 (`ArtifactBundleExample.lean`), where `proj` is defined exactly as `Option.bind obs extract`.
+
+## 3. Main Mechanized Results
+### 3.1 Foundational lemmas (supporting, not novelty claims)
+From `paper/lean/UadfU0/U0Spec/Construction.lean`:
+1. `preimage_monotone`
+2. `preimage_union`
+3. `preimage_subset_preimageMay`
+4. `lifted_subset_liftedMay`
+5. `lifted_subset_preimage_domain`
+
+These are explicitly treated as support lemmas.
+
+### 3.2 Join/meet characterizations
+From `paper/lean/UadfU0/U0Spec/Minimality.lean`:
+1. `U0_least_upper_bound_iff`
+2. `UAndOn_greatest_lower_bound_iff`
+
+Interpretation:
+1. `U0` is the LUB of lifted family under `⊆`.
+2. `UAndOn(active)` is the GLB of active lifted family under `⊆`.
+
+Supporting RQ linkage:
+1. `RQ1` is answered by typed inverse-image definitions parameterized by heterogeneous `carrier : ι -> Type`, and operationally witnessed by `heterogeneous_lifted_transfer` (§5.1).
+2. `RQ2` is answered by `lifted_subset_preimage_domain` and `U0_witness_projects_to_some_domain`, which propagate `A(i) ⊆ D(i)` to root witnesses.
+
+### 3.3 Central role-separation result for `RQ3`
+From `paper/lean/UadfU0/U0Spec/Construction.lean`:
+1. `U0On_monotone`
+2. `UAndOn_antitone`
+3. `UAndOn_subset_U0On` (requires non-empty active set)
+4. `consistent_iff_exists_UAndOn_pair`
+5. `UAndOn_empty_eq_univ`
+
+Implication:
+1. join-side and meet-side operators are behaviorally distinct,
+2. active-layer expansion has opposite monotonicity effects,
+3. vacuous-truth edge cases are explicit.
+
+Role-separation theorem bundle (paper-level statement):
+1. `U0On` is monotone in active-set growth, while `UAndOn` is antitone.
+2. Under non-empty active sets, `UAndOn(active) ⊆ U0On(active)`.
+3. Under empty active set, `UAndOn` collapses to universal predicate (`UAndOn_empty_eq_univ`), so any consistency interpretation must explicitly enforce `∃ i, active i`.
+4. `consistent_iff_exists_UAndOn_pair` gives the pairwise-consistency interpretation of meet-side operator on two selected layers.
+5. order on active predicates is inclusion `J ⊆ K :⇔ ∀ i, J i → K i`, so `UAndOn_antitone` means larger active-set predicates yield smaller meet results under `⊆`.
+
+Vacuous-truth implication:
+1. `UAndOn_empty_eq_univ` means meet over zero active layers yields universal predicate,
+2. therefore any operational interpretation of `UAndOn` must enforce non-empty active sets when using it as a consistency signal.
+3. the same-root linkage contract used later in `lifted_transfer` (§3.4) is one explicit mechanism for keeping this consistency reading operationally meaningful under partial observations.
+
+Difference from total-map-only intuition:
+1. In total-map settings, undefined-observation branch does not exist and must/may collapse.
+2. In this partial kernel, strict inclusion can appear (`preimage_subset_preimageMay`, `UAndOn_subset_UAndMayOn`), so join/meet reasoning must be paired with explicit undefined-point policy.
+3. Therefore `U0`/`UAnd` separation here is not only order-theoretic; it is policy-sensitive under partiality.
+
+### 3.4 Inter-layer transfer theorem
+Formal theorem (`InterLayer/Transfer.lean`):
+
+\[
+(\forall x,\forall y_j,\ proj_j(x)=some(y_j) \to \exists y_i,\ proj_i(x)=some(y_i) \land R(y_i,y_j))
+\]
+\[
+\land\ (\forall y_i,y_j,\ R(y_i,y_j) \to y_j\in A(j) \to y_i\in A(i))
+\]
+\[
+\Rightarrow lifted(j) \subseteq lifted(i)
+\]
+
+Lean signature excerpt:
+```lean
+theorem lifted_transfer
+    (i j : ι)
+    (R : M.carrier i → M.carrier j → Prop)
+    (hproj :
+      ∀ x : α, ∀ yj : M.carrier j,
+        M.proj j x = some yj →
+        ∃ yi : M.carrier i, M.proj i x = some yi ∧ R yi yj)
+    (hA :
+      ∀ yi : M.carrier i, ∀ yj : M.carrier j,
+        R yi yj → yj ∈ M.Ui j → yi ∈ M.Ui i)
+    : M.lifted j ⊆ M.lifted i
+```
+
+Proof skeleton:
+1. Take arbitrary `x ∈ lifted(j)`.
+2. Extract witness `yj` with `proj_j x = some yj` and `yj ∈ A(j)`.
+3. Apply `hproj` at the same root point `x` to get `yi` and `proj_i x = some yi` with `R yi yj`.
+4. Apply `hA` to transfer admissibility from `A(j)` to `A(i)`.
+5. Construct witness for `x ∈ lifted(i)`.
+
+Assumption audit:
+1. Without same-root linkage (`hproj`), codomain relation `R` alone is insufficient.
+2. Without admissibility-preservation (`hA`), transfer of set membership fails.
+3. Mechanized counterexample without `hproj` is provided in `paper/lean/UadfU0/Examples/TransferCounterexample.lean` (`transfer_fails_without_hproj`), including a case where admissibility-side reasoning is still present (`hA_trivial`).
+4. Derived corollary `consistent_transport_left` (same file) transports pairwise consistency along proved lifted-subset relations.
+
+### 3.5 Composition theorem for induced inverse images
+Formal theorem (`InterLayer/Composition.lean`):
+
+\[
+proj_j(x)=Option.bind(proj_i(x),g)
+\Rightarrow
+preimage_j(S)=preimage_i(pullbackVia_g(S))
+\]
+
+with
+
+\[
+pullbackVia_g(S)=\{y_i\mid \exists y_j,\ g(y_i)=some(y_j)\land y_j\in S\}
+\]
+
+Lean signature excerpt:
+```lean
+theorem preimage_compose
+    (i j : ι)
+    (g : M.carrier i → Option (M.carrier j))
+    (hcomm : ∀ x, M.proj j x = Option.bind (M.proj i x) g)
+    (S : SpecSet (M.carrier j))
+    : M.preimage j S = M.preimage i (M.pullbackVia g S)
+```
+
+Proof skeleton (both directions explicit):
+1. `j -> i` direction:
+2. Start from witness `yj` in `preimage_j(S)`.
+3. Use `hcomm` and case analysis on `proj_i x`.
+4. In `none` branch, `Option.bind (proj_i x) g = none`, contradicting `proj_j x = some yj` via `hcomm`.
+5. In `some yi` branch, reduce `Option.bind (some yi) g = some yj` to `g yi = some yj` and construct pullback witness.
+6. `i -> j` direction:
+7. Start from witness `yi` plus pullback witness `yj`.
+8. Rebuild `Option.bind` equality and conclude `proj_j x = some yj`.
+
+Why non-trivial in this model:
+1. proof depends on partiality-aware branch handling,
+2. impossible branch elimination is essential and mechanized.
+3. if projections were total (`α -> β`) and `Option` branch were absent, this theorem collapses to standard total preimage-composition identities; here the `none` branch introduces an extra proof obligation that must be discharged explicitly.
+
+### 3.6 One-sided adequacy decomposition (must and may)
+From `paper/lean/UadfU0/InterLayer/Adequacy.lean`.
+
+Motivation for introducing abstract `E`:
+1. `proj` captures an implementation-level observation path,
+2. `E` captures semantic extraction relation used for adequacy statements,
+3. separating them allows theorem-level reasoning before committing to a concrete extractor implementation,
+4. this separation is required to express mismatched cases (`E ≠ graph(proj)`) where one-sided adequacy still holds and complete adequacy fails.
+
+Definitions:
+\[
+semanticPullback(E,S):=\{x\mid \exists y, E(x,y)\land y\in S\}
+\]
+\[
+semanticPullbackMay(E,S):=\{x\mid proj_i(x)=none\ \lor\ \exists y, E(x,y)\land y\in S\}
+\]
+
+Must-side theorems:
+1. `preimage_subset_semanticPullback_of_sound`
+2. `semanticPullback_subset_preimage_of_complete`
+3. `preimage_eq_semanticPullback`
+
+May-side theorems:
+1. `preimageMay_subset_semanticPullbackMay_of_sound`
+2. `semanticPullbackMay_subset_preimageMay_of_complete`
+3. `preimageMay_eq_semanticPullbackMay`
+
+Interpretation boundary:
+1. These are abstract theorems over relation `E`.
+2. Extractor-specific correctness is not proven here.
+3. Non-triviality under `E ≠ proj` is shown by mechanized counterexample in `paper/lean/UadfU0/Examples/AdequacyCounterexample.lean` (sound side can hold while complete side fails).
+4. Concrete `obs/extract` instantiation obligations are mechanized in `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean` (`Eextract_sound`, `Eextract_complete`, `preimage_eq_semanticPullback_Eextract`).
+
+Practical `E ≠ graph(proj)` motivation:
+1. `E` can represent semantic normalization (for example unit-normalized interval meaning), while `proj` can represent implementation-level extraction output.
+2. with parser drift or partial parsing, a normalized semantic relation can remain sound for extracted witnesses while completeness fails because some semantically valid pairs are not reconstructed by `proj`.
+3. the `EPlus1` model in `AdequacyCounterexample.lean` is a proof-structure witness of this mismatch pattern, not a production extractor model.
+
+#### 3.6.1 Concrete-extractor proof obligations (template)
+For a concrete extractor decomposition:
+1. `obs_i : Ω -> Option Γ_i`
+2. `extract_i : Γ_i -> Option β_i`
+3. `proj_i := Option.bind obs_i extract_i`
+
+typical sufficient obligations are:
+1. Sound side:
+   - `obs_i x = some γ ∧ extract_i γ = some y -> E_extract x y`
+2. Complete side:
+   - `E_extract x y -> ∃ γ, obs_i x = some γ ∧ extract_i γ = some y`
+3. none-policy side:
+   - must or may handling of inconclusive is fixed as an operational policy.
+
+Lean mapping:
+1. sound obligation corresponds to `hSound`.
+2. complete obligation corresponds to `hComplete`.
+3. adequacy application reads as substitution `E := E_extract`.
+
+#### 3.6.2 Why `semanticPullbackMay` contains `proj`-none branch
+May-comparison requires matching the same inconclusive policy on both sides.
+Therefore `semanticPullbackMay` includes `proj_i(x)=none` branch explicitly.
+This is an operational comparability choice, not an arbitrary mixing of abstractions.
+Alternative rejected here: forcing `proj_i(x)=none` to immediate non-membership on the semantic side would collapse may behavior toward must behavior and erase the policy split this paper is designed to expose.
+
+### 3.7 Non-adjointness under partial projections
+From `paper/lean/UadfU0/RelatedWork/Galois.lean`:
+
+Adjointness notion used:
+\[
+HasLeftAdjoint(G) :\Leftrightarrow \exists F,\ \forall S,T,\ F(S)\subseteq T \leftrightarrow S\subseteq G(T)
+\]
+with `G = preimage_i`.
+
+\[
+(\exists x_0,\ proj_i(x_0)=none) \Rightarrow \neg HasLeftAdjoint(preimage_i)
+\]
+
+Lean signature excerpt:
+```lean
+theorem no_left_adjoint_of_partial
+    (M : Model ι α) (i : ι) (x0 : α)
+    (hnone : M.proj i x0 = none)
+    : ¬ HasLeftAdjoint (M.preimage i)
+```
+
+Proof skeleton:
+1. Assume a left adjoint `F` exists.
+2. Instantiate adjunction with singleton root set `S = {x0}` and universal codomain set `T = ⊤`.
+3. From left side (`F S ⊆ T` trivial), derive right side `S ⊆ preimage_i(T)`.
+4. Hence `x0 ∈ preimage_i(T)` and there exists `y` with `proj_i x0 = some y`.
+5. Contradiction with `proj_i x0 = none`.
+
+This theorem blocks silent import of total-map Galois intuitions into partial-projection settings.
+In this paper the theorem is a mechanized guardrail: any adjunction-based reasoning must explicitly justify totality or equivalent conditions.
+It is not claimed as standalone mathematical novelty and is categorized as supporting in §4.6.
+
+### 3.8 Ideal-root linkage under observability domains
+From `paper/lean/UadfU0/U0Spec/IdealRoot.lean`:
+This subsection is classified as supporting conditional linkage, not as core novelty.
+1. `UStar : SpecSet α` is an explicit theorem parameter denoting ideal-root predicate
+   (it is not constructed by this kernel; theorem statements are parametric in `UStar`)
+2. `projDom(i) := {x | ∃ y, proj_i x = some y}`
+3. `projDomOn(active) := {x | ∀ i, active i -> x ∈ projDom(i)}`
+
+Representative Lean signature:
+```lean
+theorem UStar_inter_projDomOn_subset_UAndOn
+    {active : ι → Prop}
+    (UStar : SpecSet α)
+    (hNecessaryOnDom :
+      ∀ i : ι, active i →
+        (fun x : α => x ∈ UStar ∧ x ∈ M.projDom i) ⊆ M.lifted i) :
+    (fun x : α => x ∈ UStar ∧ x ∈ M.projDomOn active) ⊆ M.UAndOn active
+```
+
+Key theorems:
+1. global-necessity form: `UStar_subset_UAndOn`, `UStar_subset_U0On_of_nonempty_active`, `UStar_subset_UAnd`
+2. domain-restricted form: `UStar_inter_projDomOn_subset_UAndOn`, `UStar_inter_projDomOn_subset_U0On_of_nonempty_active`
+3. may-side form: `UStar_subset_UAndMayOn`
+
+Interpretation:
+1. global form requires stronger premise (`UStar ⊆ lifted(i)` for active layers), while domain-restricted form relaxes this to observable points only.
+2. under partial observability, domain-restricted linkage is the operationally meaningful variant.
+3. may-side linkage and must-side linkage are not interchangeable.
+4. because `UStar` is parametric input, these are conditional linkage theorems rather than a construction of `UStar`; their value is to make assumption strength explicit and machine-checkable.
+5. explicit chain under assumptions:
+   \[
+   UStar \cap projDomOn(active) \subseteq UAndOn(active) \subseteq U0On(active)
+   \]
+   where the second inclusion additionally requires non-empty `active`.
+
+## 4. Mechanization Method and Proof Integrity
+### 4.1 Mechanization principles
+1. Every theorem states assumptions in argument list.
+2. No implicit classical package opening in core files.
+3. No empirical evidence is used as theorem proof evidence.
+4. Edge cases (empty active set, undefined projection points) are explicitly theoremized.
+
+### 4.2 Proof-structure discipline
+Selected proof styles are intentionally explicit.
+1. witness extraction and reconstruction for existential sets,
+2. extensional equality proofs via `set_ext`,
+3. branch analysis on `Option` where partiality matters,
+4. subset reasoning through compositional lemmas (`subset_trans`, monotonicity theorems).
+
+### 4.3 Logic basis disclosure
+1. toolchain: `leanprover/lean4:v4.27.0`.
+2. manifest hash (`paper/lean/lake-manifest.json`):
+   - `8c098d788704fb7c279c7004a1f492723bd892acf2500483665ae39e7a00a6e7`
+3. extensional equality reasoning uses `funext` and `propext`.
+4. core files do not use `open Classical`/`open Finset`; this affects readability only, because kernel-level constants (for example `Classical.choice`) can still appear in elaborated proof terms.
+5. reported axioms (`propext`, `Classical.choice`, `Quot.sound`) are Lean4 core-level constants (not external package axioms; Mathlib is not imported in this artifact).
+6. Axiom audit (`#print axioms`) on selected primary/supporting theorems:
+   - `lifted_transfer`: no axioms
+   - `preimage_compose`: `[propext, Classical.choice, Quot.sound]`
+   - `preimage_eq_semanticPullback`: `[propext, Quot.sound]`
+   - `preimageMay_eq_semanticPullbackMay`: `[propext, Quot.sound]`
+   - `no_left_adjoint_of_partial`: `[propext]`
+   - `UStar_inter_projDomOn_subset_UAndOn`: no axioms
+7. `Classical.choice` appears in some equality proofs (for example `preimage_compose`) because witness reconstruction is expressed through extensional equality over existential branches; this theorem is classically proven here by proof-style choice, and a constructivity-preserving re-proof is outside this scope.
+8. `Quot.sound` appears through core equality infrastructure used by Lean elaboration in extensional set-equality proofs; this is a kernel-level dependency, not an external-library import.
+9. In particular, for `preimage_compose`, this manuscript fixes a concise extensional-equality proof style and reports the resulting axiom footprint; it does not claim constructivity-preserving normalization.
+10. Asymmetry note: `lifted_transfer` is a one-way subset theorem and avoids extensional set equality over existential branches, while `preimage_compose` proves set equality via `set_ext` across two existential directions; this proof-shape difference is the practical source of their different axiom footprints.
+
+### 4.4 Artifact integrity checks
+```bash
+# repository root
+bash paper/formal-methods/appendix/reproduce_formal.sh
+```
+
+Current values:
+1. theorem count (informational): `74`
+2. `sorry` count (hard check): `0`
+3. primary-theorem name membership (hard check): all names in the `primary` set in `reproduce_formal.sh` are present.
+4. LOC (`paper/lean/UadfU0`, informational): `1807`
+5. lake job count (`46`) is a build-graph execution count and is not expected to equal source-file count.
+6. replay script checks SHA256 for manifest/toolchain/lakefile and selected traceability-critical source files.
+
+Environment assumptions for this reproducibility claim:
+1. `bash`, `python3`, `rg`, and Lean toolchain from `paper/lean/lean-toolchain` are available.
+2. reproducibility scope is "same manifest + same Lean toolchain + same script revision", not bit-identical CI/container replay.
+
+Artifact scope in this submission:
+1. full Lean sources under `paper/lean/UadfU0` are part of the formal artifact package,
+2. theorem catalog and assumption matrix are derived from those sources.
+3. `paper/formal-methods/appendix/theorem_catalog.md` enumerates the full `.lean` file set in that package.
+
+### 4.5 Theorem-to-file traceability
+| Formal claim | Lean theorem(s) | File |
+|---|---|---|
+| must/may operator laws | `U0On_monotone`, `UAndOn_antitone`, `UAndOn_subset_U0On`, `UAndOn_subset_UAndMayOn`, `UAndOn_empty_eq_univ`, `consistent_iff_exists_UAndOn_pair` | `paper/lean/UadfU0/U0Spec/Construction.lean` |
+| join/meet characterization | `U0_least_upper_bound_iff`, `UAndOn_greatest_lower_bound_iff` | `paper/lean/UadfU0/U0Spec/Minimality.lean` |
+| transfer | `lifted_transfer` | `paper/lean/UadfU0/InterLayer/Transfer.lean` |
+| transfer assumption counterexample (`hproj` missing) | `transfer_fails_without_hproj` | `paper/lean/UadfU0/Examples/TransferCounterexample.lean` |
+| composition | `preimage_compose` | `paper/lean/UadfU0/InterLayer/Composition.lean` |
+| adequacy (must) | `preimage_subset_semanticPullback_of_sound`, `semanticPullback_subset_preimage_of_complete`, `preimage_eq_semanticPullback` | `paper/lean/UadfU0/InterLayer/Adequacy.lean` |
+| adequacy (may) | `preimageMay_subset_semanticPullbackMay_of_sound`, `semanticPullbackMay_subset_preimageMay_of_complete`, `preimageMay_eq_semanticPullbackMay` | `paper/lean/UadfU0/InterLayer/Adequacy.lean` |
+| adequacy non-triviality example (`E ≠ proj`) | `EPlus1_sound`, `EPlus1_not_complete`, `semanticPullback_not_subset_preimage_EPlus1` | `paper/lean/UadfU0/Examples/AdequacyCounterexample.lean` |
+| partial-vs-total reduction counterexample | `naive_totalization_adds_spurious_witness` | `paper/lean/UadfU0/Examples/TotalizationCounterexample.lean` |
+| adequacy concrete instantiation (`E := Eextract`) | `Eextract_sound`, `Eextract_complete`, `preimage_eq_semanticPullback_Eextract` | `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean` |
+| consistency/contradiction duality | `contradictory_iff_not_consistent` | `paper/lean/UadfU0/InterLayer/Consistency.lean` |
+| non-adjointness under partiality | `no_left_adjoint_of_partial` | `paper/lean/UadfU0/RelatedWork/Galois.lean` |
+| ideal-root observability-domain linkage | `UStar_subset_UAndOn`, `UStar_inter_projDomOn_subset_UAndOn`, `UStar_subset_U0On_of_nonempty_active`, `UStar_inter_projDomOn_subset_U0On_of_nonempty_active`, `UStar_subset_UAndMayOn`, `UStar_subset_UAnd` | `paper/lean/UadfU0/U0Spec/IdealRoot.lean` |
+
+Role-category note:
+1. traceability table includes both core and supporting theorems.
+2. `UAndOn_subset_UAndMayOn`, `consistent_transport_left`, `no_left_adjoint_of_partial`, and all `UStar_*` linkage theorems are supporting in §4.6 accounting.
+
+### 4.6 Theorem-role breakdown (for evaluation transparency)
+Total theorem declarations are `74` (from `paper/lean/UadfU0`, `theorem` keyword only).
+
+Role categories used in this paper:
+1. primary theorem interfaces (`RQ3`-`RQ5`): `15` declarations (join/meet laws, transfer/composition, adequacy families).
+2. supporting lemmas: `34` declarations (foundational monotonicity/extensionality lemmas, must/may bridge lemmas, guardrail boundaries, and conditional `UStar` linkage contracts).
+3. example-level theorem declarations: `25` declarations (concrete instantiation/counterexample theorems used to validate assumption boundaries).
+
+Interpretation rule:
+1. this role split is an evaluation/traceability split, not a novelty ranking of theorems,
+2. theorem-level traceability and role separation are given by this section, §5, and `paper/formal-methods/appendix/theorem_catalog.md`.
+3. foundational local-set lemmas in `Definitions/Model.lean` (`subset_refl`, `subset_trans`, `set_ext`) are included in the supporting-lemma category.
+
+## 5. Mechanized Examples (Formal Sanity Layer)
+### 5.1 Artifact bundle instantiation
+File: `paper/lean/UadfU0/Examples/ArtifactBundleExample.lean`.
+
+What is mechanized:
+1. concrete `Ω_art` bundle type,
+2. `obs/extract/proj=bind` decomposition,
+3. layer-level domain/admissibility predicates,
+4. witness-level examples for `U0`, `UAnd`, and must/may divergence.
+5. explicit heterogeneous carriers (`ReqIR`, `ApiIR`, `CodeIR`) under one index type, demonstrating RQ1 in a concrete model instance.
+6. adequacy instantiation bridge with explicit obligations (`Eextract_sound`, `Eextract_complete`) and equality theorem (`preimage_eq_semanticPullback_Eextract`).
+7. separate heterogeneous-transfer witness (`heterogeneous_lifted_transfer` in `paper/lean/UadfU0/Examples/HeterogeneousTransferWitness.lean`) showing that one transfer theorem is reused over different carrier types (`Nat` and `Bool`) in one model signature.
+
+This example validates model instantiation consistency, not external validity.
+
+### 5.2 Password-policy case theorem
+File: `paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean`.
+
+Proven statement:
+1. closed-form consistency check is equivalent to existence of shared witness across three lifted layers (`checkConsistent_iff_allThree`).
+2. directional proof components are separately mechanized (`checkConsistent_true_implies_allThree`, `allThree_implies_checkConsistent_true`) and compose the equivalence theorem.
+3. `req_projection_adequacy` is used as a concrete instantiation of abstract adequacy interface, not as a general proof of extractor correctness.
+
+This is used as a mechanized sanity theorem for constrained interval domain.
+Distinct role vs `ArtifactBundleExample.lean`:
+1. `ArtifactBundleExample` validates typed model instantiation and adequacy-interface plumbing.
+2. `PasswordPolicy` validates a domain-specific decision-form equivalence (`checkConsistent` predicate vs witness-based semantics), which is not covered by the bundle-instantiation example.
+
+Model details used in this case theorem:
+1. root carrier is `Nat` with identity projections `proj _ n = some n`,
+2. layer admissibility predicates are interval constraints:
+   - request layer: `minLen ≤ n ∧ n ≤ maxLen`,
+   - API layer: `minLen ≤ n`,
+   - code layer: `n ≤ maxLen`,
+3. each layer domain `D` is `True` in this toy case (domain separation is non-trivial in other examples, for example `ArtifactBundleExample`).
+
+### 5.3 Transfer counterexample (absence of same-root linkage)
+File: `paper/lean/UadfU0/Examples/TransferCounterexample.lean`.
+
+Mechanized facts:
+1. `hA_trivial`: admissibility-side condition can hold in a simple model.
+2. `zero_in_lifted_j`: source-layer lifted set is non-empty.
+3. `zero_not_in_lifted_i`: target-layer lifted set can still be empty at the same root point.
+4. `transfer_fails_without_hproj`: `lifted(j) ⊆ lifted(i)` fails without same-root linkage.
+5. `contradictoryModel_uand_empty_univ` and `contradictoryModel_empty_active_has_spurious_witness`: empty-active meet becomes vacuously true even for contradictory layers.
+
+Interpretation:
+1. `lifted_transfer` in §3.4 is not a tautology from set algebra alone.
+2. `hproj` is a real proof obligation, not a cosmetic hypothesis.
+3. non-empty-active enforcement for `UAndOn` is a mechanized operational requirement, not only a prose warning.
+
+### 5.4 Adequacy counterexample (`E ≠ proj`) in Lean
+File: `paper/lean/UadfU0/Examples/AdequacyCounterexample.lean`.
+
+Mechanized facts:
+1. `EPlus1_sound`: sound-side obligation holds (`proj` witnesses satisfy `EPlus1`).
+2. `EPlus1_not_complete`: complete-side obligation fails.
+3. `preimage_subset_semanticPullback_EPlus1`: one-sided inclusion (sound side) still holds.
+4. `semanticPullback_not_subset_preimage_EPlus1`: reverse inclusion fails.
+
+Interpretation:
+1. adequacy decomposition in §3.6 is not a tautology over `proj`,
+2. one-sided theorems remain informative when `E` and projection equality diverge.
+
+### 5.5 Totalization counterexample (why direct total-map reduction is unsound)
+File: `paper/lean/UadfU0/Examples/TotalizationCounterexample.lean`.
+
+Mechanized fact:
+1. `naive_totalization_adds_spurious_witness` proves that replacing partial `proj : Ω -> Option β` with a default-filled total map can add witnesses absent from must semantics.
+
+Interpretation:
+1. this is the concrete reason §6.1 does not reduce to direct `Set.preimage_comp` over totalized projections,
+2. partiality is not only a syntactic wrapper; default-totalization can change the semantic membership set.
+
+### 5.6 Why these examples matter for the formal paper
+1. They verify that theorem interfaces are usable in concrete typed instantiations.
+2. They expose none/must/may behavior in executable proof contexts.
+3. They do not replace general proofs and are not used to claim broad engineering effectiveness.
+4. They provide assumption-level debugging hooks (for example, same-root linkage and bind-commutation requirements are visible at executable model level).
+
+## 6. What Mechanization Added Beyond Textbook Identities
+This paper explicitly distinguishes classical overlap from mechanization-specific value.
+The novelty claim is interface-level and methodological: a single typed partial-projection kernel where assumption boundaries, counterexamples, and theorem families are jointly machine-audited.
+
+Classical overlap (not novelty claims):
+1. inverse-image monotonicity,
+2. LUB/GLB identities under inclusion,
+3. contradiction/non-consistency duality.
+
+Mechanization-specific value in this UAD/f kernel:
+1. assumption surfacing:
+   - same-root linkage (`hproj`) and admissibility transport (`hA`) are explicit.
+2. partiality discipline:
+   - `none` branch is first-class and theorem-visible.
+3. one-sided adequacy granularity:
+   - sound/complete can be reasoned separately before equivalence.
+4. adjunction caution:
+   - partiality invalidates naive total-map adjoint intuitions.
+5. observability-domain linkage:
+   - ideal-root claims are domain-restricted rather than over-assumed.
+
+Per-theorem hardness summary:
+1. `lifted_transfer` is not a set-theory tautology because same-root witness linkage is required and mechanized explicitly.
+2. `preimage_compose` is not immediate under partiality because impossible `none` branches must be eliminated constructively.
+3. adequacy equalities are not free: they hold only when one-sided obligations are paired; one-sided failures remain explicit.
+4. non-adjointness exhibits a partiality-specific structural break that blocks naive reuse of total-map adjoint intuitions.
+5. ideal-root linkage requires observability-domain restriction to avoid overclaiming under undefined projections.
+
+### 6.1 Concrete delta against baseline theorem libraries
+This subsection states the delta as a theorem-interface/methodology contribution, not as new set-theoretic identities.
+Contribution type in this paper: explicit assumption-interface design + mechanized boundary auditing under partial projections.
+
+Baseline capabilities (available in standard theorem-library practice):
+1. total-function preimage monotonicity and composition laws (`Set.preimage_mono`, `Set.preimage_comp`-style APIs),
+2. lattice-level LUB/GLB facts under inclusion (`sSup`/`sInf` or equivalent order-theory interfaces),
+3. generic Galois-connection interfaces for total mappings (`GaloisConnection`-style interfaces).
+Reference note: these baseline APIs are cited for comparison (for example Mathlib-style interfaces), not imported dependencies of this artifact.
+
+What this kernel adds beyond direct baseline instantiation:
+1. one model combining heterogeneous carriers (`carrier : ι -> Type`) with partial projections (`Option`) and domain/admissibility separation,
+2. explicit transfer/composition assumptions as theorem arguments (`hproj`, `hA`, `hcomm`) rather than implicit prose assumptions,
+3. adequacy decomposition in both must/may forms with named bridge theorems,
+4. explicit non-adjointness boundary theorem under undefined points,
+5. assumption matrix and theorem catalog linked to concrete Lean files.
+
+Why direct baseline reuse is insufficient for this paper's target claims:
+1. our statements must combine heterogeneously indexed carriers with partial projections in one model signature,
+2. `preimage_compose` here is not only `preimage_comp` instantiation: under `Option` it must discharge impossible `none` branches induced by bind-commutation assumptions (`hcomm`),
+3. `lifted_transfer` requires same-root linkage witness (`hproj`) that is external to ordinary set-algebra APIs and is shown non-redundant by mechanized failure witness (`transfer_fails_without_hproj`),
+4. non-adjointness theorem uses an undefined-point witness (`proj_i x0 = none`), which is outside total-map `GaloisConnection` interfaces,
+5. therefore the delta is an auditable contract layer under partiality, with explicit obligations and failure boundaries, not a claim of novel algebraic identities.
+
+Concrete comparison witness:
+1. `naive_totalization_adds_spurious_witness` (`Examples/TotalizationCounterexample.lean`) shows that default-based totalization of `Option` projections can introduce members not present in must-preimage semantics.
+2. this is the formal reason we do not claim direct reduction from the partial kernel to total-map `Set.preimage` identities without extra side conditions.
+
+Claim boundary for this delta:
+1. we do not claim these mathematical identities are new,
+2. we claim this partial/heterogeneous/assumption-audited interface is mechanized end-to-end with executable counterexample witnesses for dropped assumptions.
+
+### 6.2 What becomes possible with this kernel (scientific claim)
+This paper's positive claim is not "new algebra," but "auditable theorem-interface contracts under partiality."
+Concretely, the kernel contributes the following reusable proof obligations:
+1. transfer contract: if same-root linkage (`hproj`) and admissibility transport (`hA`) hold, lifted-subset transfer is derivable; if not, `transfer_fails_without_hproj` provides a machine-checkable falsification witness.
+2. composition contract: if bind-commutation (`hcomm`) holds, partial preimage composition is derivable; default-totalization shortcuts are unsound (`naive_totalization_adds_spurious_witness`).
+3. adequacy contract: must/may equalities are derivable exactly from one-sided obligations (`hSound`, `hComplete`) and policy choice; mismatch cases are executable (`EPlus1_not_complete`).
+
+Transferability claim:
+1. these contracts are parameterized over model/index/carrier signatures and are instantiated by multiple independent examples in this artifact (`ArtifactBundleExample`, `PasswordPolicy`, `HeterogeneousTransferWitness`),
+2. therefore the artifact is intended as a reusable contract kernel, not as a one-off proof script for one dataset.
+
+## 7. Relation to Prior Work
+This section is definition-level positioning, not an exhaustive survey.
+The paper does not claim strict dominance over these lines; it states where this kernel's theorem interfaces are narrower/different.
+
+### 7.1 Abstract interpretation and order-theoretic semantics
+Abstract interpretation gives language for monotonic abstractions.
+This paper contributes a typed partial-projection interface (`Option`-based reverse mapping) where monotonic/order-theoretic statements are tied to explicit assumption arguments and machine-checked failure modes.
+
+### 7.2 Institutions and heterogeneous semantics
+Institutional frameworks capture satisfaction transfer across logics.
+This paper contributes a narrower but executable kernel: one typed root-operator signature with assumption-audited transfer/composition/adequacy theorems under partial projections.
+Definition-level difference: institution-style developments (including Hets-oriented lines) center on signature/sentence/model morphisms and satisfaction-condition transport between logics, while this kernel fixes one root-space predicate semantics and audits partial-observability assumptions (`none` branches, must/may split) directly at theorem-interface level.
+Scope consequence: we do not provide institution-level heterogeneous-logic composition theorems; we provide one-kernel assumption contracts with executable failure witnesses.
+
+### 7.3 View consistency and inconsistency governance
+View-consistency literature motivates multi-view comparison problems.
+This paper contributes the formal operator layer (`U0`/`UAnd`, transfer assumptions, adequacy interfaces) that can serve as a theorem-audited substrate beneath governance workflows.
+
+### 7.4 BX/synchronization lines
+BX and synchronization works treat propagation and consistency restoration.
+This paper contributes minimal one-way reverse-mapping contracts (`hproj`, `hA`, `hcomm`) with explicit mechanized counterexamples when contracts are dropped.
+
+### 7.5 Galois-connection mechanization lines
+Constructive and mechanized Galois-connection literature motivates careful treatment of adjunction assumptions.
+This paper contributes a partiality-specific guardrail theorem (`no_left_adjoint_of_partial`) that blocks unqualified transfer of total-map adjunction intuitions into undefined-point settings.
+Definition-level difference: constructive Galois-connection lines (for example Darais/Van Horn) typically start from total abstraction/concretization interfaces; our theorem starts from explicit partial observation (`proj_i : Ω -> Option β`) and an undefined-point witness (`proj_i x0 = none`), then proves non-adjointness boundary under this partial interface.
+
+### 7.6 Positioning statement
+This paper is intended as a mechanized kernel contribution:
+1. not a replacement for institution/BX frameworks,
+2. not a complete temporal semantics framework,
+3. but a reusable formal core with explicit assumptions and machine-checkable proofs.
+
+### 7.7 Definition-level differences from two nearby lines
+Difference to institution-style frameworks:
+1. this paper does not mechanize general signature/sentence/model morphisms with satisfaction condition preservation,
+2. instead it fixes one typed root-kernel with partial projections and proves operator/transfer/adequacy results inside that kernel.
+3. tradeoff: we lose full heterogeneous-logic interoperability, but gain a compact theorem interface where every proof obligation is explicit at term level and directly executable in Lean.
+
+Difference to BX/TGG synchronization lines:
+1. this paper does not mechanize bidirectional restoration algorithms,
+2. instead it proves one-way reverse-mapping conditions (`lifted_transfer`, `preimage_compose`) with explicit hypotheses and failure-mode boundaries under partiality.
+
+Difference to total-map set/order formalizations:
+1. undefined projection points are first-class (`Option`) and may alter theorem interfaces (must/may split),
+2. `U0`/`UAnd` analysis is coupled with undefined-point policy rather than only total preimage algebra.
+3. non-adjointness theorem is used here as a guardrail to prevent accidental reuse of total-map intuitions.
+
+### 7.8 Relation to refinement-calculus ideal specifications
+Back/von Wright-style refinement-calculus lines construct weakest/ideal specifications from given program spaces.
+This paper does not construct such an ideal object.
+Instead, `UStar` is a parameter predicate and theorems in §3.8 state conditional linkage:
+1. if necessary-condition assumptions hold (global or domain-restricted), then inclusion into `UAndOn`/`U0On` follows,
+2. these are assumption-audit theorems, not `UStar` construction theorems.
+
+## 8. Limitations and Threats to Validity
+1. Constraint language focus is bounded-parameter constraints (for example interval-like checks).
+2. Temporal/state-transition semantics are out of scope.
+3. Extractor-specific adequacy proofs are external obligations.
+4. Engineering replay evidence is not theorem evidence.
+5. `UAndOn` has a vacuous-truth edge (`UAndOn_empty_eq_univ`); operational use as consistency signal must enforce non-empty active sets.
+6. If some layer is overly permissive, `U0` may become coarse as a coverage baseline.
+
+## 9. Reproducibility Pointers
+Included formal sources (submission package):
+1. `paper/lean/UadfU0/Definitions`
+2. `paper/lean/UadfU0/U0Spec`
+3. `paper/lean/UadfU0/InterLayer`
+4. `paper/lean/UadfU0/RelatedWork`
+5. `paper/lean/UadfU0/Examples`
+6. `paper/lean/UadfU0/CaseStudy`
+7. `paper/lean/lean-toolchain`
+8. `paper/lean/lake-manifest.json`
+9. `paper/lean/lakefile.lean`
+
+Build entry:
+```bash
+cd paper/lean
+command -v lake >/dev/null 2>&1 && lake build || ~/.elan/bin/lake build
+```
+
+One-command replay (repository root):
+```bash
+bash paper/formal-methods/appendix/reproduce_formal.sh
+```
+`reproduce_formal.sh` is a convenience wrapper; equivalent checks can be run by direct `python3` and `lake` invocations listed in the script.
+
+Containerized replay option:
+1. `paper/formal-methods/appendix/Dockerfile.fm` provides a pinned replay container recipe.
+2. this is offered to reduce host-tool variance; the paper's reproducibility claim remains scoped as declared in §4.4.
+
+Expected integrity outcomes:
+1. build succeeds (`Build completed successfully`),
+2. theorem declarations in `UadfU0` (from `paper/lean` working directory) match `paper/formal-methods/appendix/theorem_catalog.md`,
+3. `rg -n '\\bsorry\\b' UadfU0` returns no matches,
+4. replay script hash-checks manifest/toolchain plus traceability-critical Lean source files.
+
+Verification scope declaration:
+1. claims in §4.4 and §9 are limited to artifacts included in this submission package (`paper/lean/UadfU0`, manifest, and appendices),
+2. no external benchmark, network source, or engineering-pipeline output is used as formal-proof evidence in this manuscript.
+
+Manifest hash check (portable command):
+Run this hash check from repository root (not from `paper/lean` after `cd`).
+```bash
+python3 - <<'PY'
+import hashlib, pathlib
+p = pathlib.Path("paper/lean/lake-manifest.json")
+print(hashlib.sha256(p.read_bytes()).hexdigest())
+PY
+```
+Expected SHA256 values are recorded in `paper/formal-methods/appendix/build_evidence.md`.
+
+Submission package pointers:
+1. `paper/formal-methods/appendix/fm_submission_checklist.md`
+2. `paper/formal-methods/appendix/theorem_catalog.md`
+3. `paper/formal-methods/appendix/assumption_matrix.md`
+4. `paper/formal-methods/appendix/build_evidence.md`
+5. `paper/formal-methods/appendix/Dockerfile.fm`
+
+## References (selection)
+1. P. Cousot and R. Cousot. Abstract Interpretation: A Unified Lattice Model... POPL 1977.
+2. J. Goguen and R. Burstall. Introducing Institutions. LNCS 164, 1984.
+3. L. Lamport. *Specifying Systems*. Addison-Wesley, 2002.
+4. L. de Alfaro and T. Henzinger. Interface Automata. FSE 2001.
+5. R.-J. Back and J. von Wright. *Refinement Calculus*. Springer, 1998.
+6. B. Nuseibeh, J. Kramer, A. Finkelstein. ViewPoints. IEEE TSE, 1994.
+7. M. Wirsing and A. Knapp. View Consistency in Software Development. LNCS, 2004.
+8. Y. Xiong et al. Model Synchronization based on Triple Graph Grammars. SoSyM, 2012.
+9. T. Mossakowski et al. Heterogeneous Tool Set (Hets), CEUR-WS.
+10. L. de Moura and S. Ullrich. The Lean 4 Theorem Prover and Programming Language. CADE, 2021.
+11. A. Darais and D. Van Horn. Constructive Galois Connections. ICFP, 2016.
+12. The mathlib Community. The Lean Mathematical Library. CPP, 2020.
+13. T. Nipkow, L. C. Paulson, and M. Wenzel. *Isabelle/HOL: A Proof Assistant for Higher-Order Logic*. LNCS 2283, 2002.
