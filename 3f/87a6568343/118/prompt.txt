@@ -1,0 +1,143 @@
+GOAL:
+- Provide a strict venue-grade formal-methods review for the current formal paper.
+
+CONTEXT:
+- Target venues (must be explicit in review framing): FM / ITP / CPP / TACAS / FASE / Formal Aspects.
+- This is the formal-methods paper only (not the engineering paper).
+- Judge with standards expected for acceptance in those venues.
+- Do not assume extra context beyond attached files.
+
+TASK:
+- Review the manuscript as Reviewer #1 (strictest).
+- Focus on theorem-level contribution quality, mechanization rigor, novelty argument, assumption discipline, reproducibility contract, and claim-boundary correctness.
+- Identify only real blockers for acceptance at the target venues.
+
+OUTPUT:
+- Markdown in Japanese.
+- Sections exactly in this order:
+  1) 総合判定（Recommendation）
+  2) 強み
+  3) 主要懸念（Major concerns）
+  4) 中程度の懸念（Medium concerns）
+  5) 軽微修正（Minor / Editorial）
+  6) 必須修正チェックリスト（採択条件）
+- Keep it concrete and evidence-based. Avoid generic advice.
+
+
+# Context files
+
+--- BEGIN FILE: paper/formal-methods/appendix/reproduce_formal.sh ---
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$REPO_ROOT"
+
+echo "[0/4] Tool checks"
+command -v python3 >/dev/null 2>&1 || { echo "python3 not found"; exit 1; }
+command -v rg >/dev/null 2>&1 || { echo "rg not found"; exit 1; }
+
+echo "[1/4] Hash checks (Python stdlib only; run from repository root)"
+python3 - <<'PY' || exit 1
+import hashlib
+import pathlib
+import sys
+
+expected = {
+    "paper/lean/lake-manifest.json": "8c098d788704fb7c279c7004a1f492723bd892acf2500483665ae39e7a00a6e7",
+    "paper/lean/lean-toolchain": "d55ca0039a5479db5b38919d005b2c427b89b3be4f0184a20f2f4eae931f5bdb",
+    "paper/lean/lakefile.lean": "74729ef754fd55cdc1add76accac3f5632e06fe934e8d9f4f8ed0e16d6b51891",
+    "paper/lean/UadfU0/Definitions/Model.lean": "29a390f099332f4e8ba76e2f2bed617de84325d237dc4ce824833daa9933d441",
+    "paper/lean/UadfU0/U0Spec/Construction.lean": "062e395e1e8eae2e34d912210768d793581e59e5860224a8768636c09fc70ad0",
+    "paper/lean/UadfU0/U0Spec/Minimality.lean": "25127d6ac7ca27acc4d318d6cdd7be9cf2c2be499bc5d9dc94b898f1e3f84c18",
+    "paper/lean/UadfU0/InterLayer/Transfer.lean": "ad9cc4cbfd744d1eae06b79ff33220554a08212a5ac4f8b3161c8fe17ce7e9c5",
+    "paper/lean/UadfU0/InterLayer/Composition.lean": "c0d83e571b400a08c9db70aef48a23840637902305f5de202e98adcac7a1a1a3",
+    "paper/lean/UadfU0/InterLayer/Adequacy.lean": "19ab977db363540b056a721d9623d2dfb9f54fdf061e3de279511978e9a5f65d",
+    "paper/lean/UadfU0/Examples/HeterogeneousTransferWitness.lean": "205ee0f7064682fc14e442ba8bc72f974486beb9d79fd6904e8c3fe63886296e",
+    "paper/lean/UadfU0/Examples/TotalizationCounterexample.lean": "d46e6105de5f9269a306390f47236c06ea640697e389ea9fd986b5c198414874",
+    "paper/lean/UadfU0/CaseStudy/PasswordPolicy.lean": "REDACTED",
+}
+
+for path, want in expected.items():
+    got = hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+    if got != want:
+        sys.exit(f"hash mismatch: {path} expected={want} got={got}")
+print("hash checks: OK")
+PY
+
+echo "[2/4] Lean build"
+cd paper/lean
+if command -v lake >/dev/null 2>&1; then
+  lake clean
+  lake build
+else
+  ~/.elan/bin/lake clean
+  ~/.elan/bin/lake build
+fi
+
+echo "[3/4] primary-theorem membership + traceability-path checks + sorry checks"
+primary_theorems=(
+  U0On_monotone
+  UAndOn_antitone
+  UAndOn_subset_U0On
+  UAndOn_empty_eq_univ
+  consistent_iff_exists_UAndOn_pair
+  U0_least_upper_bound_iff
+  UAndOn_greatest_lower_bound_iff
+  lifted_transfer
+  preimage_compose
+  preimage_subset_semanticPullback_of_sound
+  semanticPullback_subset_preimage_of_complete
+  preimage_eq_semanticPullback
+  preimageMay_subset_semanticPullbackMay_of_sound
+  semanticPullbackMay_subset_preimageMay_of_complete
+  preimageMay_eq_semanticPullbackMay
+)
+
+for thm in "${primary_theorems[@]}"; do
+  if ! rg -n "^theorem ${thm}\\b" UadfU0 >/dev/null 2>&1; then
+    echo "missing primary theorem declaration: $thm"
+    exit 1
+  fi
+done
+
+traceability_checks=(
+  "mem_preimage_iff:UadfU0/U0Spec/Construction.lean"
+  "U0_least_upper_bound_iff:UadfU0/U0Spec/Minimality.lean"
+  "lifted_transfer:UadfU0/InterLayer/Transfer.lean"
+  "preimage_compose:UadfU0/InterLayer/Composition.lean"
+  "preimage_eq_semanticPullback:UadfU0/InterLayer/Adequacy.lean"
+  "heterogeneous_lifted_transfer:UadfU0/Examples/HeterogeneousTransferWitness.lean"
+  "naive_totalization_adds_spurious_witness:UadfU0/Examples/TotalizationCounterexample.lean"
+)
+
+for item in "${traceability_checks[@]}"; do
+  thm="${item%%:*}"
+  path="${item#*:}"
+  if ! rg -n "^theorem ${thm}\\b" "$path" >/dev/null 2>&1; then
+    echo "traceability check failed: theorem ${thm} not found in ${path}"
+    exit 1
+  fi
+done
+
+sorry_count="$( (rg -n '\bsorry\b' UadfU0 || true) | wc -l | tr -d ' ' )"
+if [ "$sorry_count" != "0" ]; then
+  echo "unexpected sorry count: $sorry_count"
+  exit 1
+fi
+
+echo "[4/4] informational counts (non-failing)"
+theorem_count="$(rg -n '^theorem ' UadfU0 | wc -l | tr -d ' ')"
+loc_total="$(python3 - <<'PY'
+import pathlib
+total = 0
+for p in pathlib.Path("UadfU0").rglob("*.lean"):
+    total += p.read_text(encoding="utf-8").count("\n")
+print(total)
+PY
+)"
+echo "theorem_count=$theorem_count"
+echo "loc_total=$loc_total"
+
+echo "reproduce_formal.sh: OK"
+--- END FILE: paper/formal-methods/appendix/reproduce_formal.sh ---
