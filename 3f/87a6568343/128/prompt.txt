@@ -1,0 +1,33 @@
+GOAL:
+- Re-review after revisions for strict FM-level acceptance risk.
+
+TASK:
+- Identify whether any MUST blockers remain.
+- If none, state explicitly and list only SHOULD/MINOR tightening edits.
+
+OUTPUT:
+- Sections exactly: Verdict / MUST / SHOULD / MINOR.
+- Keep concise and concrete.
+
+
+# Context files
+
+--- BEGIN FILE: paper/formal-methods/appendix/assumption_matrix.md ---
+# Assumption Matrix (Core Theorems)
+
+This appendix summarizes which assumptions each core theorem needs, and what fails if an assumption is removed.
+
+| Theorem | Required assumptions | Failure mode if removed | Lean reference |
+|---|---|---|---|
+| `lifted_transfer` | `hproj` (same-root linkage), `hA` (admissibility transport) | Without `hproj`, codomain relation alone cannot lift root witness across layers. Without `hA`, witness does not transfer from `A(j)` to `A(i)`. | `paper/lean/UadfU0/InterLayer/Transfer.lean` |
+| `preimage_compose` | `hcomm : proj_j = bind(proj_i,g)` pointwise | Equality of preimages cannot be derived; impossible `none` branch elimination is unavailable. | `paper/lean/UadfU0/InterLayer/Composition.lean` |
+| `preimage_eq_semanticPullback` | both sound and complete directions for `E` | Only one-sided inclusion is derivable; equality is not justified. | `paper/lean/UadfU0/InterLayer/Adequacy.lean` |
+| `preimageMay_eq_semanticPullbackMay` | may-side sound and complete directions | Same as above under may semantics; equality collapses to one-sided relation only. | `paper/lean/UadfU0/InterLayer/Adequacy.lean` |
+| `UAndOn_subset_U0On` | non-empty active set (`∃ i, active i`) | For empty active set, `UAndOn = univ`; subset to `U0On` is not generally valid. | `paper/lean/UadfU0/U0Spec/Construction.lean` |
+| `no_left_adjoint_of_partial` | existence of undefined projection point (`proj_i x0 = none`) | Boundary claim is inapplicable; theorem does not assert non-adjointness for total projections. | `paper/lean/UadfU0/RelatedWork/Galois.lean` |
+| `UStar_inter_projDomOn_subset_UAndOn` | domain-restricted necessary-condition premise | Ideal-root inclusion over full space is not justified under partial observability. | `paper/lean/UadfU0/U0Spec/IdealRoot.lean` |
+
+Practical reading rule:
+1. if assumptions are met, theorem claims hold exactly as stated,
+2. if assumptions are not established, keep only the weaker theorem variants (usually one-sided inclusions).
+--- END FILE: paper/formal-methods/appendix/assumption_matrix.md ---
