@@ -1,0 +1,7 @@
+id: c541de86-448a-4fed-9ae7-4132cdc595a4
+content: The get-node command shows node metadata including source_file, inferred status, confidence, and extractor type for auto-extracted specifications
+kind: Assertion
+metadata: {}
+created_at: 1771110026
+modified_at: 1771110026
+formality_layer: 0

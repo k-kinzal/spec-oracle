@@ -1,0 +1,32 @@
+# Reviewer 2 Round 44
+
+- Role: Reviewer 2 (Software Engineering / Requirements Engineering journal reviewer)
+- Recommendation: Minor Revision
+- Pass Gate: true
+
+## Summary
+This manuscript presents a mechanized formalization (Lean4) of the UAD/f reverse-mapping model for multi-layer specification consistency governance, focused narrowly on interval-domain parameter constraint audit. The core contribution is well-scoped: it provides a typed mechanization of U0 (join-based coverage baseline) and U∧ (meet-based simultaneous satisfaction), proves 59 theorems including non-trivial results (partial projection breaks adjunction, one-sided adequacy decomposition), and demonstrates technical reproducibility through source-locked artifact extraction (n=3 OSS, deterministic replay verified). The research claim is appropriately bounded—this is a feasibility demonstration of reverse-mapping mechanics, not a general validity study. The distinction between tri-valued raw judgement and policy_judgement (must/may projection) is clearly operationalized. However, minor revisions are needed to: (1) tighten the gap between theoretical adequacy (§4.3 abstract relation E) and PoC regex extraction claims, (2) clarify that "U0 observation" in PoC is an instantiation-specific equivalence (not extraction-agnostic), and (3) add explicit non-goals to prevent over-interpretation of the n=3 convenience sample.
+
+## Strengths
+- Scope discipline: Manuscript explicitly bounds claims to 'interval-domain parameter constraint audit' (§0.3) and distinguishes theory (RQ1-5) from practice (RQ6 replay). No behavioral specification management overclaim.
+- Mechanization rigor: 59 Lean theorems with explicit assumption tracking (hproj, hSound/hComplete as theorem parameters). Non-trivial results include partial-projection adjunction breaking (§4.4) and one-sided adequacy (§4.3).
+- Reproducibility package: Source-lock (SHA256 + snapshots), deterministic replay verified in 3 modes (fail-fast/must/may), and minimal verification checklist (§7.5). Python stdlib-only, no external ML dependencies.
+- Theory-practice separation: §4.8 table explicitly marks which theorems apply to PoC. §6.2 clearly states regex extraction soundness is 'assumption' not 'proven'. U0_support ↔ U0 equivalence is marked instantiation-specific.
+- Tri-valued judgement operationalization: Raw judgement (consistent/contradictory/inconclusive) + policy projection (must/may) with concrete semantics. §4.7 and §6.2 tables show operational differences.
+- Negative case inclusion: §6.4 documents regex drift failure with 3-mode comparison (fail-fast vs graceful must/may). Not a constructed example—uses actual PoC extraction brittleness.
+- Mutation expectation tracking: 6/6 pre-fixed expectations satisfied (stale_requirement_lower + unit_mismatch). Expectation criterion explicitly stated in results table (§6.2).
+
+## Required Fixes
+- §4.3 adequacy: Add explicit note that theorems (preimage_subset_semanticPullback_of_sound, etc.) are proven for abstract relation E, and that applying them to regex/LLM extractors requires separate proof of hSound/hComplete for that extractor. Current text says 'not proven' but readers may miss the implication boundary.
+- §6.2 'U0 observation' paragraph: The claim 'PoC instantiation... U0_support(x) ↔ x∈U0 (must interpretation) holds' is correct but too compressed. Expand to: 'Under the PoC-specific instantiation (Ω:=Ω_art, β_i:=ℤ×ℤ, proj_i:=interval_i, A_i:={well-formed intervals}), the equivalence U0_support ↔ U0 follows from the definitions. This equivalence is not extraction-method-agnostic; it depends on interval_i producing Option(ℤ×ℤ) with the specified domain.'
+- §0.3 or §6.2: Add a bolded 'Non-goals' subsection stating: 'This PoC does NOT claim (i) statistical generalizability from n=3, (ii) validity for non-numeric constraints, (iii) extraction method soundness/completeness proofs, or (iv) operational deployment readiness.' Current disclaimers are scattered; consolidate for gate clarity.
+
+## Optional Fixes
+- §6.3 support_ratio interpretation: Consider adding 'support_ratio measures observability (both-sided interval extraction success), not specification coverage in the requirement-satisfaction sense' as a one-sentence clarification.
+- §4.8 table: Add a column 'PoC applicability gap' explaining why each unverified theorem remains unverified (e.g., 'hproj: requires cross-project artifact alignment study beyond n=3 scope').
+- §7.6: The本文-Lean correspondence table is helpful but lists many files. Consider adding a 'critical path' row highlighting the 3-4 theorems central to RQ3 (U0/U∧ separation) for readers prioritizing core claims.
+- §6.2 mutation results table: The 'expected_outcome' column mixes judgement-level (contradictory) and metric-level (upper' <= threshold) expectations. Adding a 'mutation family' column (boundary-reversal vs unit-scale) would improve readability.
+- §2.7 IR schema: The example IR fields (actor, operation, bound, unit, condition, exception, evidence_span) are illustrative but not used in PoC. Mark as 'future-work schema' or trim to actual PoC fields (lower/upper/source) to avoid confusion.
+
+## Evidence Quote
+- "本稿の実証主張は「interval-domain における reverse-mapping（部分射影が誘導する逆像）カーネルの実行可能性」に限定し、一般ドメインでの有効性・網羅性は主張しない。"

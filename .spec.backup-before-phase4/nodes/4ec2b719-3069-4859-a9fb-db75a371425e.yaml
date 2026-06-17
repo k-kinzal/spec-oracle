@@ -1,0 +1,7 @@
+id: 4ec2b719-3069-4859-a9fb-db75a371425e
+content: 'RPC DetectPotentialSynonyms: Detects potential synonym pairs using similarity threshold, returns synonym candidates with similarity scores'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

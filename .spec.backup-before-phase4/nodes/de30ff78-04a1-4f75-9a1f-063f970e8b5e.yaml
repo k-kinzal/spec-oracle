@@ -1,0 +1,7 @@
+id: de30ff78-04a1-4f75-9a1f-063f970e8b5e
+content: The export-dot command generates DOT format with layer-based subgraphs and kind-based node coloring
+kind: Assertion
+metadata: {}
+created_at: 1771115265
+modified_at: 1771115265
+formality_layer: 0

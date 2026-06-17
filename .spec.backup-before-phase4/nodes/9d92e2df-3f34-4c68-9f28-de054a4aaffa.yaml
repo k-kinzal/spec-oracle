@@ -1,0 +1,7 @@
+id: 9d92e2df-3f34-4c68-9f28-de054a4aaffa
+content: specORACLE must verify that its own implementation satisfies its specifications by extracting architectural properties from code (file size, module structure, responsibility distribution) and comparing them against U0 requirements
+kind: Assertion
+metadata: {}
+created_at: 1771098272
+modified_at: 1771098272
+formality_layer: 0

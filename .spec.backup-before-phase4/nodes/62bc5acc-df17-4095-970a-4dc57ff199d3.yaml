@@ -1,0 +1,7 @@
+id: 62bc5acc-df17-4095-970a-4dc57ff199d3
+content: Domain struct represents the region that a specification actually covers, enabling gap detection via D \ D_S
+kind: Assertion
+metadata: {}
+created_at: 1771064471
+modified_at: 1771064471
+formality_layer: 0

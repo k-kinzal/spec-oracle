@@ -19,3 +19,7 @@ chrono = { version = "0.4", features = ["serde"] }
 regex = "1.10"
 notify = "6.1"
 z3 = "0.12"
+anyhow = "1"
+rust-ini = "0.21"
+dirs = "5"
+serde_yaml = "0.9"

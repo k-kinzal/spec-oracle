@@ -1,0 +1,7 @@
+id: 99d081e1-2c83-4965-b2c2-3fa4cf470714
+content: 'The essence of specORACLE governance is detecting violations through observable contradictions: when U3 (extracted from actual code) contradicts U0 (requirements), the system has failed to govern itself. Currently missing: architectural property extraction that would reveal spec-cli/src/main.rs violates separation of concerns.'
+kind: Assertion
+metadata: {}
+created_at: 1771098398
+modified_at: 1771098398
+formality_layer: 0

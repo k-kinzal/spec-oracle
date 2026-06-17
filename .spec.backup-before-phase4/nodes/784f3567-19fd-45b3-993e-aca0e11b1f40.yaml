@@ -1,0 +1,7 @@
+id: 784f3567-19fd-45b3-993e-aca0e11b1f40
+content: AdmissibleSet struct symbolically represents the set of allowed implementations through constraints
+kind: Assertion
+metadata: {}
+created_at: 1771064472
+modified_at: 1771064472
+formality_layer: 0

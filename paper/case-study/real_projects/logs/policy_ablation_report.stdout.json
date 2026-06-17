@@ -1,0 +1,24 @@
+{
+  "n_scenarios": 21,
+  "group_counts": {
+    "contradiction": 6,
+    "uncertainty": 9,
+    "benign_change": 6
+  },
+  "raw_exact_match_rate": 0.9047619047619048,
+  "contradiction_detection_rate": {
+    "policy_must": 1.0,
+    "policy_may": 1.0,
+    "binary_strict": 1.0
+  },
+  "false_contradiction_rate_on_non_contradiction": {
+    "policy_must": 0.7333333333333333,
+    "policy_may": 0.13333333333333333,
+    "binary_strict": 0.8666666666666667
+  },
+  "uncertainty_collapse_rate": {
+    "policy_must": 1.0,
+    "policy_may": 0.0,
+    "binary_strict": 1.0
+  }
+}

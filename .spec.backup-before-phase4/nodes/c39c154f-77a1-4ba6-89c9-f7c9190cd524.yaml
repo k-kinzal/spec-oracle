@@ -1,0 +1,7 @@
+id: c39c154f-77a1-4ba6-89c9-f7c9190cd524
+content: 'RPC FilterByLayer: Filters specifications by formality layer range (0=natural, 1=structured, 2=formal, 3=executable)'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

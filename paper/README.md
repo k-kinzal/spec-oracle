@@ -1,16 +1,39 @@
 # paper
 
-このディレクトリは「UAD/fモデルでのU0仕様の証明」関連成果を格納する。
+This directory now follows a two-paper strategy:
 
-- `manuscript/`: 論文本文
-  - `uadf_u0_spec_proof.md`: 読みやすい版
-  - `uadf_u0_spec_proof.tex`: 学術誌向け体裁
-- `lean/`: Lean4形式証明
-  - `UadfU0/Definitions`: 型付きUAD/fモデル定義（`Ω`, `βᵢ`, `Dᵢ`, `Aᵢ`, `projᵢ`）
-  - `UadfU0/U0Spec`: join側 `U0` と meet側 `U∧`（`UAnd`）の主証明
-  - `UadfU0/InterLayer`: 層間整合性・伝播・合成則・抽出適合の証明
-  - `UadfU0/RelatedWork`: 既存理論との差分（非随伴性）の形式証明
-  - `UadfU0/CaseStudy`: 具体抽出判定器の健全性/完全性証明
-  - `UadfU0/Examples`: 具体例
-- `case-study/`: 内部整合チェックと実OSS外的検証（`real_projects/`）のスクリプトと結果
-- `reviews/`: Claudeによる教授レビュー・査読ログ
+1. **Formal-methods paper** (theory/mechanization first)
+2. **Engineering paper** (operational trust and replayability)
+
+## Structure
+- `formal-methods/`
+  - `manuscript_fm.md`: FM/ITP/CPP/TACAS/FASE/Formal Aspects-oriented manuscript
+  - `appendix/fm_submission_checklist.md`
+- `engineering/`
+  - `manuscript_se.md`: SE-engineering oriented manuscript
+  - `reproducibility/replay_acceptance_contract.md`
+- `lean/`
+  - Lean4 mechanization for UAD/f kernel and theorem assets
+- `case-study/real_projects/`
+  - PoC extraction/replay artifacts used by engineering manuscript
+- `manuscript/`
+  - legacy integrated manuscript drafts (kept for traceability)
+- `reviews/`
+  - review logs (organized by reviewer/professor/summary)
+
+## Recommended Build/Replay
+Formal mechanization:
+```bash
+cd paper/lean
+~/.elan/bin/lake build
+```
+
+Engineering PoC replay:
+```bash
+cd paper/case-study/real_projects
+bash reproduce.sh
+python3 verify_replay.py --logs-dir logs
+```
+
+Readiness audit:
+- `split_readiness_audit_20260218.md`

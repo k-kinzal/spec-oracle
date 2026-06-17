@@ -1,0 +1,7 @@
+id: 3e602132-2f60-4c9f-bced-f40e0482679e
+content: 'RPC GetComplianceReport: Generates compliance report for all specifications, returns entries with scores and explanations'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

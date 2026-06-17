@@ -1,0 +1,7 @@
+id: 0728ead9-7114-4679-b889-436e55fa73e4
+content: The list-nodes command must support --full flag to opt-in to the complete list view with all specifications displayed
+kind: Constraint
+metadata: {}
+created_at: 1771119824
+modified_at: 1771119824
+formality_layer: 0

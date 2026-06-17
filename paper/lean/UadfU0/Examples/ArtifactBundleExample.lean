@@ -1,4 +1,4 @@
-import UadfU0.U0Spec.Construction
+import UadfU0.InterLayer.Adequacy
 
 namespace UadfU0
 namespace Examples
@@ -106,6 +106,52 @@ abbrev artifactBundleModel : Model LayerTag ArtifactBundle where
 theorem proj_bind_decomposition (i : LayerTag) (x : ArtifactBundle) :
     artifactBundleModel.proj i x = Option.bind (obs i x) (extract i) := by
   rfl
+
+/--
+Concrete semantic extraction relation induced by `obs/extract`.
+This is used as a concrete adequacy instantiation witness.
+-/
+def Eextract (i : LayerTag) (x : ArtifactBundle) (y : artifactBundleModel.carrier i) : Prop :=
+  ∃ γ : Gamma i, obs i x = some γ ∧ extract i γ = some y
+
+theorem Eextract_sound
+    (i : LayerTag) :
+    ∀ x : ArtifactBundle, ∀ y : artifactBundleModel.carrier i,
+      artifactBundleModel.proj i x = some y → Eextract i x y := by
+  intro x y hProj
+  unfold artifactBundleModel at hProj
+  unfold projFromObsExtract at hProj
+  unfold Eextract
+  cases hObs : obs i x with
+  | none =>
+      simp [hObs] at hProj
+  | some γ =>
+      have hExtract : extract i γ = some y := by
+        simpa [hObs] using hProj
+      exact ⟨γ, by simp, hExtract⟩
+
+theorem Eextract_complete
+    (i : LayerTag) :
+    ∀ x : ArtifactBundle, ∀ y : artifactBundleModel.carrier i,
+      Eextract i x y → artifactBundleModel.proj i x = some y := by
+  intro x y hE
+  rcases hE with ⟨γ, hObs, hExtract⟩
+  unfold artifactBundleModel
+  unfold projFromObsExtract
+  simp [hObs, hExtract]
+
+theorem preimage_eq_semanticPullback_Eextract
+    (i : LayerTag)
+    (S : SpecSet (artifactBundleModel.carrier i)) :
+    artifactBundleModel.preimage i S =
+      artifactBundleModel.semanticPullback (Eextract i) S := by
+  apply artifactBundleModel.preimage_eq_semanticPullback i (Eextract i)
+  intro x y
+  constructor
+  · intro hProj
+    exact Eextract_sound i x y hProj
+  · intro hE
+    exact Eextract_complete i x y hE
 
 def goodBundle : ArtifactBundle where
   reqDoc := some ⟨1, 63⟩

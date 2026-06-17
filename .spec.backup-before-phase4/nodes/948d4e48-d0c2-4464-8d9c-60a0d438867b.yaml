@@ -1,0 +1,7 @@
+id: 948d4e48-d0c2-4464-8d9c-60a0d438867b
+content: 'RPC GetComplianceTrend: Analyzes compliance trend over time for a specification, returns data points and trend direction (improving/degrading/stable)'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

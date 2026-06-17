@@ -3,16 +3,23 @@ syntax = "proto3";
 package spec_oracle;
 
 service SpecOracle {
-  // Node operations
-  rpc AddNode(AddNodeRequest) returns (AddNodeResponse);
-  rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
-  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
-  rpc RemoveNode(RemoveNodeRequest) returns (RemoveNodeResponse);
+  // Project management
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc SwitchProject(SwitchProjectRequest) returns (SwitchProjectResponse);
+  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+  rpc GetCurrentProject(GetCurrentProjectRequest) returns (GetCurrentProjectResponse);
+  rpc ImportProject(ImportProjectRequest) returns (ImportProjectResponse);
 
-  // Edge operations
-  rpc AddEdge(AddEdgeRequest) returns (AddEdgeResponse);
-  rpc ListEdges(ListEdgesRequest) returns (ListEdgesResponse);
-  rpc RemoveEdge(RemoveEdgeRequest) returns (RemoveEdgeResponse);
+  // ==========================================
+  // Node/Edge operations removed in v2.0.0
+  // Use UDA/f operations instead:
+  // - CreateAdmissibleSet (instead of AddNode)
+  // - GetAdmissibleSet (instead of GetNode)
+  // - ListAdmissibleSets (instead of ListNodes)
+  // - CreateTransform (instead of AddEdge)
+  // - ListTransforms (instead of ListEdges)
+  // ==========================================
 
   // Query and analysis
   rpc Query(QueryRequest) returns (QueryResponse);
@@ -24,7 +31,7 @@ service SpecOracle {
   rpc ResolveTerminology(ResolveTerminologyRequest) returns (ResolveTerminologyResponse);
 
   // Layer-aware operations
-  rpc FilterByLayer(FilterByLayerRequest) returns (FilterByLayerResponse);
+  // FilterByLayer removed in v2.0.0 - use ListUniverses instead
   rpc FindFormalizations(FindFormalizationsRequest) returns (FindFormalizationsResponse);
 
   // Semantic normalization
@@ -47,13 +54,49 @@ service SpecOracle {
 
   // Inter-universe consistency (conversation.md U, D, A, f implementation)
   rpc DetectInterUniverseInconsistencies(DetectInterUniverseInconsistenciesRequest) returns (DetectInterUniverseInconsistenciesResponse);
-  rpc SetNodeUniverse(SetNodeUniverseRequest) returns (SetNodeUniverseResponse);
+  // SetNodeUniverse removed in v2.0.0 - use CreateUniverse + CreateAdmissibleSet instead
 
   // Automatic relationship inference
   rpc InferAllRelationships(InferAllRelationshipsRequest) returns (InferAllRelationshipsResponse);
 
   // AI-powered relationship inference (cross-layer semantic matching)
   rpc InferAllRelationshipsWithAi(InferAllRelationshipsWithAiRequest) returns (InferAllRelationshipsResponse);
+
+  // ==========================================
+  // UDA/f Model Operations (Phase 2)
+  // ==========================================
+
+  // Universe operations
+  rpc CreateUniverse(CreateUniverseRequest) returns (CreateUniverseResponse);
+  rpc GetUniverse(GetUniverseRequest) returns (GetUniverseResponse);
+  rpc ListUniverses(ListUniversesRequest) returns (ListUniversesResponse);
+  rpc DeleteUniverse(DeleteUniverseRequest) returns (DeleteUniverseResponse);
+
+  // Domain operations
+  rpc CreateDomain(CreateDomainRequest) returns (CreateDomainResponse);
+  rpc GetDomain(GetDomainRequest) returns (GetDomainResponse);
+  rpc ListDomains(ListDomainsRequest) returns (ListDomainsResponse);
+  rpc UpdateDomainConstraints(UpdateDomainConstraintsRequest) returns (UpdateDomainConstraintsResponse);
+
+  // AdmissibleSet operations
+  rpc CreateAdmissibleSet(CreateAdmissibleSetRequest) returns (CreateAdmissibleSetResponse);
+  rpc GetAdmissibleSet(GetAdmissibleSetRequest) returns (GetAdmissibleSetResponse);
+  rpc ListAdmissibleSets(ListAdmissibleSetsRequest) returns (ListAdmissibleSetsResponse);
+  rpc VerifyConsistency(VerifyConsistencyRequest) returns (VerifyConsistencyResponse);
+  rpc VerifyImplication(VerifyImplicationRequest) returns (VerifyImplicationResponse);
+
+  // Transform operations
+  rpc CreateTransform(CreateTransformRequest) returns (CreateTransformResponse);
+  rpc GetTransform(GetTransformRequest) returns (GetTransformResponse);
+  rpc ListTransforms(ListTransformsRequest) returns (ListTransformsResponse);
+  rpc VerifyTransformSoundness(VerifyTransformSoundnessRequest) returns (VerifyTransformSoundnessResponse);
+
+  // Projection operations (core reverse mapping)
+  rpc ConstructU0(ConstructU0Request) returns (ConstructU0Response);
+  rpc SyncModel(SyncModelRequest) returns (SyncModelResponse);
+
+  // Verification operations
+  rpc ValidateModel(ValidateModelRequest) returns (ValidateModelResponse);
 }
 
 // --- Node types ---
@@ -101,63 +144,8 @@ enum SpecEdgeKind {
 }
 
 // --- Request/Response messages ---
-
-message AddNodeRequest {
-  string content = 1;
-  SpecNodeKind kind = 2;
-  map<string, string> metadata = 3;
-}
-
-message AddNodeResponse {
-  SpecNode node = 1;
-}
-
-message GetNodeRequest {
-  string id = 1;
-}
-
-message GetNodeResponse {
-  SpecNode node = 1;
-}
-
-message ListNodesRequest {
-  SpecNodeKind kind_filter = 1;  // 0 = no filter
-}
-
-message ListNodesResponse {
-  repeated SpecNode nodes = 1;
-}
-
-message RemoveNodeRequest {
-  string id = 1;
-}
-
-message RemoveNodeResponse {}
-
-message AddEdgeRequest {
-  string source_id = 1;
-  string target_id = 2;
-  SpecEdgeKind kind = 3;
-  map<string, string> metadata = 4;
-}
-
-message AddEdgeResponse {
-  SpecEdge edge = 1;
-}
-
-message ListEdgesRequest {
-  string node_id = 1;  // empty = list all
-}
-
-message ListEdgesResponse {
-  repeated SpecEdge edges = 1;
-}
-
-message RemoveEdgeRequest {
-  string id = 1;
-}
-
-message RemoveEdgeResponse {}
+// Node/Edge CRUD messages removed in v2.0.0
+// Use UDA/f operation messages instead (see below)
 
 message QueryRequest {
   string natural_language_query = 1;
@@ -212,14 +200,7 @@ message LayerInconsistency {
   string explanation = 3;
 }
 
-message FilterByLayerRequest {
-  uint32 min_layer = 1;
-  uint32 max_layer = 2;
-}
-
-message FilterByLayerResponse {
-  repeated SpecNode nodes = 1;
-}
+// FilterByLayer messages removed in v2.0.0 - use ListUniverses instead
 
 message FindFormalizationsRequest {
   string node_id = 1;
@@ -381,14 +362,7 @@ message InterUniverseInconsistency {
   string explanation = 6;
 }
 
-message SetNodeUniverseRequest {
-  string node_id = 1;
-  string universe = 2;  // Universe identifier (e.g., "ui", "api", "database")
-}
-
-message SetNodeUniverseResponse {
-  SpecNode node = 1;
-}
+// SetNodeUniverse messages removed in v2.0.0 - use CreateUniverse + CreateAdmissibleSet instead
 
 message InferAllRelationshipsRequest {}
 
@@ -400,4 +374,375 @@ message InferAllRelationshipsResponse {
   uint32 edges_created = 1;
   uint32 suggestions_count = 2;
   repeated string suggestions = 3;  // Human-readable edge suggestions
+}
+
+// ==========================================
+// Project Management (Phase 1)
+// ==========================================
+
+message CreateProjectRequest {
+  string name = 1;
+  string description = 2;
+  StorageBackend storage_backend = 3;  // Optional, defaults to local file
+}
+
+message CreateProjectResponse {
+  Project project = 1;
+}
+
+message ListProjectsRequest {}
+
+message ListProjectsResponse {
+  repeated Project projects = 1;
+}
+
+message SwitchProjectRequest {
+  string name = 1;
+}
+
+message SwitchProjectResponse {
+  Project project = 1;
+}
+
+message DeleteProjectRequest {
+  string name = 1;
+}
+
+message DeleteProjectResponse {}
+
+message GetCurrentProjectRequest {}
+
+message GetCurrentProjectResponse {
+  Project project = 1;
+}
+
+message ImportProjectRequest {
+  string name = 1;              // Project name to create
+  string description = 2;       // Project description
+  string spec_directory_path = 3;  // Path to legacy .spec/ directory
+}
+
+message ImportProjectResponse {
+  Project project = 1;
+  uint32 nodes_imported = 2;
+  uint32 edges_imported = 3;
+  uint32 universes_created = 4;
+}
+
+message Project {
+  string name = 1;
+  string description = 2;
+  int64 created_at = 3;
+  uint32 node_count = 4;
+  uint32 edge_count = 5;
+  StorageBackend storage = 6;
+}
+
+enum StorageBackend {
+  STORAGE_BACKEND_UNSPECIFIED = 0;
+  LOCAL_FILE = 1;
+  DATABASE = 2;
+  S3 = 3;
+  GIT = 4;
+}
+
+// ==========================================
+// UDA/f Model Types (Phase 2)
+// ==========================================
+
+// Universe: The space in which specifications are defined (U0, U1, ...)
+message UdafUniverse {
+  string id = 1;              // e.g., "U0", "U1", "U2"
+  string name = 2;            // Human-readable name
+  string description = 3;     // What this universe represents
+  uint32 layer = 4;           // Layer number (0=root, 1=formal, 2=interface, 3=impl)
+  repeated string spec_ids = 5; // Specification IDs in this universe
+  map<string, string> metadata = 6;
+}
+
+// Domain: The region a specification covers
+message UdafDomain {
+  string id = 1;              // UUID
+  string name = 2;            // Human-readable name
+  string description = 3;     // What this domain covers
+  string universe_id = 4;     // Which universe this domain belongs to
+  repeated UdafConstraint constraints = 5;  // Domain boundary constraints
+  repeated string covered_by = 6;  // Spec IDs that cover this domain
+  repeated string subdomain_ids = 7; // Child domain IDs
+  map<string, string> metadata = 8;
+}
+
+// AdmissibleSet: The set of allowed implementations for a specification
+message UdafAdmissibleSet {
+  string spec_id = 1;         // Specification ID (UUID)
+  string universe_id = 2;     // Which universe this belongs to
+  repeated UdafConstraint constraints = 3;  // Constraints defining membership
+  repeated string contradicts = 4;  // Spec IDs this contradicts
+  map<string, string> metadata = 5;
+}
+
+// Constraint: A symbolic membership condition
+message UdafConstraint {
+  string formal = 1;          // Formal representation (e.g., ">= 8")
+  UdafConstraintKind kind = 2;
+  string description = 3;     // Natural language description
+  map<string, string> metadata = 4;
+}
+
+enum UdafConstraintKind {
+  UDAF_CONSTRAINT_KIND_UNSPECIFIED = 0;
+  UNIVERSAL = 1;     // Must hold for all cases
+  EXISTENTIAL = 2;   // Must hold for at least one case
+  IMPLICATION = 3;   // If condition then consequence
+  EQUIVALENCE = 4;   // Bidirectional implication
+}
+
+// Transform: Mapping between universes
+message UdafTransform {
+  string id = 1;              // e.g., "f_U1_to_U0"
+  string source_universe = 2; // Source universe ID
+  string target_universe = 3; // Target universe ID
+  string description = 4;     // Human-readable description
+  UdafTransformKind kind = 5;
+  UdafTransformStrategy strategy = 6;
+  map<string, string> metadata = 7;
+}
+
+enum UdafTransformKind {
+  UDAF_TRANSFORM_KIND_UNSPECIFIED = 0;
+  FORWARD = 1;       // Ui -> Uj (more concrete)
+  INVERSE = 2;       // Ui -> U0 (reverse mapping to root)
+  PARALLEL = 3;      // Ui -> Uj (different aspects, same layer)
+}
+
+message UdafTransformStrategy {
+  string strategy_type = 1;   // "ast_analysis", "nlp_inference", "formal_verification", "type_analysis", "manual"
+  map<string, string> config = 2;  // Strategy-specific configuration
+}
+
+// Proof result from verification operations
+message UdafProofResult {
+  string id = 1;
+  UdafProofStatus status = 2;
+  string property_type = 3;   // "consistency", "satisfiability", "implication", "completeness", "soundness"
+  repeated UdafProofStep steps = 4;
+  string method = 5;          // "constraint_solving", "smt_solver", "heuristic"
+  map<string, string> metadata = 6;
+}
+
+enum UdafProofStatus {
+  UDAF_PROOF_STATUS_UNSPECIFIED = 0;
+  PROVEN = 1;        // Property is proven true
+  REFUTED = 2;       // Property is proven false
+  UNKNOWN = 3;       // Unable to prove or refute
+  PENDING = 4;       // Proof attempt in progress
+}
+
+message UdafProofStep {
+  string description = 1;
+  string justification = 2;
+}
+
+// ==========================================
+// UDA/f Request/Response Messages (Phase 2)
+// ==========================================
+
+// --- Universe operations ---
+
+message CreateUniverseRequest {
+  uint32 layer = 1;           // Layer number (1-255, 0 is reserved for U0)
+  string name = 2;
+  string description = 3;
+}
+
+message CreateUniverseResponse {
+  UdafUniverse universe = 1;
+}
+
+message GetUniverseRequest {
+  string id = 1;              // e.g., "U0", "U1"
+}
+
+message GetUniverseResponse {
+  UdafUniverse universe = 1;
+}
+
+message ListUniversesRequest {}
+
+message ListUniversesResponse {
+  repeated UdafUniverse universes = 1;
+}
+
+message DeleteUniverseRequest {
+  string id = 1;
+}
+
+message DeleteUniverseResponse {}
+
+// --- Domain operations ---
+
+message CreateDomainRequest {
+  string name = 1;
+  string description = 2;
+  string universe_id = 3;     // Which universe this domain belongs to
+}
+
+message CreateDomainResponse {
+  UdafDomain domain = 1;
+}
+
+message GetDomainRequest {
+  string id = 1;              // Domain UUID
+}
+
+message GetDomainResponse {
+  UdafDomain domain = 1;
+}
+
+message ListDomainsRequest {
+  string universe_id = 1;     // Optional: filter by universe (empty = all)
+}
+
+message ListDomainsResponse {
+  repeated UdafDomain domains = 1;
+}
+
+message UpdateDomainConstraintsRequest {
+  string domain_id = 1;
+  repeated UdafConstraint constraints = 2;  // New constraints to add
+}
+
+message UpdateDomainConstraintsResponse {
+  UdafDomain domain = 1;
+}
+
+// --- AdmissibleSet operations ---
+
+message CreateAdmissibleSetRequest {
+  string universe_id = 1;
+  repeated UdafConstraint constraints = 2;
+  map<string, string> metadata = 3;
+}
+
+message CreateAdmissibleSetResponse {
+  UdafAdmissibleSet admissible_set = 1;
+}
+
+message GetAdmissibleSetRequest {
+  string spec_id = 1;
+}
+
+message GetAdmissibleSetResponse {
+  UdafAdmissibleSet admissible_set = 1;
+}
+
+message ListAdmissibleSetsRequest {
+  string universe_id = 1;     // Optional: filter by universe (empty = all)
+}
+
+message ListAdmissibleSetsResponse {
+  repeated UdafAdmissibleSet admissible_sets = 1;
+}
+
+// Verify consistency: Check if A1 ∩ A2 ≠ ∅
+message VerifyConsistencyRequest {
+  string spec_a_id = 1;
+  string spec_b_id = 2;
+}
+
+message VerifyConsistencyResponse {
+  UdafProofResult proof = 1;
+  bool is_consistent = 2;     // Quick boolean result
+}
+
+// Verify implication: Check if A1 ⊆ A2
+message VerifyImplicationRequest {
+  string antecedent_id = 1;   // Spec ID that should imply
+  string consequent_id = 2;   // Spec ID that should be implied
+}
+
+message VerifyImplicationResponse {
+  UdafProofResult proof = 1;
+  bool implies = 2;           // Quick boolean result
+}
+
+// --- Transform operations ---
+
+message CreateTransformRequest {
+  string source_universe = 1;
+  string target_universe = 2;
+  string description = 3;
+  UdafTransformKind kind = 4;
+  UdafTransformStrategy strategy = 5;
+}
+
+message CreateTransformResponse {
+  UdafTransform transform = 1;
+}
+
+message GetTransformRequest {
+  string id = 1;              // e.g., "f_U1_to_U0"
+}
+
+message GetTransformResponse {
+  UdafTransform transform = 1;
+}
+
+message ListTransformsRequest {
+  string universe_id = 1;     // Optional: filter by source universe (empty = all)
+}
+
+message ListTransformsResponse {
+  repeated UdafTransform transforms = 1;
+}
+
+// Verify that a transform preserves semantics: f(A_source) ⊆ A_target
+message VerifyTransformSoundnessRequest {
+  string transform_id = 1;
+}
+
+message VerifyTransformSoundnessResponse {
+  UdafProofResult proof = 1;
+  bool is_sound = 2;
+}
+
+// --- Projection operations ---
+
+// Construct U0 from all projection universes via inverse mappings
+// U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ ... ∪ f₀ₙ⁻¹(UN)
+message ConstructU0Request {
+  repeated string source_paths = 1;  // Optional: source file paths for code analysis
+}
+
+message ConstructU0Response {
+  UdafUniverse u0 = 1;        // The constructed root universe
+  uint32 specs_extracted = 2;  // Number of specifications extracted
+  repeated string messages = 3; // Diagnostic messages
+}
+
+// Synchronize UDAFModel from SpecRepository
+message SyncModelRequest {
+  bool export_proof_metadata = 1;  // Also export proof results back to repository
+}
+
+message SyncModelResponse {
+  uint32 universes_count = 1;
+  uint32 domains_count = 2;
+  uint32 admissible_sets_count = 3;
+  uint32 transforms_count = 4;
+  repeated string messages = 5;
+}
+
+// --- Verification operations ---
+
+// Validate all reference integrity across the model
+message ValidateModelRequest {}
+
+message ValidateModelResponse {
+  bool is_valid = 1;
+  repeated string errors = 2;
+  uint32 universes_count = 3;
+  uint32 domains_count = 4;
+  uint32 admissible_sets_count = 5;
+  uint32 transforms_count = 6;
 }

@@ -829,6 +829,7 @@ def run(
     policy_distribution = {
         "consistent": sum(1 for x in real_results if x["policy_judgement"] == "consistent"),
         "contradictory": sum(1 for x in real_results if x["policy_judgement"] == "contradictory"),
+        "inconclusive": sum(1 for x in real_results if x["policy_judgement"] == "inconclusive"),
     }
     layer_names = ["requirement", "api", "code"]
     support_frequency = {
@@ -935,12 +936,15 @@ def main() -> None:
     out_path = base_dir / "external_validation_results.json"
     out_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
 
-    lock_path = base_dir / "external_validation_sources.lock.json"
-    lock_payload = {
-        "date": result["date"],
-        "source_lock": result["source_lock"],
-    }
-    lock_path.write_text(json.dumps(lock_payload, indent=2), encoding="utf-8")
+    # Keep deterministic replay inputs immutable: only online acquisition rewrites
+    # the canonical lock. Offline replay must not clobber the pinned lock file.
+    if args.offline_lock is None:
+        lock_path = base_dir / "external_validation_sources.lock.json"
+        lock_payload = {
+            "date": result["date"],
+            "source_lock": result["source_lock"],
+        }
+        lock_path.write_text(json.dumps(lock_payload, indent=2), encoding="utf-8")
 
     print(json.dumps(result, indent=2))
 

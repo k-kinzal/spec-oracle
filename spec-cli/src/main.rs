@@ -3,21 +3,12 @@ mod proto {
 }
 
 mod presentation;
-mod persistence;
 mod utils;
 mod commands;
 
 use clap::{Parser, Subcommand};
 use proto::spec_oracle_client::SpecOracleClient;
-use proto::{SpecNodeKind, SpecEdgeKind};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use tonic::Request;
 use tracing_subscriber::EnvFilter;
-use spec_core::{FileStore, NodeKind as CoreNodeKind};
-use presentation::formatter::*;
-use persistence::store_router::*;
-use utils::*;
 
 #[derive(Parser)]
 #[command(name = "spec")]
@@ -30,90 +21,12 @@ struct Cli {
     command: Commands,
 }
 
-/// Low-level graph API commands (advanced users)
+/// Low-level RPC commands for advanced users
+///
+/// These commands provide direct access to specd's UDA/f operations.
+/// For most use cases, prefer high-level commands like `spec add`, `spec summary`, etc.
 #[derive(Subcommand)]
-enum ApiCommands {
-    /// Add a new specification node (direct graph operation)
-    AddNode {
-        /// Content of the specification
-        content: String,
-        /// Kind of node: assertion, constraint, scenario, definition, domain
-        #[arg(short, long, default_value = "assertion")]
-        kind: String,
-    },
-    /// Get a node by ID
-    GetNode {
-        /// Node ID
-        id: String,
-    },
-    /// List all nodes (optionally filtered by kind/layer)
-    ListNodes {
-        /// Filter by kind: assertion, constraint, scenario, definition, domain
-        #[arg(short, long)]
-        kind: Option<String>,
-
-        /// Filter by formality layer: 0 (U0), 1 (U1), 2 (U2), 3 (U3)
-        #[arg(short, long)]
-        layer: Option<u8>,
-
-        /// Filter by lifecycle status (active, deprecated, archived)
-        #[arg(short, long)]
-        status: Option<String>,
-
-        /// Show full list instead of summary (default: summary)
-        #[arg(short, long)]
-        full: bool,
-
-        /// Limit number of results (only with --full)
-        #[arg(long)]
-        limit: Option<usize>,
-
-        /// Offset for pagination (only with --full)
-        #[arg(long)]
-        offset: Option<usize>,
-    },
-    /// Remove a node
-    RemoveNode {
-        /// Node ID
-        id: String,
-    },
-    /// Add an edge between nodes
-    AddEdge {
-        /// Source node ID
-        source: String,
-        /// Target node ID
-        target: String,
-        /// Edge kind: refines, depends_on, contradicts, derives_from, synonym, composes
-        #[arg(short, long, default_value = "refines")]
-        kind: String,
-    },
-    /// List edges (optionally for a specific node)
-    ListEdges {
-        /// Node ID to filter edges
-        #[arg(short, long)]
-        node: Option<String>,
-    },
-    /// Remove an edge
-    RemoveEdge {
-        /// Edge ID
-        id: String,
-    },
-    /// Set universe metadata for a node
-    SetUniverse {
-        /// Node ID
-        id: String,
-        /// Universe identifier (e.g., "ui", "api", "database")
-        universe: String,
-    },
-    /// Filter nodes by formality layer
-    FilterByLayer {
-        /// Minimum formality layer (0=natural, 1=structured, 2=formal, 3=executable)
-        #[arg(short, long, default_value = "0")]
-        min: u32,
-        /// Maximum formality layer
-        #[arg(short = 'M', long, default_value = "3")]
-        max: u32,
-    },
+enum RpcCommands {
     /// Generate executable contract template from specification
     GenerateContract {
         /// Node ID
@@ -151,10 +64,182 @@ enum ApiCommands {
         /// Node ID
         id: String,
     },
+
+    // === specd RPC Operations (managing UDA/f model) ===
+    /// Create a new universe
+    CreateUniverse {
+        /// Universe layer (1 for U1, 2 for U2, 3 for U3, etc.)
+        #[arg(short, long)]
+        layer: u32,
+        /// Universe name (e.g., "TLA+", "gRPC", "Rust")
+        #[arg(short, long)]
+        name: String,
+        /// Universe description
+        #[arg(short, long, default_value = "")]
+        description: String,
+    },
+    /// Get universe details
+    GetUniverse {
+        /// Universe ID
+        id: String,
+    },
+    /// List all universes
+    ListUniverses,
+    /// Delete a universe
+    DeleteUniverse {
+        /// Universe ID
+        id: String,
+    },
+
+    /// Create a new domain
+    CreateDomain {
+        /// Universe ID
+        #[arg(short, long)]
+        universe: String,
+        /// Domain name
+        #[arg(short, long)]
+        name: String,
+        /// Domain description
+        #[arg(short, long, default_value = "")]
+        description: String,
+    },
+    /// Get domain details
+    GetDomain {
+        /// Domain ID
+        id: String,
+    },
+    /// List all domains
+    ListDomains {
+        /// Filter by universe ID
+        #[arg(short, long)]
+        universe: Option<String>,
+    },
+    /// Update domain constraints
+    UpdateDomainConstraints {
+        /// Domain ID
+        #[arg(short, long)]
+        domain: String,
+        /// Constraints to add (can be specified multiple times)
+        #[arg(short, long)]
+        constraint: Vec<String>,
+    },
+
+    /// Create a new transform
+    CreateTransform {
+        /// Source universe ID
+        #[arg(short, long)]
+        source: String,
+        /// Target universe ID
+        #[arg(short, long)]
+        target: String,
+        /// Transform kind (forward, inverse, parallel)
+        #[arg(short, long, default_value = "forward")]
+        kind: String,
+    },
+    /// Get transform details
+    GetTransform {
+        /// Transform ID
+        id: String,
+    },
+    /// List all transforms
+    ListTransforms,
+    /// Verify transform soundness
+    VerifyTransformSoundness {
+        /// Transform ID
+        id: String,
+    },
+
+    /// Create a new admissible set
+    CreateAdmissibleSet {
+        /// Specification ID
+        #[arg(short, long)]
+        spec: String,
+        /// Constraints (can be specified multiple times)
+        #[arg(short, long)]
+        constraint: Vec<String>,
+    },
+    /// Get admissible set details
+    GetAdmissibleSet {
+        /// Specification ID
+        spec: String,
+    },
+    /// List all admissible sets
+    ListAdmissibleSets,
+    /// Verify consistency between two admissible sets
+    VerifyConsistency {
+        /// First specification ID
+        #[arg(short = 'a', long)]
+        spec_a: String,
+        /// Second specification ID
+        #[arg(short = 'b', long)]
+        spec_b: String,
+    },
+    /// Verify implication between two admissible sets
+    VerifyImplication {
+        /// Antecedent specification ID (implies)
+        #[arg(short, long)]
+        antecedent: String,
+        /// Consequent specification ID (is implied)
+        #[arg(short, long)]
+        consequent: String,
+    },
+
+    /// Construct U0 from artifacts (reverse mapping)
+    ConstructU0 {
+        /// Artifact paths (can be specified multiple times)
+        #[arg(short, long)]
+        artifact: Vec<String>,
+    },
+    /// Sync model from repository (specd operation)
+    SyncModel,
+    /// Validate model consistency (specd operation)
+    ValidateModel,
+}
+
+/// Project management subcommands
+#[derive(Subcommand)]
+enum ProjectCommands {
+    /// Create a new project
+    Create {
+        /// Project name
+        name: String,
+        /// Project description
+        #[arg(short, long, default_value = "")]
+        description: String,
+    },
+    /// List all projects
+    List,
+    /// Switch to a project
+    Use {
+        /// Project name to switch to
+        name: String,
+    },
+    /// Delete a project
+    Delete {
+        /// Project name to delete
+        name: String,
+    },
+    /// Show the current active project
+    Current,
+    /// Import a project from legacy .spec/ directory
+    Import {
+        /// Project name to create
+        name: String,
+        /// Project description
+        #[arg(short, long, default_value = "")]
+        description: String,
+        /// Path to .spec/ directory
+        #[arg(short, long)]
+        path: String,
+    },
 }
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Manage projects (create, list, switch, delete)
+    #[command(subcommand)]
+    Project(ProjectCommands),
+
     /// Add a specification (high-level, auto-infers kind and relationships)
     Add {
         /// Specification content in natural language
@@ -163,81 +248,9 @@ enum Commands {
         #[arg(long)]
         no_infer: bool,
     },
-    /// Low-level graph API operations (for advanced users)
+    /// Low-level specd RPC operations (for advanced users)
     #[command(subcommand)]
-    Api(ApiCommands),
-    /// [DEPRECATED] Use 'spec api add-node' instead
-    #[command(hide = true)]
-    AddNode {
-        /// Content of the specification
-        content: String,
-        /// Kind of node: assertion, constraint, scenario, definition, domain
-        #[arg(short, long, default_value = "assertion")]
-        kind: String,
-    },
-    /// [DEPRECATED] Use 'spec api get-node' instead
-    #[command(hide = true)]
-    GetNode {
-        /// Node ID
-        id: String,
-    },
-    /// [DEPRECATED] Use 'spec api list-nodes' instead
-    #[command(hide = true)]
-    ListNodes {
-        /// Filter by kind: assertion, constraint, scenario, definition, domain
-        #[arg(short, long)]
-        kind: Option<String>,
-
-        /// Filter by formality layer: 0 (U0), 1 (U1), 2 (U2), 3 (U3)
-        #[arg(short, long)]
-        layer: Option<u8>,
-
-        /// Filter by lifecycle status (active, deprecated, archived)
-        #[arg(short, long)]
-        status: Option<String>,
-
-        /// Show full list instead of summary (default: summary)
-        #[arg(short, long)]
-        full: bool,
-
-        /// Limit number of results (only with --full)
-        #[arg(long)]
-        limit: Option<usize>,
-
-        /// Offset for pagination (only with --full)
-        #[arg(long)]
-        offset: Option<usize>,
-    },
-    /// [DEPRECATED] Use 'spec api remove-node' instead
-    #[command(hide = true)]
-    RemoveNode {
-        /// Node ID
-        id: String,
-    },
-    /// [DEPRECATED] Use 'spec api add-edge' instead
-    #[command(hide = true)]
-    AddEdge {
-        /// Source node ID
-        source: String,
-        /// Target node ID
-        target: String,
-        /// Edge kind: refines, depends_on, contradicts, derives_from, synonym, composes
-        #[arg(short, long, default_value = "refines")]
-        kind: String,
-    },
-    /// [DEPRECATED] Use 'spec api list-edges' instead
-    #[command(hide = true)]
-    ListEdges {
-        /// Node ID to filter edges
-        #[arg(short, long)]
-        node: Option<String>,
-    },
-    /// [DEPRECATED] Use 'spec api remove-edge' instead
-    #[command(hide = true)]
-    RemoveEdge {
-        /// Edge ID
-        id: String,
-    },
+    Rpc(RpcCommands),
     /// Query specifications using natural language
     Query {
         /// Natural language query
@@ -254,18 +267,6 @@ enum Commands {
     Check,
     /// Display summary statistics of specifications
     Summary,
-    /// Export specification graph in DOT format for visualization
-    ExportDot {
-        /// Output file path (defaults to stdout if not specified)
-        #[arg(short, long)]
-        output: Option<String>,
-        /// Filter by formality layer (0-3)
-        #[arg(short, long)]
-        layer: Option<u32>,
-        /// Include metadata in node labels
-        #[arg(short, long)]
-        metadata: bool,
-    },
     /// Find specifications by semantic search (high-level interface)
     Find {
         /// Search query in natural language
@@ -295,16 +296,6 @@ enum Commands {
     },
     /// Detect cross-layer inconsistencies in specifications
     DetectLayerInconsistencies,
-    /// [DEPRECATED] Use 'spec api filter-by-layer' instead
-    #[command(hide = true)]
-    FilterByLayer {
-        /// Minimum formality layer (0=natural, 1=structured, 2=formal, 3=executable)
-        #[arg(short, long, default_value = "0")]
-        min: u32,
-        /// Maximum formality layer
-        #[arg(short = 'M', long, default_value = "3")]
-        max: u32,
-    },
     /// Find formalizations of a specification node
     FindFormalizations {
         /// Node ID
@@ -324,90 +315,21 @@ enum Commands {
         #[arg(long, default_value = "0.3")]
         min_similarity: f32,
     },
-    /// [DEPRECATED] Use 'spec api generate-contract' instead
-    #[command(hide = true)]
-    GenerateContract {
-        /// Node ID
-        id: String,
-        /// Target language (rust, python, etc.)
-        #[arg(long, default_value = "rust")]
-        language: String,
-    },
     /// Get test coverage report
     TestCoverage,
-    /// [DEPRECATED] Use 'spec api check-compliance' instead
-    #[command(hide = true)]
-    CheckCompliance {
-        /// Node ID
-        id: String,
-        /// Code snippet or file path (prefix with @ for file)
-        code: String,
-    },
     /// Get compliance report for all specifications
     ComplianceReport,
-    /// [DEPRECATED] Use 'spec api query-at-timestamp' instead
-    #[command(hide = true)]
-    QueryAtTimestamp {
-        /// Unix timestamp (seconds since epoch)
-        timestamp: i64,
-    },
-    /// [DEPRECATED] Use 'spec api diff-timestamps' instead
-    #[command(hide = true)]
-    DiffTimestamps {
-        /// Start timestamp (unix seconds)
-        from: i64,
-        /// End timestamp (unix seconds)
-        to: i64,
-    },
-    /// [DEPRECATED] Use 'spec api node-history' instead
-    #[command(hide = true)]
-    NodeHistory {
-        /// Node ID
-        id: String,
-    },
-    /// [DEPRECATED] Use 'spec api compliance-trend' instead
-    #[command(hide = true)]
-    ComplianceTrend {
-        /// Node ID
-        id: String,
-    },
-    /// Extract specifications from source code
-    Extract {
-        /// Source directory or file path
-        source: String,
-        /// Programming language (rust, python, etc.)
-        #[arg(long, default_value = "rust")]
-        language: String,
-        /// Minimum confidence threshold (0.0-1.0)
-        #[arg(long, default_value = "0.7")]
-        min_confidence: f32,
-    },
     /// Detect inter-universe inconsistencies in multi-layered specifications
     DetectInterUniverseInconsistencies,
-    /// [DEPRECATED] Use 'spec api set-universe' instead
-    #[command(hide = true)]
-    SetUniverse {
-        /// Node ID
-        id: String,
-        /// Universe identifier (e.g., "ui", "api", "database")
-        universe: String,
-    },
     /// Infer relationships for all nodes in the graph
     InferRelationships,
-    /// Infer relationships using AI-powered semantic matching (requires claude CLI)
-    InferRelationshipsAi {
-        /// Minimum confidence threshold (0.0-1.0)
-        #[arg(long, default_value = "0.7")]
-        min_confidence: f32,
-        /// Preview edges without creating them (dry-run mode)
-        #[arg(long)]
-        dry_run: bool,
-        /// Maximum number of edges to create (0 = unlimited)
-        #[arg(long, default_value = "0")]
-        limit: usize,
-        /// Interactive review mode (confirm each edge before creation)
-        #[arg(long)]
-        interactive: bool,
+    /// Trace specification relationships across layers (hierarchical display)
+    Trace {
+        /// Node ID to trace
+        id: String,
+        /// Maximum depth to traverse (0 = unlimited)
+        #[arg(short, long, default_value = "0")]
+        depth: usize,
     },
     /// Watch source files and maintain specification synchronization
     Watch {
@@ -423,130 +345,20 @@ enum Commands {
         #[arg(long, default_value = "2")]
         interval: u64,
     },
-    /// Trace specification relationships across layers (hierarchical display)
-    Trace {
-        /// Node ID to trace
-        id: String,
-        /// Maximum depth to traverse (0 = unlimited)
-        #[arg(short, long, default_value = "0")]
-        depth: usize,
-    },
-    /// Verify multi-layer specification consistency (formal verification)
-    VerifyLayers,
-    /// Prove consistency between two specifications (formal proof generation)
-    ProveConsistency {
-        /// First specification ID
-        spec_a: String,
-        /// Second specification ID
-        spec_b: String,
-    },
-    /// Prove satisfiability of a specification (formal proof generation)
-    ProveSatisfiability {
-        /// Specification ID to prove satisfiable
-        spec: String,
-    },
-    /// Inspect U/D/A/f model structure (display universes, domains, admissible sets, transforms)
-    InspectModel {
-        /// Show detailed information for each universe
-        #[arg(long)]
-        verbose: bool,
-    },
-    /// Construct U0 from projection universes via inverse transforms (demonstrate executable theory)
-    ConstructU0 {
-        /// Actually execute transform strategies
-        #[arg(long)]
-        execute: bool,
-        /// Show detailed extraction results
-        #[arg(long)]
-        verbose: bool,
-    },
-    /// Initialize project-local specification management
-    Init {
-        /// Project root directory (defaults to current directory)
-        #[arg(default_value = ".")]
-        path: String,
-    },
-    /// Migrate specifications from JSON file to directory format
-    Migrate {
-        /// Source JSON file (defaults to .spec/specs.json)
-        #[arg(long)]
-        source: Option<String>,
-        /// Target directory (defaults to .spec/)
-        #[arg(long)]
-        target: Option<String>,
-    },
-    /// Remove low-quality extracted specifications (cleanup isolated test artifacts)
-    CleanupLowQuality {
-        /// Actually remove specs (default: dry-run mode)
-        #[arg(long)]
-        execute: bool,
-    },
-    /// Mark a specification as archived (excluded from checks but kept for history)
-    Archive {
-        /// Specification ID to archive
-        id: String,
-    },
-    /// Mark a specification as deprecated (shows warnings but still checked)
-    Deprecate {
-        /// Specification ID to deprecate
-        id: String,
-    },
-    /// Mark a specification as active (remove lifecycle status)
-    Activate {
-        /// Specification ID to activate
-        id: String,
+    /// Export specification graph in DOT format for visualization
+    ExportDot {
+        /// Output file path (defaults to stdout if not specified)
+        #[arg(short, long)]
+        output: Option<String>,
+        /// Filter by formality layer (0-3)
+        #[arg(short, long)]
+        layer: Option<u32>,
+        /// Include metadata in node labels
+        #[arg(short, long)]
+        metadata: bool,
     },
 }
 
-
-/// Check if two specifications are semantically related using simple heuristics
-fn is_semantically_related(content_a: &str, content_b: &str) -> bool {
-    let a_lower = content_a.to_lowercase();
-    let b_lower = content_b.to_lowercase();
-
-    // Extract meaningful words (filter out common words)
-    let stop_words = ["the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-                      "have", "has", "had", "do", "does", "did", "will", "would", "should",
-                      "could", "may", "might", "must", "can", "to", "of", "in", "for", "on",
-                      "at", "by", "with", "from", "as", "and", "or", "but", "not"];
-
-    let a_words: Vec<&str> = a_lower
-        .split(|c: char| !c.is_alphanumeric())
-        .filter(|w| w.len() > 3 && !stop_words.contains(w))
-        .collect();
-
-    let b_words: Vec<&str> = b_lower
-        .split(|c: char| !c.is_alphanumeric())
-        .filter(|w| w.len() > 3 && !stop_words.contains(w))
-        .collect();
-
-    if a_words.is_empty() || b_words.is_empty() {
-        return false;
-    }
-
-    // Count common words
-    let mut common_count = 0;
-    for a_word in &a_words {
-        for b_word in &b_words {
-            if a_word == b_word {
-                common_count += 1;
-            } else {
-                // Check for word stems (common prefix >= 5 chars)
-                let prefix_len = a_word
-                    .chars()
-                    .zip(b_word.chars())
-                    .take_while(|(a, b)| a == b)
-                    .count();
-                if prefix_len >= 5 {
-                    common_count += 1;
-                }
-            }
-        }
-    }
-
-    // Related if at least 2 significant words in common
-    common_count >= 2
-}
 
 /// Handle AI query using claude or codex CLI
 pub async fn handle_ai_query(question: &str, ai_cmd: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -594,36 +406,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli = Cli::parse();
 
-    // Auto-detect project-local storage (.spec/nodes/ or .spec/specs.json)
-    let storage_type = persistence::detect_storage_type();
+    // Always connect to specd
+    let client = match SpecOracleClient::connect(cli.server.clone()).await {
+        Ok(c) => c,
+        Err(_) => {
+            eprintln!("Cannot connect to specd at {}", cli.server);
+            eprintln!();
+            eprintln!("Make sure specd is running:");
+            eprintln!("  cargo run --bin specd");
+            eprintln!();
+            eprintln!("Or specify a custom address:");
+            eprintln!("  spec --server http://localhost:50051 <command>");
+            std::process::exit(1);
+        }
+    };
 
-    // Standalone mode is the recommended and default mode
-    if let Some(storage) = storage_type {
-        let (store, display_msg) = match storage {
-            persistence::StorageType::Directory(spec_dir) => {
-                let msg = format!("📁 Using directory-based storage: {}/nodes/", spec_dir.display());
-                (spec_core::Store::from_directory(&spec_dir), msg)
-            }
-            persistence::StorageType::File(spec_file) => {
-                let msg = format!("📁 Using file-based storage: {}", spec_file.display());
-                (spec_core::Store::from_file(&spec_file), msg)
-            }
-        };
-        eprintln!("{}", display_msg);
-        eprintln!("🚀 Running in standalone mode (no server required)");
-        eprintln!();
-        return commands::dispatch_standalone(cli.command, store).await;
-    }
-
-    // No .spec/ directory found - guide user
-    eprintln!("❌ No specification directory found (.spec/)");
-    eprintln!();
-    eprintln!("To get started:");
-    eprintln!("  1. Initialize specifications: spec init");
-    eprintln!("  2. Add a specification: spec add \"Your specification here\"");
-    eprintln!("  3. Check for issues: spec check");
-    eprintln!();
-    eprintln!("For more information, see the README or run 'spec init --help'");
-    
-    std::process::exit(1);
+    commands::dispatch(cli.command, client).await
 }

@@ -49,6 +49,19 @@ theorem contradictoryModel_is_contradictory :
       _ = 1 := hxEq1
   exact Nat.zero_ne_one h01
 
+theorem contradictoryModel_uand_empty_univ (x : Nat) :
+    x ∈ contradictoryModel.UAndOn (fun _ : Bool => False) := by
+  have hEmpty :
+      contradictoryModel.UAndOn (fun _ : Bool => False) = (fun _ : Nat => True) :=
+    Model.UAndOn_empty_eq_univ (M := contradictoryModel)
+  have hxTrue : x ∈ (fun _ : Nat => True) := by
+    trivial
+  simpa [hEmpty] using hxTrue
+
+theorem contradictoryModel_empty_active_has_spurious_witness :
+    ∃ x : Nat, x ∈ contradictoryModel.UAndOn (fun _ : Bool => False) := by
+  exact ⟨0, contradictoryModel_uand_empty_univ 0⟩
+
 example : ¬ contradictoryModel.Consistent true false :=
   (Model.contradictory_iff_not_consistent (M := contradictoryModel) true false).1
     contradictoryModel_is_contradictory

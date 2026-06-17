@@ -1,61 +1,11 @@
+/// Query command: Search specifications using natural language (gRPC only)
+
 use crate::proto::{self, spec_oracle_client::SpecOracleClient};
-use crate::{handle_ai_query, node_kind_name, format_formality_layer};
+use crate::presentation::formatter::format_formality_layer;
+use crate::utils::node_kind_name;
 use tonic::Request;
-use spec_core::{Store, SpecRepository};
 
-/// Execute Query command in standalone mode
-pub async fn execute_query_standalone(
-    store: &Store,
-    query: &str,
-    ai: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let search_query = if ai {
-        println!("Enhancing query with AI...");
-        handle_ai_query(query, "claude").await?
-    } else {
-        query.to_string()
-    };
-
-    // Load from store and convert to repository
-    let spec_graph = store.load()?;
-    let graph = SpecRepository::from_spec_graph(&spec_graph);
-
-    // Search for matching specifications
-    let results = graph.search(&search_query);
-
-    if results.is_empty() {
-        println!("No specifications found matching '{}'", search_query);
-        println!("\nTry:");
-        println!("  - Using different keywords");
-        println!("  - Broadening your search");
-        println!("  - Using 'spec list-nodes' to see all specifications");
-    } else {
-        println!("Found {} specification(s) matching '{}':", results.len(), search_query);
-        println!();
-
-        for node in &results {
-            let layer_label = format_formality_layer(node.formality_layer);
-            let kind_str = match node.kind {
-                spec_core::NodeKind::Assertion => "assertion",
-                spec_core::NodeKind::Constraint => "constraint",
-                spec_core::NodeKind::Scenario => "scenario",
-                spec_core::NodeKind::Definition => "definition",
-                spec_core::NodeKind::Domain => "domain",
-            };
-
-            println!("  [{}] [{}] {} - {}",
-                layer_label,
-                &node.id[..8],
-                kind_str,
-                node.content
-            );
-        }
-    }
-
-    Ok(())
-}
-
-/// Execute Query command in server mode
+/// Execute Query command via gRPC
 pub async fn execute_query_server(
     client: &mut SpecOracleClient<tonic::transport::Channel>,
     query: &str,
@@ -63,7 +13,7 @@ pub async fn execute_query_server(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let search_query = if ai {
         println!("Enhancing query with AI...");
-        handle_ai_query(query, "claude").await?
+        crate::handle_ai_query(query, "claude").await?
     } else {
         query.to_string()
     };
@@ -83,7 +33,7 @@ pub async fn execute_query_server(
             let layer_label = format_formality_layer(node.formality_layer as u8);
             println!("  [{}] [{}] {} - {}",
                 layer_label,
-                node.id,
+                &node.id[..8.min(node.id.len())],
                 node_kind_name(node.kind),
                 node.content);
         }

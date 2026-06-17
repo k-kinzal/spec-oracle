@@ -1,0 +1,7 @@
+id: 0f2a7c7e-5a9f-4293-a14a-2e64da42818b
+content: The list-nodes command must support --layer <N> parameter to filter specifications by formality layer where N is 0 (U0), 1 (U1), 2 (U2), or 3 (U3)
+kind: Assertion
+metadata: {}
+created_at: 1771119825
+modified_at: 1771119825
+formality_layer: 0

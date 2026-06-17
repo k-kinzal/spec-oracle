@@ -1,5 +1,11 @@
 # UAD/fにおける根被覆基準の構成: 射影逆像に基づく `U0`/`U∧` 二演算カーネル
 
+> [!NOTE]
+> This file is retained as a legacy integrated draft for traceability.
+> Split manuscripts for submission are:
+> - Formal-methods paper: `paper/formal-methods/manuscript_fm.md`
+> - Engineering paper: `paper/engineering/manuscript_se.md`
+
 ## 0. 問題設定と研究目的
 ### 0.1 問題設定
 本稿が対象とする問題は、**多層防御における層横断比較基準の欠如**である。  
@@ -17,6 +23,7 @@
 したがって `U*` そのものを先に与えるのでなく、層と root を結ぶ部分射影 `f_{0i}`（`proj_i`）から逆像で**根被覆基準 `U0`**を構成する。  
 ここでの主価値は「矛盾検出」それ自体ではなく、**層横断比較の共通基準を root 側に構成すること**である（矛盾検出はその副産物）。  
 `U0` は拘束仕様（hard constraint）ではなく、被覆側の比較基準（over-approx envelope）として扱う。
+本稿の実証対象は数値パラメータ境界制約であり、状態遷移・時相・非連続構造制約の完全管理は対象外とする。
 
 導入例（同一意図の層別表現）:
 - アプリ層: 「データAを取得する」
@@ -31,15 +38,25 @@
 
 1. 多層仕様比較の最小核として `U,D,A,f` を型付きで定義し、root を「記述」ではなく「射影逆像で構成」する形式を与える。
 2. 運用上の2用途を分離する。  
-   - **root 被覆仕様**としての join 演算（`U0`）  
+   - **root 被覆基準**としての join 演算（`U0`）  
    - 同時満足・矛盾判定のための補助演算としての meet（`U∧`）
 3. Lean4で中核定理を機械検証し、実アーティファクト抽出パイプラインの再実行可能性を示す。
 
 ### 0.3 貢献範囲
-- 研究者: 暗黙仮定（随伴の成立、層間伝播仮定、抽出同値仮定）を明示し、議論可能にする。
+- 研究者: 暗黙仮定（随伴の成立/不成立条件、層間伝播仮定、抽出同値仮定）を明示し、議論可能にする。
 - 実務者: `U0`（被覆合成 / over-approximation）と `U∧`（同時満足）の使い分け定義、および抽出パイプラインの**技術的再実行可能性デモ**を得る（一般適用性は未評価）。
+- 対象境界: 本稿は multi-layer consistency governance のうち「パラメータ制約監査」を対象とし、完全な behavioral specification management を主張しない。
+- 主張境界: 本稿の実証主張は「interval-domain における reverse-mapping（部分射影が誘導する逆像）カーネルの実行可能性」に限定し、一般ドメインでの有効性・網羅性は主張しない。
 - 再現性: Lean証明・抽出スクリプト・ソースロックを同梱し、第三者検証可能にする。
 - 評価範囲: 実OSS評価は convenience sample（`n=3`）による PoC であり、母集団推定を目的としない。
+
+**Non-goals（本稿が主張しないこと）**
+- `n=3` PoC からの統計的一般化（母集団推定）は行わない。
+- interval-domain 以外（状態遷移・時相・非連続構造制約）への一般妥当性は主張しない。
+- 抽出器（regex/LLM）の soundness/completeness 証明は本稿の対象外である。
+- 本稿PoCは feasibility 実証であり、運用導入 readiness の保証を主張しない。
+- RQ整合: `RQ5` は抽象関係 `E` に対する一般定理の提示を対象とし、具体抽出器への適用証明は Non-goals として本稿では扱わない。
+- RQ整合: `RQ2` の `A(i) ⊆ D(i)` は理論/Lean 側で型付きに追跡するが、§6.2 PoC では `D(i)=ℤ×ℤ`（trivial）を置いており、domain 制約の実運用検証（単位正規化・型域制約）は将来課題とする。
 
 ## 1. 研究課題（RQ）
 本稿のRQは、上記の比較基準課題を「定義可能性」「証明可能性」「再現可能性」に分解したものである。
@@ -56,7 +73,7 @@
 
 1. `RQ3`: `U0`（join）と `U∧`（meet）を同一モデル上で分離定義できるか。
 2. `RQ4`: 層間伝播/合成の成立条件を仮定込みで機械検証できるか。
-3. `RQ5`: 抽出適合を one-sided（sound / complete）へ分解して運用判断へ接続できるか。
+3. `RQ5`: 抽出適合を one-sided（sound / complete）へ分解し、運用判断のための理論的整理を与えられるか（具体抽出器への適用証明は Non-goals）。
 
 `RQ1`/`RQ2` はモデル基盤（型付き定義と `A(i) ⊆ D(i)`）を固定する補助RQ、`RQ6` は PoC 実行可能性確認である。
 
@@ -120,17 +137,17 @@ def lifted (M : Model ι α) (i : ι) : SpecSet α :=
 def U0 (M : Model ι α) : SpecSet α :=
   fun x : α => ∃ i : ι, x ∈ M.lifted i
 
-def UAndOn (active : ι → Prop) : SpecSet α :=
+def UAndOn (M : Model ι α) (active : ι → Prop) : SpecSet α :=
   fun x : α => ∀ i : ι, active i → x ∈ M.lifted i
 
-theorem UAndOn_antitone {J K : ι → Prop}
+theorem UAndOn_antitone (M : Model ι α) {J K : ι → Prop}
     (hJK : ∀ i : ι, J i → K i) :
     M.UAndOn K ⊆ M.UAndOn J
 ```
 
 ### 2.5 `Ω`（root空間）の実体化テンプレート
 `Ω` は「誰かが完全列挙した実体集合」ではなく、層横断比較のための意味領域（挙動宇宙）として置く。  
-ただし本稿では工学的実体を曖昧にしないため、次の2つの具体インスタンスを明示する。
+ただし本稿では工学的実体を曖昧にしないため、代表として次の2つ（`Ω_trace`, `Ω_art`）を明示し、共通注記として `β_i` と `none` の意味を付す。
 
 1. `Ω_trace = Trace`（アプリイベント列・HTTPメッセージ列・TCPイベント列を持つ構造体）
 2. `Ω_art = Γ_req × Γ_api × Γ_code`（同一時点で取得したartifact束。PoCで採用）
@@ -179,7 +196,7 @@ IR最小スキーマ（例）:
 なお、§6 の実装PoCは意味解析器ではなく **pattern-based regex 抽出**であり、一般NL理解を主張しない。
 
 ## 3. `U0` と `U∧` の役割分離
-本稿では `U0` を root 側の被覆仕様（join）として定義し、`U∧` は整合性診断のための別演算（meet）として扱う。  
+本稿では `U0` を root 側の被覆基準（join）として定義し、`U∧` は整合性診断のための別演算（meet）として扱う。  
 両者は一般には一致せず、目的も異なる。
 以下の join/meet 語彙は、§2.3 で固定した包含順序 `⊆` に対して用いる。
 
@@ -188,9 +205,17 @@ IR最小スキーマ（例）:
 lifted(i) := f^{-1}_{0i}(A(i)),\quad
 U0 := \bigcup_{i\in I} lifted(i)
 \]
+\[
+U0On(active) := \{x \mid \exists i,\ active(i)\land x\in lifted(i)\}
+\]
+\[
+U0 := U0On(\lambda i,\ True)
+\]
 
 `U0` は「どれかの層で許容される root 状態」の集合であり、包含順序 `⊆` での join（最小上界）である。  
 ゆえに `U0` は各層を被覆する over-approximation であり、仕様強弱の直観では各層より弱い（許容集合が大きい）統合として解釈する。
+**注意（順序と強弱）**: 包含順序 `⊆` では `U0=∪ lifted(i)` は join（最小上界）であり、強化仕様ではなく最も緩い被覆基準である。
+注意: `U0` の情報量は層仕様と抽出精度に依存し、極端に permissive な層があると粗い被覆になる。実運用では `support/unknown/invalid` 監査値を併用して解釈する。
 
 運用ミニシナリオ（変更波及の説明）:
 1. 新規層 `k` を追加したとき、`U0` は被覆集合として追跡対象を保ちやすい。
@@ -201,7 +226,13 @@ U0 := \bigcup_{i\in I} lifted(i)
 ### 3.2 meet側（同時満足統合）
 有効層集合 `active : I → Prop` に対し
 \[
-U^\wedge_{active}(x) := \forall i,\ active(i) \to x\in lifted(i)
+UAndOn(active)(x) := \forall i,\ active(i) \to x\in lifted(i)
+\]
+\[
+U^\wedge_{active} := UAndOn(active)
+\]
+\[
+UAnd := UAndOn(\lambda i,\ True)
 \]
 
 Lean:
@@ -217,9 +248,10 @@ Consistent(i,j) :\Leftrightarrow \exists x,\ x\in lifted(i)\land x\in lifted(j)
 Contradictory(i,j) :\Leftrightarrow \forall x,\ x\in lifted(i)\to x\in lifted(j)\to False
 \]
 
-- `UAndOn_subset_U0On`: 非空な `active` では `U∧ ⊆ U0`。
+- `UAndOn_subset_U0On`: 非空な `active` では `UAndOn(active) ⊆ U0On(active)`（全層指定では `UAnd ⊆ U0`）。
 - `consistent_iff_exists_UAndOn_pair`: 2層整合は「その2層に対する `U∧` の非空性」と同値。
 - `UAndOn_antitone`: `active` を増やすと `U∧` は反単調に小さくなる（要件が厳しくなる）。
+- 方向の明示: `(\forall i,\ J(i)\to K(i)) \Rightarrow UAndOn(K) \subseteq UAndOn(J)`。
 - `UAndOn_empty_eq_univ`: `active=∅` では vacuous truth により `U∧=Ω` となるため、運用上は `∃i, active i` を要求する。
 
 これにより、`U0`（OR）と整合性判定（AND）を別演算として明示し、意味論的混線を解消する。
@@ -245,6 +277,9 @@ MUS(active) :\Leftrightarrow Inconsistent(active)\ \land\
 \]
 を最小不整合集合（MUS）とする。
 
+本稿では MUS を**有限 active を仮定した診断仕様**として扱う。  
+すなわち `MUS(active)` の運用的意味づけは `Fintype {i // active i}`（または同等の有限性仮定）の下で解釈する。  
+加えて実運用では `active` 非空を前提にし、`active' ⊊ active` が存在しない退化ケース（例: 単一層のみ）を MUS 監査対象から除外する。
 本稿は `U0`/`U∧` とその性質を機械検証する基礎段階であり、MUS抽出アルゴリズムの正当性証明は今後課題とする。
 
 ### 3.5 理想根 `U*` との関係（仮定付き）
@@ -270,7 +305,7 @@ U^* \cap Dom_{active} \subseteq U^\wedge_{active}
 \]
 を得る。さらに active 非空なら
 \[
-U^* \cap Dom_{active} \subseteq U^\wedge_{active} \subseteq U0_{active}
+ U^* \cap Dom_{active} \subseteq U^\wedge_{active} \subseteq U0On(active)
 \]
 が成り立つ。
 
@@ -284,7 +319,8 @@ U^* \subseteq U^{\wedge,may}_{active}
 \]
 を得る。
 
-注記: `U^* \cap Dom_i \subseteq lifted(i)` は「弱化主張」ではなく、部分射影下で観測可能領域を明示した必要条件仮定である。  
+注記: `U^* \cap Dom_i \subseteq lifted(i)` は論理的には `U^* \subseteq lifted(i)` を `Dom_i` へ制限した弱い仮定である。  
+一方、部分射影下で観測不能点を除外するという意味で工学的には適切な精密化である。  
 すなわち本稿はこの仮定を導出したのでなく、`UStar` と `hNecessaryOnDom` を仮定引数として Lean 上で追跡可能にした。
 
 Lean（`paper/lean/UadfU0/U0Spec/IdealRoot.lean`）:
@@ -323,8 +359,23 @@ f^{-1}_{0j}(S)=f^{-1}_{0i}(pullbackVia_g(S)).
 Lean: `preimage_compose` in `paper/lean/UadfU0/InterLayer/Composition.lean`。
 
 ### 4.3 抽出適合の one-sided 分解
-`E : Ω → β_i → Prop` に対し、次を機械検証した。
-以下の定理は**抽象関係 `E` に対する一般結果**であり、特定抽出器（regex/LLM等）へ適用するには、その抽出器が soundness/completeness 前提を満たすことの別証明が必要である。
+`E : Ω → β_i → Prop` に対する定理列挙の前に、まず適用境界を固定する。  
+**重要（適用境界）**: 本節の adequacy 定理は抽象関係 `E` に対する一般定理である。  
+具体抽出器（regex/LLM）へ適用するには、当該抽出器について `hSound` / `hComplete` が成り立つことを**別途証明**する必要がある。
+**警告（PoC非適用）**: 下記の運用帰結は `hSound` / `hComplete` が成立する場合に限る。§6 の regex 抽出器について本稿はこれを証明しておらず、PoC結果へ直接適用しない（§0.3, §4.8）。
+以下、上記適用境界の下で成立する一般結果を示す。
+
+具体抽出器 `extract_i` へ接続する際の（十分条件としての）典型的 proof obligation（本稿では未実施）:
+1. 関係定義: `E_extract(x,y)` を「`x` から観測した層artifactが意味論上 `y` を満たす」関係として定義する。
+   （例: 区間制約PoCでは `y=(l,u)` が「抽出された境界制約を意味論上表している」ことを `E_extract` で表す。）
+2. sound 側: `obs_i x = some γ ∧ extract_i γ = some y -> E_extract(x,y)`。
+3. complete 側: `E_extract(x,y) -> ∃γ, obs_i x = some γ ∧ extract_i γ = some y`（復元可能性）。
+4. `none` 仕様: must/may のどちらで `inconclusive` を射影するかを運用仕様として固定する。
+5. may側整合: `semanticPullbackMay` の `proj_i(x)=none` 分岐は `E` 非依存の運用規約として固定し、必要に応じて `E_extract(x,y) -> proj_i(x)=some(y)`（`none` 点での `E` 証人不在）を追加仮定として与える。
+（Lean対応: 上記 2/3 は `InterLayer/Adequacy.lean` の仮定 `hSound` / `hComplete` に対応する。）
+以下、adequacy 定理への具体適用を読む際は `E := E_extract` を代入して解釈する。
+
+従って `RQ5` は「抽象 `E` に対する理論整理」を与える段階であり、具体抽出器の意味保存保証そのものは Non-goals である。
 
 - Soundnessのみ: `preimage ⊆ semanticPullback`
   - Lean: `preimage_subset_semanticPullback_of_sound`
@@ -340,28 +391,8 @@ Lean: `preimage_compose` in `paper/lean/UadfU0/InterLayer/Composition.lean`。
 これにより、`proj_i(x)=some(y) ↔ E(x,y)` の強仮定を分解し、現実抽出器への接続を段階化した。
 ここでの `E` は抽象関係であり、regex 抽出器の意味保存性をこの節で証明したことを意味しない。
 
-運用上の帰結:
-（以下は `hSound` / `hComplete` などの抽象仮定が成立する場合の形式的帰結）
-- 判定 `REPORT_CONSISTENT`（`U∧` 非空を報告）を主対象にする場合:
-  - sound 側 inclusion は「偽の整合報告（false consistency）」を抑える方向
-  - complete 側 inclusion は「整合見逃し（missed consistency）」を抑える方向
-- 判定 `REPORT_CONTRADICTORY`（`U∧` 空を報告）を主対象にする場合:
-  - complete 側 inclusion は「偽の矛盾報告（false contradiction）」を抑える方向
-  - sound 側 inclusion は under-approximation により矛盾報告が増える方向に働き得る
-- したがって運用要件（どの報告を主対象にするか）を先に固定する必要がある。
-
-### 4.8 定理適用境界（仮定とPoC対応）
-PoC（§6）は RQ6 の deterministic replay を対象とするため、§4 の理論定理は「適用可能条件」を次のように区別する。
-
-| 定理群 | 必要仮定 | PoCでの検証状況 |
-|---|---|---|
-| §4.1 `lifted_transfer` | `hproj`（同一点連結）+ `hA`（前向き保存） | 未検証（PoCは抽出再実行デモ） |
-| §4.2 `preimage_compose` | `proj_j = bind(proj_i,g)`（点ごとの等式） | `Ω_art` 具体化で構成は提示、一般検証は未実施 |
-| §4.3 adequacy（must/may） | `hSound` / `hComplete`（抽象関係 `E`） | 未検証（実抽出器への意味保存証明は範囲外） |
-| §4.7 must/may 関係 | `preimageMay` 定義のみ | Leanで検証済み、PoCでは運用ポリシーとして観測 |
-
-したがって、§6 の結果は「§4理論を実抽出器へ適用して妥当性を証明した」ことを主張しない。  
-主張するのは source-lock 付きの決定的再実行（RQ6）である。
+運用上の帰結（誤り方向の整理）は §4.7 に集約して示す。  
+（PoCとの対応区分は §4.8 および §6.2 を参照。）
 
 ### 4.4 部分射影下での非随伴性
 `∃x0, proj_i(x0)=none` なら、`preimage_i` は冪集合上の左随伴を持たない。
@@ -402,13 +433,13 @@ proj_i(x)=none\ \lor\ \exists y,\ proj_i(x)=some(y)\land y\in S
 
 Lean（`paper/lean/UadfU0/U0Spec/Construction.lean`）:
 ```lean
-def preimageMay (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
+def preimageMay (M : Model ι α) (i : ι) (S : SpecSet (M.carrier i)) : SpecSet α :=
   fun x => M.proj i x = none ∨ ∃ y : M.carrier i, M.proj i x = some y ∧ y ∈ S
 
-theorem UAndOn_subset_UAndMayOn {active : ι → Prop} :
+theorem UAndOn_subset_UAndMayOn (M : Model ι α) {active : ι → Prop} :
     M.UAndOn active ⊆ M.UAndMayOn active
 
-theorem UAndMayOn_empty_implies_UAndOn_empty {active : ι → Prop}
+theorem UAndMayOn_empty_implies_UAndOn_empty (M : Model ι α) {active : ι → Prop}
     (hEmptyMay : ∀ x : α, x ∈ M.UAndMayOn active → False) :
     ∀ x : α, x ∈ M.UAndOn active → False
 ```
@@ -427,8 +458,11 @@ theorem UAndMayOn_empty_implies_UAndOn_empty {active : ι → Prop}
   := \{x \mid proj_i(x)=none \lor \exists y,\ E(x,y)\land y\in S\}
   \]
 - 比較は must 同士 / may 同士で行う（`preimage` と `semanticPullback`、`preimageMay` と `semanticPullbackMay`）。
+- 注記: may 比較では `none`（観測不能）を同一規則で扱う必要があるため、抽象 `E` 側の比較対象 `semanticPullbackMay` にも `proj_i(x)=none` を明示的に含める。  
+  この `none` 分岐は `E` 非依存の運用規約であり、`E` は `some` 証人がある枝（`∃y`）にのみ関与する。
 
 抽象定理（adequacy inclusion）から得られる誤り方向:
+（以下は `hSound` / `hComplete` などの抽象仮定が成立する場合の形式的帰結であり、§6 regex 抽出器への直接適用を主張しない。）
 - 判定 `REPORT_CONSISTENT`（`U∧` 非空を報告）を主対象にする場合:
   - sound 側 inclusion は「偽の整合報告（false consistency）」を抑える方向
   - complete 側 inclusion は「整合見逃し（missed consistency）」を抑える方向
@@ -459,6 +493,19 @@ theorem UAndMayOn_empty_implies_UAndOn_empty {active : ι → Prop}
 | 継続運用（可用性重視） | graceful + may | 一部抽出失敗でも全体パイプラインを止めたくない場合 |
 
 したがって運用時は、(i) 基準集合の種類（must/may）、(ii) 抽出仮定（sound/complete）、(iii) `none` 方針（must/may）をセットで宣言する必要がある。
+
+### 4.8 定理適用境界（仮定とPoC対応）
+PoC（§6）は RQ6 の deterministic replay を対象とするため、§4 の理論定理は「適用可能条件」を次のように区別する。
+
+| 定理群 | 必要仮定 | PoCでの検証状況 |
+|---|---|---|
+| §4.1 `lifted_transfer` | `hproj`（同一点連結）+ `hA`（前向き保存） | 未検証（PoCは抽出再実行デモ） |
+| §4.2 `preimage_compose` | `proj_j = bind(proj_i,g)`（点ごとの等式） | `Ω_art` 具体化で構成は提示、一般検証は未実施 |
+| §4.3 adequacy（must/may） | `hSound` / `hComplete`（抽象関係 `E`） | 未検証（実抽出器への意味保存証明は範囲外） |
+| §4.7 must/may 関係 | `preimageMay` 定義のみ | Leanで検証済み、PoCでは運用ポリシーとして観測 |
+
+したがって、§6 の結果は「§4理論を実抽出器へ適用して妥当性を証明した」ことを主張しない。  
+主張するのは source-lock 付きの決定的再実行（RQ6）である。
 
 ## 5. 形式化エンジニアリング上の設計判断
 本稿の主たる貢献は、UAD/f 最小コアの参照 mechanization を通じて、必要仮定を明示化した点にある。
@@ -505,18 +552,22 @@ check = true \iff \exists n,\ n\in lifted(req)\cap lifted(api)\cap lifted(code)
 
 **重要（RQ5/RQ6境界）**: 本節は `RQ6 (practice)`（source-lock付き決定的再実行可能性）を対象とする。  
 `RQ5 (theory)` の adequacy（§4.3）で使う抽象関係 `E` について、regex抽出器が意味保存性を満たすことは本節で証明していない。
+本節の解釈は §0.3 の **Non-goals**（統計的一般化なし・非interval一般化なし・抽出器証明なし・運用導入保証なし）に従う。
 
 **重要（サンプル位置づけ）**: 本節の `n=3` は convenience sample による技術デモであり、矛盾発生率の推定や母集団代表性の主張を意図しない。  
 選定基準は「3層公開・数値境界制約・URL固定取得可能」という再実行要件である。
 
 **重要（主張水準）**: 本節の評価は **preliminary feasibility demonstration** であり、外的妥当性の統計主張を行わない。  
 したがって本稿で「検証できた」と呼ぶ対象は、(i) source-lock 付き決定的再実行、(ii) 三値判定とポリシー射影の挙動、(iii) 事前固定 mutation 期待条件の追跡、に限定する。
+**重要（モデル対応）**: 本節PoCは §2 の単一 `proj_i` モデルの完全インスタンスではない。`U0` 側に `proj_i^{U0}`、`U∧` 側に `measure_i^{U∧}` を併置する運用構成であり、`classify_uand` と `UAndOn` の同値は主張しない。
+したがって §4 の定理を本PoCへ適用する際は、`U0` 側（`proj_i^{U0}`）と `U∧` 側（`measure_i^{U∧}`）を同一射影として同一視しない。`measure_i^{U∧}` 側は operational analogue としてのみ解釈する。
 
 PoCにおけるモデル接続（§2.6の具体化）:
 - `Ω_art := Γ_req × Γ_api × Γ_code`（同一時点で取得した3層artifact束）
 - `obs_i` は `Ω_art` からの成分射影
 - `extract_i` は現行regex抽出器
-- `proj_i = Option.bind obs_i extract_i`
+- `\widehat{interval}_i := Option.bind obs_i extract_i`（PoCにおける `proj_i^{U0}` の定義）
+- PoCは `U0` 用の `proj_i^{U0}` を上記で具体化し、`U∧` 側は同一 `proj` による `lifted` の meet を直接計算せず、bounds 上の operational analogue（`measure_i^{U∧}`）を併置する。
 
 本節のスクリプトは、主として `extract_i` の実行可能性を検証する。`obs_i` は source-lock された3層artifact束の対応づけとして実装的に固定される。
 本節でいう再実行可能性は「同一lock/snapshot入力に対する決定的再実行（deterministic replay）」を意味し、ドキュメント更新への頑健性一般を意味しない。
@@ -529,8 +580,23 @@ PoC では次の2種類の射影を分けて扱う。
 \[
 \widehat{bounds}_i : Ω_{art} \to (Option(\mathbb{Z})\times Option(\mathbb{Z})\times Bool)
 \]
+定義（PoC instantiation, U0 側）:
+\[
+proj_i^{U0} := \widehat{interval}_i = Option.bind\ (obs_i)\ (extract_i)
+\]
+本稿の `U0_support ↔ U0` はこの定義展開に基づく同値であり、独立の追加定理ではない。
+- 命名上、`U0` 側では `proj_i^{U0} := \widehat{interval}_i`、`U∧` 側では `measure_i^{U∧} := \widehat{bounds}_i` とみなし、PoC は単一 `proj_i` の完全実装ではなく「2種の観測関数を併置した運用構成」として扱う（`measure` は §2.6 の `obs_i` とは別概念で、`classify_uand` に供給する bounds 観測量を表す命名）。
 - `\widehat{interval}_i` は「両側境界が揃った区間」を返す（揃わない場合は `none`）。
 - `\widehat{bounds}_i` は `classify_uand` 用の部分境界（`lower?`,`upper?`）と parse 成否フラグを返す。
+
+理論要素と PoC 要素の対応（§6.2）:
+
+| 理論側 | PoC 側（本節） |
+|---|---|
+| `proj_i : Ω \to Option(\beta_i)` | `proj_i^{U0} := \widehat{interval}_i (= Option.bind\ obs_i\ extract_i) : Ω_{art}\to Option(\mathbb{Z}\times\mathbb{Z})` |
+| `lifted(i)=preimage_i(A(i))` | `supported_i / unknown_i / invalid_i` による三値監査（U0側） |
+| `U0=\bigcup_i lifted(i)`（join） | `U0_support`（must instantiation で同値）/ `U0_unfalsified`（may operational） |
+| `UAndOn`（同一 `Ω` 上の meet） | `judgement = classify_uand(\widehat{bounds})`（bounds上の operational analogue） |
 
 PoC の整形式許容集合を
 \[
@@ -551,9 +617,10 @@ invalid_i(x) :\Leftrightarrow
 unknown_i(x) :\Leftrightarrow
 \widehat{interval}_i(x)=none
 \]
+PoCでは `D_i` を trivial（全体集合）に置き、domain 分離の本格運用（単位正規化・包含性・型域制約の導入）は理論側設計として残す。
 
 実装上は `layer_status[i] ∈ {supported, invalid, unknown}` として保持する。  
-この三値化は interval 抽出PoCの**整形式監査**であり、`invalid` は「抽出IRが `l>u` で不整形式」であることを意味する（仕様反証そのものを意味しない）。  
+この三値化は interval 抽出PoCの**整形式監査**であり、`invalid`（= ill-formed interval）は「抽出IRが `l>u` で不整形式」であることを意味する（仕様反証そのものを意味しない）。  
 片側境界だけ得られた層は `supported` とみなさない（誤支持を避ける）。
 
 `U0` 理論定義と PoC 指標の区別:
@@ -561,13 +628,28 @@ unknown_i(x) :\Leftrightarrow
 - PoC `U0_support(x)`（`u0_support_indicator`）は `∃i, supported_i(x)` を監査指標として計算する。
 - PoC `U0_unknown_only(x)`（`u0_unknown_only`）は `¬U0_support(x) ∧ ∃i, unknown_i(x)` を監査指標として計算する。
 - PoC `U0_unfalsified(x)`（`u0_unfalsified_indicator`）は `∃i, (supported_i(x)\lor unknown_i(x))` を監査指標として計算する。
-- したがって PoC 指標は `U0` そのものの同値計算ではなく、`U0` 監査のための operational indicator である。
+- PoC instantiation（`Ω:=Ω_art`, `β_i:=ℤ×ℤ`, `proj_i:=\widehat{interval}_i`, `A_i:=\{(l,u)\mid l\le u\}`）では `supported_i(x) ↔ x∈lifted(i)` となるため、`U0_support(x) ↔ x∈U0`（must解釈）が成り立つ。
+- 本稿の PoC における `U0` 観測主張は上記 instantiation に限定する。抽出器一般（regex/LLM全般）で `U0_support ↔ U0` が常に成り立つことは主張しない。
+- 一方 `U0_unknown_only` と `U0_unfalsified` は unknown 厚みを監査する operational indicator であり、理論 `U0` の同値計算そのものではない。
+- PoC の may 側では `U0_unfalsified(x) = ∃i, lifted_may(i,x)` と読めるため、`preimageMay` に対応する `U0` の operational 版として解釈できる。
+- `U0_unfalsified` は unknown を含むため真になりやすく、単独評価には不向きな補助指標として扱う。本稿の主要監査値は `support_ratio` と `unknown_ratio` である。
 
 PoC における must/may membership 近似:
 - `lifted_must(i,x)` は `supported_i(x)` と同値に扱う。
 - `lifted_may(i,x)` は `supported_i(x) ∨ unknown_i(x)`（未反証）として扱う。
 `U∧` 判定（`judgement`）は `\widehat{interval}_i` ではなく `\widehat{bounds}_i`（部分境界）を入力に行う。  
 そのため、ある層が `unknown` でも別層の境界情報により raw judgement が `consistent` になる場合がある。
+PoC の `U∧` は、同一 `Ω` 上で `lifted(i)` の meet を直接計算したものではなく、抽出制約（bounds）上の同時満足可能性を返す **operational analogue** として実装している。  
+すなわち `judgement = classify_uand(\widehat{bounds})` は `UAndOn` そのものの実装ではなく、運用上の近似診断器である。
+形式注記: 本稿は `∀x,\ classify\_uand(\widehat{bounds}(x)) \leftrightarrow x \in UAndOn` の同値主張を行わない。PoC は `U0` 側と `U∧` 側で異なる観測関数を併置する運用構成である。
+したがって PoC では (i) `U0_support` による coverage 監査と、(ii) `judgement` による consistency 診断を分離運用する。
+ここで `contradictory` は `U∧` 判定（区間交差で `lower > upper`）として定義され、`invalid`（ill-formed interval）は抽出IR整形式違反の監査値である。`invalid` は仕様矛盾そのものを定義しない。
+運用規約として、`invalid` は U0 側監査にのみ用い、`judgement`（U∧診断）は `\widehat{bounds}` 系で独立計算する。両者は上書きせず併記する。
+
+判定関数の実装対応:
+- 実装本体: `paper/case-study/real_projects/external_validation.py` の `classify_uand` / `apply_none_policy`
+- 論文内抜粋: 付録 `§12.1`（fail-fast/graceful, must/may, 三値判定）
+- §6.2 の `judgement` / `policy_judgement` は上記2関数の返り値定義に準拠する。
 
 1. 公式ドキュメント/公式ソースを取得
 2. 正規表現で境界値を抽出
@@ -575,39 +657,53 @@ PoC における must/may membership 近似:
 4. `U∧` 判定は三値 `judgement ∈ {consistent, contradictory, inconclusive}` で評価し、運用ポリシーとして `policy_judgement`（must/may）を付加
 5. 各層状態を三値 `supported/invalid/unknown` で保持し、`U0` 指標を support 系（`u0_support_indicator`）と unknown 系（`u0_unknown_only`）に分離して可視化
 6. 変異試験を2種類実行（`stale_requirement_lower`, `unit_mismatch_upper_scale_down_1024`）
+7. 抽出実行は `extraction_mode=automatic_regex_no_manual_edit_offline_snapshot_replay` とし、人手補正なしの自動抽出のみを replay 対象とする
 
 スクリプト実行モード:
 - `--failure-policy fail-fast`（既定）: 抽出失敗時に停止
 - `--failure-policy none --none-semantics must`: 失敗を `none` に落とし、未定義を矛盾側へ倒す
 - `--failure-policy none --none-semantics may`: 失敗を `none` に落とし、未定義を保留側へ倒す
+- `policy_judgement` への射影規則: `inconclusive -> contradictory`（must）, `inconclusive -> consistent`（may）
 
 デモ実行結果（2026-02-15）:
-- `n_real_projects = 3`
-- `raw_judgement_distribution = {consistent: 3, contradictory: 0, inconclusive: 0}`
-- `policy_judgement_distribution = {consistent: 3, contradictory: 0}`
-- `n_u0_support_indicator = 3`, `n_u0_unfalsified_indicator = 3`, `n_u0_unknown_only = 0`
-- `avg_support_ratio = 0.778`, `avg_unknown_ratio = 0.222`, `avg_invalid_interval_ratio = 0.0`
-- `support_frequency = {requirement: 3, api: 3, code: 1}`
-- `unknown_frequency = {requirement: 0, api: 0, code: 2}`
-- `invalid_interval_frequency = {requirement: 0, api: 0, code: 0}`
-- `mutation_detected_by_expectation = 6 / 6`
-  - 矛盾化期待（`stale_requirement_lower`, 判定条件: `raw judgement == contradictory`）: `3 / 3`
-  - `1/1024`縮退期待（`unit_mismatch_upper_scale_down_1024`, 判定条件: `upper' <= floor(upper/1024)`）: `3 / 3`
+- 論文照合仕様（deterministic replay の合否判定に用いる4項目）:
+  - `n_real_projects = 3`
+  - `raw_judgement_distribution = {consistent: 3, contradictory: 0, inconclusive: 0}`
+  - `policy_judgement_distribution = {consistent: 3, contradictory: 0, inconclusive: 0}`
+  - `mutation_detected_by_expectation = 6 (out of 6)`
+  - 内訳は `uand_contradiction` 3件 + `bound_shrinkage` 3件であり、前者は `U∧` 判定に直接結びつく一方、後者は運用メトリクス（交差上限縮退）による検出である。
+- 補助指標（監査用詳細）:
+  - `extraction_mode = automatic_regex_no_manual_edit_offline_snapshot_replay`
+  - `failure_policy = none`, `none_semantics = may`, `network_required = false`（source-lock + snapshot による offline replay）
+  - `n_u0_support_indicator = 3`, `n_u0_unfalsified_indicator = 3`, `n_u0_unknown_only = 0`
+  - `support_total = 7`, `unknown_total = 2`, `invalid_total = 0`（3 project × 3 layer = 9 観測）
+  - `avg_support_ratio = 0.778`, `avg_unknown_ratio = 0.222`, `avg_invalid_interval_ratio = 0.0`  
+    （それぞれ `7/9`, `2/9`, `0/9` を小数第3位で丸めた値）
+  - `support_frequency = {requirement: 3, api: 3, code: 1}`
+  - `unknown_frequency = {requirement: 0, api: 0, code: 2}`
+  - `invalid_interval_frequency = {requirement: 0, api: 0, code: 0}`
+  - 期待内訳:
+    - 矛盾化期待（`stale_requirement_lower`, 判定条件: `raw judgement == contradictory`）: `3 / 3`
+    - `1/1024`縮退期待（`unit_mismatch_upper_scale_down_1024`, 判定条件: `upper' <= floor(upper/1024)`）: `3 / 3`
 
 変異検出ログ（実行出力）:
-- `paper/case-study/real_projects/logs/external_validation_offline.log`
+- `paper/case-study/real_projects/logs/external_validation_graceful_may.log`（§6.2 の `failure_policy=none, none_semantics=may` に対応）
 - スクリプト内部では `judgement`（三値）と `policy_judgement`（must/may）を併記する。
 - 変異は `stale_requirement_lower` と `unit_mismatch_upper_scale_down_1024` の2種を注入する（`external_validation.py` の `run` 関数）。
 - 実際の変異結果は `external_validation_results.json` に次表として記録される。
+- `extraction_patterns` には各層regexと一致片（`matched`）を保存し、`automatic_regex_no_manual_edit_offline_snapshot_replay` の監査証跡として扱う。
+- ここで `invalid` は U0 側の抽出IR整形式監査値、`contradictory` は U∧ 側の交差不能判定であり、同一概念ではない。両者は併記し、上書きしない。
 
-| Project | mutation_id | expected_outcome | criterion | mutated_intersection | expectation_satisfied |
-|---|---|---|---|---|---|
-| PostgreSQL identifier length | stale_requirement_lower | `raw_judgement=contradictory` | `judgement == contradictory` | `[64, 63]` | true |
-| PostgreSQL identifier length | unit_mismatch_upper_scale_down_1024 | `intersection_upper_at_most_floor_baseline_div_1024` | `upper' <= 0` | `[1, 0]` | true |
-| zlib compression level | stale_requirement_lower | `raw_judgement=contradictory` | `judgement == contradictory` | `[10, 9]` | true |
-| zlib compression level | unit_mismatch_upper_scale_down_1024 | `intersection_upper_at_most_floor_baseline_div_1024` | `upper' <= 0` | `[-1, 0]` | true |
-| SQLite page size | stale_requirement_lower | `raw_judgement=contradictory` | `judgement == contradictory` | `[65537, 65536]` | true |
-| SQLite page size | unit_mismatch_upper_scale_down_1024 | `intersection_upper_at_most_floor_baseline_div_1024` | `upper' <= 64` | `[512, 64]` | true |
+| Project | mutation_id | detection_criterion_type | expected_outcome | criterion | mutated_intersection | expectation_satisfied |
+|---|---|---|---|---|---|---|
+| PostgreSQL identifier length | stale_requirement_lower | `uand_contradiction` | `raw_judgement=contradictory` | `judgement == contradictory` | `[64, 63]` | true |
+| PostgreSQL identifier length | unit_mismatch_upper_scale_down_1024 | `bound_shrinkage` | `intersection_upper_at_most_floor_baseline_div_1024` | `upper' <= 0` | `[1, 0]` | true |
+| zlib compression level | stale_requirement_lower | `uand_contradiction` | `raw_judgement=contradictory` | `judgement == contradictory` | `[10, 9]` | true |
+| zlib compression level | unit_mismatch_upper_scale_down_1024 | `bound_shrinkage` | `intersection_upper_at_most_floor_baseline_div_1024` | `upper' <= 0` | `[-1, 0]` | true |
+| SQLite page size | stale_requirement_lower | `uand_contradiction` | `raw_judgement=contradictory` | `judgement == contradictory` | `[65537, 65536]` | true |
+| SQLite page size | unit_mismatch_upper_scale_down_1024 | `bound_shrinkage` | `intersection_upper_at_most_floor_baseline_div_1024` | `upper' <= 64` | `[512, 64]` | true |
+
+注記: `detection_criterion_type=uand_contradiction` は `U∧` の矛盾検出、`detection_criterion_type=bound_shrinkage` は交差上限の縮退検出を意味する。したがって `expectation_satisfied=true` は常に `raw_judgement=contradictory` を意味しない。
 
 区間交差判定:
 | Project | lower | upper | 判定 |
@@ -645,28 +741,36 @@ invalid\_interval\_ratio := \frac{|\{i \mid layer\_status_i = invalid\}|}{|I_{ac
 
 入力マッピング上の仮定:
 - 各プロジェクトで抽出した `lower/upper` は、運用上の入力候補として区間制約に整形する。
-- `D(i)` は「数値・単位・包含性が解釈可能な区間値」という対象領域として置き、`A(i)` はその中での許容区間に限定する（`A(i) ⊆ D(i)` の実務対応）。
+- PoC では `D(i)=ℤ×ℤ`（trivial）として置き、`A(i)=\{(l,u)\mid l\le u\}` の整形式監査を行う。単位正規化・包含性・型域制約を `D(i)` に載せる実運用設計は将来課題とする。
 - 交差判定 `max(lower_i) ≤ min(upper_i)` は、3層区間制約の整合判定実装である。
 - ただし本稿は regex 抽出そのものの soundness/completeness を証明していない。  
   したがって「抽出結果が `A(i)` を正しく表す」ことは未検証であり、定理4.3を本デモへ直接適用したとは主張しない。
 - 明示的に言えば、regex 抽出層は本稿で証明対象ではなく、機械検証済みモデルの前段入力生成層として扱う。
 
 ### 6.3 何が分かったか（結果と解釈の分離）
+本節の結論は次の2点である。  
+第1に、`RQ6` として source-lock 付き deterministic replay と三値判定パイプラインの技術的実行可能性を確認した。第2に、抽出器意味保存（`RQ5` の具体適用）および統計的一般化は本稿の対象外である。
+
 - スコープ明示: 本PoCが検証するのは「regex抽出 + 区間整合判定」の技術的実行可能性であり、`U0→U1→U2→U3` 全体運用の実証ではない。
 - スコープ固定文（R2対応）: 本結果は「(i) 文書化されたAPI制約で自動抽出が動作すること、(ii) 区間ベース整合判定が動作すること、(iii) 2系統mutationで期待どおり検出できること」を示す feasibility 結果である。  
   プロジェクト種別一般への一般化は本稿の主張範囲外である。
 - 結果: 実データ3件は raw/policy とも整合 (`consistent`)。  
-  変異は「矛盾化期待 3件」「`1/1024`縮退期待 3件」の計6件を期待どおり検出した（`mutation_detected_by_expectation = 6/6`）。
+  変異は「矛盾化期待 3件」「`1/1024`縮退期待 3件」の計6件を期待どおり検出した（`mutation_detected_by_expectation = 6 (out of 6)`）。
+  この 6 件は同一述語ではなく、`uand_contradiction`（理論側に直接対応）と `bound_shrinkage`（運用指標）を分離した合算値として解釈する。
 - `U0` 観測: baseline の平均 support 比率は `0.778`、unknown 比率は `0.222`。変異後は project 別 baseline と比較して `mutated_support_count` が低下するケース（5/6）が観測され、`U0` を単純真偽ではなく support/unknown/invalid 分解で扱う必要が確認できた。
-- 指標意味: このPoCで `support_ratio` は「両側区間まで確定できた層の割合」を表す監査指標であり、仕様充足率そのものを意味しない。
+- coverage 解釈: `support_ratio=0.778` と `unknown_ratio=0.222` は「U0投影が部分的である」ことを示す観測値であり、完全被覆を意味しない。
+- 補助指標の位置づけ: `U0_unfalsified` は unknown を含むため補助指標としてのみ用い、主たる比較は `support_ratio` と `unknown_ratio` に基づく。
+- 指標意味: このPoCで `support_ratio` は「両側区間まで確定できた層の割合」を表す観測可能性（observability）指標であり、仕様充足率・信頼度そのものを意味しない。
 - 運用含意: `U∧` は同時満足診断、`U0_support` は「比較根拠を与える層」の監査、`U0_unknown_only` は「比較不能（観測/抽出劣化）」警告、`invalid` は「抽出IRが不整形式（`l>u`）」警告として使い分ける。
 - unknown 解釈: unknown 層は「失敗」でも「整合」でもなく、比較不能状態である。  
   本稿の成功条件は unknown のゼロ化ではなく、unknown を別カテゴリとして保存し must/may ポリシーで可観測に扱えることに置く。
 - code層 unknown 解釈: 本データでは 2/3 で code.lower が `null` となる。  
   これは regex 抽出器が片側境界しか回収できない実装上の限界を主に反映し、API意味論が本質的に下界未定義であることを直接主張するものではない。
+- `raw_judgement=inconclusive` が 0 の理由: `classify_uand` は各層から得られた非null境界の集合で交差を計算するため、ある層に欠損があっても他層から少なくとも1つの lower と upper が得られれば判定は確定できる（全体で lower/upper のいずれかが欠ける場合のみ `inconclusive`）。
 - `U∧` 観測: `stale_requirement_lower` は全件で `raw judgement=contradictory` を満たし、`unit_mismatch` は project により raw judgement の変化有無が分かれる。  
   そのため mutation 検出は「何が問題変化か」を事前固定（本稿では `upper' <= floor(upper/1024)`）して評価する必要がある。
-- `invalid` 観測: baseline では `invalid_interval_frequency=0` だが、mutation では `mutated_invalid_interval_count=1` となるケースが5/6で発生し、不整形式区間の出現を安定に捕捉できた。
+- `invalid` 観測: baseline では `invalid_interval_frequency=0`。mutation では 5/6 ケースで `mutated_invalid_interval_count=1` となった。  
+  これは `stale_requirement_lower` が全 project で requirement 層区間を `lower>upper` に反転させること（3/3）と、`unit_mismatch_upper_scale_down_1024` が PostgreSQL/SQLite で requirement 層を `lower>upper` にする一方、zlib では `[-1,0]` の整形式区間が残ること（2/3）に対応する。
 - 解釈: 本節が示すのは「既存仕様の不具合発見率」ではなく、**実アーティファクト抽出からJSON出力・交差判定までを source-lock 付きで再実行できること**。
 - ただし抽出器自体（regex層）の正当性保証は本稿の範囲外であり、抽出 soundness/completeness は仮定として扱う。
 - したがって本節は `RQ6 (practice)` の実行可能性確認を対象とし、`RQ5 (theory)` の実抽出器適用（意味保存証明）は対象外である。
@@ -697,7 +801,16 @@ SQLite 抽出では次の固定パターンを使っている。
 - `paper/case-study/real_projects/logs/regex_drift_graceful_must.log`
 - `paper/case-study/real_projects/logs/regex_drift_graceful_may.log`
 - ドリフト再現用 lock: `paper/case-study/real_projects/logs/regex_drift_lock.json`
+- ドリフト再現用 snapshot: `paper/case-study/real_projects/logs/regex_drift_snapshot.txt`
 - 同一ドリフト入力での実測差: 両モードとも `judgement=inconclusive`（SQLite）だが、policy は graceful+must で `contradictory`、graceful+may で `consistent` になる。
+
+再生成コマンド（current schema）:
+```bash
+cd paper/case-study/real_projects
+python external_validation.py --offline-lock logs/regex_drift_lock.json > logs/regex_drift_failure.log 2>&1 || true
+python external_validation.py --offline-lock logs/regex_drift_lock.json --failure-policy none --none-semantics must > logs/regex_drift_graceful_must.log
+python external_validation.py --offline-lock logs/regex_drift_lock.json --failure-policy none --none-semantics may > logs/regex_drift_graceful_may.log
+```
 
 この負例が示す点:
 1. 負例は「実装済み抽出器が起こしうる失敗形」であり、構成的な架空例ではない。
@@ -733,6 +846,9 @@ cd paper/lean
 - `lakefile`: `paper/lean/lakefile.lean`
 - `manifest`: `paper/lean/lake-manifest.json`
 - `manifest SHA256`: `8c098d788704fb7c279c7004a1f492723bd892acf2500483665ae39e7a00a6e7`
+- `external_validation.py SHA256`（2026-02-17 実行版）: `ea820e0d86324d2c7583e963cd5e0a9e49c2f2f827e8e0a8d2f560bea8b649d7`
+- `reproduce.sh SHA256`（2026-02-17 実行版）: `3a60d05c5f4281812dbc53cc448e201f60a3403ba6475577dc4f2ee36e8fd562`
+- `external_validation_sources.lock.json SHA256`: `0c34d22165d3f032d3929f8333657fa25fa65aa55542749d83dba031f11a4793`
 - 外部パッケージ: `packages = []`（mathlib 非依存、Lean標準ライブラリのみ）
 - 抽出デモスクリプト: Python標準ライブラリのみ（追加pip依存なし）
 - 抽出デモのオンライン実行はネットワーク接続を要する（公式URL取得のため）
@@ -783,7 +899,7 @@ cd paper/lean
 `source_lock` には URL, SHA256, 取得UTC時刻, snapshot path を記録し、抽出再現の証跡とする。
 抽出スクリプトは Python標準ライブラリのみを使用し、追加pip依存を必要としない。
 `snapshots/*` は本リポジトリに同梱し、オフライン追試時の入力として利用する。
-再実行入口として `paper/case-study/real_projects/reproduce.sh` を用意し、offline fail-fast / graceful must / graceful may の3モードを一括実行できる。
+再実行入口として `paper/case-study/real_projects/reproduce.sh` を用意し、(1) offline fail-fast, (2) graceful must, (3) graceful may, (4) regexドリフト追試（fail-fast/must/may）, (5) `classify_uand` 境界ケースログ生成を一括実行できる。
 
 再現パッケージ（最小必須ファイル）:
 - `paper/case-study/real_projects/external_validation.py`
@@ -791,6 +907,9 @@ cd paper/lean
 - `paper/case-study/real_projects/external_validation_sources.lock.json`
 - `paper/case-study/real_projects/snapshots/*`
 - （実行後に生成）`paper/case-study/real_projects/logs/*`
+- 負例ログ（同梱済み）: `paper/case-study/real_projects/logs/regex_drift_failure.log`, `paper/case-study/real_projects/logs/regex_drift_graceful_must.log`, `paper/case-study/real_projects/logs/regex_drift_graceful_may.log`, `paper/case-study/real_projects/logs/regex_drift_lock.json`
+- `regex_drift_lock.json` SHA256: `1f31c8e65688f680abc9b4781ea41aca7f4ebe142f1838f74b7698d5e2517330`
+- 負例スナップショット（同梱済み）: `paper/case-study/real_projects/logs/regex_drift_snapshot.txt`（SHA256: `0d2d319f9edd4dbf2c80351bf1bcbfd3264552999ca557ad9598ac833ea4480c`）
 
 追試手順（オンライン/オフライン）:
 1. オンライン再取得: `python external_validation.py` を引数なしで実行し、`results` / `source_lock` / `snapshots` を再生成する（既存 lock/snapshot があってもオンライン取得を行う。ネットワーク必要）。
@@ -800,22 +919,107 @@ cd paper/lean
 5. SHA256 検証は `paper/case-study/real_projects/external_validation.py` の `fetch_text` オフライン分岐で実装している（不一致時は例外停止）。
 6. オフライン追試で SHA256 不一致が発生した場合は、論文実行時と異なる入力であり再現性が保証されないことを意味するため、同梱 snapshot と lock の一致状態を復元して再実行する。
 7. 長期保存に関しては、ソース固定アーカイブ（例: DOI付きリポジトリアーカイブ）とURL失効時フォールバック（例: Wayback参照）を推奨する。
+8. `https://www.sqlite.org/pragma.html#pragma_page_size` は URL fragment を含むため、オンライン取得時のHTTP要求は fragment を送信しない一方、lockキーは fragment 付きURL文字列を保持する。本稿の決定的再実行では lockキー一致 + snapshot SHA 検証を正準とする。
 
-`reproduce.sh` の3モード意図:
+`reproduce.sh` の5セクション意図:
+- 実行前に `external_validation.py` と `external_validation_sources.lock.json` の SHA256 を検証し、不一致時は replay を停止する（script/lock drift の早期検知）。  
+  lock 整合の詳細は `fetch_text` の snapshot SHA256 検証で担保する。
+- 実行前に `logs/regex_drift_lock.json` と `logs/regex_drift_snapshot.txt` の SHA256 も検証し、ドリフト追試入力の同一性を確認する。
+- オフライン replay（`--offline-lock`）は `external_validation_sources.lock.json` を上書きしない実装とし、main lock の不変性を保つ。
 - `external_validation_offline.log`: offline fail-fast（入力不整合を即停止）
 - `external_validation_graceful_must.log`: graceful + must（`inconclusive -> contradictory` 射影）
 - `external_validation_graceful_may.log`: graceful + may（`inconclusive -> consistent` 射影）
+- `regex_drift_failure.log` / `regex_drift_graceful_must.log` / `regex_drift_graceful_may.log`: regexドリフト負例（§6.4）の fail-fast / graceful must / graceful may
+- `check_consistent_edge_cases.log`: `classify_uand` / `apply_none_policy` の境界挙動（`min>max`, `min=max`, 負値含む, 境界欠損）を固定ケースで再生成
+- `logs/*.log` は拡張子に関わらず JSON 単一オブジェクトとして出力され、`jq` で直接検証できる（モード別ログ名を維持する運用都合で拡張子は `.log` を用いる）。
 
-期待出力の照合（最低限）:
+期待出力の照合（最低限, Python-only）:
 ```bash
 cd paper/case-study/real_projects
 bash reproduce.sh
-jq '{n_real_projects, raw_judgement_distribution, policy_judgement_distribution, mutation_detected_by_expectation}' logs/external_validation_offline.log
+# SHAチェック（macOS/Linux 共通, 追加依存なし）:
+python - <<'PY'
+import hashlib, pathlib
+p = pathlib.Path("external_validation.py")
+h = hashlib.sha256(p.read_bytes()).hexdigest()
+print(h)
+assert h == "ea820e0d86324d2c7583e963cd5e0a9e49c2f2f827e8e0a8d2f560bea8b649d7"
+PY
+# JSON照合（jq不要, Python標準ライブラリのみ）:
+python - <<'PY'
+import json, pathlib
+p = pathlib.Path("logs/external_validation_graceful_may.log")
+d = json.loads(p.read_text(encoding="utf-8"))
+assert d["n_real_projects"] == 3
+r = d["raw_judgement_distribution"]
+assert r["consistent"] == 3 and r["contradictory"] == 0 and r["inconclusive"] == 0
+pjd = d["policy_judgement_distribution"]
+assert pjd["consistent"] == 3 and pjd["contradictory"] == 0 and pjd["inconclusive"] == 0
+assert d["mutation_detected_by_expectation"] == 6
+print("OK")
+PY
 ```
+
+任意の追加確認（jq を使う場合）:
+```bash
+jq '{n_real_projects, raw_judgement_distribution, policy_judgement_distribution, mutation_detected_by_expectation}' logs/external_validation_graceful_may.log
+jq -e '
+  .n_real_projects == 3 and
+  .raw_judgement_distribution.consistent == 3 and
+  .raw_judgement_distribution.contradictory == 0 and
+  .raw_judgement_distribution.inconclusive == 0 and
+  .policy_judgement_distribution.consistent == 3 and
+  .policy_judgement_distribution.contradictory == 0 and
+  .policy_judgement_distribution.inconclusive == 0 and
+  .mutation_detected_by_expectation == 6
+' logs/external_validation_graceful_may.log
+```
+
+任意のSHA代替チェック（コマンドライン）:
+```bash
+# 代替（macOS）
+test "$(shasum -a 256 external_validation.py | cut -d' ' -f1)" = "ea820e0d86324d2c7583e963cd5e0a9e49c2f2f827e8e0a8d2f560bea8b649d7"
+# 代替（Linux, GNU coreutils）
+test "$(sha256sum external_validation.py | cut -d' ' -f1)" = "ea820e0d86324d2c7583e963cd5e0a9e49c2f2f827e8e0a8d2f560bea8b649d7"
+```
+
 期待条件:
 - `n_real_projects == 3`
 - `raw_judgement_distribution.consistent == 3`
+- `policy_judgement_distribution.inconclusive == 0`
 - `mutation_detected_by_expectation == 6`
+- 合否判定: 上記 Pythonチェックが `OK` を出すこと、または（jq を使う場合）`jq -e` が終了コード `0` を返すこと
+- `jq` は便利ツールであり必須ではない（上記 Python 代替チェックでも同一合否判定が可能）。
+
+アーティファクト検証チェック（推奨手順）:
+```bash
+# 1) Lean mechanization build
+cd paper/lean
+~/.elan/bin/lake build
+
+# 2) PoC offline deterministic replay
+cd ../case-study/real_projects
+bash reproduce.sh
+# （同等に python external_validation.py ... を5セクション相当で個別実行してもよい）
+
+# 3a) 論文照合仕様（4項目）の確認: Python-only（推奨）
+python - <<'PY'
+import json, pathlib
+p = pathlib.Path("logs/external_validation_graceful_may.log")
+d = json.loads(p.read_text(encoding="utf-8"))
+assert d["n_real_projects"] == 3
+r = d["raw_judgement_distribution"]
+assert r["consistent"] == 3 and r["contradictory"] == 0 and r["inconclusive"] == 0
+pjd = d["policy_judgement_distribution"]
+assert pjd["consistent"] == 3 and pjd["contradictory"] == 0 and pjd["inconclusive"] == 0
+assert d["mutation_detected_by_expectation"] == 6
+print("OK")
+PY
+
+# 3b) 任意確認（jq がある場合のみ）
+command -v jq >/dev/null 2>&1 && jq '{n_real_projects, raw_judgement_distribution, policy_judgement_distribution, mutation_detected_by_expectation}' logs/external_validation_graceful_may.log
+```
+上記 1)-3) が通ることを、再現性付録の最小 artifact 受入条件とする。
 
 補足:
 - `date` は実行時刻依存で差分が出るため、決定的照合対象から除外する。
@@ -823,8 +1027,16 @@ jq '{n_real_projects, raw_judgement_distribution, policy_judgement_distribution,
 
 deterministic replay の定義（本稿）:
 - 固定入力: `external_validation_sources.lock.json` + `snapshots/*` + `external_validation.py`（同一版）
-- 決定性対象: `real_results` / `mutation_results` / `parse_issues` / 集計指標
+- 決定性対象（論文照合仕様）: `n_real_projects` / `raw_judgement_distribution` / `policy_judgement_distribution` / `mutation_detected_by_expectation`
+- `mutation_detected_by_expectation` の型: JSON では整数（本稿デモでは `6`）。本文中の `6 (out of 6)` は説明用表記である。
+- 決定性対象を上記4項目に限定する理由: 本文で再現性の合否判定として採用する指標はこの4項目であり、合否判定も同じ射影で定義する。
+- 分布キー安定性: `raw_judgement_distribution` / `policy_judgement_distribution` は `{consistent, contradictory, inconclusive}` を必須キーとし、**合否判定はこの3キー値のみを参照**する。追加キーが存在しても合否には影響しない。
 - 非決定性許容: 実行日付などのメタ情報（例: `date`）
+- 同一性判定レベル: JSON の**構造同値**（上記必須フィールドの値一致）で判定し、キー順・表示順は一致要件に含めない（§7.5 の `jq` チェックを準拠仕様とする）
+- 補助観測: `real_results` / `mutation_results` / `parse_issues` は監査用詳細出力として保存するが、本稿の決定性 pass 条件は上記論文照合仕様に基づく。
+- スクリプト同一性: `sha256(external_validation.py)=ea820e0d86324d2c7583e963cd5e0a9e49c2f2f827e8e0a8d2f560bea8b649d7` を一致条件に含める
+- ラッパ同一性: `sha256(reproduce.sh)=3a60d05c5f4281812dbc53cc448e201f60a3403ba6475577dc4f2ee36e8fd562` を併記し、`reproduce.sh` は実行前に `external_validation.py` / `external_validation_sources.lock.json` / regexドリフト入力 (`regex_drift_lock.json` / `regex_drift_snapshot.txt`) の SHA256 を自己検証する。
+- `reproduce.sh` の位置づけ: `paper/case-study/real_projects/reproduce.sh` は通常3モード + regexドリフト追試 + 境界ケースログ生成を束ねるラッパであり、決定性仕様そのものは `external_validation.py` が規定する。
 
 SHA256 不一致時の例（`fetch_text`）:
 ```python
@@ -912,7 +1124,7 @@ if sha != record.sha256:
 ## 10. 結論
 本稿は、UAD/f の root 統合問題を
 
-- `U0`（join: root 被覆仕様）
+- `U0`（join: root 被覆基準）
 - `U∧`（meet: 同時満足診断）
 
 に分離し、同一の型付き部分射影モデルで Lean4 機械検証した。  
@@ -927,6 +1139,7 @@ if sha != record.sha256:
 4. 部分性による随伴不成立条件（総写像前提の破綻）
 
 さらに、実OSSアーティファクト抽出をソースロック付きで再実行可能にし、前段入力生成パイプラインとしての PoC 基盤を示した。
+ただしこれは interval-domain・convenience sample（`n=3`）での feasibility 実証であり、多層仕様統治一般に対する外的妥当性を主張するものではない。
 
 拡張方向（colimit 統合、institution 射、仮想フェデレーション、`Δ` 駆動運用、LLM候補生成器分担）は、コア mechanization の直接成果とは分離し、将来課題として整理した（§9）。
 
@@ -1175,7 +1388,7 @@ cd paper/lean
 cd ../case-study/real_projects
 python external_validation.py --offline-lock external_validation_sources.lock.json
 
-# External validation (3モード一括再実行)
+# External validation (通常3モード + ドリフト追試 + 境界ケースログ生成を一括再実行)
 ./reproduce.sh
 
 # External validation (offline, graceful must)

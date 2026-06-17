@@ -1,0 +1,31 @@
+# Reviewer 1 Round 44
+
+- Role: Reviewer 1 (Formal Methods / Mechanization correctness)
+- Recommendation: Minor Revision
+- Pass Gate: true
+
+## Summary
+The manuscript presents a mechanized UAD/f kernel with explicit separation of U0 (join-based coverage baseline) and U∧ (meet-based consistency diagnosis). The core contribution—making implicit assumptions explicit through Lean4 formalization—is sound and the scope boundaries are clearly stated. The interval-domain PoC demonstrates deterministic replay (RQ6) with source-lock verification. However, minor clarifications are needed regarding: (1) the precise relationship between PoC operational analogues and theory, (2) mutation coverage boundaries, and (3) the adequacy theorem application chain. These are addressable without re-mechanization.
+
+## Strengths
+- Explicit separation of U0 (join/coverage) and U∧ (meet/consistency) resolves the ambiguity in 'integration' semantics—this is formalized correctly in Construction.lean with UAndOn_subset_U0On
+- Mechanized exposure of hidden assumptions: hproj (same-point connection in lifted_transfer), adequacy one-sided decomposition, and partial-projection non-adjointness (no_left_adjoint_of_partial) are valuable formalization outcomes
+- Scope boundaries are rigorously stated: interval-domain only, n=3 convenience sample explicitly disclaimed as non-statistical, PoC targets RQ6 (deterministic replay) not RQ5 (extraction adequacy proof)
+- Deterministic replay infrastructure is well-designed: source-lock with SHA256, tri-valued judgement + policy projection separation, mutation expectation pre-fixed and tracked
+- Theory-practice alignment is honestly reported: §4.8 table explicitly marks which theorems have PoC verification vs. which remain as typed assumptions
+- Must/may semantics formalized correctly with inclusion UAndOn ⊆ UAndMayOn and contrapositive UAndMayOn_empty_implies_UAndOn_empty
+
+## Required Fixes
+- §6.2 PoC layer status definition: Clarify that 'operational analogue' means U∧ judgement uses \hat{bounds}_i (partial bounds) not \hat{interval}_i (two-sided intervals), and state explicitly that this is NOT a direct implementation of meet(lifted_i) from theory but a bounds-based consistency heuristic aligned with meet semantics
+- §6.3 mutation coverage: Add explicit statement that the two mutation families (stale_requirement_lower, unit_mismatch_upper_scale_down_1024) do NOT cover inclusive/exclusive boundary semantics or implicit default handling, and that robustness claims are limited to these two boundary-reversal scenarios
+- §4.3 adequacy application chain: In the note after theorems preimage_subset_semanticPullback_of_sound etc., add one sentence clarifying that applying these to regex extractor requires separate proof that regex satisfies hSound/hComplete for relation E, which is out of scope—currently this is stated but should be more prominent given RQ5/RQ6 boundary importance
+
+## Optional Fixes
+- §2.6 obs/extract decomposition: Consider adding a small Lean snippet showing the proj_i = bind(obs_i, extract_i) composition in the main text (currently only referenced to Examples/), which would help readers see the artifact→IR separation more concretely
+- §7.6 theory-Lean correspondence table: Add row for §2.6 decomposition pointing to ArtifactBundleExample.lean's proj_bind_decomposition for completeness
+- §6.4 negative case: The regex drift example is valuable—consider moving the key insight ('failure_policy and none_semantics must be contractually fixed') into a separate 'Operational Policy Requirements' subsection for visibility
+- Abstract: Consider adding one sentence stating the main formalization outcome: 'We expose previously implicit assumptions (same-point projection connection, adequacy one-sidedness, partial-projection non-adjointness) as typed Lean4 theorem premises'
+- §9 Future Work: Mention MUS extraction formalization (§3.4 defines MUS but algorithm correctness is deferred) as a concrete next step for completeness
+
+## Evidence Quote
+- "operational analogue to U∧ (meet-based consistency diagnosis)"

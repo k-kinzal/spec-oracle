@@ -1,0 +1,7 @@
+id: c9c97133-5aa5-48c3-b3dc-26f775b6d28f
+content: 'ProofMethod enum supports multiple verification strategies: ConstraintSolving, SMTSolver, TheoremProver, PropertyTesting, Manual'
+kind: Scenario
+metadata: {}
+created_at: 1771065633
+modified_at: 1771065633
+formality_layer: 0

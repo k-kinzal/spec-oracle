@@ -1,0 +1,7 @@
+id: 4856caf8-b947-43da-a8c0-bbd5d8a5229e
+content: The prove-consistency command generates formal proofs that two specifications are consistent using Z3 SMT solver
+kind: Assertion
+metadata: {}
+created_at: 1771069593
+modified_at: 1771069593
+formality_layer: 1

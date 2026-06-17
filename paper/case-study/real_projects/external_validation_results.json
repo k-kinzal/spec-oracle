@@ -1,35 +1,36 @@
 {
-  "date": "2026-02-15",
+  "date": "2026-02-18",
   "failure_policy": "none",
-  "none_semantics": "must",
+  "none_semantics": "may",
   "extraction_mode": "automatic_regex_no_manual_edit_offline_snapshot_replay",
   "network_required": false,
   "n_real_projects": 3,
   "n_real_consistent": 3,
   "n_real_contradictory": 0,
-  "n_real_inconclusive": 0,
+  "n_real_inconclusive": 1,
   "raw_judgement_distribution": {
+    "consistent": 2,
+    "contradictory": 0,
+    "inconclusive": 1
+  },
+  "policy_judgement_distribution": {
     "consistent": 3,
     "contradictory": 0,
     "inconclusive": 0
   },
-  "policy_judgement_distribution": {
-    "consistent": 3,
-    "contradictory": 0
-  },
   "n_u0_support_indicator": 3,
   "n_u0_unfalsified_indicator": 3,
   "n_u0_unknown_only": 0,
-  "avg_support_ratio": 0.7777777777777777,
-  "avg_unknown_ratio": 0.2222222222222222,
+  "avg_support_ratio": 0.6666666666666666,
+  "avg_unknown_ratio": 0.3333333333333333,
   "avg_invalid_interval_ratio": 0.0,
   "support_frequency": {
-    "requirement": 3,
+    "requirement": 2,
     "api": 3,
     "code": 1
   },
   "unknown_frequency": {
-    "requirement": 0,
+    "requirement": 1,
     "api": 0,
     "code": 2
   },
@@ -39,14 +40,29 @@
     "code": 0
   },
   "mutation_total": 6,
-  "mutation_detected_by_expectation": 6,
+  "mutation_detected_by_expectation": 4,
   "mutation_expected_contradictory_total": 3,
-  "mutation_detected_contradictory": 3,
+  "mutation_detected_contradictory": 2,
   "mutation_expected_change_total": 3,
-  "mutation_detected_change": 3,
-  "mutation_skipped": 0,
-  "parse_issue_count": 0,
-  "parse_issues": [],
+  "mutation_detected_change": 2,
+  "mutation_skipped": 2,
+  "parse_issue_count": 2,
+  "parse_issues": [
+    {
+      "project": "SQLite page size",
+      "layer": "requirement",
+      "field": "min",
+      "reason": "regex_no_match",
+      "pattern": "between ([0-9]+) and 65536 inclusive"
+    },
+    {
+      "project": "SQLite page size",
+      "layer": "requirement",
+      "field": "max",
+      "reason": "regex_no_match",
+      "pattern": "between [0-9]+ and ([0-9]+) inclusive"
+    }
+  ],
   "real_results": [
     {
       "project": "PostgreSQL identifier length",
@@ -181,36 +197,36 @@
       "project": "SQLite page size",
       "consistent": true,
       "policy_judgement": "consistent",
-      "judgement": "consistent",
-      "intersection_lower": 512,
-      "intersection_upper": 65536,
-      "consistency_reason": "interval_intersection",
-      "has_parse_issue": false,
+      "judgement": "inconclusive",
+      "intersection_lower": null,
+      "intersection_upper": null,
+      "consistency_reason": "parse_issue",
+      "has_parse_issue": true,
       "u0_support_indicator": true,
       "u0_unfalsified_indicator": true,
       "u0_unknown_only": false,
-      "support_count": 2,
-      "unknown_count": 1,
+      "support_count": 1,
+      "unknown_count": 2,
       "invalid_interval_count": 0,
-      "support_ratio": 0.6666666666666666,
-      "unknown_ratio": 0.3333333333333333,
+      "support_ratio": 0.3333333333333333,
+      "unknown_ratio": 0.6666666666666666,
       "invalid_interval_ratio": 0.0,
       "u0_support_layers": [
-        "requirement",
         "api"
       ],
       "u0_unknown_layers": [
+        "requirement",
         "code"
       ],
       "u0_invalid_interval_layers": [],
       "layer_status": {
-        "requirement": "supported",
+        "requirement": "unknown",
         "api": "supported",
         "code": "unknown"
       },
       "lifted_membership": {
         "must": {
-          "requirement": true,
+          "requirement": false,
           "api": true,
           "code": false
         },
@@ -223,8 +239,8 @@
       "artifacts": {
         "name": "SQLite page size",
         "requirement": {
-          "lower": 512,
-          "upper": 65536,
+          "lower": null,
+          "upper": null,
           "source": "https://www.sqlite.org/pragma.html#pragma_page_size",
           "note": "PRAGMA page_size range in docs."
         },
@@ -361,59 +377,19 @@
       "project": "SQLite page size",
       "mutation_id": "stale_requirement_lower",
       "expected_outcome": "raw_judgement=contradictory",
-      "detected_expectation": true,
-      "expectation_satisfied": true,
-      "policy_judgement": "contradictory",
-      "judgement": "contradictory",
-      "mutated_intersection_lower": 65537,
-      "mutated_intersection_upper": 65536,
-      "consistency_reason": "interval_intersection",
-      "mutated_u0_support_indicator": true,
-      "mutated_u0_unfalsified_indicator": true,
-      "mutated_support_count": 1,
-      "mutated_unknown_count": 1,
-      "mutated_invalid_interval_count": 1,
-      "mutated_u0_support_layers": [
-        "api"
-      ],
-      "mutated_u0_unknown_layers": [
-        "code"
-      ],
-      "mutated_u0_invalid_interval_layers": [
-        "requirement"
-      ],
-      "skipped": false
+      "detected_expectation": null,
+      "expectation_satisfied": null,
+      "skipped": true,
+      "reason": "mutation_skipped_missing_intersection_bounds"
     },
     {
       "project": "SQLite page size",
       "mutation_id": "unit_mismatch_upper_scale_down_1024",
       "expected_outcome": "intersection_upper_at_most_floor_baseline_div_1024",
-      "expected_upper_threshold": 64,
-      "detected_expectation": true,
-      "expectation_satisfied": true,
-      "detection_basis": [
-        "intersection_upper_le_floor_baseline_div_1024"
-      ],
-      "policy_judgement": "contradictory",
-      "judgement": "contradictory",
-      "mutated_intersection_lower": 512,
-      "mutated_intersection_upper": 64,
-      "consistency_reason": "interval_intersection",
-      "mutated_u0_support_indicator": true,
-      "mutated_u0_unfalsified_indicator": true,
-      "mutated_support_count": 1,
-      "mutated_unknown_count": 1,
-      "mutated_invalid_interval_count": 1,
-      "mutated_u0_support_layers": [
-        "api"
-      ],
-      "mutated_u0_unknown_layers": [
-        "code"
-      ],
-      "mutated_u0_invalid_interval_layers": [
-        "requirement"
-      ],
-      "skipped": false
+      "detected_expectation": null,
+      "expectation_satisfied": null,
+      "skipped": true,
+      "reason": "mutation_skipped_missing_intersection_bounds"
     }
   ],
   "source_lock": [
@@ -455,9 +431,9 @@
     },
     {
       "url": "https://www.sqlite.org/pragma.html#pragma_page_size",
-      "sha256": "054868f5909b8b20ffe819d01b99b862407a6eb52f919841d555813774bdb980",
+      "sha256": "0d2d319f9edd4dbf2c80351bf1bcbfd3264552999ca557ad9598ac833ea4480c",
       "retrieved_at_utc": "2026-02-14T15:34:11.216069+00:00",
-      "snapshot_file": "snapshots/www.sqlite.org_pragma.html_pragma_page_size.txt"
+      "snapshot_file": "logs/regex_drift_snapshot.txt"
     },
     {
       "url": "https://www.sqlite.org/fileformat.html",
@@ -521,12 +497,12 @@
       {
         "field": "requirement.min",
         "pattern": "between ([0-9]+) and 65536 inclusive",
-        "match": "between 512 and 65536 inclusive"
+        "match": null
       },
       {
         "field": "requirement.max",
         "pattern": "between [0-9]+ and ([0-9]+) inclusive",
-        "match": "between 512 and 65536 inclusive"
+        "match": null
       },
       {
         "field": "api.min",

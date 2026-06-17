@@ -1078,6 +1078,45 @@ fn test_scenario_{}() {{
     }
 
     // ========================================================================
+    // Analysis and detection methods (stubs for Phase 1, to be implemented in Phase 2)
+    // ========================================================================
+
+    /// Detect contradictions between specifications
+    /// Stub implementation - returns empty list. To be implemented in Phase 2.
+    pub fn detect_contradictions(&self) -> Vec<super::Contradiction> {
+        // TODO: Implement contradiction detection using formal methods
+        Vec::new()
+    }
+
+    /// Detect omissions in specification coverage
+    /// Stub implementation - returns empty list. To be implemented in Phase 2.
+    pub fn detect_omissions(&self) -> Vec<super::Omission> {
+        // TODO: Implement omission detection using domain analysis
+        Vec::new()
+    }
+
+    /// Detect inconsistencies between specification layers
+    /// Stub implementation - returns empty list. To be implemented in Phase 2.
+    pub fn detect_layer_inconsistencies(&self) -> Vec<super::LayerInconsistency> {
+        // TODO: Implement layer inconsistency detection
+        Vec::new()
+    }
+
+    /// Get compliance trend for a specific node (singular version)
+    /// Delegates to get_compliance_trends (plural)
+    pub fn get_compliance_trend(&self, node_id: &str) -> Option<ComplianceTrend> {
+        self.get_compliance_trends(node_id)
+    }
+
+    /// Detect inconsistencies between different universes
+    /// Stub implementation - returns empty list. To be implemented in Phase 2.
+    pub fn detect_inter_universe_inconsistencies(&self) -> Vec<super::InterUniverseInconsistency> {
+        // TODO: Implement inter-universe inconsistency detection
+        Vec::new()
+    }
+
+
+    // ========================================================================
     // Serialization
     // ========================================================================
 

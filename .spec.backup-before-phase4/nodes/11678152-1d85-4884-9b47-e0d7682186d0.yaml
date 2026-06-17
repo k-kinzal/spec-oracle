@@ -1,0 +1,7 @@
+id: 11678152-1d85-4884-9b47-e0d7682186d0
+content: The list-nodes command must display a summary by default instead of listing all specifications, showing counts grouped by formality layer (U0-U3) and kind (Assertions, Constraints, Scenarios, Definitions, Domains)
+kind: Constraint
+metadata: {}
+created_at: 1771119819
+modified_at: 1771119819
+formality_layer: 0

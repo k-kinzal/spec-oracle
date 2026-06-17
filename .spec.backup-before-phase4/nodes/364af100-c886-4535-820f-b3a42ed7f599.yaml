@@ -1,0 +1,7 @@
+id: 364af100-c886-4535-820f-b3a42ed7f599
+content: Test extraction must create both U3 test scenarios and U0 requirements, with the U0 requirement extracted via AI analysis of test intent
+kind: Assertion
+metadata: {}
+created_at: 1771094271
+modified_at: 1771094271
+formality_layer: 0

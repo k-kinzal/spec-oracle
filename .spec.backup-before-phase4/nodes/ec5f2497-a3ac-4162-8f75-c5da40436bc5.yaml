@@ -1,0 +1,7 @@
+id: ec5f2497-a3ac-4162-8f75-c5da40436bc5
+content: Project-local specifications must be stored in .spec/specs.json and auto-detected by the CLI
+kind: Constraint
+metadata: {}
+created_at: 1771060211
+modified_at: 1771060211
+formality_layer: 0

@@ -1,0 +1,7 @@
+id: fb893fba-819f-4abc-baa1-090c89bbe4f8
+content: The check command must respect specification lifecycle status and exclude archived specs from checks
+kind: Assertion
+metadata: {}
+created_at: 1771122422
+modified_at: 1771122422
+formality_layer: 0

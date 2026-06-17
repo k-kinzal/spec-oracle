@@ -1,0 +1,7 @@
+id: 5e3afc70-1aa1-4e9c-8eb4-445fe406f75e
+content: specORACLE must use itself to govern its own development by tracking design specifications (U0), implementation (U3), detecting contradictions in architectural decisions, and finding omissions in feature coverage - demonstrating the reverse mapping engine through dogfooding
+kind: Assertion
+metadata: {}
+created_at: 1771093368
+modified_at: 1771093368
+formality_layer: 0

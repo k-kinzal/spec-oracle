@@ -1,0 +1,31 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["9e528c8dde452594.olean"],
+  "i": "9e9c4a27f0c4ccb3.ilean",
+  "c": "6e93dbd668c25500.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/AdequacyCounterexample.lean -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/AdequacyCounterexample.olean -i /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/AdequacyCounterexample.ilean -c /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/AdequacyCounterexample.c --setup /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/AdequacyCounterexample.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["UadfU0.Examples.AdequacyCounterexample:deps",
+   [["deps",
+     [["UadfU0Paper/UadfU0:extraDep",
+       [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["UadfU0.InterLayer.Adequacy transitive imports (legacy)",
+         "4ec647936e58741b"],
+        ["UadfU0.InterLayer.Adequacy:importAllArts", "6c01df13da58281f"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/AdequacyCounterexample.lean",
+   "97a2f385f135ed1e"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "df2bb147a2976913"}

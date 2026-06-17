@@ -1,0 +1,7 @@
+id: 73e33064-9b24-4e28-acbf-53ebf6b8182b
+content: The Prover module implements the 'proven world' concept from docs/motivation.md, providing mathematical certainty through Z3 SMT solver
+kind: Assertion
+metadata: {}
+created_at: 1771067748
+modified_at: 1771067748
+formality_layer: 0

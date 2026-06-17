@@ -1,0 +1,1209 @@
+use crate::project::{ProjectManager, Project};
+use crate::proto;
+use crate::udaf_service::UdafServiceImpl;
+use spec_core::data::{EdgeKind, NodeKind, SpecRepository};
+use std::sync::{Arc, Mutex};
+use tonic::{Request, Response, Status};
+
+pub struct SpecOracleService {
+    project_manager: Arc<Mutex<ProjectManager>>,
+    udaf: UdafServiceImpl,
+}
+
+impl SpecOracleService {
+    pub fn new(project_manager: ProjectManager) -> Result<Self, Box<dyn std::error::Error>> {
+        let pm = Arc::new(Mutex::new(project_manager));
+        let udaf = UdafServiceImpl::new(pm.clone());
+        Ok(Self {
+            project_manager: pm,
+            udaf,
+        })
+    }
+
+    /// Get the current project or use the specified project name
+    fn get_project(&self, project_name: &str) -> Result<Project, Status> {
+        let pm = self.project_manager.lock()
+            .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+
+        let name = if project_name.is_empty() {
+            pm.current_project()
+                .ok_or_else(|| Status::failed_precondition("No current project set. Use SwitchProject or specify project name."))?
+        } else {
+            project_name.to_string()
+        };
+
+        pm.load_project(&name)
+            .map_err(|e| Status::not_found(format!("Project not found: {}", e)))
+    }
+
+    /// Save a project back to storage
+    fn save_project(&self, project: &Project) -> Result<(), Status> {
+        let pm = self.project_manager.lock()
+            .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+
+        pm.save_project(project)
+            .map_err(|e| Status::internal(format!("Failed to save project: {}", e)))
+    }
+
+    /// Add node with explicit formality layer (helper method)
+    fn add_node_with_layer(
+        repo: &mut SpecRepository,
+        content: String,
+        kind: NodeKind,
+        formality_layer: u8,
+        metadata: std::collections::HashMap<String, String>,
+    ) -> spec_core::data::SpecNodeData {
+        let node = repo.add_node(content, kind, metadata).clone();
+        let node_id = node.id.clone();
+        repo.update_node_formality(&node_id, formality_layer);
+        repo.get_node(&node_id).unwrap().clone()
+    }
+}
+
+// ==========================================
+// Proto conversion helpers
+// ==========================================
+
+fn to_proto_node(n: &spec_core::data::SpecNodeData) -> proto::SpecNode {
+    proto::SpecNode {
+        id: n.id.clone(),
+        content: n.content.clone(),
+        kind: to_proto_node_kind(n.kind).into(),
+        metadata: n.metadata.clone(),
+        created_at: n.created_at,
+        modified_at: n.modified_at,
+        formality_layer: n.formality_layer as u32,
+    }
+}
+
+fn to_proto_node_kind(k: NodeKind) -> proto::SpecNodeKind {
+    match k {
+        NodeKind::Assertion => proto::SpecNodeKind::Assertion,
+        NodeKind::Constraint => proto::SpecNodeKind::Constraint,
+        NodeKind::Scenario => proto::SpecNodeKind::Scenario,
+        NodeKind::Definition => proto::SpecNodeKind::Definition,
+        NodeKind::Domain => proto::SpecNodeKind::Domain,
+    }
+}
+
+fn from_proto_node_kind(k: i32) -> NodeKind {
+    match proto::SpecNodeKind::try_from(k) {
+        Ok(proto::SpecNodeKind::Assertion) => NodeKind::Assertion,
+        Ok(proto::SpecNodeKind::Constraint) => NodeKind::Constraint,
+        Ok(proto::SpecNodeKind::Scenario) => NodeKind::Scenario,
+        Ok(proto::SpecNodeKind::Definition) => NodeKind::Definition,
+        Ok(proto::SpecNodeKind::Domain) => NodeKind::Domain,
+        _ => NodeKind::Assertion,
+    }
+}
+
+fn to_proto_edge(e: &spec_core::data::SpecEdgeData, src: &str, tgt: &str) -> proto::SpecEdge {
+    proto::SpecEdge {
+        id: e.id.clone(),
+        source_id: src.to_string(),
+        target_id: tgt.to_string(),
+        kind: to_proto_edge_kind(e.kind).into(),
+        metadata: e.metadata.clone(),
+        created_at: e.created_at,
+    }
+}
+
+fn to_proto_edge_kind(k: EdgeKind) -> proto::SpecEdgeKind {
+    match k {
+        EdgeKind::Refines => proto::SpecEdgeKind::Refines,
+        EdgeKind::DependsOn => proto::SpecEdgeKind::DependsOn,
+        EdgeKind::Contradicts => proto::SpecEdgeKind::Contradicts,
+        EdgeKind::DerivesFrom => proto::SpecEdgeKind::DerivesFrom,
+        EdgeKind::Synonym => proto::SpecEdgeKind::Synonym,
+        EdgeKind::Composes => proto::SpecEdgeKind::Composes,
+        EdgeKind::Formalizes => proto::SpecEdgeKind::Formalizes,
+        EdgeKind::Transform => proto::SpecEdgeKind::Transform,
+    }
+}
+
+fn from_proto_edge_kind(k: i32) -> EdgeKind {
+    match proto::SpecEdgeKind::try_from(k) {
+        Ok(proto::SpecEdgeKind::Refines) => EdgeKind::Refines,
+        Ok(proto::SpecEdgeKind::DependsOn) => EdgeKind::DependsOn,
+        Ok(proto::SpecEdgeKind::Contradicts) => EdgeKind::Contradicts,
+        Ok(proto::SpecEdgeKind::DerivesFrom) => EdgeKind::DerivesFrom,
+        Ok(proto::SpecEdgeKind::Synonym) => EdgeKind::Synonym,
+        Ok(proto::SpecEdgeKind::Composes) => EdgeKind::Composes,
+        Ok(proto::SpecEdgeKind::Formalizes) => EdgeKind::Formalizes,
+        Ok(proto::SpecEdgeKind::Transform) => EdgeKind::Transform,
+        _ => EdgeKind::DependsOn,
+    }
+}
+
+fn to_proto_storage_backend(config: &crate::config::StorageConfig) -> proto::StorageBackend {
+    use crate::config::StorageConfig;
+    match config {
+        StorageConfig::LocalFile { .. } => proto::StorageBackend::LocalFile,
+        StorageConfig::Database { .. } => proto::StorageBackend::Database,
+        StorageConfig::S3 { .. } => proto::StorageBackend::S3,
+        StorageConfig::Git { .. } => proto::StorageBackend::Git,
+    }
+}
+
+// ==========================================
+// RPC Implementations
+// ==========================================
+
+#[tonic::async_trait]
+impl proto::spec_oracle_server::SpecOracle for SpecOracleService {
+    // ==========================================
+    // Project Management RPCs
+    // ==========================================
+
+    async fn create_project(
+        &self,
+        request: Request<proto::CreateProjectRequest>,
+    ) -> Result<Response<proto::CreateProjectResponse>, Status> {
+        let req = request.into_inner();
+
+        let storage = match req.storage_backend() {
+            proto::StorageBackend::LocalFile | proto::StorageBackend::Unspecified => {
+                let pm = self.project_manager.lock()
+                    .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+                crate::config::StorageConfig::LocalFile {
+                    base_path: pm.base_path().to_path_buf(),
+                }
+            }
+            proto::StorageBackend::Database => {
+                return Err(Status::unimplemented("Database storage not yet implemented"));
+            }
+            proto::StorageBackend::S3 => {
+                return Err(Status::unimplemented("S3 storage not yet implemented"));
+            }
+            proto::StorageBackend::Git => {
+                return Err(Status::unimplemented("Git storage not yet implemented"));
+            }
+        };
+
+        let mut pm = self.project_manager.lock()
+            .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+
+        pm.create_project(req.name.clone(), req.description, storage)
+            .map_err(|e| Status::already_exists(format!("Failed to create project: {}", e)))?;
+
+        let project_info = pm.list_projects()
+            .map_err(|e| Status::internal(format!("Failed to list projects: {}", e)))?
+            .into_iter()
+            .find(|p| p.name == req.name)
+            .ok_or_else(|| Status::internal("Project created but not found"))?;
+
+        Ok(Response::new(proto::CreateProjectResponse {
+            project: Some(proto::Project {
+                name: project_info.name,
+                description: project_info.description,
+                created_at: project_info.created_at,
+                node_count: project_info.node_count as u32,
+                edge_count: project_info.edge_count as u32,
+                storage: to_proto_storage_backend(&project_info.storage).into(),
+            }),
+        }))
+    }
+
+    async fn list_projects(
+        &self,
+        _request: Request<proto::ListProjectsRequest>,
+    ) -> Result<Response<proto::ListProjectsResponse>, Status> {
+        let pm = self.project_manager.lock()
+            .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+
+        let projects = pm.list_projects()
+            .map_err(|e| Status::internal(format!("Failed to list projects: {}", e)))?
+            .into_iter()
+            .map(|p| proto::Project {
+                name: p.name,
+                description: p.description,
+                created_at: p.created_at,
+                node_count: p.node_count as u32,
+                edge_count: p.edge_count as u32,
+                storage: to_proto_storage_backend(&p.storage).into(),
+            })
+            .collect();
+
+        Ok(Response::new(proto::ListProjectsResponse { projects }))
+    }
+
+    async fn switch_project(
+        &self,
+        request: Request<proto::SwitchProjectRequest>,
+    ) -> Result<Response<proto::SwitchProjectResponse>, Status> {
+        let req = request.into_inner();
+
+        let pm = self.project_manager.lock()
+            .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+
+        pm.switch_project(&req.name)
+            .map_err(|e| Status::not_found(format!("Failed to switch project: {}", e)))?;
+
+        let project_info = pm.list_projects()
+            .map_err(|e| Status::internal(format!("Failed to list projects: {}", e)))?
+            .into_iter()
+            .find(|p| p.name == req.name)
+            .ok_or_else(|| Status::internal("Project switched but not found"))?;
+
+        Ok(Response::new(proto::SwitchProjectResponse {
+            project: Some(proto::Project {
+                name: project_info.name,
+                description: project_info.description,
+                created_at: project_info.created_at,
+                node_count: project_info.node_count as u32,
+                edge_count: project_info.edge_count as u32,
+                storage: to_proto_storage_backend(&project_info.storage).into(),
+            }),
+        }))
+    }
+
+    async fn delete_project(
+        &self,
+        request: Request<proto::DeleteProjectRequest>,
+    ) -> Result<Response<proto::DeleteProjectResponse>, Status> {
+        let req = request.into_inner();
+
+        let mut pm = self.project_manager.lock()
+            .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+
+        pm.delete_project(&req.name)
+            .map_err(|e| Status::not_found(format!("Failed to delete project: {}", e)))?;
+
+        Ok(Response::new(proto::DeleteProjectResponse {}))
+    }
+
+    async fn get_current_project(
+        &self,
+        _request: Request<proto::GetCurrentProjectRequest>,
+    ) -> Result<Response<proto::GetCurrentProjectResponse>, Status> {
+        let pm = self.project_manager.lock()
+            .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+
+        let current = pm.current_project()
+            .ok_or_else(|| Status::failed_precondition("No current project set"))?;
+
+        let project_info = pm.list_projects()
+            .map_err(|e| Status::internal(format!("Failed to list projects: {}", e)))?
+            .into_iter()
+            .find(|p| p.name == current)
+            .ok_or_else(|| Status::internal("Current project not found"))?;
+
+        Ok(Response::new(proto::GetCurrentProjectResponse {
+            project: Some(proto::Project {
+                name: project_info.name,
+                description: project_info.description,
+                created_at: project_info.created_at,
+                node_count: project_info.node_count as u32,
+                edge_count: project_info.edge_count as u32,
+                storage: to_proto_storage_backend(&project_info.storage).into(),
+            }),
+        }))
+    }
+
+    async fn import_project(
+        &self,
+        request: Request<proto::ImportProjectRequest>,
+    ) -> Result<Response<proto::ImportProjectResponse>, Status> {
+        let req = request.into_inner();
+        let spec_dir = std::path::PathBuf::from(&req.spec_directory_path);
+
+        let mut pm = self.project_manager.lock()
+            .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+
+        let report = crate::migration::import_legacy_spec_directory(
+            &spec_dir,
+            req.name.clone(),
+            req.description,
+            &mut pm,
+        ).map_err(|e| Status::internal(format!("Import failed: {}", e)))?;
+
+        let project_info = pm.list_projects()
+            .map_err(|e| Status::internal(format!("Failed to list projects: {}", e)))?
+            .into_iter()
+            .find(|p| p.name == req.name)
+            .ok_or_else(|| Status::internal("Project imported but not found"))?;
+
+        Ok(Response::new(proto::ImportProjectResponse {
+            project: Some(proto::Project {
+                name: project_info.name,
+                description: project_info.description,
+                created_at: project_info.created_at,
+                node_count: project_info.node_count as u32,
+                edge_count: project_info.edge_count as u32,
+                storage: to_proto_storage_backend(&project_info.storage).into(),
+            }),
+            nodes_imported: report.nodes_imported as u32,
+            edges_imported: report.edges_imported as u32,
+            universes_created: report.universes_created as u32,
+        }))
+    }
+
+    // ==========================================
+    // Node Operations
+    // ==========================================
+
+    async fn add_node(
+        &self,
+        request: Request<proto::AddNodeRequest>,
+    ) -> Result<Response<proto::AddNodeResponse>, Status> {
+        let req = request.into_inner();
+        let mut project = self.get_project("")?; // Use current project for now
+
+        let formality_layer = req.metadata.get("formality_layer")
+            .and_then(|s| s.parse::<u8>().ok())
+            .unwrap_or(0);
+
+        let node = Self::add_node_with_layer(
+            &mut project.repository,
+            req.content,
+            from_proto_node_kind(req.kind),
+            formality_layer,
+            req.metadata,
+        );
+
+        self.save_project(&project)?;
+
+        Ok(Response::new(proto::AddNodeResponse {
+            node: Some(to_proto_node(&node)),
+        }))
+    }
+
+    async fn get_node(
+        &self,
+        request: Request<proto::GetNodeRequest>,
+    ) -> Result<Response<proto::GetNodeResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let node = project.repository
+            .get_node(&req.id)
+            .ok_or_else(|| Status::not_found(format!("Node {} not found", req.id)))?;
+
+        Ok(Response::new(proto::GetNodeResponse {
+            node: Some(to_proto_node(node)),
+        }))
+    }
+
+    async fn list_nodes(
+        &self,
+        request: Request<proto::ListNodesRequest>,
+    ) -> Result<Response<proto::ListNodesResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let filter = if req.kind_filter == 0 {
+            None
+        } else {
+            Some(from_proto_node_kind(req.kind_filter))
+        };
+
+        let nodes: Vec<proto::SpecNode> = project.repository
+            .list_nodes(filter)
+            .into_iter()
+            .map(to_proto_node)
+            .collect();
+
+        Ok(Response::new(proto::ListNodesResponse { nodes }))
+    }
+
+    async fn remove_node(
+        &self,
+        request: Request<proto::RemoveNodeRequest>,
+    ) -> Result<Response<proto::RemoveNodeResponse>, Status> {
+        let req = request.into_inner();
+        let mut project = self.get_project("")?;
+
+        project.repository
+            .remove_node(&req.id)
+            .ok_or_else(|| Status::not_found(format!("Node {} not found", req.id)))?;
+
+        self.save_project(&project)?;
+
+        Ok(Response::new(proto::RemoveNodeResponse {}))
+    }
+
+    // ==========================================
+    // Edge Operations
+    // ==========================================
+
+    async fn add_edge(
+        &self,
+        request: Request<proto::AddEdgeRequest>,
+    ) -> Result<Response<proto::AddEdgeResponse>, Status> {
+        let req = request.into_inner();
+        let mut project = self.get_project("")?;
+
+        let edge = project.repository
+            .add_edge(
+                &req.source_id,
+                &req.target_id,
+                from_proto_edge_kind(req.kind),
+                req.metadata,
+            )
+            .map_err(|e| Status::not_found(e.to_string()))?
+            .clone();
+
+        self.save_project(&project)?;
+
+        Ok(Response::new(proto::AddEdgeResponse {
+            edge: Some(to_proto_edge(&edge, &req.source_id, &req.target_id)),
+        }))
+    }
+
+    async fn list_edges(
+        &self,
+        request: Request<proto::ListEdgesRequest>,
+    ) -> Result<Response<proto::ListEdgesResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let node_id = if req.node_id.is_empty() {
+            None
+        } else {
+            Some(req.node_id.as_str())
+        };
+
+        let edges: Vec<proto::SpecEdge> = project.repository
+            .list_edges(node_id)
+            .into_iter()
+            .map(|(e, src, tgt)| to_proto_edge(e, src, tgt))
+            .collect();
+
+        Ok(Response::new(proto::ListEdgesResponse { edges }))
+    }
+
+    async fn remove_edge(
+        &self,
+        request: Request<proto::RemoveEdgeRequest>,
+    ) -> Result<Response<proto::RemoveEdgeResponse>, Status> {
+        let req = request.into_inner();
+        let mut project = self.get_project("")?;
+
+        project.repository
+            .remove_edge(&req.id)
+            .ok_or_else(|| Status::not_found(format!("Edge {} not found", req.id)))?;
+
+        self.save_project(&project)?;
+
+        Ok(Response::new(proto::RemoveEdgeResponse {}))
+    }
+
+    // ==========================================
+    // Query and Analysis
+    // ==========================================
+
+    async fn query(
+        &self,
+        request: Request<proto::QueryRequest>,
+    ) -> Result<Response<proto::QueryResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let matching: Vec<proto::SpecNode> = project.repository
+            .search(&req.natural_language_query)
+            .into_iter()
+            .map(to_proto_node)
+            .collect();
+
+        let explanation = if matching.is_empty() {
+            "No matching specifications found.".to_string()
+        } else {
+            format!("Found {} matching specification(s).", matching.len())
+        };
+
+        Ok(Response::new(proto::QueryResponse {
+            matching_nodes: matching,
+            explanation,
+        }))
+    }
+
+    async fn detect_contradictions(
+        &self,
+        _request: Request<proto::DetectContradictionsRequest>,
+    ) -> Result<Response<proto::DetectContradictionsResponse>, Status> {
+        let project = self.get_project("")?;
+
+        let contradictions: Vec<proto::Contradiction> = project.repository
+            .detect_contradictions()
+            .into_iter()
+            .map(|c| proto::Contradiction {
+                node_a: Some(to_proto_node(&c.node_a)),
+                node_b: Some(to_proto_node(&c.node_b)),
+                explanation: c.explanation,
+            })
+            .collect();
+
+        Ok(Response::new(proto::DetectContradictionsResponse {
+            contradictions,
+        }))
+    }
+
+    async fn detect_omissions(
+        &self,
+        _request: Request<proto::DetectOmissionsRequest>,
+    ) -> Result<Response<proto::DetectOmissionsResponse>, Status> {
+        let project = self.get_project("")?;
+
+        let omissions: Vec<proto::Omission> = project.repository
+            .detect_omissions()
+            .into_iter()
+            .map(|o| proto::Omission {
+                description: o.description,
+                related_nodes: o.related_nodes.iter().map(to_proto_node).collect(),
+            })
+            .collect();
+
+        Ok(Response::new(proto::DetectOmissionsResponse { omissions }))
+    }
+
+    async fn resolve_terminology(
+        &self,
+        request: Request<proto::ResolveTerminologyRequest>,
+    ) -> Result<Response<proto::ResolveTerminologyResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let (defs, synonyms) = project.repository.resolve_term(&req.term);
+
+        Ok(Response::new(proto::ResolveTerminologyResponse {
+            definitions: defs.into_iter().map(to_proto_node).collect(),
+            synonyms,
+        }))
+    }
+
+    async fn detect_layer_inconsistencies(
+        &self,
+        _request: Request<proto::DetectLayerInconsistenciesRequest>,
+    ) -> Result<Response<proto::DetectLayerInconsistenciesResponse>, Status> {
+        let project = self.get_project("")?;
+
+        let inconsistencies: Vec<proto::LayerInconsistency> = project.repository
+            .detect_layer_inconsistencies()
+            .into_iter()
+            .map(|i| proto::LayerInconsistency {
+                source: Some(to_proto_node(&i.source)),
+                target: Some(to_proto_node(&i.target)),
+                explanation: i.explanation,
+            })
+            .collect();
+
+        Ok(Response::new(proto::DetectLayerInconsistenciesResponse {
+            inconsistencies,
+        }))
+    }
+
+    async fn filter_by_layer(
+        &self,
+        request: Request<proto::FilterByLayerRequest>,
+    ) -> Result<Response<proto::FilterByLayerResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let nodes: Vec<proto::SpecNode> = project.repository
+            .filter_by_layer(req.min_layer as u8, req.max_layer as u8)
+            .into_iter()
+            .map(to_proto_node)
+            .collect();
+
+        Ok(Response::new(proto::FilterByLayerResponse { nodes }))
+    }
+
+    async fn find_formalizations(
+        &self,
+        request: Request<proto::FindFormalizationsRequest>,
+    ) -> Result<Response<proto::FindFormalizationsResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let formalizations: Vec<proto::SpecNode> = project.repository
+            .find_formalizations(&req.node_id)
+            .into_iter()
+            .map(to_proto_node)
+            .collect();
+
+        let natural_sources: Vec<proto::SpecNode> = project.repository
+            .find_natural_source(&req.node_id)
+            .into_iter()
+            .map(to_proto_node)
+            .collect();
+
+        Ok(Response::new(proto::FindFormalizationsResponse {
+            formalizations,
+            natural_sources,
+        }))
+    }
+
+    async fn find_related_terms(
+        &self,
+        request: Request<proto::FindRelatedTermsRequest>,
+    ) -> Result<Response<proto::FindRelatedTermsResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let mut related = project.repository.find_related_terms(&req.term);
+
+        if req.max_results > 0 && related.len() > req.max_results as usize {
+            related.truncate(req.max_results as usize);
+        }
+
+        let nodes: Vec<proto::ScoredNode> = related
+            .into_iter()
+            .map(|(node, score)| proto::ScoredNode {
+                node: Some(to_proto_node(node)),
+                score,
+            })
+            .collect();
+
+        Ok(Response::new(proto::FindRelatedTermsResponse { nodes }))
+    }
+
+    async fn detect_potential_synonyms(
+        &self,
+        request: Request<proto::DetectPotentialSynonymsRequest>,
+    ) -> Result<Response<proto::DetectPotentialSynonymsResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let min_sim = if req.min_similarity > 0.0 {
+            req.min_similarity
+        } else {
+            0.3
+        };
+
+        let candidates: Vec<proto::SynonymCandidate> = project.repository
+            .detect_potential_synonyms()
+            .into_iter()
+            .filter(|(_, _, sim)| *sim >= min_sim)
+            .map(|(node_a, node_b, similarity)| proto::SynonymCandidate {
+                node_a: Some(to_proto_node(&node_a)),
+                node_b: Some(to_proto_node(&node_b)),
+                similarity,
+            })
+            .collect();
+
+        Ok(Response::new(proto::DetectPotentialSynonymsResponse {
+            candidates,
+        }))
+    }
+
+    async fn generate_contract_template(
+        &self,
+        request: Request<proto::GenerateContractTemplateRequest>,
+    ) -> Result<Response<proto::GenerateContractTemplateResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let template = project.repository
+            .generate_contract_template(&req.node_id, &req.language)
+            .ok_or_else(|| Status::not_found("Node not found or not testable"))?;
+
+        let node = project.repository
+            .get_node(&req.node_id)
+            .ok_or_else(|| Status::not_found("Node not found"))?;
+
+        let node_kind = match node.kind {
+            spec_core::data::NodeKind::Constraint => "constraint",
+            spec_core::data::NodeKind::Scenario => "scenario",
+            _ => "unknown",
+        };
+
+        Ok(Response::new(proto::GenerateContractTemplateResponse {
+            template,
+            node_kind: node_kind.to_string(),
+        }))
+    }
+
+    async fn get_test_coverage(
+        &self,
+        _request: Request<proto::GetTestCoverageRequest>,
+    ) -> Result<Response<proto::GetTestCoverageResponse>, Status> {
+        let project = self.get_project("")?;
+        let coverage = project.repository.get_test_coverage();
+
+        Ok(Response::new(proto::GetTestCoverageResponse {
+            total_testable: coverage.total_testable as u32,
+            with_tests: coverage.with_tests as u32,
+            coverage_ratio: coverage.coverage_ratio,
+            nodes_with_tests: coverage
+                .nodes_with_tests
+                .iter()
+                .map(to_proto_node)
+                .collect(),
+            nodes_without_tests: coverage
+                .nodes_without_tests
+                .iter()
+                .map(to_proto_node)
+                .collect(),
+        }))
+    }
+
+    async fn calculate_compliance(
+        &self,
+        request: Request<proto::CalculateComplianceRequest>,
+    ) -> Result<Response<proto::CalculateComplianceResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let compliance = project.repository
+            .calculate_compliance(&req.node_id, &req.code)
+            .ok_or_else(|| Status::not_found("Node not found"))?;
+
+        Ok(Response::new(proto::CalculateComplianceResponse {
+            score: compliance.score,
+            keyword_overlap: compliance.keyword_overlap,
+            structural_match: compliance.structural_match,
+            explanation: compliance.explanation,
+        }))
+    }
+
+    async fn get_compliance_report(
+        &self,
+        _request: Request<proto::GetComplianceReportRequest>,
+    ) -> Result<Response<proto::GetComplianceReportResponse>, Status> {
+        let project = self.get_project("")?;
+        let report = project.repository.get_compliance_report();
+
+        let entries: Vec<proto::ComplianceEntry> = report
+            .into_iter()
+            .map(|(node, score)| proto::ComplianceEntry {
+                node: Some(to_proto_node(&node)),
+                score: score.score,
+                keyword_overlap: score.keyword_overlap,
+                structural_match: score.structural_match,
+                explanation: score.explanation,
+            })
+            .collect();
+
+        Ok(Response::new(proto::GetComplianceReportResponse {
+            entries,
+        }))
+    }
+
+    async fn query_at_timestamp(
+        &self,
+        request: Request<proto::QueryAtTimestampRequest>,
+    ) -> Result<Response<proto::QueryAtTimestampResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let snapshot = project.repository.query_at_timestamp(req.timestamp);
+
+        let nodes: Vec<proto::SpecNode> = snapshot.nodes.iter().map(to_proto_node).collect();
+
+        let edges: Vec<proto::SpecEdge> = snapshot
+            .edges
+            .iter()
+            .map(|e| proto::SpecEdge {
+                id: e.id.clone(),
+                source_id: String::new(),
+                target_id: String::new(),
+                kind: to_proto_edge_kind(e.kind).into(),
+                metadata: e.metadata.clone(),
+                created_at: e.created_at,
+            })
+            .collect();
+
+        Ok(Response::new(proto::QueryAtTimestampResponse {
+            timestamp: snapshot.timestamp,
+            nodes,
+            edges,
+            node_count: snapshot.node_count as u32,
+            edge_count: snapshot.edge_count as u32,
+        }))
+    }
+
+    async fn diff_timestamps(
+        &self,
+        request: Request<proto::DiffTimestampsRequest>,
+    ) -> Result<Response<proto::DiffTimestampsResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let diff = project.repository.diff_timestamps(req.from_timestamp, req.to_timestamp);
+
+        let added_nodes: Vec<proto::SpecNode> =
+            diff.added_nodes.iter().map(to_proto_node).collect();
+
+        let removed_nodes: Vec<proto::SpecNode> =
+            diff.removed_nodes.iter().map(to_proto_node).collect();
+
+        let modified_nodes: Vec<proto::NodeChange> = diff
+            .modified_nodes
+            .iter()
+            .map(|(from, to)| proto::NodeChange {
+                from_node: Some(to_proto_node(from)),
+                to_node: Some(to_proto_node(to)),
+            })
+            .collect();
+
+        let added_edges: Vec<proto::SpecEdge> = diff
+            .added_edges
+            .iter()
+            .map(|e| proto::SpecEdge {
+                id: e.id.clone(),
+                source_id: String::new(),
+                target_id: String::new(),
+                kind: to_proto_edge_kind(e.kind).into(),
+                metadata: e.metadata.clone(),
+                created_at: e.created_at,
+            })
+            .collect();
+
+        let removed_edges: Vec<proto::SpecEdge> = diff
+            .removed_edges
+            .iter()
+            .map(|e| proto::SpecEdge {
+                id: e.id.clone(),
+                source_id: String::new(),
+                target_id: String::new(),
+                kind: to_proto_edge_kind(e.kind).into(),
+                metadata: e.metadata.clone(),
+                created_at: e.created_at,
+            })
+            .collect();
+
+        Ok(Response::new(proto::DiffTimestampsResponse {
+            from_timestamp: diff.from_timestamp,
+            to_timestamp: diff.to_timestamp,
+            added_nodes,
+            removed_nodes,
+            modified_nodes,
+            added_edges,
+            removed_edges,
+        }))
+    }
+
+    async fn get_node_history(
+        &self,
+        request: Request<proto::GetNodeHistoryRequest>,
+    ) -> Result<Response<proto::GetNodeHistoryResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let history = project.repository
+            .get_node_history(&req.node_id)
+            .ok_or_else(|| Status::not_found("Node not found"))?;
+
+        let events: Vec<proto::HistoryEvent> = history
+            .events
+            .iter()
+            .map(|e| proto::HistoryEvent {
+                timestamp: e.timestamp,
+                event_type: e.event_type.clone(),
+                description: e.description.clone(),
+            })
+            .collect();
+
+        Ok(Response::new(proto::GetNodeHistoryResponse {
+            node: Some(to_proto_node(&history.node)),
+            events,
+        }))
+    }
+
+    async fn get_compliance_trend(
+        &self,
+        request: Request<proto::GetComplianceTrendRequest>,
+    ) -> Result<Response<proto::GetComplianceTrendResponse>, Status> {
+        let req = request.into_inner();
+        let project = self.get_project("")?;
+
+        let trend = project.repository
+            .get_compliance_trend(&req.node_id)
+            .ok_or_else(|| Status::not_found("Node not found or no compliance data"))?;
+
+        let data_points: Vec<proto::ComplianceDataPoint> = trend
+            .data_points
+            .iter()
+            .map(|d| proto::ComplianceDataPoint {
+                timestamp: d.timestamp,
+                score: d.score,
+            })
+            .collect();
+
+        Ok(Response::new(proto::GetComplianceTrendResponse {
+            node: Some(to_proto_node(&trend.node)),
+            data_points,
+            trend_direction: trend.trend_direction,
+        }))
+    }
+
+    async fn detect_inter_universe_inconsistencies(
+        &self,
+        _request: Request<proto::DetectInterUniverseInconsistenciesRequest>,
+    ) -> Result<Response<proto::DetectInterUniverseInconsistenciesResponse>, Status> {
+        let project = self.get_project("")?;
+
+        let inconsistencies: Vec<proto::InterUniverseInconsistency> = project.repository
+            .detect_inter_universe_inconsistencies()
+            .into_iter()
+            .map(|i| proto::InterUniverseInconsistency {
+                universe_a: i.universe_a,
+                universe_b: i.universe_b,
+                spec_a: Some(to_proto_node(&i.spec_a)),
+                spec_b: Some(to_proto_node(&i.spec_b)),
+                transform_path: i.transform_path,
+                explanation: i.explanation,
+            })
+            .collect();
+
+        Ok(Response::new(
+            proto::DetectInterUniverseInconsistenciesResponse { inconsistencies },
+        ))
+    }
+
+    async fn set_node_universe(
+        &self,
+        request: Request<proto::SetNodeUniverseRequest>,
+    ) -> Result<Response<proto::SetNodeUniverseResponse>, Status> {
+        let req = request.into_inner();
+        let mut project = self.get_project("")?;
+
+        let node = project.repository
+            .update_node_metadata(&req.node_id, "universe".to_string(), req.universe)
+            .ok_or_else(|| Status::not_found("Node not found"))?;
+
+        self.save_project(&project)?;
+
+        Ok(Response::new(proto::SetNodeUniverseResponse {
+            node: Some(to_proto_node(&node)),
+        }))
+    }
+
+    async fn infer_all_relationships(
+        &self,
+        _request: Request<proto::InferAllRelationshipsRequest>,
+    ) -> Result<Response<proto::InferAllRelationshipsResponse>, Status> {
+        let mut project = self.get_project("")?;
+
+        let report = project.repository.infer_all_relationships();
+
+        self.save_project(&project)?;
+
+        let suggestions: Vec<String> = report.suggestions.iter()
+            .map(|s| format!("{} --{:?}-> {} (confidence: {:.2})",
+                s.source_id, s.kind, s.target_id, s.confidence))
+            .collect();
+
+        Ok(Response::new(proto::InferAllRelationshipsResponse {
+            edges_created: report.edges_created as u32,
+            suggestions_count: suggestions.len() as u32,
+            suggestions,
+        }))
+    }
+
+    async fn infer_all_relationships_with_ai(
+        &self,
+        request: Request<proto::InferAllRelationshipsWithAiRequest>,
+    ) -> Result<Response<proto::InferAllRelationshipsResponse>, Status> {
+        let req = request.into_inner();
+        let mut project = self.get_project("")?;
+
+        let report = project.repository.infer_cross_layer_relationships_with_ai(req.min_confidence);
+
+        self.save_project(&project)?;
+
+        let suggestions: Vec<String> = report.suggestions.iter()
+            .map(|s| format!("{} --{:?}-> {} (confidence: {:.2}): {}",
+                s.source_id, s.kind, s.target_id, s.confidence, s.explanation))
+            .collect();
+
+        Ok(Response::new(proto::InferAllRelationshipsResponse {
+            edges_created: report.edges_created as u32,
+            suggestions_count: suggestions.len() as u32,
+            suggestions,
+        }))
+    }
+
+    // ==========================================
+    // UDA/f Model Operations (Phase 2)
+    // ==========================================
+
+    async fn create_universe(
+        &self,
+        request: Request<proto::CreateUniverseRequest>,
+    ) -> Result<Response<proto::CreateUniverseResponse>, Status> {
+        self.udaf.create_universe(request).await
+    }
+
+    async fn get_universe(
+        &self,
+        request: Request<proto::GetUniverseRequest>,
+    ) -> Result<Response<proto::GetUniverseResponse>, Status> {
+        self.udaf.get_universe(request).await
+    }
+
+    async fn list_universes(
+        &self,
+        request: Request<proto::ListUniversesRequest>,
+    ) -> Result<Response<proto::ListUniversesResponse>, Status> {
+        self.udaf.list_universes(request).await
+    }
+
+    async fn delete_universe(
+        &self,
+        request: Request<proto::DeleteUniverseRequest>,
+    ) -> Result<Response<proto::DeleteUniverseResponse>, Status> {
+        self.udaf.delete_universe(request).await
+    }
+
+    async fn create_domain(
+        &self,
+        request: Request<proto::CreateDomainRequest>,
+    ) -> Result<Response<proto::CreateDomainResponse>, Status> {
+        self.udaf.create_domain(request).await
+    }
+
+    async fn get_domain(
+        &self,
+        request: Request<proto::GetDomainRequest>,
+    ) -> Result<Response<proto::GetDomainResponse>, Status> {
+        self.udaf.get_domain(request).await
+    }
+
+    async fn list_domains(
+        &self,
+        request: Request<proto::ListDomainsRequest>,
+    ) -> Result<Response<proto::ListDomainsResponse>, Status> {
+        self.udaf.list_domains(request).await
+    }
+
+    async fn update_domain_constraints(
+        &self,
+        request: Request<proto::UpdateDomainConstraintsRequest>,
+    ) -> Result<Response<proto::UpdateDomainConstraintsResponse>, Status> {
+        self.udaf.update_domain_constraints(request).await
+    }
+
+    async fn create_admissible_set(
+        &self,
+        request: Request<proto::CreateAdmissibleSetRequest>,
+    ) -> Result<Response<proto::CreateAdmissibleSetResponse>, Status> {
+        self.udaf.create_admissible_set(request).await
+    }
+
+    async fn get_admissible_set(
+        &self,
+        request: Request<proto::GetAdmissibleSetRequest>,
+    ) -> Result<Response<proto::GetAdmissibleSetResponse>, Status> {
+        self.udaf.get_admissible_set(request).await
+    }
+
+    async fn list_admissible_sets(
+        &self,
+        request: Request<proto::ListAdmissibleSetsRequest>,
+    ) -> Result<Response<proto::ListAdmissibleSetsResponse>, Status> {
+        self.udaf.list_admissible_sets(request).await
+    }
+
+    async fn verify_consistency(
+        &self,
+        request: Request<proto::VerifyConsistencyRequest>,
+    ) -> Result<Response<proto::VerifyConsistencyResponse>, Status> {
+        self.udaf.verify_consistency(request).await
+    }
+
+    async fn verify_implication(
+        &self,
+        request: Request<proto::VerifyImplicationRequest>,
+    ) -> Result<Response<proto::VerifyImplicationResponse>, Status> {
+        self.udaf.verify_implication(request).await
+    }
+
+    async fn create_transform(
+        &self,
+        request: Request<proto::CreateTransformRequest>,
+    ) -> Result<Response<proto::CreateTransformResponse>, Status> {
+        self.udaf.create_transform(request).await
+    }
+
+    async fn get_transform(
+        &self,
+        request: Request<proto::GetTransformRequest>,
+    ) -> Result<Response<proto::GetTransformResponse>, Status> {
+        self.udaf.get_transform(request).await
+    }
+
+    async fn list_transforms(
+        &self,
+        request: Request<proto::ListTransformsRequest>,
+    ) -> Result<Response<proto::ListTransformsResponse>, Status> {
+        self.udaf.list_transforms(request).await
+    }
+
+    async fn verify_transform_soundness(
+        &self,
+        request: Request<proto::VerifyTransformSoundnessRequest>,
+    ) -> Result<Response<proto::VerifyTransformSoundnessResponse>, Status> {
+        self.udaf.verify_transform_soundness(request).await
+    }
+
+    async fn construct_u0(
+        &self,
+        request: Request<proto::ConstructU0Request>,
+    ) -> Result<Response<proto::ConstructU0Response>, Status> {
+        self.udaf.construct_u0(request).await
+    }
+
+    async fn sync_model(
+        &self,
+        request: Request<proto::SyncModelRequest>,
+    ) -> Result<Response<proto::SyncModelResponse>, Status> {
+        self.udaf.sync_model(request).await
+    }
+
+    async fn validate_model(
+        &self,
+        request: Request<proto::ValidateModelRequest>,
+    ) -> Result<Response<proto::ValidateModelResponse>, Status> {
+        self.udaf.validate_model(request).await
+    }
+}
+
+    async fn import_project(
+        &self,
+        request: Request<proto::ImportProjectRequest>,
+    ) -> Result<Response<proto::ImportProjectResponse>, Status> {
+        let req = request.into_inner();
+        
+        let spec_dir = PathBuf::from(&req.spec_directory_path);
+        if !spec_dir.exists() {
+            return Err(Status::not_found(format!(
+                "Directory not found: {}",
+                req.spec_directory_path
+            )));
+        }
+
+        let mut pm = self
+            .project_manager
+            .lock()
+            .map_err(|e| Status::internal(format!("Lock error: {}", e)))?;
+
+        let report = migration::import_legacy_spec_directory(
+            &spec_dir,
+            req.name.clone(),
+            req.description.clone(),
+            &mut pm,
+        )
+        .map_err(|e| Status::internal(format!("Import failed: {}", e)))?;
+
+        let project_info = pm
+            .list_projects()
+            .map_err(|e| Status::internal(format!("Failed to list projects: {}", e)))?
+            .into_iter()
+            .find(|p| p.name == req.name)
+            .ok_or_else(|| Status::internal("Imported project not found"))?;
+
+        Ok(Response::new(proto::ImportProjectResponse {
+            project: Some(proto::Project {
+                name: project_info.name,
+                description: project_info.description,
+                created_at: project_info.created_at,
+                node_count: project_info.node_count as u32,
+                edge_count: project_info.edge_count as u32,
+                storage: to_proto_storage_backend(&project_info.storage).into(),
+            }),
+            nodes_imported: report.nodes_imported as u32,
+            edges_imported: report.edges_imported as u32,
+            universes_created: report.universes_created as u32,
+        }))
+    }

@@ -8,19 +8,13 @@ name = "spec"
 path = "src/main.rs"
 
 [dependencies]
-spec-core = { path = "../spec-core", default-features = false }
 tonic = { workspace = true }
 prost = { workspace = true }
 tokio = { workspace = true }
 clap = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-chrono = { workspace = true }
 notify = { workspace = true }
-
-[features]
-default = []
-z3-solver = ["spec-core/z3-solver"]
 
 [build-dependencies]
 tonic-build = { workspace = true }

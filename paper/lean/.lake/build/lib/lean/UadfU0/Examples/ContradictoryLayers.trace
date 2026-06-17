@@ -1,8 +1,8 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["8b6969dfc3ccf160.olean"],
-  "i": "e6683ef490e60c7c.ilean",
+ {"o": ["ec7634b1a2fd7ed4.olean"],
+  "i": "22557b2f290bcfc4.ilean",
   "c": "e521d4ff3639ecad.c"},
  "log":
  [{"message":
@@ -25,7 +25,7 @@
   ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
    "9a2be90fd35343e5"],
   ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/ContradictoryLayers.lean",
-   "3dff87fc24e7a631"],
+   "910cd68d1a4c505d"],
   ["options", "00000000000006bb"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "a8ed3820bb957539"}
+ "depHash": "45146cada41255b5"}

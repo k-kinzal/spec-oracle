@@ -1,0 +1,243 @@
+{
+  "summary": {
+    "n_scenarios": 21,
+    "group_counts": {
+      "contradiction": 6,
+      "uncertainty": 9,
+      "benign_change": 6
+    },
+    "raw_exact_match_rate": 0.9047619047619048,
+    "contradiction_detection_rate": {
+      "policy_must": 1.0,
+      "policy_may": 1.0,
+      "binary_strict": 1.0
+    },
+    "false_contradiction_rate_on_non_contradiction": {
+      "policy_must": 0.7333333333333333,
+      "policy_may": 0.13333333333333333,
+      "binary_strict": 0.8666666666666667
+    },
+    "uncertainty_collapse_rate": {
+      "policy_must": 1.0,
+      "policy_may": 0.0,
+      "binary_strict": 1.0
+    }
+  },
+  "rows": [
+    {
+      "project": "PostgreSQL identifier length",
+      "scenario_id": "stale_requirement_lower",
+      "expectation_raw": "contradictory",
+      "expectation_group": "contradiction",
+      "raw_judgement": "contradictory",
+      "policy_must": "contradictory",
+      "policy_may": "contradictory",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "PostgreSQL identifier length",
+      "scenario_id": "api_upper_below_requirement_lower",
+      "expectation_raw": "contradictory",
+      "expectation_group": "contradiction",
+      "raw_judgement": "contradictory",
+      "policy_must": "contradictory",
+      "policy_may": "contradictory",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "PostgreSQL identifier length",
+      "scenario_id": "all_uppers_missing",
+      "expectation_raw": "inconclusive",
+      "expectation_group": "uncertainty",
+      "raw_judgement": "inconclusive",
+      "policy_must": "contradictory",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "PostgreSQL identifier length",
+      "scenario_id": "all_lowers_missing",
+      "expectation_raw": "inconclusive",
+      "expectation_group": "uncertainty",
+      "raw_judgement": "inconclusive",
+      "policy_must": "contradictory",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "PostgreSQL identifier length",
+      "scenario_id": "parse_issue",
+      "expectation_raw": "inconclusive",
+      "expectation_group": "uncertainty",
+      "raw_judgement": "inconclusive",
+      "policy_must": "contradictory",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "PostgreSQL identifier length",
+      "scenario_id": "unit_scale_upper_1024",
+      "expectation_raw": "consistent",
+      "expectation_group": "benign_change",
+      "raw_judgement": "contradictory",
+      "policy_must": "contradictory",
+      "policy_may": "contradictory",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "PostgreSQL identifier length",
+      "scenario_id": "off_by_one_upper",
+      "expectation_raw": "consistent",
+      "expectation_group": "benign_change",
+      "raw_judgement": "consistent",
+      "policy_must": "consistent",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "zlib compression level",
+      "scenario_id": "stale_requirement_lower",
+      "expectation_raw": "contradictory",
+      "expectation_group": "contradiction",
+      "raw_judgement": "contradictory",
+      "policy_must": "contradictory",
+      "policy_may": "contradictory",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "zlib compression level",
+      "scenario_id": "api_upper_below_requirement_lower",
+      "expectation_raw": "contradictory",
+      "expectation_group": "contradiction",
+      "raw_judgement": "contradictory",
+      "policy_must": "contradictory",
+      "policy_may": "contradictory",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "zlib compression level",
+      "scenario_id": "all_uppers_missing",
+      "expectation_raw": "inconclusive",
+      "expectation_group": "uncertainty",
+      "raw_judgement": "inconclusive",
+      "policy_must": "contradictory",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "zlib compression level",
+      "scenario_id": "all_lowers_missing",
+      "expectation_raw": "inconclusive",
+      "expectation_group": "uncertainty",
+      "raw_judgement": "inconclusive",
+      "policy_must": "contradictory",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "zlib compression level",
+      "scenario_id": "parse_issue",
+      "expectation_raw": "inconclusive",
+      "expectation_group": "uncertainty",
+      "raw_judgement": "inconclusive",
+      "policy_must": "contradictory",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "zlib compression level",
+      "scenario_id": "unit_scale_upper_1024",
+      "expectation_raw": "consistent",
+      "expectation_group": "benign_change",
+      "raw_judgement": "consistent",
+      "policy_must": "consistent",
+      "policy_may": "consistent",
+      "binary_strict": "consistent"
+    },
+    {
+      "project": "zlib compression level",
+      "scenario_id": "off_by_one_upper",
+      "expectation_raw": "consistent",
+      "expectation_group": "benign_change",
+      "raw_judgement": "consistent",
+      "policy_must": "consistent",
+      "policy_may": "consistent",
+      "binary_strict": "consistent"
+    },
+    {
+      "project": "SQLite page size",
+      "scenario_id": "stale_requirement_lower",
+      "expectation_raw": "contradictory",
+      "expectation_group": "contradiction",
+      "raw_judgement": "contradictory",
+      "policy_must": "contradictory",
+      "policy_may": "contradictory",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "SQLite page size",
+      "scenario_id": "api_upper_below_requirement_lower",
+      "expectation_raw": "contradictory",
+      "expectation_group": "contradiction",
+      "raw_judgement": "contradictory",
+      "policy_must": "contradictory",
+      "policy_may": "contradictory",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "SQLite page size",
+      "scenario_id": "all_uppers_missing",
+      "expectation_raw": "inconclusive",
+      "expectation_group": "uncertainty",
+      "raw_judgement": "inconclusive",
+      "policy_must": "contradictory",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "SQLite page size",
+      "scenario_id": "all_lowers_missing",
+      "expectation_raw": "inconclusive",
+      "expectation_group": "uncertainty",
+      "raw_judgement": "inconclusive",
+      "policy_must": "contradictory",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "SQLite page size",
+      "scenario_id": "parse_issue",
+      "expectation_raw": "inconclusive",
+      "expectation_group": "uncertainty",
+      "raw_judgement": "inconclusive",
+      "policy_must": "contradictory",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "SQLite page size",
+      "scenario_id": "unit_scale_upper_1024",
+      "expectation_raw": "consistent",
+      "expectation_group": "benign_change",
+      "raw_judgement": "contradictory",
+      "policy_must": "contradictory",
+      "policy_may": "contradictory",
+      "binary_strict": "contradictory"
+    },
+    {
+      "project": "SQLite page size",
+      "scenario_id": "off_by_one_upper",
+      "expectation_raw": "consistent",
+      "expectation_group": "benign_change",
+      "raw_judgement": "consistent",
+      "policy_must": "consistent",
+      "policy_may": "consistent",
+      "binary_strict": "contradictory"
+    }
+  ],
+  "source": {
+    "offline_lock": "external_validation_sources.lock.json",
+    "n_projects": 3,
+    "n_scenarios": 21
+  }
+}

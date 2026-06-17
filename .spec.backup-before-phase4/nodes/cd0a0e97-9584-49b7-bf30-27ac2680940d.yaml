@@ -1,0 +1,7 @@
+id: cd0a0e97-9584-49b7-bf30-27ac2680940d
+content: The list-edges command must display node content including layer, kind, and content preview for both source and target nodes, not just UUIDs
+kind: Assertion
+metadata: {}
+created_at: 1771113465
+modified_at: 1771113465
+formality_layer: 0

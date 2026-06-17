@@ -12,5 +12,9 @@ import UadfU0.Examples.TwoLayer
 import UadfU0.Examples.ContradictoryLayers
 import UadfU0.Examples.TransferExample
 import UadfU0.Examples.TransferChainExample
+import UadfU0.Examples.TransferCounterexample
 import UadfU0.Examples.CompositionExample
 import UadfU0.Examples.ArtifactBundleExample
+import UadfU0.Examples.AdequacyCounterexample
+import UadfU0.Examples.HeterogeneousTransferWitness
+import UadfU0.Examples.TotalizationCounterexample

@@ -1,0 +1,7 @@
+id: 9f2314ee-d6fb-42cc-bbc9-0cc44a68eb55
+content: 'RPC ResolveTerminology: Resolves a term to its definitions and synonyms, returns definition nodes and synonym list'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

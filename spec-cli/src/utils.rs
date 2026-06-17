@@ -1,5 +1,4 @@
 use crate::proto::{SpecEdgeKind, SpecNodeKind};
-use spec_core::NodeKind as CoreNodeKind;
 
 /// Parse node kind string to proto SpecNodeKind
 pub fn parse_node_kind(s: &str) -> SpecNodeKind {
@@ -25,23 +24,6 @@ pub fn parse_edge_kind(s: &str) -> SpecEdgeKind {
         "formalizes" => SpecEdgeKind::Formalizes,
         "transform" => SpecEdgeKind::Transform,
         _ => SpecEdgeKind::Refines,
-    }
-}
-
-/// Parse formality layer (after migration, just convert u8 to u32)
-pub fn parse_formality_layer(formality_layer: u8) -> u32 {
-    formality_layer as u32
-}
-
-/// Convert proto NodeKind to core NodeKind
-pub fn proto_to_core_kind(kind: SpecNodeKind) -> CoreNodeKind {
-    match kind {
-        SpecNodeKind::Assertion => CoreNodeKind::Assertion,
-        SpecNodeKind::Constraint => CoreNodeKind::Constraint,
-        SpecNodeKind::Scenario => CoreNodeKind::Scenario,
-        SpecNodeKind::Definition => CoreNodeKind::Definition,
-        SpecNodeKind::Domain => CoreNodeKind::Domain,
-        _ => CoreNodeKind::Assertion,
     }
 }
 

@@ -1,0 +1,7 @@
+id: 0154a181-1962-4aa1-aee2-236d2078caf6
+content: 'Prover.prove_satisfiability() proves that a specification''s admissible set is non-empty: ∃x. x ∈ A'
+kind: Assertion
+metadata: {}
+created_at: 1771065633
+modified_at: 1771065633
+formality_layer: 0

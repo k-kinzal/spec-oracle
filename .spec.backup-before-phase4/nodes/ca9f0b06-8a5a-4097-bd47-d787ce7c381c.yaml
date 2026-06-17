@@ -1,0 +1,7 @@
+id: ca9f0b06-8a5a-4097-bd47-d787ce7c381c
+content: SpecGraph provides find_node_by_content() method to check for duplicate specifications before creating new nodes, preventing duplicate creation during extraction.
+kind: Assertion
+metadata: {}
+created_at: 1771087189
+modified_at: 1771087189
+formality_layer: 0

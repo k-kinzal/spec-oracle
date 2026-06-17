@@ -1,0 +1,7 @@
+id: 53f60616-c92e-4cb9-bc71-48cde00e5a1a
+content: Self-referencing edges are invalid and must be rejected during edge creation
+kind: Assertion
+metadata: {}
+created_at: 1771112151
+modified_at: 1771112151
+formality_layer: 0

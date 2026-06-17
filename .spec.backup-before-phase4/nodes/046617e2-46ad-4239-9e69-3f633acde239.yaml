@@ -1,0 +1,7 @@
+id: 046617e2-46ad-4239-9e69-3f633acde239
+content: 'RPC DiffTimestamps: Compares specification state between two timestamps, returns added/removed/modified nodes and edges'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

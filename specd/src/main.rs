@@ -1,7 +1,13 @@
+mod config;
+mod migration;
+mod model_service;
+mod project;
 mod service;
+mod storage;
 
+use config::SpecdConfig;
+use project::ProjectManager;
 use service::SpecOracleService;
-use std::path::PathBuf;
 use tonic::transport::Server;
 use tracing_subscriber::EnvFilter;
 
@@ -11,32 +17,42 @@ pub mod proto {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load configuration
+    let config = SpecdConfig::load_or_default()?;
+
+    // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new(&config.log_level))
+        )
         .init();
 
-    let addr = "[::1]:50051".parse()?;
-    let store_path = std::env::var("SPECD_STORE_PATH")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            dirs_or_default().join("spec-oracle").join("specs.json")
-        });
+    tracing::info!("Starting specd...");
+    tracing::info!("Projects directory: {}", config.default_path.display());
+
+    // Initialize project manager
+    let mut project_manager = ProjectManager::new(config.default_path.clone());
+
+    // Discover existing projects
+    project_manager.discover_projects()?;
+
+    // Ensure default project exists
+    project_manager.ensure_default()?;
+
+    tracing::info!("Loaded {} project(s)", project_manager.list_projects()?.len());
+
+    // Create gRPC service
+    let addr = config.listen_address.parse()?;
+    let svc = SpecOracleService::new(project_manager)?;
 
     tracing::info!("specd listening on {}", addr);
-    tracing::info!("store path: {}", store_path.display());
 
-    let svc = SpecOracleService::new(store_path)?;
-
+    // Start gRPC server
     Server::builder()
         .add_service(proto::spec_oracle_server::SpecOracleServer::new(svc))
         .serve(addr)
         .await?;
 
     Ok(())
-}
-
-fn dirs_or_default() -> PathBuf {
-    std::env::var("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("."))
 }

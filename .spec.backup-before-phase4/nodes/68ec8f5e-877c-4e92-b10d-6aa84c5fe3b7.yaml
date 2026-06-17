@@ -1,0 +1,7 @@
+id: 68ec8f5e-877c-4e92-b10d-6aa84c5fe3b7
+content: The query-at-timestamp command enables querying the specification graph state at any point in history for temporal analysis
+kind: Scenario
+metadata: {}
+created_at: 1771069609
+modified_at: 1771069609
+formality_layer: 0

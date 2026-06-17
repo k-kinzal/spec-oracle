@@ -1,0 +1,18 @@
+# Assumption Matrix (Core Theorems and Supporting Lemmas)
+
+This appendix summarizes which assumptions each core theorem needs, and what fails if an assumption is removed.
+
+| Theorem or lemma | Required assumptions | Failure mode if removed | Fallback claim | Lean reference |
+|---|---|---|---|---|
+| `lifted_transfer` | `hproj` (same-root linkage), `hA` (admissibility transport) | Without `hproj`, codomain relation alone cannot lift root witness across layers. Without `hA`, witness does not transfer from `A(j)` to `A(i)`. | No general subset transfer claim; only layer-local lifted predicates remain. | `paper/lean/UadfU0/InterLayer/Transfer.lean` |
+| `preimage_compose` | `hcomm : proj_j = bind(proj_i,g)` pointwise | Equality of preimages cannot be derived. Without `hcomm`, the `none` branch cannot be eliminated via bind commutation, so equality reduces to weaker one-sided reasoning only. | Keep separate one-directional implications only when independently proven. | `paper/lean/UadfU0/InterLayer/Composition.lean` |
+| `preimage_eq_semanticPullback` | both sound and complete directions for `E` | Only one-sided inclusion is derivable; equality is not justified. | Use `preimage_subset_semanticPullback_of_sound` or `semanticPullback_subset_preimage_of_complete` only. | `paper/lean/UadfU0/InterLayer/Adequacy.lean` |
+| `preimageMay_eq_semanticPullbackMay` | may-side sound and complete directions | May-side analogue of must case: equality collapses to one-sided relation only if one direction is missing. | Use `preimageMay_subset_semanticPullbackMay_of_sound` or `semanticPullbackMay_subset_preimageMay_of_complete` only. | `paper/lean/UadfU0/InterLayer/Adequacy.lean` |
+| `UAndOn_subset_U0On` | non-empty active set (`∃ i, active i`) | For empty active set, `UAndOn` becomes the universal set (`univ`), so subset to `U0On` is not generally valid. | Restrict to non-empty active sets; for empty active set use `UAndOn_empty_eq_univ` explicitly. | `paper/lean/UadfU0/U0Spec/Construction.lean` |
+| `no_left_adjoint_of_partial` | existence of undefined projection point (`proj_i x0 = none`) | Scope note: theorem applies under partiality. For total projections, this theorem makes no non-adjointness claim. | None in general; total case requires separate proof obligations. | `paper/lean/UadfU0/RelatedWork/Galois.lean` |
+| `UStar_subset_UAndOn` / `UStar_subset_UAnd` | global necessary-condition premise (`∀ i, active i → UStar ⊆ lifted i`) | If global necessity is unavailable, full-space ideal-root linkage is unjustified. | Use domain-restricted variant over `UStar ∩ projDomOn(active)`. | `paper/lean/UadfU0/U0Spec/IdealRoot.lean` |
+| `UStar_inter_projDomOn_subset_UAndOn` | domain-restricted necessary-condition premise | Ideal-root inclusion over full space is not justified under partial observability. | Keep domain-restricted claim over `UStar ∩ projDomOn(active)` only. | `paper/lean/UadfU0/U0Spec/IdealRoot.lean` |
+
+Practical reading rule:
+1. if all assumptions hold, use the theorem claim exactly as stated,
+2. if any assumption fails or is unproven, fall back to the weaker variant noted in the fallback-claim column (usually one-sided inclusions).

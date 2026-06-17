@@ -1,0 +1,7 @@
+id: de2d7a5a-3fc5-40f4-9d2b-0204a45c5d38
+content: 'The essence of specORACLE governance is REALIZED: ArchitectureExtractor automatically extracts file metrics (lines of code, module structure) from U3, creating specifications that contradict U0 architectural requirements when violations exist. Example: spec-cli/src/main.rs (originally 2172 lines, now refactored to 531 lines) demonstrates self-governance through reverse mapping f₀₃⁻¹.'
+kind: Assertion
+metadata: {}
+created_at: 1771104362
+modified_at: 1771104362
+formality_layer: 0

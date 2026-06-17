@@ -1,0 +1,7 @@
+id: 8c5fe666-81ed-4b30-95f1-17f00b0ca199
+content: Session 134 verified that list-nodes pagination (spec [c12f2359]) is fully implemented with --limit, --offset parameters, 'Showing X - Y of Z' display, and 'use --offset M' hints working correctly
+kind: Assertion
+metadata: {}
+created_at: 1771120345
+modified_at: 1771120345
+formality_layer: 0

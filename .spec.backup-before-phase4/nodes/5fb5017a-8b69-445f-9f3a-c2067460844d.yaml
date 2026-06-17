@@ -1,0 +1,16 @@
+id: 5fb5017a-8b69-445f-9f3a-c2067460844d
+content: '- "Password must be >= 8 chars" (natural language)'
+kind: Definition
+metadata:
+  source_file: spec-core/src/ai_semantic.rs
+  status: active
+  inferred: 'true'
+  example_purpose: test_data
+  extractor: doc
+  confidence: '0.8'
+  doc_comment: 'true'
+  is_example: 'true'
+  source_line: '5'
+created_at: 1771093752
+modified_at: 1771122322
+formality_layer: 0

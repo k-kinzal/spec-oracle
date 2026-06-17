@@ -1,0 +1,7 @@
+id: 9bdc5e64-ef88-46e6-9ef1-bc81c5d9fe43
+content: 'RPC FindRelatedTerms: Finds semantically related specifications for a term, returns scored nodes by similarity (0.0-1.0)'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

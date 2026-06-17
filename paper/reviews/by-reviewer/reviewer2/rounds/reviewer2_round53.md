@@ -1,0 +1,36 @@
+# Reviewer 2 Round 53
+
+- Role: SE/RE Reviewer (#2): Theory-Practice Boundary & Claim Calibration Specialist
+- Recommendation: Minor Revision
+- Pass Gate: true
+
+## Summary
+The manuscript has made **substantial progress** in addressing theory-practice boundaries and claim calibration. The authors now clearly separate RQ5 (abstract theory) from RQ6 (PoC execution), explicitly mark Non-goals, and provide deterministic replay infrastructure. However, **minor clarifications** are still needed: (1) §6.2's `U∧` operational analogue needs one more sentence clarifying why bounds-based judgement differs from direct meet computation, (2) the `D(i)` separation motivation (§2.1) should add one concrete example showing why `A(i) ⊆ D(i)` tracking matters in practice, and (3) Table in §4.8 should explicitly state "PoC validates replay only, not theorem application" to prevent reader over-interpretation. The core contribution—mechanized UAD/f kernel with explicit assumptions—is now publication-ready. The boundary work (§0.3 Non-goals, §4.8 application boundaries, §6.3 result interpretation) is exemplary for artifact-driven SE research.
+
+## Strengths
+- **Exemplary assumption tracking**: §4.1-4.3 theorems now explicitly list `hproj`, `hA`, `hSound`, `hComplete` as proof obligations, making application boundaries mechanically verifiable
+- **Clear RQ5/RQ6 separation**: §4.3 now states 'RQ5 is abstract E-relation theorem; concrete extractor application requires separate proof (Non-goals)' — prevents conflation
+- **Deterministic replay infrastructure**: §7.5 provides SHA256-locked snapshots + reproduce.sh with 3-mode validation (fail-fast/must/may), enabling verifiable artifact claims
+- **Non-goals § anchoring**: §0.3 explicitly excludes statistical generalization, non-interval domains, extractor soundness proofs, and production readiness — sets realistic scope
+- **Must/may separation formalized**: §4.7 mechanizes `preimageMay` with theorems `UAndOn_subset_UAndMayOn` and `UAndMayOn_empty_implies_UAndOn_empty`, connecting operational policy to theory
+- **Mutation expectation pre-registration**: §6.2 mutation table shows `expected_outcome` + `criterion` + `expectation_satisfied` before execution, avoiding post-hoc rationalization
+- **PoC成功条件 explicit definition**: §6.3 defines success as (i) lock-consistent replay, (ii) stable 3-value judgement, (iii) pre-fixed mutation criteria — not zero-unknown or bug-finding rate
+- **Lean mechanization substantial**: 59 theorems (§7.4), 1502 LOC in UadfU0, mathlib-independent, funext+propext basis clearly stated — reproducible formal artifact
+- **Negative case included**: §6.4 regex drift failure with graceful/must/may comparison logs demonstrates failure-mode transparency
+- **Table §4.8 application boundaries**: Explicitly separates theorems needing unverified assumptions vs. Lean-verified claims, preventing over-extension
+
+## Required Fixes
+- **§6.2 `U∧` operational analogue clarification**: Add one sentence after '本稿は `U∧` を同一 `Ω` 上で `lifted(i)` の meet を直接計算したものではなく…' explaining: '`classify_uand` receives partial bounds `(lower?, upper?)` and returns intersection feasibility, whereas theoretical `UAndOn` requires full `proj_i : Ω → Option β_i` membership. PoC uses bounds-based analogue due to extraction incompleteness.' Current text states the difference but doesn't explain *why* bounds ≠ full proj.
+- **§2.1 `D(i)` separation concrete example**: After 'PoCでは `D(i)` 分離の実運用実証までは到達していない', add: 'Concrete case: password length with `carrier i = String × ℕ`. `D(i) = {(pwd,n) | length(pwd)=n}` (domain precondition), `A(i) = {(pwd,n) ∈ D(i) | 8≤n≤63}` (admissible constraint). Tracking `A(i) ⊆ D(i)` via RQ2 ensures root witnesses satisfy domain precondition before checking admissibility.' This makes the theoretical D/A split concrete.
+- **§4.8 table caption enhancement**: Change table caption from '定理適用境界（仮定とPoC対応）' to '定理適用境界（仮定とPoC対応）— PoC は RQ6 の再実行可能性を検証し、下記仮定の実抽出器への適用証明は範囲外'. Add footnote: 'PoC の役割は §4 理論の技術的実行環境を示すことであり、理論定理の外的妥当性を統計的に証明することではない.' This prevents readers from misinterpreting the table as claiming PoC validates theory applicability.
+
+## Optional Fixes
+- **§6.3 support_ratio interpretation refinement**: Consider adding: 'support_ratio=0.778 は「両側区間抽出成功率」であり、仕様充足率（specification coverage）ではない。code層の unknown (2/2) は regex 抽出器が下界パターンを持たないことを反映し、API層の意味論的下界欠如を直接主張しない。' This clarifies observability vs. semantic coverage distinction.
+- **§7.5 long-term preservation recommendation**: Add: 'For >5yr reproducibility: (1) archive snapshots with DOI (e.g., Zenodo), (2) record upstream URL失効時のfallback (e.g., Wayback Machine timestamp), (3) include `external_validation.py` version hash in lock.json schema.' Current lock is SHA256-locked but doesn't address URL link rot.
+- **§3.4 MUS diagnosis scope note**: After MUS definition, add: 'MUS抽出の計算量とアルゴリズム選択（MARCO, QuickXplain等）は本稿の証明範囲外であり、SMTソルバー併用時の soundness 保証も今後課題とする。' This pre-empts 'why not implement MUS extraction' questions.
+- **§6.2 mutation coverage limitation**: Add to §6.5 threat #4: '現在の2系統 mutation は境界反転と単位解釈差に限定され、(a) 包含/排他境界の差（`<` vs `≤`）、(b) 暗黙デフォルト値の解釈差、(c) 条件分岐による動的境界、への robustness は未評価である。' This makes mutation boundary more explicit.
+- **Figure suggestion**: Consider adding a single diagram in §2 showing `Ω_art = (Γ_req, Γ_api, Γ_code) → obs_i → Γ_i → extract_i → β_i` with `proj_i = bind(obs_i, extract_i)` flow. Current §2.6 is text-only; a 4-box flow diagram would aid comprehension.
+- **Appendix consolidation**: §12.1 (if exists) should cross-reference §6.2's `classify_uand` / `apply_none_policy` definitions. If appendix duplicates main text, consider moving all implementation details to §6.2 and keeping appendix for extended logs only.
+
+## Evidence Quote
+- §0.3: 'Non-goals（本稿が主張しないこと）: n=3 PoCからの統計的一般化…抽出器のsoundness/completeness証明は本稿の対象外…RQ5は抽象関係Eに対する一般定理の提示を対象とし、具体抽出器への適用証明はNon-goals' | §4.3: '重要（適用境界）: 本節のadequacy定理は抽象関係Eに対する一般定理である。具体抽出器へ適用するには…別途証明する必要がある' | §6.2: 'PoCは単一projの完全実装ではなく「2種の観測関数を併置した運用構成」' | §6.3: 'PoC成功条件: (i) lock整合付き再実行, (ii) 三値判定の安定出力, (iii) 事前固定mutation期待条件の成立' | §7.5: 'SHA256検証…不一致時は例外停止…決定性対象を4項目に限定する理由: 本文で再現性の合否判定として採用する指標はこの4項目'

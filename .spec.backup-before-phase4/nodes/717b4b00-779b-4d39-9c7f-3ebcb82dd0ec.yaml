@@ -1,0 +1,7 @@
+id: 717b4b00-779b-4d39-9c7f-3ebcb82dd0ec
+content: The verify-layers command checks multi-layer specification consistency by verifying completeness and soundness
+kind: Constraint
+metadata: {}
+created_at: 1771063624
+modified_at: 1771063624
+formality_layer: 0

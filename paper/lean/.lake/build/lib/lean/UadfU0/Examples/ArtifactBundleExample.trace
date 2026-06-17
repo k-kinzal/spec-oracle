@@ -1,9 +1,9 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["47a0c6b4b0da1bcd.olean"],
-  "i": "dcaa295ef6d2ca28.ilean",
-  "c": "1c737924266cbb5c.c"},
+ {"o": ["70976c70cd8ee32d.olean"],
+  "i": "8b3e4f85388c86d6.ilean",
+  "c": "0b782d0b315d50b8.c"},
  "log":
  [{"message":
    ".> LEAN_PATH=/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/ArtifactBundleExample.lean -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/ArtifactBundleExample.olean -i /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/ArtifactBundleExample.ilean -c /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/ArtifactBundleExample.c --setup /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/ArtifactBundleExample.setup.json --json",
@@ -14,9 +14,9 @@
      [["UadfU0Paper/UadfU0:extraDep",
        [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
       ["imports",
-       [["UadfU0.U0Spec.Construction transitive imports (legacy)",
-         "f42258e499a8b77a"],
-        ["UadfU0.U0Spec.Construction:importAllArts", "6dd198fda5a72f1e"]]]]],
+       [["UadfU0.InterLayer.Adequacy transitive imports (legacy)",
+         "4ec647936e58741b"],
+        ["UadfU0.InterLayer.Adequacy:importAllArts", "6c01df13da58281f"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -25,7 +25,7 @@
   ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
    "9a2be90fd35343e5"],
   ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/ArtifactBundleExample.lean",
-   "12499049fe862246"],
+   "a89d87a2ea084fec"],
   ["options", "00000000000006bb"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "20c3033f410b139f"}
+ "depHash": "40907ea0c02393c9"}

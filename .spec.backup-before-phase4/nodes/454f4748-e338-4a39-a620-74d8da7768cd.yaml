@@ -1,0 +1,7 @@
+id: 454f4748-e338-4a39-a620-74d8da7768cd
+content: 'RPC DetectContradictions: Analyzes all specifications to find logical contradictions between nodes, returns pairs of contradicting nodes with explanations'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

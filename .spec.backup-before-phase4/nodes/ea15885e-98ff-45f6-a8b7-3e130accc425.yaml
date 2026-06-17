@@ -1,0 +1,7 @@
+id: ea15885e-98ff-45f6-a8b7-3e130accc425
+content: The export_specs_dot.py script exports specifications as DOT graph format for Graphviz visualization
+kind: Assertion
+metadata: {}
+created_at: 1771076326
+modified_at: 1771076326
+formality_layer: 0

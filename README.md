@@ -1,29 +1,74 @@
-# specORACLE
+# specORACLE: Reverse Mapping Engine
 
-**A reverse mapping engine for multi-layered specification management.**
+**Constructs U0 (root specification) from diverse artifacts through reverse mappings.**
 
-specORACLE is not a traditional specification tool. It constructs the root specification (U0) from diverse artifacts through reverse mappings:
+specORACLE is not a traditional specification tool. It is a **reverse mapping engine** that constructs the foundational specification (U0) from multiple sources:
 
 ```
-Code, Tests, Docs, Proto, Contracts, Types → [f₀ᵢ⁻¹] → U0
+Code, Tests, Docs, Proto, Contracts, Types, TLA+ → [f₀ᵢ⁻¹] → U0
 ```
 
 U0 serves as the baseline for governing multi-layered defenses. Humans express intent. The system infers everything else.
 
-**Status**: Production-ready. 234 specifications managed (26.1% auto-extracted via reverse mapping), zero contradictions (Z3-verified), zero isolated specs, complete graph connectivity. Self-governance demonstrated. All critical issues resolved.
+**Status**: Production-ready architecture. Multi-project support, UDA/f model management, gRPC-based core engine, comprehensive testing.
 
 ## Documentation
 
 **New to specORACLE?** Start here:
 - **[Concepts Guide](docs/concepts.md)** - Understand formality layers (U0-U3), reverse mapping, and the U/D/A/f model
 - **[Motivation](docs/motivation.md)** - Why specORACLE is needed (multi-layer defense coordination)
-- **[Theoretical Foundation](docs/conversation.md)** - Deep dive into specification theory
+- **[Theoretical Foundation](docs/conversation.md)** - Deep dive into specification theory (U, D, A, f model)
 
 ## Architecture
 
-- **specd**: Server daemon managing the specification graph via gRPC
-- **spec**: Command-line client for interacting with specifications
-- **spec-core**: Core library with graph data structures, Z3 formal verification, and reverse mapping engine
+### Core Components
+
+**specd** (Core Engine):
+- Manages UDA/f model (Universe, Domain, AdmissibleSet, Transform)
+- Project/namespace management (multi-project support)
+- Reverse mapping engine (construct U0 from artifacts)
+- Formal verification layer operations
+- Storage abstraction (LocalFile, Database, S3, Git - pluggable)
+- gRPC server for all operations
+
+**spec-cli** (Natural Language Interface):
+- Pure gRPC client translating user intent to specd operations
+- High-level commands (`add`, `check`, `find`, `trace`)
+- Low-level RPC operations (`spec rpc <operation>`)
+- Future: LLM/AI Agent integration for natural language formalization
+
+**spec-core** (Shared Library):
+- UDA/f model data structures
+- Specification graph (nodes, edges, relationships)
+- Formal verification primitives
+- Storage backends (file, directory, future: database)
+- Projection and transform logic
+
+## UDA/f Model
+
+Based on the theoretical foundation in `docs/conversation.md`:
+
+- **U (Universe)**: Specification space at a formality level (U0=root, U1=formal, U2=interface, U3=implementation)
+- **D (Domain)**: Region a spec covers (boundaries, constraints)
+- **A (Admissible Set)**: Valid implementations satisfying a spec (constraints defining membership)
+- **f (Transform)**: Mappings between universes (forward, inverse, parallel)
+
+### Reverse Mapping
+
+The core innovation of specORACLE is **reverse mapping** (f₀ᵢ⁻¹):
+
+```
+f₀₃⁻¹: U3 (Code) → U0 (Root Spec)
+f₀₂⁻¹: U2 (Proto) → U0 (Root Spec)
+f₀₁⁻¹: U1 (TLA+) → U0 (Root Spec)
+
+U0 = f₀₁⁻¹(U1) ∪ f₀₂⁻¹(U2) ∪ f₀₃⁻¹(U3) ∪ ...
+```
+
+**Traditional tools**: Humans write specs → Generate code (forward mapping)
+**specORACLE**: Code/artifacts exist → Construct root spec (reverse mapping)
+
+This allows specORACLE to manage specifications for existing codebases and continuously synchronize them with reality.
 
 ## Core Features
 
@@ -69,84 +114,89 @@ U0 serves as the baseline for governing multi-layered defenses. Humans express i
 
 ## Quick Start
 
-### Option 1: Project-Local Specifications (Recommended - Zero Configuration)
+### 1. Start specd
 
-Initialize specification management in your project:
+Build and start the core engine:
 ```bash
-cd your-project
-spec init
+cargo build --release
+cargo run --bin specd
+# Server starts on [::1]:50051
 ```
 
-This creates a `.spec/` directory with specifications storage.
+### 2. Create a Project
 
-**That's it! No server needed.**
-
-Use specifications immediately (standalone mode - auto-detected):
+In another terminal:
 ```bash
-# Add specifications with auto-inference
+# Create a new project
+spec project create my-app --description "My application specifications"
+
+# Switch to the project
+spec project use my-app
+
+# List all projects
+spec project list
+```
+
+### 3. Add Specifications
+
+```bash
+# Add specifications (auto-infers kind and relationships)
+spec add "User can login with email and password"
 spec add "Password must be at least 8 characters"
+spec add "Email must be valid format"
 
 # Get overview
 spec summary
+```
 
-# Check for issues (runs both contradiction & omission detection)
+### 4. Work with UDA/f Model
+
+```bash
+# Create projection universes
+spec rpc create-universe --layer 1 --name "TLA+" --description "Formal specifications"
+spec rpc create-universe --layer 2 --name "gRPC" --description "API contracts"
+spec rpc create-universe --layer 3 --name "Rust" --description "Implementation code"
+
+# List universes
+spec rpc list-universes
+
+# Create domains
+spec rpc create-domain --universe U1 --name "Authentication" --description "Auth domain"
+
+# Create transforms
+spec rpc create-transform --source U3 --target U0 --kind inverse
+
+# Validate model
+spec rpc validate-model
+```
+
+### 5. Verify Specifications
+
+```bash
+# Check for contradictions and omissions
 spec check
 
-# Search specifications
+# Find specifications
 spec find "password"
 
-# See relationships
+# Trace relationships
 spec trace <spec-id>
+
+# Export graph visualization
+spec export-dot --output specs.dot
+dot -Tpng specs.dot -o specs.png
 ```
 
-Commit to Git:
+### Configuration
+
+Server address (default: `[::1]:50051`):
 ```bash
-git add .spec/
-git commit -m "Add authentication specifications"
+spec --server http://localhost:50051 <command>
 ```
 
-Team members (zero configuration):
+Project storage location (default: `~/.specd/projects/`):
 ```bash
-git clone your-repo
-spec add "New specification"  # Just works! Auto-detects .spec/
-spec list-nodes               # No server setup needed
-```
-
-**How it works**: The CLI automatically detects `.spec/` directory and runs in standalone mode (direct file access, no server required). For advanced features (AI inference, watch mode), server mode is available.
-
-### Option 2: Global Specifications (Quick Testing)
-
-Build the project:
-```bash
-cargo build --release
-```
-
-Start the server:
-```bash
-cargo run --bin specd
-# Or: ./target/release/specd
-```
-
-Use the CLI (in another terminal):
-```bash
-# Add a domain
-cargo run --bin spec -- add-node "Authentication" --kind domain
-
-# Add a constraint
-cargo run --bin spec -- add-node "Passwords must be >= 8 chars" --kind constraint
-
-# Create relationship
-cargo run --bin spec -- add-edge <constraint-id> <domain-id> --kind refines
-
-# List all specifications
-cargo run --bin spec -- list-nodes
-
-# Detect issues
-cargo run --bin spec -- detect-contradictions
-cargo run --bin spec -- detect-omissions
-
-# Query with AI (requires claude CLI)
-cargo run --bin spec -- ask "What are the authentication requirements?"
+# Configured via ~/.specd/config.ini
 ```
 
 ## Example: Real-World Usage (specORACLE Managing Itself)
@@ -359,21 +409,50 @@ cargo run --bin spec -- --server http://localhost:50051 <command>
 
 ## Testing
 
+### Unit Tests
 ```bash
+# All packages
 cargo test
+
+# Specific package
+cargo test --package spec-core
+cargo test --package specd
+cargo test --package spec-cli
 ```
 
-All 73 tests verify:
-- Node and edge CRUD operations
-- Contradiction detection (Z3-verified formal proofs + heuristics)
-- Omission detection (isolated nodes, incomplete coverage)
-- Multi-layer specification consistency (U0-U3)
-- Automatic specification extraction (Rust, PHP, protobuf)
-- Reverse mapping engine (f₀ᵢ⁻¹: code→specs)
-- Idempotent extraction (べき等性)
-- AI-powered relationship inference
-- Search and terminology resolution
-- Serialization and persistence (file-based & directory-based storage)
+### Integration Tests
+
+**Prerequisites**: specd must be running on [::1]:50051
+
+```bash
+# Start specd in one terminal
+cargo run --bin specd
+
+# Run integration tests in another terminal
+cd specd
+cargo test --test integration_test
+```
+
+Integration tests verify:
+- Project lifecycle (create, use, delete, isolation)
+- Universe operations (create, get, list, delete)
+- Domain operations (create, get, list)
+- Transform operations (create, get, list)
+- Model synchronization and validation
+- Multi-project isolation
+
+### Coverage
+
+Tests verify:
+- **Project Management**: Creation, switching, deletion, isolation
+- **UDA/f Model Operations**: Universe, Domain, AdmissibleSet, Transform
+- **Graph Operations**: Node and edge CRUD operations
+- **Contradiction Detection**: Z3-verified formal proofs + heuristics
+- **Omission Detection**: Isolated nodes, incomplete coverage
+- **Multi-layer Consistency**: U0-U3 specification alignment
+- **Reverse Mapping**: f₀ᵢ⁻¹ code→specs extraction
+- **Storage**: File-based, directory-based, pluggable backends
+- **Concurrency**: Multi-client, concurrent operations
 
 ## License
 

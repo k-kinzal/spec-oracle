@@ -1,0 +1,13 @@
+id: dfbd8aef-7dfd-4272-b97a-c22733dac4b7
+content: 'RPC: Get compliance report'
+kind: Assertion
+metadata:
+  confidence: '0.95'
+  source_line: '40'
+  inferred: 'true'
+  source_file: proto/spec_oracle.proto
+  extractor: proto_rpc
+  rpc_name: GetComplianceReport
+created_at: 1771078430
+modified_at: 1771078430
+formality_layer: 2

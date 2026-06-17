@@ -1,0 +1,7 @@
+id: 387c9c08-d9b3-4f05-9095-7ed4793b476c
+content: 'RPC Query: Performs natural language query against specification content, returns matching nodes with explanation'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

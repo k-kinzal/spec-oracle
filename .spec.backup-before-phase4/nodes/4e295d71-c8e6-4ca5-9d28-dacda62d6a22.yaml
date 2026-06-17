@@ -1,0 +1,7 @@
+id: 4e295d71-c8e6-4ca5-9d28-dacda62d6a22
+content: 'RPC GetTestCoverage: Analyzes test coverage of specifications, returns total testable specs, specs with tests, coverage ratio, and lists'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2

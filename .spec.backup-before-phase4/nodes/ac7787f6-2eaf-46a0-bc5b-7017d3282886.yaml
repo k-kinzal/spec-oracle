@@ -1,0 +1,7 @@
+id: ac7787f6-2eaf-46a0-bc5b-7017d3282886
+content: 'Prover.prove_consistency() proves that two specifications have non-empty admissible set intersection: ∃x. (x ∈ A1 ∧ x ∈ A2)'
+kind: Assertion
+metadata: {}
+created_at: 1771065633
+modified_at: 1771065633
+formality_layer: 0

@@ -1,0 +1,7 @@
+id: 0a82c20d-98e4-48a8-a16f-3c41ada89994
+content: pub struct Universe in spec-core/src/udaf.rs implements the Universe concept with id, layer, name, description, and specifications fields
+kind: Assertion
+metadata: {}
+created_at: 1771064489
+modified_at: 1771064489
+formality_layer: 3

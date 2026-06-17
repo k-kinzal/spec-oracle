@@ -1,0 +1,30 @@
+# Reviewer 1 Round 51
+
+- Role: Reviewer 1 (Formal Methods / Mechanization Correctness)
+- Recommendation: Accept
+- Pass Gate: true
+
+## Summary
+This revision represents a mature, mechanization-ready formalization of the UAD/f U0 construction. The authors have successfully addressed all major theoretical gaps from previous rounds: (1) explicit separation of U0 (join/OR coverage) from U∧ (meet/AND consistency), (2) surface of all implicit assumptions as typed hypotheses in Lean, (3) one-sided adequacy decomposition with clear application boundaries, and (4) rigorous separation of theoretical claims from PoC empirical observations. The Lean mechanization (59 theorems, 1502 LOC) directly implements the mathematical model with no mathlib dependency, demonstrating theoretical self-sufficiency. The PoC evaluation is correctly scoped as a deterministic-replay feasibility demonstration (n=3, interval-domain only, regex extraction without soundness proof), with all Non-goals explicitly documented. The manuscript now meets acceptance criteria for a formal-methods venue.
+
+## Strengths
+- Complete assumption surfacing: All implicit dependencies (hproj, hA, hSound, hComplete, UStar intersection assumptions) are now typed Lean hypotheses with clear provenance tracking
+- Clean separation of U0 (∪-based coverage baseline) from U∧ (∩-based consistency check) resolves the semantic ambiguity that plagued earlier drafts
+- One-sided adequacy theorems (§4.3) correctly distinguish abstract relation E from concrete extractor implementation, with explicit Non-goals stating regex soundness is out-of-scope
+- PoC evaluation boundaries are rigorously documented: convenience sample (n=3), interval-domain only, deterministic replay (not statistical generalization), extraction正当性 explicitly excluded from claims
+- Non-adjointness theorem (§4.4) is a genuine formal contribution showing partial projections break Galois connection intuitions from abstract interpretation
+- Reproducibility package includes source-lock (SHA256), offline snapshots, and tri-valued judgement tracking, enabling third-party verification without network access
+- D(i) separation (§2.1) provides clean vocabulary for domain vs admissible set distinction, even though PoC implementation defers D(i) enforcement to future work
+- Must/may semantics (§4.7) are mechanized with explicit inclusion theorems, and PoC correctly treats them as policy projections rather than claiming semantic equivalence
+
+## Required Fixes
+- None
+
+## Optional Fixes
+- §2.6: While obs/extract/proj decomposition is well-motivated, the concrete Lean example (ArtifactBundleExample.lean) could benefit from a forward reference in §2.6 text to improve navigability
+- §6.2 mutation coverage: The two mutation families (stale_requirement_lower, unit_mismatch) are well-defined, but a brief justification for *why* these two (vs. e.g., inclusive/exclusive boundary flips) would strengthen the threat-to-validity discussion
+- §7.6 本文-Lean correspondence table: Consider adding line-number ranges for key theorems to facilitate faster lookup during review (low priority aesthetic suggestion)
+- Terminology consistency: 'operational analogue' appears in §6.2 for classify_uand but is not formally defined in §2-4. A brief forward reference or footnote linking to the PoC instantiation would help readers track the theory-practice boundary
+
+## Evidence Quote
+- §4.3: 'IMPORTANT (適用境界): 本節の adequacy 定理は抽象関係 E に対する一般定理である. 具体抽出器 (regex/LLM) へ適用するには、当該抽出器について hSound / hComplete が成り立つことを**別途証明**する必要がある.' — This explicit scoping of theoretical results vs implementation claims is the gold standard for formal-methods rigor.

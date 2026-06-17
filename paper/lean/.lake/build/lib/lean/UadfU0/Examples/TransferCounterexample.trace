@@ -1,0 +1,31 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["fda94eb20364fd51.olean"],
+  "i": "9695e2e4c16bbc6a.ilean",
+  "c": "987cac44a792eabd.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean /Users/ab/.elan/toolchains/leanprover--lean4---v4.27.0/bin/lean /Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/TransferCounterexample.lean -o /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/TransferCounterexample.olean -i /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/lib/lean/UadfU0/Examples/TransferCounterexample.ilean -c /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/TransferCounterexample.c --setup /Users/ab/Projects/spec-oracle/paper/lean/.lake/build/ir/UadfU0/Examples/TransferCounterexample.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["UadfU0.Examples.TransferCounterexample:deps",
+   [["deps",
+     [["UadfU0Paper/UadfU0:extraDep",
+       [["@UadfU0Paper:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["UadfU0.U0Spec.Construction transitive imports (legacy)",
+         "f42258e499a8b77a"],
+        ["UadfU0.U0Spec.Construction:importAllArts", "6dd198fda5a72f1e"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit db93fe1608548721853390a10cd40580fe7d22ae",
+   "9a2be90fd35343e5"],
+  ["/Users/ab/Projects/spec-oracle/paper/lean/UadfU0/Examples/TransferCounterexample.lean",
+   "446b15b7a5a1465c"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "55ec37f38efd2476"}

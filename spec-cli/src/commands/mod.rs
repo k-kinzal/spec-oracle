@@ -1,45 +1,21 @@
-/// Command implementations for the spec CLI
+/// Command implementations for the spec CLI (gRPC only)
 ///
-/// This module contains all command implementations, organized by functionality.
-/// Each command is responsible for implementing a specific user-facing operation.
+/// All commands communicate with specd via gRPC.
+/// There is no standalone mode.
 
 pub mod add;
-pub mod api;
 pub mod check;
 pub mod contradictions;
 pub mod dispatcher;
 pub mod export_dot;
-pub mod extract;
 pub mod find;
-pub mod init;
 pub mod layer;
-pub mod lifecycle;
-pub mod migrate;
 pub mod omissions;
-pub mod prover;
+pub mod project;
 pub mod query;
-pub mod relationships;
+pub mod specd_rpc;
 pub mod summary;
 pub mod trace;
-pub mod u0;
 pub mod watch;
 
-pub use add::{execute_add, execute_add_standalone, execute_add_server};
-pub use check::{execute_check, execute_check_standalone, execute_check_server};
-pub use contradictions::{execute_contradictions_standalone, execute_contradictions_server};
-pub use dispatcher::{dispatch_standalone, dispatch_server};
-pub use export_dot::execute_export_dot_standalone;
-pub use extract::execute_extract_standalone;
-pub use find::{execute_find_standalone, execute_find_server};
-pub use init::execute_init;
-pub use layer::{execute_verify_layers_standalone, execute_detect_layer_inconsistencies_server};
-pub use lifecycle::{execute_archive, execute_deprecate, execute_activate};
-pub use migrate::execute_migrate;
-pub use omissions::{execute_omissions_standalone, execute_omissions_server};
-pub use prover::{execute_prove_consistency_standalone, execute_prove_satisfiability_standalone, execute_inspect_model_standalone};
-pub use query::{execute_query_standalone, execute_query_server};
-pub use relationships::execute_infer_relationships_ai_standalone;
-pub use summary::execute_summary_standalone;
-pub use trace::{execute_trace_standalone, execute_trace_server};
-pub use u0::{execute_construct_u0_standalone, execute_cleanup_low_quality_standalone};
-pub use watch::execute_watch_server;
+pub use dispatcher::dispatch;

@@ -1,0 +1,7 @@
+id: 6fe50517-3363-41db-aa33-ad98d271b5ca
+content: 'PHPTestExtractor extracts test scenarios from PHP test files by detecting #[Test] attributes and converting camelCase method names to human-readable scenarios with U3 formality layer'
+kind: Assertion
+metadata: {}
+created_at: 1771107654
+modified_at: 1771107654
+formality_layer: 0

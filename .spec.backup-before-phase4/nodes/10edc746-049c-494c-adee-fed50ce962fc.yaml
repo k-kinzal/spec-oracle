@@ -1,0 +1,7 @@
+id: 10edc746-049c-494c-adee-fed50ce962fc
+content: spec deprecate <id> must mark a specification as deprecated and show warnings
+kind: Assertion
+metadata: {}
+created_at: 1771121904
+modified_at: 1771121904
+formality_layer: 0

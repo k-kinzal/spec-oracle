@@ -1,378 +1,378 @@
-//! Unified command dispatcher for standalone and server modes
+//! Unified command dispatcher (gRPC only)
 //!
-//! This module contains the command dispatch logic, separating it from
-//! the CLI parsing layer in main.rs. This achieves the separation of
-//! concerns required by the specification.
+//! All commands are dispatched via gRPC to specd.
+//! There is no standalone mode -- specd must be running.
 
 use crate::proto::spec_oracle_client::SpecOracleClient;
-use crate::proto::{self, SpecEdgeKind, SpecNodeKind};
+use crate::proto;
 use crate::utils::*;
 use crate::presentation::formatter::*;
-use crate::ApiCommands;
-use spec_core::{Store, NodeKind as CoreNodeKind};
+use crate::RpcCommands;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use tonic::Request;
 
-/// Dispatch commands in standalone mode (direct file access, no server)
-pub async fn dispatch_standalone(
+type Client = SpecOracleClient<tonic::transport::Channel>;
+
+/// Dispatch all commands via gRPC
+pub async fn dispatch(
     command: crate::Commands,
-    store: Store,
+    mut client: Client,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::commands;
-
-    let mut store = store;
-
     match command {
-        crate::Commands::Init { path: _ } => {
-            // Init command doesn't need existing spec file
-            eprintln!("Error: Init command should not reach standalone mode");
-            return Ok(());
+        crate::Commands::Project(project_cmd) => {
+            crate::commands::project::dispatch_project(&mut client, project_cmd).await?;
         }
-        crate::Commands::Migrate { source, target } => {
-            commands::execute_migrate(source, target)?;
-            return Ok(());
-        }
+
         crate::Commands::Add { content, no_infer } => {
-            commands::execute_add_standalone(&mut store, content, no_infer)?;
+            crate::commands::add::execute_add_server(&mut client, content, no_infer).await?;
         }
-        crate::Commands::Api(api_cmd) => {
-            dispatch_api_standalone(&mut store, api_cmd)?;
-        }
-        crate::Commands::ListNodes { kind, layer, status, full, limit, offset } => {
-            dispatch_list_nodes_standalone(&store, kind, layer, status.clone(), full, limit, offset)?;
+        crate::Commands::Rpc(rpc_cmd) => {
+            dispatch_rpc(&mut client, rpc_cmd).await?;
         }
         crate::Commands::DetectContradictions => {
-            commands::execute_contradictions_standalone(&store)?;
+            crate::commands::contradictions::execute_contradictions_server(&mut client).await?;
         }
         crate::Commands::DetectOmissions => {
-            commands::execute_omissions_standalone(&store)?;
+            crate::commands::omissions::execute_omissions_server(&mut client).await?;
         }
         crate::Commands::Check => {
-            let exit_code = commands::execute_check_standalone(&store)?;
-            std::process::exit(exit_code);
-        }
-        crate::Commands::Summary => {
-            commands::execute_summary_standalone(&store)?;
-        }
-        crate::Commands::ExportDot { output, layer, metadata } => {
-            commands::execute_export_dot_standalone(&store, output, layer, metadata)?;
-        }
-        crate::Commands::Find { query, layer, status, max } => {
-            commands::execute_find_standalone(&store, &query, layer, status.clone(), max).await?;
-        }
-        crate::Commands::GetNode { id } => {
-            eprintln!("⚠️  WARNING: 'spec get-node' is deprecated. Use 'spec api get-node' instead.");
-            eprintln!("   The command will still work but may be removed in a future version.\n");
-            commands::api::execute_get_node_standalone(&store, id)?;
-        }
-        crate::Commands::Trace { id, depth } => {
-            commands::execute_trace_standalone(&store, &id, depth).await?;
-        }
-        crate::Commands::VerifyLayers => {
-            commands::execute_verify_layers_standalone(&store)?;
-        }
-        crate::Commands::ProveConsistency { spec_a, spec_b } => {
-            commands::execute_prove_consistency_standalone(&store, spec_a, spec_b)?;
-        }
-        crate::Commands::ProveSatisfiability { spec } => {
-            commands::execute_prove_satisfiability_standalone(&store, spec)?;
-        }
-        crate::Commands::InspectModel { verbose } => {
-            commands::execute_inspect_model_standalone(&store, verbose)?;
-        }
-        crate::Commands::ConstructU0 { execute, verbose } => {
-            commands::execute_construct_u0_standalone(&mut store, execute, verbose)?;
-        }
-        crate::Commands::CleanupLowQuality { execute } => {
-            commands::execute_cleanup_low_quality_standalone(&mut store, execute)?;
-        }
-        crate::Commands::AddEdge { source, target, kind } => {
-            eprintln!("⚠️  WARNING: 'spec add-edge' is deprecated. Use 'spec api add-edge' instead.");
-            eprintln!("   The command will still work but may be removed in a future version.\n");
-            commands::api::execute_add_edge_standalone(&mut store, source, target, kind)?;
-        }
-        crate::Commands::Extract { source, language, min_confidence } => {
-            commands::execute_extract_standalone(&mut store, source, language, min_confidence)?;
-        }
-        crate::Commands::InferRelationshipsAi { min_confidence, dry_run, limit, interactive } => {
-            commands::execute_infer_relationships_ai_standalone(&mut store, min_confidence, dry_run, limit, interactive)?;
-        }
-        crate::Commands::Archive { id } => {
-            commands::execute_archive(&mut store, id)?;
-        }
-        crate::Commands::Deprecate { id } => {
-            commands::execute_deprecate(&mut store, id)?;
-        }
-        crate::Commands::Activate { id } => {
-            commands::execute_activate(&mut store, id)?;
-        }
-        _ => {
-            eprintln!("Command not yet supported in standalone mode.");
-            eprintln!("For advanced features, use server mode (start specd first).");
-            return Err("Unsupported command in standalone mode".into());
-        }
-    }
-
-    Ok(())
-}
-
-/// Dispatch API commands in standalone mode
-fn dispatch_api_standalone(
-    store: &mut Store,
-    api_cmd: ApiCommands,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::commands::api;
-
-    match api_cmd {
-        ApiCommands::AddNode { content, kind } => {
-            api::execute_add_node_standalone(store, content, kind)?;
-        }
-        ApiCommands::GetNode { id } => {
-            api::execute_get_node_standalone(store, id)?;
-        }
-        ApiCommands::ListNodes { kind, layer, status, full, limit, offset } => {
-            api::execute_list_nodes_standalone(store, kind, layer, status.clone(), full, limit, offset)?;
-        }
-        ApiCommands::RemoveNode { id } => {
-            api::execute_remove_node_standalone(store, id)?;
-        }
-        ApiCommands::AddEdge { source, target, kind } => {
-            api::execute_add_edge_standalone(store, source, target, kind)?;
-        }
-        ApiCommands::ListEdges { node } => {
-            api::execute_list_edges_standalone(store, node)?;
-        }
-        ApiCommands::RemoveEdge { id } => {
-            api::execute_remove_edge_standalone(store, id)?;
-        }
-        ApiCommands::SetUniverse { id, universe } => {
-            api::execute_set_universe_standalone(store, id, universe)?;
-        }
-        ApiCommands::FilterByLayer { min, max } => {
-            api::execute_filter_by_layer_standalone(store, min, max)?;
-        }
-        ApiCommands::GenerateContract { id: _, language: _ } => {
-            eprintln!("Contract generation not yet supported in standalone mode");
-        }
-        ApiCommands::CheckCompliance { id: _, code: _ } => {
-            eprintln!("Compliance checking not yet supported in standalone mode");
-        }
-        ApiCommands::QueryAtTimestamp { timestamp: _ } => {
-            eprintln!("Temporal queries not yet supported in standalone mode");
-        }
-        ApiCommands::DiffTimestamps { from: _, to: _ } => {
-            eprintln!("Temporal diff not yet supported in standalone mode");
-        }
-        ApiCommands::NodeHistory { id: _ } => {
-            eprintln!("Node history not yet supported in standalone mode");
-        }
-        ApiCommands::ComplianceTrend { id: _ } => {
-            eprintln!("Compliance trend not yet supported in standalone mode");
-        }
-    }
-
-    Ok(())
-}
-
-/// Dispatch list-nodes command in standalone mode (deprecated)
-fn dispatch_list_nodes_standalone(
-    store: &Store,
-    kind: Option<String>,
-    layer: Option<u8>,
-    status: Option<String>,
-    full: bool,
-    limit: Option<usize>,
-    offset: Option<usize>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!("⚠️  WARNING: 'spec list-nodes' is deprecated. Use 'spec api list-nodes' instead.");
-    eprintln!("   The command will still work but may be removed in a future version.\n");
-
-    let graph = store.load()?;
-    let kind_filter = kind.as_ref().map(|k| proto_to_core_kind(parse_node_kind(k)));
-    let mut nodes = graph.list_nodes(kind_filter);
-
-    // Apply layer filter if specified
-    if let Some(layer_filter) = layer {
-        nodes.retain(|n| n.formality_layer == layer_filter);
-    }
-
-    // Apply status filter if specified
-    if let Some(ref status_filter) = status {
-        nodes.retain(|n| {
-            let node_status = n.metadata.get("status")
-                .map(|s| s.as_str())
-                .unwrap_or("active");
-            node_status == status_filter.as_str()
-        });
-    }
-
-    // Summary mode (default)
-    if !full {
-        println!("📊 Specification Summary");
-        println!("Total: {} specifications", nodes.len());
-        println!();
-
-        // Group by formality layer
-        let mut by_layer = std::collections::HashMap::<u8, usize>::new();
-        for node in &nodes {
-            *by_layer.entry(node.formality_layer).or_insert(0) += 1;
-        }
-
-        println!("By Formality Layer:");
-        for layer_num in 0..=3 {
-            if let Some(&count) = by_layer.get(&layer_num) {
-                let layer_label = format_formality_layer(layer_num);
-                let layer_name = match layer_num {
-                    0 => "Natural Language Requirements",
-                    1 => "Formal Specifications",
-                    2 => "Interface Definitions",
-                    3 => "Implementation",
-                    _ => "Unknown",
-                };
-                println!("  {}: {} ({} specs)", layer_label, layer_name, count);
+            let exit_code = crate::commands::check::execute_check_server(&mut client).await?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
             }
         }
-        println!();
-
-        // Group by kind
-        let mut by_kind = std::collections::HashMap::<String, usize>::new();
-        for node in &nodes {
-            let kind_str = match node.kind {
-                CoreNodeKind::Assertion => "Assertions".to_string(),
-                CoreNodeKind::Constraint => "Constraints".to_string(),
-                CoreNodeKind::Scenario => "Scenarios".to_string(),
-                CoreNodeKind::Definition => "Definitions".to_string(),
-                CoreNodeKind::Domain => "Domains".to_string(),
-            };
-            *by_kind.entry(kind_str).or_insert(0) += 1;
-        }
-
-        println!("By Kind:");
-        let mut kind_vec: Vec<_> = by_kind.iter().collect();
-        kind_vec.sort_by_key(|(k, _)| k.as_str());
-        for (kind, count) in kind_vec {
-            println!("  {}: {}", kind, count);
-        }
-        println!();
-
-        println!("💡 Use --full to see the complete list");
-        println!("💡 Use --layer <N> to filter by formality layer (0-3)");
-        println!("💡 Use --kind <type> to filter by kind");
-        return Ok(());
-    }
-
-    // Full mode with optional pagination
-    let offset_val = offset.unwrap_or(0);
-    let limit_val = limit.unwrap_or(nodes.len());
-    let end = std::cmp::min(offset_val + limit_val, nodes.len());
-    let page_nodes: Vec<_> = nodes.iter().skip(offset_val).take(limit_val).collect();
-
-    println!("Found {} node(s):", nodes.len());
-    if offset_val > 0 || limit.is_some() {
-        println!("Showing {} - {} of {}:", offset_val + 1, end, nodes.len());
-    }
-    println!();
-
-    for node in page_nodes {
-        let kind_str = match node.kind {
-            CoreNodeKind::Assertion => "assertion",
-            CoreNodeKind::Constraint => "constraint",
-            CoreNodeKind::Scenario => "scenario",
-            CoreNodeKind::Definition => "definition",
-            CoreNodeKind::Domain => "domain",
-        };
-        let layer_label = format_formality_layer(node.formality_layer);
-        println!(
-            "  [{}] [{}] {} - {}",
-            layer_label,
-            &node.id[..8],
-            kind_str,
-            node.content.chars().take(80).collect::<String>()
-        );
-    }
-
-    if end < nodes.len() {
-        println!();
-        println!("... and {} more (use --offset {} to see next page)", nodes.len() - end, end);
-    }
-
-    Ok(())
-}
-
-/// Dispatch commands in server mode (gRPC client)
-pub async fn dispatch_server(
-    command: crate::Commands,
-    mut client: SpecOracleClient<tonic::transport::Channel>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::commands;
-
-    match command {
-        crate::Commands::Add { content, no_infer } => {
-            commands::execute_add_server(&mut client, content, no_infer).await?;
-        }
-        crate::Commands::Api(api_cmd) => {
-            dispatch_api_server(&mut client, api_cmd).await?;
-        }
-        crate::Commands::DetectContradictions => {
-            commands::execute_contradictions_server(&mut client).await?;
-        }
-        crate::Commands::DetectOmissions => {
-            commands::execute_omissions_server(&mut client).await?;
-        }
-        crate::Commands::Check => {
-            commands::execute_check_server(&mut client).await?;
+        crate::Commands::Summary => {
+            crate::commands::summary::execute_summary_server(&mut client).await?;
         }
         crate::Commands::Find { query, layer, status, max } => {
-            commands::execute_find_server(&mut client, &query, layer, status.clone(), max).await?;
-        }
-        crate::Commands::Trace { id, depth } => {
-            commands::execute_trace_server(&mut client, &id, depth).await?;
+            crate::commands::find::execute_find_server(&mut client, &query, layer, status, max).await?;
         }
         crate::Commands::Query { query, ai } => {
-            commands::execute_query_server(&mut client, &query, ai).await?;
+            crate::commands::query::execute_query_server(&mut client, &query, ai).await?;
         }
-        crate::Commands::VerifyLayers => {
-            // VerifyLayers requires standalone mode for now
-            println!("VerifyLayers command requires standalone mode (project-local .spec/ directory)");
-            println!("Run 'spec init' to initialize project-local specification management.");
+        crate::Commands::Trace { id, depth } => {
+            crate::commands::trace::execute_trace_server(&mut client, &id, depth).await?;
         }
         crate::Commands::Watch { source, language, min_confidence, interval } => {
-            commands::execute_watch_server(&mut client, source, language, min_confidence, interval).await?;
+            crate::commands::watch::execute_watch_server(&mut client, source, language, min_confidence, interval).await?;
         }
-        crate::Commands::Init { path } => {
-            commands::execute_init(path)?;
+        crate::Commands::DetectLayerInconsistencies => {
+            crate::commands::layer::execute_detect_layer_inconsistencies_server(&mut client).await?;
         }
-        crate::Commands::Migrate { source, target } => {
-            commands::execute_migrate(source, target)?;
+        crate::Commands::DetectInterUniverseInconsistencies => {
+            let resp = client
+                .detect_inter_universe_inconsistencies(Request::new(proto::DetectInterUniverseInconsistenciesRequest {}))
+                .await?;
+            let inconsistencies = resp.into_inner().inconsistencies;
+            if inconsistencies.is_empty() {
+                println!("No inter-universe inconsistencies detected.");
+            } else {
+                println!("Found {} inter-universe inconsistency(ies):", inconsistencies.len());
+                for i in inconsistencies {
+                    println!("\n  Universe {} <-> Universe {}", i.universe_a, i.universe_b);
+                    if let (Some(a), Some(b)) = (i.spec_a, i.spec_b) {
+                        println!("    A: [{}] {}", a.id, a.content);
+                        println!("    B: [{}] {}", b.id, b.content);
+                    }
+                    println!("    Reason: {}", i.explanation);
+                }
+            }
         }
-        crate::Commands::ConstructU0 { execute: _, verbose: _ } => {
-            println!("ConstructU0 command requires standalone mode (project-local .spec/ directory)");
-            println!("Run 'spec init' to initialize project-local specification management.");
+        crate::Commands::InferRelationships => {
+            let resp = client
+                .infer_all_relationships(Request::new(proto::InferAllRelationshipsRequest {}))
+                .await?;
+            let result = resp.into_inner();
+            println!("Relationship inference complete:");
+            println!("  Edges created: {}", result.edges_created);
+            println!("  Suggestions: {}", result.suggestions_count);
+            if !result.suggestions.is_empty() {
+                println!("\nSuggestions:");
+                for (i, s) in result.suggestions.iter().take(10).enumerate() {
+                    println!("  {}. {}", i + 1, s);
+                }
+                if result.suggestions.len() > 10 {
+                    println!("  ... and {} more", result.suggestions.len() - 10);
+                }
+            }
         }
-        crate::Commands::CleanupLowQuality { execute: _ } => {
-            println!("CleanupLowQuality command requires standalone mode (project-local .spec/ directory)");
-            println!("Run 'spec init' to initialize project-local specification management.");
-            println!("\nReason: This command directly modifies the specification database.");
+        crate::Commands::ResolveTerm { term } => {
+            let resp = client
+                .resolve_terminology(Request::new(proto::ResolveTerminologyRequest { term: term.clone() }))
+                .await?;
+            let result = resp.into_inner();
+            if result.definitions.is_empty() && result.synonyms.is_empty() {
+                println!("No definitions or synonyms found for '{}'", term);
+            } else {
+                if !result.definitions.is_empty() {
+                    println!("Definitions for '{}':", term);
+                    for node in &result.definitions {
+                        println!("  [{}] {}", &node.id[..8.min(node.id.len())], node.content);
+                    }
+                }
+                if !result.synonyms.is_empty() {
+                    println!("\nSynonyms: {}", result.synonyms.join(", "));
+                }
+            }
         }
-        _ => {
-            eprintln!("Command '{}' not yet implemented in server mode",
-                std::any::type_name_of_val(&command));
-            return Err("Unsupported command in server mode".into());
+        crate::Commands::Ask { question, ai_cmd } => {
+            let answer = crate::handle_ai_query(&question, &ai_cmd).await?;
+            println!("{}", answer);
+        }
+        crate::Commands::FindFormalizations { id } => {
+            let resp = client
+                .find_formalizations(Request::new(proto::FindFormalizationsRequest { node_id: id.clone() }))
+                .await?;
+            let result = resp.into_inner();
+            if result.formalizations.is_empty() && result.natural_sources.is_empty() {
+                println!("No formalizations found for node {}", id);
+            } else {
+                if !result.formalizations.is_empty() {
+                    println!("Formalizations of [{}]:", &id[..8.min(id.len())]);
+                    for node in &result.formalizations {
+                        let layer = format_formality_layer(node.formality_layer as u8);
+                        println!("  [{}] [{}] {}", layer, &node.id[..8.min(node.id.len())], node.content);
+                    }
+                }
+                if !result.natural_sources.is_empty() {
+                    println!("\nNatural language sources:");
+                    for node in &result.natural_sources {
+                        let layer = format_formality_layer(node.formality_layer as u8);
+                        println!("  [{}] [{}] {}", layer, &node.id[..8.min(node.id.len())], node.content);
+                    }
+                }
+            }
+        }
+        crate::Commands::FindRelatedTerms { term, max } => {
+            let resp = client
+                .find_related_terms(Request::new(proto::FindRelatedTermsRequest {
+                    term: term.clone(),
+                    max_results: max,
+                }))
+                .await?;
+            let result = resp.into_inner();
+            if result.nodes.is_empty() {
+                println!("No related terms found for '{}'", term);
+            } else {
+                println!("Related terms for '{}':", term);
+                for scored in &result.nodes {
+                    if let Some(ref node) = scored.node {
+                        println!("  [{:.2}] [{}] {}", scored.score, &node.id[..8.min(node.id.len())], node.content);
+                    }
+                }
+            }
+        }
+        crate::Commands::DetectPotentialSynonyms { min_similarity } => {
+            let resp = client
+                .detect_potential_synonyms(Request::new(proto::DetectPotentialSynonymsRequest {
+                    min_similarity,
+                }))
+                .await?;
+            let result = resp.into_inner();
+            if result.candidates.is_empty() {
+                println!("No potential synonyms detected (threshold: {:.2})", min_similarity);
+            } else {
+                println!("Found {} potential synonym pair(s):", result.candidates.len());
+                for c in &result.candidates {
+                    if let (Some(a), Some(b)) = (&c.node_a, &c.node_b) {
+                        println!("  [{:.2}] '{}' <-> '{}'", c.similarity,
+                            a.content.chars().take(40).collect::<String>(),
+                            b.content.chars().take(40).collect::<String>());
+                    }
+                }
+            }
+        }
+        crate::Commands::TestCoverage => {
+            let resp = client
+                .get_test_coverage(Request::new(proto::GetTestCoverageRequest {}))
+                .await?;
+            let result = resp.into_inner();
+            println!("Test Coverage Report:");
+            println!("  Total testable specs: {}", result.total_testable);
+            println!("  With tests:           {}", result.with_tests);
+            println!("  Coverage:             {:.1}%", result.coverage_ratio * 100.0);
+            if !result.nodes_without_tests.is_empty() {
+                println!("\nSpecs without tests:");
+                for node in result.nodes_without_tests.iter().take(10) {
+                    println!("  [{}] {}", &node.id[..8.min(node.id.len())], node.content);
+                }
+                if result.nodes_without_tests.len() > 10 {
+                    println!("  ... and {} more", result.nodes_without_tests.len() - 10);
+                }
+            }
+        }
+        crate::Commands::ComplianceReport => {
+            let resp = client
+                .get_compliance_report(Request::new(proto::GetComplianceReportRequest {}))
+                .await?;
+            let result = resp.into_inner();
+            if result.entries.is_empty() {
+                println!("No compliance data available.");
+            } else {
+                println!("Compliance Report ({} entries):", result.entries.len());
+                for entry in &result.entries {
+                    if let Some(ref node) = entry.node {
+                        println!("  [{:.1}%] [{}] {}",
+                            entry.score * 100.0,
+                            &node.id[..8.min(node.id.len())],
+                            node.content.chars().take(60).collect::<String>());
+                    }
+                }
+            }
+        }
+        crate::Commands::ExportDot { output, layer, metadata } => {
+            // Export DOT format via listing nodes and edges from server
+            crate::commands::export_dot::execute_export_dot_server(&mut client, output, layer, metadata).await?;
         }
     }
 
     Ok(())
 }
 
-/// Dispatch API commands in server mode
-async fn dispatch_api_server(
-    client: &mut SpecOracleClient<tonic::transport::Channel>,
-    api_cmd: ApiCommands,
+/// Dispatch API commands via gRPC
+async fn dispatch_rpc(
+    client: &mut Client,
+    rpc_cmd: RpcCommands,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // This is a placeholder - the actual implementation needs to be extracted from main.rs
-    // For now, return an error
-    eprintln!("API commands in server mode not yet fully extracted to dispatcher");
-    eprintln!("Command: {:?}", std::any::type_name_of_val(&api_cmd));
-    Err("Server mode API dispatch not yet implemented in dispatcher module".into())
+    match rpc_cmd {
+        // === specd RPC Operations (managing UDA/f model) ===
+        RpcCommands::CreateUniverse { layer, name, description } => {
+            crate::commands::specd_rpc::execute_universe_create(client, layer, name, description).await?;
+        }
+        RpcCommands::GetUniverse { id } => {
+            crate::commands::specd_rpc::execute_universe_get(client, id).await?;
+        }
+        RpcCommands::ListUniverses => {
+            crate::commands::specd_rpc::execute_universe_list(client).await?;
+        }
+        RpcCommands::DeleteUniverse { id } => {
+            crate::commands::specd_rpc::execute_universe_delete(client, id).await?;
+        }
+        RpcCommands::CreateDomain { universe, name, description } => {
+            crate::commands::specd_rpc::execute_domain_create(client, universe, name, description).await?;
+        }
+        RpcCommands::GetDomain { id } => {
+            crate::commands::specd_rpc::execute_domain_get(client, id).await?;
+        }
+        RpcCommands::ListDomains { universe } => {
+            crate::commands::specd_rpc::execute_domain_list(client, universe).await?;
+        }
+        RpcCommands::UpdateDomainConstraints { domain, constraint } => {
+            crate::commands::specd_rpc::execute_domain_update_constraints(client, domain, constraint).await?;
+        }
+        RpcCommands::CreateTransform { source, target, kind } => {
+            crate::commands::specd_rpc::execute_transform_create(client, source, target, kind).await?;
+        }
+        RpcCommands::GetTransform { id } => {
+            crate::commands::specd_rpc::execute_transform_get(client, id).await?;
+        }
+        RpcCommands::ListTransforms => {
+            crate::commands::specd_rpc::execute_transform_list(client).await?;
+        }
+        RpcCommands::VerifyTransformSoundness { id } => {
+            crate::commands::specd_rpc::execute_transform_verify_soundness(client, id).await?;
+        }
+        RpcCommands::CreateAdmissibleSet { spec, constraint } => {
+            crate::commands::specd_rpc::execute_admissible_set_create(client, spec, constraint).await?;
+        }
+        RpcCommands::GetAdmissibleSet { spec } => {
+            crate::commands::specd_rpc::execute_admissible_set_get(client, spec).await?;
+        }
+        RpcCommands::ListAdmissibleSets => {
+            crate::commands::specd_rpc::execute_admissible_set_list(client).await?;
+        }
+        RpcCommands::VerifyConsistency { spec_a, spec_b } => {
+            crate::commands::specd_rpc::execute_admissible_set_verify_consistency(client, spec_a, spec_b).await?;
+        }
+        RpcCommands::VerifyImplication { antecedent, consequent } => {
+            crate::commands::specd_rpc::execute_admissible_set_verify_implication(client, antecedent, consequent).await?;
+        }
+        RpcCommands::ConstructU0 { artifact } => {
+            crate::commands::specd_rpc::execute_construct_u0(client, artifact).await?;
+        }
+        RpcCommands::SyncModel => {
+            crate::commands::specd_rpc::execute_sync_model(client).await?;
+        }
+        RpcCommands::ValidateModel => {
+            crate::commands::specd_rpc::execute_validate_model(client).await?;
+        }
+
+        // Node/Edge operations removed in v2.0.0
+        // Use UDA/f operations instead
+        RpcCommands::GenerateContract { id, language } => {
+            let resp = client
+                .generate_contract_template(Request::new(proto::GenerateContractTemplateRequest {
+                    node_id: id,
+                    language,
+                }))
+                .await?;
+            let result = resp.into_inner();
+            println!("Generated {} contract template:\n", result.node_kind);
+            println!("{}", result.template);
+        }
+        RpcCommands::CheckCompliance { id, code } => {
+            let resp = client
+                .calculate_compliance(Request::new(proto::CalculateComplianceRequest {
+                    node_id: id,
+                    code,
+                }))
+                .await?;
+            let result = resp.into_inner();
+            println!("Compliance Score: {:.1}%", result.score * 100.0);
+            println!("  Keyword overlap:   {:.1}%", result.keyword_overlap * 100.0);
+            println!("  Structural match:  {:.1}%", result.structural_match * 100.0);
+            println!("  {}", result.explanation);
+        }
+        RpcCommands::QueryAtTimestamp { timestamp } => {
+            let resp = client
+                .query_at_timestamp(Request::new(proto::QueryAtTimestampRequest { timestamp }))
+                .await?;
+            let result = resp.into_inner();
+            println!("Graph at timestamp {}:", result.timestamp);
+            println!("  Nodes: {}", result.node_count);
+            println!("  Edges: {}", result.edge_count);
+        }
+        RpcCommands::DiffTimestamps { from, to } => {
+            let resp = client
+                .diff_timestamps(Request::new(proto::DiffTimestampsRequest {
+                    from_timestamp: from,
+                    to_timestamp: to,
+                }))
+                .await?;
+            let result = resp.into_inner();
+            println!("Diff {} -> {}:", result.from_timestamp, result.to_timestamp);
+            println!("  Added nodes:    {}", result.added_nodes.len());
+            println!("  Removed nodes:  {}", result.removed_nodes.len());
+            println!("  Modified nodes: {}", result.modified_nodes.len());
+            println!("  Added edges:    {}", result.added_edges.len());
+            println!("  Removed edges:  {}", result.removed_edges.len());
+        }
+        RpcCommands::NodeHistory { id } => {
+            let resp = client
+                .get_node_history(Request::new(proto::GetNodeHistoryRequest { node_id: id }))
+                .await?;
+            let result = resp.into_inner();
+            if let Some(ref node) = result.node {
+                println!("History for [{}]: {}", &node.id[..8.min(node.id.len())], node.content);
+            }
+            for event in &result.events {
+                println!("  [{}] {}: {}", event.timestamp, event.event_type, event.description);
+            }
+        }
+        RpcCommands::ComplianceTrend { id } => {
+            let resp = client
+                .get_compliance_trend(Request::new(proto::GetComplianceTrendRequest { node_id: id }))
+                .await?;
+            let result = resp.into_inner();
+            if let Some(ref node) = result.node {
+                println!("Compliance trend for [{}]: {}", &node.id[..8.min(node.id.len())], node.content);
+            }
+            println!("  Direction: {}", result.trend_direction);
+            for dp in &result.data_points {
+                println!("  [{}] {:.1}%", dp.timestamp, dp.score * 100.0);
+            }
+        }
+    }
+
+    Ok(())
 }

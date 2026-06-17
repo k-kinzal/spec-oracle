@@ -1,5 +1,5 @@
 /// Query and analysis data structures
-use super::SpecNodeData;
+use super::{SpecNodeData, EdgeKind};
 
 #[derive(Debug, Clone)]
 pub struct ComplianceScore {
@@ -17,3 +17,34 @@ pub struct TestCoverage {
     pub nodes_with_tests: Vec<SpecNodeData>,
     pub nodes_without_tests: Vec<SpecNodeData>,
 }
+
+#[derive(Debug, Clone)]
+pub struct Contradiction {
+    pub node_a: SpecNodeData,
+    pub node_b: SpecNodeData,
+    pub explanation: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Omission {
+    pub description: String,
+    pub related_nodes: Vec<SpecNodeData>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LayerInconsistency {
+    pub source: SpecNodeData,
+    pub target: SpecNodeData,
+    pub explanation: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct InterUniverseInconsistency {
+    pub universe_a: String,
+    pub universe_b: String,
+    pub spec_a: SpecNodeData,
+    pub spec_b: SpecNodeData,
+    pub transform_path: Vec<String>,
+    pub explanation: String,
+}
+

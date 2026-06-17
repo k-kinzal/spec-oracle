@@ -1,0 +1,9 @@
+id: 386b1821-73e9-4b1c-90e4-618204cbad0e
+content: The detect_contradictions function must check for exact duplicates, semantic contradictions, and explicit contradicts edges
+kind: Constraint
+metadata:
+  function: detect_contradictions
+  source_file: spec-core/src/graph.rs
+created_at: 1771061151
+modified_at: 1771061151
+formality_layer: 3

@@ -1,0 +1,7 @@
+id: 80b66322-090c-4037-b074-7b31a884988c
+content: Lifecycle status must be stored in metadata.status field for backward compatibility
+kind: Assertion
+metadata: {}
+created_at: 1771121909
+modified_at: 1771121909
+formality_layer: 0

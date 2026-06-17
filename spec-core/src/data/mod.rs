@@ -28,7 +28,10 @@ pub use temporal::{
     ComplianceDataPoint,
     ComplianceTrend,
 };
-pub use query::{ComplianceScore, TestCoverage};
+pub use query::{
+    ComplianceScore, TestCoverage, Contradiction, Omission,
+    LayerInconsistency, InterUniverseInconsistency
+};
 pub use repository::SpecRepository;
 
 /// Graph errors

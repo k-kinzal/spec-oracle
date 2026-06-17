@@ -1,0 +1,28 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    ca-certificates \
+    curl \
+    git \
+    python3 \
+    ripgrep \
+    xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install elan/lean toolchain manager
+RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
+ENV PATH="/root/.elan/bin:${PATH}"
+RUN /root/.elan/bin/elan toolchain install leanprover/lean4:v4.27.0 && \
+    /root/.elan/bin/elan default leanprover/lean4:v4.27.0
+
+WORKDIR /workspace
+
+# Copy repository into container context before running:
+#   docker build -f paper/formal-methods/appendix/Dockerfile.fm -t uadf-fm .
+#   docker run --rm -v "$PWD":/workspace -w /workspace uadf-fm \
+#     bash paper/formal-methods/appendix/reproduce_formal.sh
+
+CMD ["bash", "paper/formal-methods/appendix/reproduce_formal.sh"]

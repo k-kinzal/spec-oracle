@@ -1,18 +1,36 @@
-/// Export command: Generate DOT format for Graphviz visualization
-///
-/// This command exports the specification graph in DOT format,
-/// which can be visualized using Graphviz tools (dot, neato, etc.).
+/// Export command: Generate DOT format for Graphviz visualization using UDA/f operations (gRPC only)
 
-use spec_core::{Store, NodeKind as CoreNodeKind, EdgeKind as CoreEdgeKind};
+use crate::proto::{self, spec_oracle_client::SpecOracleClient};
+use tonic::Request;
 
-/// Execute the export-dot command in standalone mode
-pub fn execute_export_dot_standalone(
-    store: &Store,
+/// Execute the export-dot command via gRPC using UDA/f operations
+pub async fn execute_export_dot_server(
+    client: &mut SpecOracleClient<tonic::transport::Channel>,
     output_file: Option<String>,
     layer: Option<u32>,
-    include_metadata: bool,
+    _include_metadata: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let graph = store.load()?;
+    // Fetch all universes
+    let universes_resp = client
+        .list_universes(Request::new(proto::ListUniversesRequest {}))
+        .await?;
+    let universes = universes_resp.into_inner().universes;
+
+    // Fetch all admissible sets
+    let sets_resp = client
+        .list_admissible_sets(Request::new(proto::ListAdmissibleSetsRequest {
+            universe_id: String::new(),
+        }))
+        .await?;
+    let admissible_sets = sets_resp.into_inner().admissible_sets;
+
+    // Fetch all transforms
+    let transforms_resp = client
+        .list_transforms(Request::new(proto::ListTransformsRequest {
+            universe_id: String::new(),
+        }))
+        .await?;
+    let transforms = transforms_resp.into_inner().transforms;
 
     // Build DOT format output
     let mut dot = String::new();
@@ -21,140 +39,130 @@ pub fn execute_export_dot_standalone(
     dot.push_str("  node [shape=box, style=rounded];\n");
     dot.push_str("  edge [fontsize=10];\n\n");
 
-    // Add subgraphs for each layer
-    for l in 0u8..=3u8 {
+    // Add subgraphs for each universe
+    for universe in &universes {
         // Skip if layer filter is set and doesn't match
         if let Some(filter_layer) = layer {
-            if filter_layer as u8 != l {
+            if filter_layer != universe.layer {
                 continue;
             }
         }
 
-        dot.push_str(&format!("  subgraph cluster_U{} {{\n", l));
-        dot.push_str(&format!("    label=\"U{}: {}\";\n", l, layer_name(l)));
+        dot.push_str(&format!("  subgraph cluster_{} {{\n", universe.id));
+        dot.push_str(&format!("    label=\"{}: {}\";\n", universe.id, universe.name));
         dot.push_str("    color=lightgray;\n");
         dot.push_str("    style=filled;\n");
-        dot.push_str("    fillcolor=\"#f0f0f0\";\n\n");
 
-        // Add nodes for this layer
-        let nodes: Vec<_> = graph.list_nodes(None)
-            .into_iter()
-            .filter(|n| n.formality_layer == l)
+        // Color by layer
+        let fill_color = match universe.layer {
+            0 => "#e0f0ff",  // U0: Light blue
+            1 => "#e0ffe0",  // U1: Light green
+            2 => "#fff0e0",  // U2: Light orange
+            3 => "#ffe0e0",  // U3: Light red
+            _ => "#f0f0f0",
+        };
+        dot.push_str(&format!("    fillcolor=\"{}\";\n\n", fill_color));
+
+        // Add admissible sets for this universe
+        let universe_sets: Vec<_> = admissible_sets.iter()
+            .filter(|s| s.universe_id == universe.id)
             .collect();
 
-        for node in &nodes {
-            let id = node.id.to_string();
-            let short_id = &id[0..8];
+        for set in &universe_sets {
+            let short_id = &set.spec_id[..8.min(set.spec_id.len())];
 
-            // Escape content for DOT format
-            let content = node.content.replace("\"", "\\\"").replace("\n", "\\n");
-            let truncated_content = if content.len() > 50 {
-                format!("{}...", &content[0..47])
+            // Get first constraint as label
+            let constraint_text = if set.constraints.is_empty() {
+                "No constraints".to_string()
             } else {
-                content.clone()
-            };
-
-            // Color by kind
-            let color = match node.kind {
-                CoreNodeKind::Constraint => "#ffe0e0",
-                CoreNodeKind::Assertion => "#e0f0ff",
-                CoreNodeKind::Scenario => "#e0ffe0",
-                CoreNodeKind::Definition => "#fff0e0",
-                CoreNodeKind::Domain => "#f0e0ff",
-            };
-
-            let kind_str = match node.kind {
-                CoreNodeKind::Constraint => "C",
-                CoreNodeKind::Assertion => "A",
-                CoreNodeKind::Scenario => "S",
-                CoreNodeKind::Definition => "D",
-                CoreNodeKind::Domain => "Dom",
-            };
-
-            let mut label = format!("[{}] {}\\n{}", kind_str, short_id, truncated_content);
-
-            // Optionally include metadata
-            if include_metadata {
-                if let Some(source) = node.metadata.get("source_file") {
-                    label.push_str(&format!("\\n📁 {}", source));
+                let desc = &set.constraints[0].description;
+                if desc.len() > 50 {
+                    format!("{}...", &desc[..47])
+                } else {
+                    desc.clone()
                 }
-                if let Some(inferred) = node.metadata.get("inferred") {
-                    if inferred == "true" {
-                        label.push_str("\\n🤖 auto-extracted");
-                    }
-                }
-            }
+            };
+
+            let constraint_text_escaped = constraint_text.replace("\"", "\\\"").replace("\n", "\\n");
+            let label = format!("[{}]\\n{}", short_id, constraint_text_escaped);
 
             dot.push_str(&format!(
-                "    \"{}\" [label=\"{}\", fillcolor=\"{}\", style=filled];\n",
-                short_id, label, color
+                "    \"{}\" [label=\"{}\", style=filled, fillcolor=\"white\"];\n",
+                set.spec_id, label
             ));
         }
 
         dot.push_str("  }\n\n");
     }
 
-    // Add edges
-    dot.push_str("  // Edges\n");
-    let edges = graph.list_edges(None);
-    for (edge_data, source_id, target_id) in &edges {
-        // Get source and target nodes to check layers
-        let source_node = graph.get_node(source_id)
-            .ok_or("Source node not found")?;
-        let target_node = graph.get_node(target_id)
-            .ok_or("Target node not found")?;
-
-        // Skip if layer filter is set and neither source nor target matches
+    // Add transforms as edges between universes
+    dot.push_str("  // Transforms\n");
+    for transform in &transforms {
+        // Skip if layer filter is set
         if let Some(filter_layer) = layer {
-            let filter_layer_u8 = filter_layer as u8;
-            if source_node.formality_layer != filter_layer_u8 && target_node.formality_layer != filter_layer_u8 {
+            let source_universe = universes.iter().find(|u| u.id == transform.source_universe);
+            let target_universe = universes.iter().find(|u| u.id == transform.target_universe);
+
+            let source_matches = source_universe.map(|u| u.layer == filter_layer).unwrap_or(false);
+            let target_matches = target_universe.map(|u| u.layer == filter_layer).unwrap_or(false);
+
+            if !source_matches || !target_matches {
                 continue;
             }
         }
 
-        let source_short = &source_id[0..8];
-        let target_short = &target_id[0..8];
-
-        let (edge_label, edge_style, edge_color) = match edge_data.kind {
-            CoreEdgeKind::Refines => ("refines", "solid", "blue"),
-            CoreEdgeKind::DependsOn => ("depends", "dashed", "gray"),
-            CoreEdgeKind::Contradicts => ("contradicts", "bold", "red"),
-            CoreEdgeKind::DerivesFrom => ("derives", "dotted", "purple"),
-            CoreEdgeKind::Synonym => ("synonym", "dashed", "green"),
-            CoreEdgeKind::Formalizes => ("formalizes", "bold", "darkblue"),
-            CoreEdgeKind::Composes => ("composes", "solid", "orange"),
-            CoreEdgeKind::Transform => ("transform", "bold", "darkorange"),
+        let kind_label = match transform.kind {
+            1 => "FORWARD",
+            2 => "INVERSE",
+            3 => "PARALLEL",
+            _ => "UNKNOWN",
         };
 
+        let (style, color) = match transform.kind {
+            1 => ("solid", "blue"),      // Forward: solid blue
+            2 => ("dashed", "red"),      // Inverse: dashed red
+            3 => ("dotted", "green"),    // Parallel: dotted green
+            _ => ("solid", "black"),
+        };
+
+        // Draw edge between universe clusters
         dot.push_str(&format!(
-            "  \"{}\" -> \"{}\" [label=\"{}\", style=\"{}\", color=\"{}\"];\n",
-            source_short, target_short, edge_label, edge_style, edge_color
+            "  \"{}\" -> \"{}\" [label=\"{}\", style=\"{}\", color=\"{}\", lhead=cluster_{}, ltail=cluster_{}];\n",
+            transform.source_universe, transform.target_universe,
+            kind_label, style, color,
+            transform.target_universe, transform.source_universe
         ));
+    }
+
+    // Add inter-spec relationships (contradictions)
+    dot.push_str("\n  // Contradictions\n");
+    for set in &admissible_sets {
+        if !set.contradicts.is_empty() {
+            for contradicting_id in &set.contradicts {
+                dot.push_str(&format!(
+                    "  \"{}\" -> \"{}\" [label=\"contradicts\", style=\"bold\", color=\"red\"];\n",
+                    set.spec_id, contradicting_id
+                ));
+            }
+        }
     }
 
     dot.push_str("}\n");
 
     // Output to file or stdout
     if let Some(output_path) = output_file {
-        std::fs::write(&output_path, dot)?;
-        println!("✅ DOT file written to: {}", output_path);
+        std::fs::write(&output_path, &dot)?;
+        println!("DOT file written to: {}", output_path);
         println!("\nVisualize with:");
         println!("  dot -Tpng {} -o spec-graph.png", output_path);
         println!("  dot -Tsvg {} -o spec-graph.svg", output_path);
+        println!("\nGraph statistics:");
+        println!("  Universes: {}", universes.len());
+        println!("  Specifications: {}", admissible_sets.len());
+        println!("  Transforms: {}", transforms.len());
     } else {
         println!("{}", dot);
     }
 
     Ok(())
-}
-
-/// Get human-readable name for formality layer
-fn layer_name(layer: u8) -> &'static str {
-    match layer {
-        0 => "Natural Language Requirements",
-        1 => "Formal Specifications",
-        2 => "Interface Definitions",
-        3 => "Implementation",
-        _ => "Unknown Layer",
-    }
 }

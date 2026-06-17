@@ -1,0 +1,7 @@
+id: c1089f41-b71a-4d98-8e4f-87e3bff4d316
+content: 'RPC InferAllRelationships: Infers relationships between all specifications using structural analysis, returns count of edges created and suggestions'
+kind: Assertion
+metadata: {}
+created_at: 1771072805
+modified_at: 1771072805
+formality_layer: 2
