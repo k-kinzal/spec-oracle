@@ -3,7 +3,7 @@
   "checkpoint_id": "3f87a6568343",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 122,
+  "checkpoints_count": 123,
   "files_touched": [
     ".claude/claude-loop.debug",
     ".claude/claude-loop.state.json",
@@ -276,6 +276,7 @@
     "paper/case-study/real_projects/logs/regex_drift_lock.json",
     "paper/case-study/real_projects/logs/regex_drift_snapshot.txt",
     "paper/case-study/real_projects/reproduce.sh",
+    "paper/reviews/by-reviewer/reviewer3/rounds/reviewer3_round75.md",
     "paper/reviews/concern_check.md",
     "paper/reviews/concern_recheck_round2.md",
     "paper/reviews/concern_recheck_round3.md",
@@ -1209,13 +1210,20 @@
       "context": "/3f/87a6568343/76/context.md",
       "content_hash": "/3f/87a6568343/76/content_hash.txt",
       "prompt": "/3f/87a6568343/76/prompt.txt"
+    },
+    {
+      "metadata": "/3f/87a6568343/77/metadata.json",
+      "transcript": "/3f/87a6568343/77/full.jsonl",
+      "context": "/3f/87a6568343/77/context.md",
+      "content_hash": "/3f/87a6568343/77/content_hash.txt",
+      "prompt": "/3f/87a6568343/77/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 13932,
-    "cache_creation_tokens": 4562697,
-    "cache_read_tokens": 107556973,
-    "output_tokens": 198394,
-    "api_call_count": 1083
+    "input_tokens": 13934,
+    "cache_creation_tokens": 4598260,
+    "cache_read_tokens": 107559292,
+    "output_tokens": 198395,
+    "api_call_count": 1084
   }
 }
