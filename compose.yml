@@ -1,0 +1,52 @@
+# Local ArangoDB for spec-oracle.
+#
+# ArangoDB is the single graph-database product spec-oracle targets across the
+# whole deployment spectrum (local → self-hosted cluster → managed cloud). This
+# file is the *local* leg: the same arangod/RocksDB engine you would later run
+# clustered or as a managed service, sized for a laptop. Growth is a relocation
+# of this one product, not a swap behind an abstraction.
+#
+# Quickstart:
+#   cp .env.example .env               # then edit the password
+#   docker compose up -d               # ArangoDB on http://localhost:8529
+#   set -a; . ./.env; set +a           # export ARANGODB_PASSWORD for the daemon
+#   cargo run --bin specd              # the ingest daemon (host), talks to ArangoDB
+#   cargo run --bin spec -- add "The pump shall stop." \
+#     --evidence so_daemon/src/store.rs:1   # the CLI, talks to the daemon
+#
+# Only ArangoDB is containerized. The `specd` daemon runs on the HOST and
+# connects to ArangoDB over localhost:8529; the `spec` CLI connects to the daemon
+# over gRPC (default 127.0.0.1:50051). The `spec_oracle` database and `contracts`
+# collection are created automatically by the daemon on first use — no init step.
+
+services:
+  arangodb:
+    image: arangodb/arangodb:3.12.4
+    container_name: spec-oracle-arangodb
+    restart: unless-stopped
+    environment:
+      # First-init ONLY: the entrypoint applies this password just once, when the
+      # data volume is empty (i.e. /var/lib/arangodb3/SERVER is absent). Changing
+      # it later has no effect until the volume is removed. One secret, kept under
+      # the CLI's own variable name in .env, feeds both daemon and client.
+      ARANGO_ROOT_PASSWORD: ${ARANGODB_PASSWORD:?set ARANGODB_PASSWORD in .env (copy .env.example)}
+    ports:
+      - "8529:8529"
+    volumes:
+      # The image declares no VOLUME, so persistence must be mounted explicitly.
+      - arangodb_data:/var/lib/arangodb3       # RocksDB data — must persist
+      - arangodb_apps:/var/lib/arangodb3-apps  # Foxx apps
+    healthcheck:
+      # Auth-free readiness endpoint: 200 when serving, 503 during startup. The
+      # image ships busybox wget (no curl); '127.0.0.1' is required because inside
+      # the container 'localhost' resolves to IPv6 ::1, where arangod is not
+      # listening.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8529/_admin/server/availability"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  arangodb_data:
+  arangodb_apps:

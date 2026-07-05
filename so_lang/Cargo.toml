@@ -1,0 +1,13 @@
+[package]
+name = "so-lang"
+version.workspace = true
+edition.workspace = true
+description = "The constrained natural-language (EARS-derived) grammar and its assume-guarantee projection."
+
+[lib]
+name = "so_lang"
+path = "src/lib.rs"
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true

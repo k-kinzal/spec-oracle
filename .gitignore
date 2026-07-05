@@ -1,0 +1,8 @@
+/target
+/.idea
+
+# Local development secret (copy .env.example → .env).
+/.env
+
+# Local content-addressed blob store created by `spec add`.
+/.spec-oracle/

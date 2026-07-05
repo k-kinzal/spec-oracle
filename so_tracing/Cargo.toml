@@ -1,0 +1,16 @@
+[package]
+name = "so-tracing"
+version.workspace = true
+edition.workspace = true
+description = "Shared OpenTelemetry setup and gRPC trace propagation for spec-oracle."
+
+[dependencies]
+anyhow.workspace = true
+opentelemetry.workspace = true
+opentelemetry-otlp.workspace = true
+opentelemetry_sdk.workspace = true
+sha2.workspace = true
+tonic.workspace = true
+tracing.workspace = true
+tracing-opentelemetry.workspace = true
+tracing-subscriber.workspace = true

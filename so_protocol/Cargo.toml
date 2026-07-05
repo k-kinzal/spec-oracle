@@ -1,0 +1,16 @@
+[package]
+name = "so-protocol"
+version.workspace = true
+edition.workspace = true
+description = "Generated protobuf/gRPC contract for spec-oracle."
+
+[lib]
+name = "so_protocol"
+path = "src/lib.rs"
+
+[dependencies]
+prost.workspace = true
+tonic.workspace = true
+
+[build-dependencies]
+tonic-build.workspace = true

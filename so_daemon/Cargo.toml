@@ -1,0 +1,35 @@
+[package]
+name = "so-daemon"
+version.workspace = true
+edition.workspace = true
+description = "The spec-oracle daemon: gRPC service, evidence capture, and ArangoDB-backed persistence."
+
+[lib]
+name = "so_daemon"
+path = "src/lib.rs"
+
+[[bin]]
+name = "specd"
+path = "src/main.rs"
+
+[dependencies]
+so-lang.workspace = true
+so-protocol.workspace = true
+so-tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+sha2.workspace = true
+ureq.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+inventory.workspace = true
+arangors.workspace = true
+tonic.workspace = true
+tokio.workspace = true
+clap.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

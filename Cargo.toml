@@ -1,0 +1,62 @@
+[workspace]
+resolver = "2"
+members = [
+    "so_lang",
+    "so_protocol",
+    "so_tracing",
+    "so_daemon",
+    "so_client",
+    "so_cli",
+]
+
+# Shared metadata and dependency versions, inherited by the member crates so a
+# version is pinned in exactly one place. The workspace is a *virtual* manifest
+# (no root package): it exists only to bind the crates together.
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+description = "An assume-guarantee contract specification graph, ingested from constrained natural language."
+
+[workspace.dependencies]
+# Internal crates, addressed by path so the workspace builds standalone.
+so-lang = { path = "so_lang" }
+so-protocol = { path = "so_protocol" }
+so-daemon = { path = "so_daemon" }
+so-client = { path = "so_client" }
+
+# Serialization / errors, used across the domain and storage layers.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+anyhow = "1"
+
+# Capture-side (daemon): hashing, HTTP fetch, time, identity, plugin registry.
+sha2 = "0.10"
+ureq = "2"
+chrono = { version = "0.4", features = ["clock"], default-features = false }
+uuid = { version = "1", features = ["v4"] }
+inventory = "0.3"
+# ArangoDB driver, blocking mode (the capture pipeline is synchronous and is run
+# off the async reactor via spawn_blocking).
+arangors = { version = "0.6", default-features = false, features = ["rocksdb", "reqwest_blocking"] }
+
+# gRPC / protobuf contract between daemon and client.
+tonic = "0.12"
+tonic-build = "0.12"
+prost = "0.13"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
+
+# CLI parsing (daemon flags + `spec` frontend).
+clap = { version = "4", features = ["derive", "env"] }
+
+# Observability: tracing spans exported as OTLP/HTTP to the shared local OTel stack.
+so-tracing = { path = "so_tracing" }
+opentelemetry = { version = "0.32", default-features = false, features = ["trace"] }
+opentelemetry-otlp = { version = "0.32", default-features = false, features = ["http-proto", "reqwest-blocking-client", "trace"] }
+opentelemetry_sdk = { version = "0.32", default-features = false, features = ["trace"] }
+tracing = "0.1"
+tracing-opentelemetry = "0.33"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Test-only.
+tempfile = "3"

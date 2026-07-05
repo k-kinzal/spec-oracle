@@ -1,0 +1,16 @@
+[package]
+name = "so-client"
+version.workspace = true
+edition.workspace = true
+description = "A thin gRPC client for the spec-oracle ContractGraph service."
+
+[lib]
+name = "so_client"
+path = "src/lib.rs"
+
+[dependencies]
+so-protocol.workspace = true
+so-tracing.workspace = true
+tonic.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
