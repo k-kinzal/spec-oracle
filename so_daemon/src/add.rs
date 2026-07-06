@@ -294,7 +294,6 @@ fn parse_error_kind(error: &grammar::ParseError) -> &'static str {
         grammar::ParseError::MissingComma { .. } => "missing_comma",
         grammar::ParseError::EmptyCondition { .. } => "empty_condition",
         grammar::ParseError::MissingModal => "missing_modal",
-        grammar::ParseError::MissingDeterminer { .. } => "missing_determiner",
         grammar::ParseError::EmptySubject => "empty_subject",
         grammar::ParseError::EmptyResponse => "empty_response",
     }
@@ -306,7 +305,6 @@ fn parse_expected_form(error: &grammar::ParseError) -> &'static str {
         grammar::ParseError::MissingComma { .. } => "condition_clause_comma_before_guarantee",
         grammar::ParseError::EmptyCondition { .. } => "condition_clause_text",
         grammar::ParseError::MissingModal
-        | grammar::ParseError::MissingDeterminer { .. }
         | grammar::ParseError::EmptySubject
         | grammar::ParseError::EmptyResponse => "guarantee_clause",
     }

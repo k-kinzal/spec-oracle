@@ -5,7 +5,7 @@
 `spec add` accepts specification statements written in an **EARS-derived
 constrained natural language**, and projects each one into an **assume-guarantee
 contract**: leading condition clauses become the **assumption**, and the
-`the <subject> shall <response>` clause becomes the **guarantee**. This directory
+`<subject> <shall|must|should> <response>` clause becomes the **guarantee**. This directory
 documents that language: its forms, its lexical rules, the projection, the error
 taxonomy, and a formal grammar.
 
@@ -34,15 +34,16 @@ There is nothing in between. Concretely, this means:
 
 ## Quick reference
 
-Three accepted forms. The determiner `the`, the modal `shall`, and the four
-condition keywords `While` / `When` / `If` / `Where` are the fixed vocabulary;
-everything else (subject, response, condition text) is opaque free text.
+Three accepted forms. The guarantee modals `shall` / `must` / `should`, the
+optional leading determiner `the`, and the four condition keywords `While` /
+`When` / `If` / `Where` are the fixed vocabulary; everything else (subject,
+response, condition text) is opaque free text.
 
 | Form | Shape | Example | Assumption |
 | --- | --- | --- | --- |
-| **Ubiquitous** | `The <subject> shall <response>.` | `The sales amount shall be greater than zero.` | `⊤` (Top) |
-| **Conditional** | `<While\|When\|If\|Where> <condition>, [then] the <subject> shall <response>.` | `When the order is submitted, the system shall record the total.` | one condition clause |
-| **Complex** | `<kw> <c1>, <kw> <c2>, ... the <subject> shall <response>.` | `While the engine is running, when the temperature exceeds the limit, the controller shall open the valve.` | conjunction of clauses |
+| **Ubiquitous** | `<subject> <shall\|must\|should> <response>.` | `The sales amount shall be greater than zero.` | `⊤` (Top) |
+| **Conditional** | `<While\|When\|If\|Where> <condition>, [then] <subject> <shall\|must\|should> <response>.` | `When the order is submitted, the system shall record the total.` | one condition clause |
+| **Complex** | `<kw> <c1>, <kw> <c2>, ... <subject> <shall\|must\|should> <response>.` | `While the engine is running, when the temperature exceeds the limit, the controller shall open the valve.` | conjunction of clauses |
 
 The trailing period is optional (`The pump shall stop` parses). See
 [forms.md](./forms.md) for each form in full and [cookbook.md](./cookbook.md)
@@ -69,3 +70,5 @@ Deliberately deferred and **not** part of this language today: subject
 resolution, a formal predicate language for the response, contract strength,
 edges (refinement / composition / conjunction / quotient), and
 classification/review. At ingest, the subject and response are opaque free text.
+Permission and capability modals such as `may` and `can` are not guarantee
+pivots.

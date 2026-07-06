@@ -13,7 +13,7 @@ A `Contract` has two parts:
 | Part | Source in the statement | Type |
 | --- | --- | --- |
 | **assumption** | the leading condition clauses (possibly none) | `Assumption` |
-| **guarantee** | the `the <subject> shall <response>` clause | `Guarantee` |
+| **guarantee** | the `<subject> <shall|must|should> <response>` clause | `Guarantee` |
 
 ## Assumption: the conjunction of the condition clauses
 
@@ -32,21 +32,28 @@ the condition phrase with the keyword and trailing comma stripped.
 
 | Statement shape | Assumption |
 | --- | --- |
-| `The <subject> shall <response>.` | `Top` (`⊤`) |
-| `<kw> <c>, the <subject> shall <response>.` | `Conditions { clauses: [c] }` |
-| `<kw> <c1>, <kw> <c2>, the <subject> shall <response>.` | `Conditions { clauses: [c1, c2] }` |
+| `<subject> <shall\|must\|should> <response>.` | `Top` (`⊤`) |
+| `<kw> <c>, <subject> <shall\|must\|should> <response>.` | `Conditions { clauses: [c] }` |
+| `<kw> <c1>, <kw> <c2>, <subject> <shall\|must\|should> <response>.` | `Conditions { clauses: [c1, c2] }` |
 
 ## Guarantee: opaque subject and response
 
-The `the <subject> shall <response>` clause becomes the `Guarantee`:
+The `<subject> <shall|must|should> <response>` clause becomes the `Guarantee`:
 
-- **subject** — the noun phrase between the determiner `the` and the modal `shall`.
-- **response** — everything after the modal `shall`.
+- **subject** — the noun phrase before the selected guarantee modal. A leading
+  `the` is stripped when present so EARS-style statements continue to project
+  `The system shall ...` as subject `system`.
+- **response** — everything after the selected modal (`shall`, `must`, or
+  `should`).
 
 Both are captured as **opaque free text**, trimmed of surrounding whitespace.
 Neither is decomposed further at ingest: the subject is not resolved to an entity,
 and the response is not parsed into a predicate language. Those are deliberate
 [non-goals](#non-goals).
+
+The selected modal is not stored in `Guarantee`. This is deliberate: the raw
+statement is the source of truth, and later views such as normative strength can
+derive from that text without making ingest depend on a settled strength model.
 
 ## Data model
 
@@ -145,7 +152,7 @@ representation.
 | --- | --- |
 | `Assumption::Top` | `⊤` |
 | `Assumption::Conditions` | clauses joined by `, `, each as `<keyword> <text>` |
-| `Guarantee` | `the <subject> shall <response>` |
+| `Guarantee` | `the <subject> shall <response>` (canonical display form) |
 
 For example, a two-clause assumption renders as:
 

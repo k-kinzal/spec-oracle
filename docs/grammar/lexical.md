@@ -23,7 +23,7 @@ order:
 | 2 | Strip at most one trailing `.`, trim again; reject if empty | [Trailing period](#trailing-period-at-most-one) |
 | 3 | Match condition keywords at a **whitespace** boundary | [Word boundaries](#word-boundaries-two-different-notions) |
 | 3 | Drop one optional `then` after a clause comma | [Optional `then`](#the-optional-then) |
-| 4 | Match determiner `the` at a **whitespace** boundary; find modal `shall` at an **alphanumeric** boundary | [Word boundaries](#word-boundaries-two-different-notions) |
+| 4 | Optionally strip determiner `the` at a **whitespace** boundary; find modal `shall`, `must`, or `should` at an **alphanumeric** boundary | [Word boundaries](#word-boundaries-two-different-notions) |
 
 ## Whitespace trimming
 
@@ -67,10 +67,10 @@ accept/reject outcomes.
 
 | Token(s) | Boundary test | A match requires the next character to be… |
 | --- | --- | --- |
-| Condition keywords (`While` `When` `If` `Where`), determiner `the`, `then` | `starts_with_word` | **whitespace** |
-| Modal `shall` | `find_word` | **non-alphanumeric** (or a string edge) |
+| Condition keywords (`While` `When` `If` `Where`), optional determiner `the`, `then` | `starts_with_word` | **whitespace** |
+| Modals `shall` / `must` / `should` | `find_word_from` | **non-alphanumeric** (or a string edge) |
 
-### Whitespace boundary — keywords, `the`, `then`
+### Whitespace boundary — keywords, optional `the`, `then`
 
 `starts_with_word` matches the token as a case-insensitive prefix **only when the
 character immediately after it is whitespace**. A comma, a letter, or end-of-string
@@ -88,14 +88,17 @@ the text is handled as an ordinary (here, malformed) guarantee clause. Because
 a space to count** — which also means the keyword can never absorb the comma that
 terminates its own clause.
 
-The same test guards the guarantee determiner: the guarantee clause must **open**
-with `the` followed by whitespace.
+The same test guards the optional guarantee determiner: when a guarantee clause
+opens with `the` followed by whitespace, that word is stripped from the projected
+subject. It is not required; `AddContract shall return the node.` is also a valid
+guarantee clause.
 
-### Alphanumeric boundary — the modal `shall`
+### Alphanumeric boundary — the modals `shall`, `must`, and `should`
 
-`find_word` scans for `shall` (case-insensitive) bounded on **both** sides by a
-non-alphanumeric byte or a string edge. This lets punctuation hug the modal but
-prevents a `shall` buried inside a longer word from matching.
+`find_word_from` scans for `shall`, `must`, and `should` (case-insensitive)
+bounded on **both** sides by a non-alphanumeric byte or a string edge. This lets
+punctuation hug the modal but prevents a modal buried inside a longer word from
+matching.
 
 ```text
 "The marshalling yard shall be clear."   ->  subject "marshalling yard",
@@ -103,26 +106,29 @@ prevents a `shall` buried inside a longer word from matching.
 ```
 
 Here the `shall` inside **mar·shall·ing** is preceded by `r` (alphanumeric), so it
-is *not* the modal; the real `shall` later in the sentence wins. Conversely,
-punctuation-adjacent forms *do* match, because commas and parentheses are
-non-alphanumeric:
+is *not* the modal; the real `shall` later in the sentence wins. Similarly,
+`must` inside `mustard` and `should` inside `shoulder` are not modals.
+Conversely, punctuation-adjacent forms *do* match, because commas, parentheses,
+and brackets are non-alphanumeric:
 
 ```text
 "... shall, ..."   ->  matches the modal
 "... (shall) ..."  ->  matches the modal
+"... [should] ..." ->  matches the modal
 ```
 
-> Why two notions? Keywords and the determiner sit at the *start* of a clause and
-> are always separated from their argument by a space, so a whitespace boundary is
-> the right, strict test. The modal sits *mid-clause* between free-form subject and
-> response text, where adjacent punctuation is normal, so an alphanumeric boundary
-> is the right test there.
+> Why two notions? Keywords and the optional determiner sit at the *start* of a
+> clause and are always separated from their argument by a space, so a whitespace
+> boundary is the right, strict test. The modal sits *mid-clause* between
+> free-form subject and response text, where adjacent punctuation is normal, so
+> an alphanumeric boundary is the right test there.
 
 ## Casing
 
-The four condition keywords, the determiner `the`, the modal `shall`, and `then`
-are all matched **case-insensitively** (ASCII case folding). `WHEN`, `When`, and
-`when` are all recognized as the keyword; `SHALL` and `shall` both pivot the
+The four condition keywords, the optional determiner `the`, the modals `shall`,
+`must`, and `should`, and `then` are all matched **case-insensitively** (ASCII
+case folding). `WHEN`, `When`, and `when` are all recognized as the keyword;
+`SHALL` and `shall`, `MUST` and `must`, or `SHOULD` and `should`, pivot the
 guarantee.
 
 The captured **condition keyword preserves the surface casing from the input** —
@@ -134,7 +140,9 @@ it is not normalized to the canonical `CONDITION_KEYWORDS` spelling.
 ```
 
 Subject, response, and condition **text** are always captured verbatim; no case
-folding is applied to them.
+folding is applied to them. If multiple modal candidates exist, the parser uses
+the first one that leaves both a non-empty subject and a non-empty response, so
+literal-token subjects such as `The shall clause shall ...` remain expressible.
 
 ## The optional `then`
 
@@ -158,11 +166,12 @@ The recognizer is **total**: it returns `Ok` or `Err` for *every* input and
 **never panics**, including on arbitrary multibyte UTF-8. `starts_with_word` uses
 `str::get(..len)`, which returns `None` (rather than panicking) when a token length
 would fall inside a codepoint — exactly the "not this token" answer we want.
-`find_word` scans bytes with ASCII boundary checks and never splits a codepoint.
+`find_word_from` scans bytes with ASCII boundary checks and never splits a
+codepoint.
 
 Non-ASCII **subject, response, and condition text is captured verbatim**. Only the
-keywords, determiner, modal, and `then` are ASCII (matched ASCII-case-insensitively);
-everything else is opaque UTF-8.
+keywords, optional determiner, modals, and `then` are ASCII (matched
+ASCII-case-insensitively); everything else is opaque UTF-8.
 
 ```text
 "The café shall serve crêpes."              ->  subject "café",

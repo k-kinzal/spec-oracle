@@ -19,11 +19,12 @@ Two building blocks appear in every form:
 - **Condition clause** — `<keyword> <condition>`, opened by one of the four
   keywords `While`, `When`, `If`, `Where` and closed by a comma. Contributes to
   the **assumption**.
-- **Guarantee clause** — `the <subject> shall <response>`, opened by the
-  determiner `the` and pivoting on the modal `shall`. Becomes the **guarantee**.
+- **Guarantee clause** — `<subject> <shall|must|should> <response>`, optionally
+  opened by the determiner `the` and pivoting on the first guarantee modal that
+  leaves a non-empty subject and response. Becomes the **guarantee**.
 
 The trailing period shown below is optional; casing and whitespace handling for
-keywords, the determiner, and the modal are governed by the tokenizer — see
+keywords, the optional determiner, and the modals are governed by the tokenizer — see
 [lexical.md](./lexical.md). For what happens when a form is malformed, see
 [errors.md](./errors.md). For how the parsed parts become a `Contract`, see
 [projection.md](./projection.md).
@@ -35,14 +36,13 @@ keywords, the determiner, and the modal are governed by the tokenizer — see
 An unconditional guarantee: the response always holds.
 
 ```text
-The <subject> shall <response>.
+<subject> <shall|must|should> <response>.
 ```
 
 | Slot | Meaning |
 | --- | --- |
-| `The` | the subject determiner that opens the guarantee clause |
-| `<subject>` | the noun phrase between the determiner and the modal |
-| `shall` | the guarantee modal (the pivot) |
+| `<subject>` | the noun phrase before the modal; a leading `the` is stripped from the projected subject when present |
+| `shall` / `must` / `should` | the guarantee modal (the pivot) |
 | `<response>` | everything after the modal |
 
 Because no condition keyword leads the body, the condition loop consumes
@@ -67,13 +67,24 @@ More accepted Ubiquitous statements (each projects to `Top`):
 | `The pump shall stop` | `pump` | `stop` | trailing period optional |
 | `The marshalling yard shall be clear.` | `marshalling yard` | `be clear` | the inner `shall` of `marshalling` is not the modal |
 | `The café shall serve crêpes.` | `café` | `serve crêpes` | subject and response captured verbatim, multibyte-safe |
+| `AddContract shall return the persisted node.` | `AddContract` | `return the persisted node` | named API subjects do not need a determiner |
+| `The daemon crate must provide the specd binary.` | `daemon crate` | `provide the specd binary` | `must` is accepted as a guarantee modal |
+| `The tracing library should install TraceContext and Baggage propagators.` | `tracing library` | `install TraceContext and Baggage propagators` | `should` is accepted as a guarantee modal |
+| `The shall clause shall become the guarantee.` | `shall clause` | `become the guarantee` | a reserved word can appear in the subject when a later modal completes the clause |
 
 **Rules specific to this form**
 
-- The clause must open with the determiner `the` at a word boundary; otherwise
-  it is not a guarantee clause.
-- The first whole-word `shall` is the pivot. A `shall` embedded inside a larger
-  word (as in `marshalling`) is not a boundary, so the real modal wins.
+- The clause may open with the determiner `the`; when it does, that determiner is
+  stripped from the projected subject for EARS compatibility.
+- The subject may also start directly with a natural technical noun phrase such
+  as `AddContract`, `Tracing`, `Each node`, or `Docker Compose`.
+- The first whole-word `shall`, `must`, or `should` that leaves a non-empty
+  subject and response is the pivot. A modal embedded inside a larger word (as
+  in `marshalling` or `shoulder`) is not a boundary, so the real modal wins.
+- The modal word is not stored in `Guarantee`; the raw statement remains the
+  source of truth for later views such as normative strength.
+- Permission and capability modals such as `may` and `can` are not guarantee
+  pivots.
 
 ---
 
@@ -82,7 +93,7 @@ More accepted Ubiquitous statements (each projects to `Top`):
 A single guard on the guarantee.
 
 ```text
-<While|When|If|Where> <condition>, [then] the <subject> shall <response>.
+<While|When|If|Where> <condition>, [then] <subject> <shall|must|should> <response>.
 ```
 
 | Slot | Meaning |
@@ -91,7 +102,7 @@ A single guard on the guarantee.
 | `<condition>` | the condition phrase, from the keyword to the comma |
 | `,` | mandatory separator closing the condition clause |
 | `[then]` | optional and discarded (EARS' `If ..., then ...`) |
-| `the <subject> shall <response>` | the guarantee clause |
+| `<subject> <shall\|must\|should> <response>` | the guarantee clause |
 
 **Accepted example**
 
@@ -149,7 +160,7 @@ loop — i.e. it follows the comma of the *last leading condition clause*, not t
 last comma in the string (a response may itself contain commas).
 
 ```text
-<kw> <c1>, <kw> <c2>, ... the <subject> shall <response>.
+<kw> <c1>, <kw> <c2>, ... <subject> <shall|must|should> <response>.
 ```
 
 The keywords may differ between clauses, and each keeps its own surface casing.
@@ -173,12 +184,12 @@ While the engine is running, when the temperature exceeds the limit, the control
   which the clauses appear.
 - **Consumption is greedy and stops at the guarantee.** The loop keeps taking
   clauses as long as the remaining text starts with a condition keyword. The
-  guarantee clause opens with `the`, which is not a keyword, so the loop halts
+  guarantee clause begins with any non-keyword subject text, so the loop halts
   there naturally.
 - **A condition phrase cannot contain a comma.** Each clause ends at the
   *first* comma after its keyword. A comma placed inside intended condition text
   will split it early, so the following segment (unless it starts with a keyword)
-  is treated as the guarantee — typically producing `MissingDeterminer` (see
+  is treated as the guarantee and must contain a valid guarantee modal (see
   [errors.md](./errors.md)).
 - Every keyword must still be followed by a comma; a later clause missing its
   comma fails with `MissingComma`.

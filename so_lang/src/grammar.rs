@@ -9,16 +9,17 @@
 //! The accepted forms, following EARS:
 //!
 //! ```text
-//! Ubiquitous:  The <subject> shall <response>.
-//! Conditional: <While|When|If|Where> <condition>, [then] the <subject> shall <response>.
-//! Complex:     <kw> <c1>, <kw> <c2>, ... the <subject> shall <response>.
+//! Ubiquitous:  <subject> <shall|must|should> <response>.
+//! Conditional: <While|When|If|Where> <condition>, [then] <subject> <shall|must|should> <response>.
+//! Complex:     <kw> <c1>, <kw> <c2>, ... <subject> <shall|must|should> <response>.
 //! ```
 //!
 //! The A/G projection is mechanical and unambiguous:
 //!   * every leading condition clause becomes part of the **assumption** (the
 //!     conjunction of the clauses); with no condition clause the assumption is
 //!     `⊤` (the ubiquitous case);
-//!   * the `the <subject> shall <response>` clause becomes the **guarantee**.
+//!   * the `<subject> <shall|must|should> <response>` clause becomes the
+//!     **guarantee**.
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -27,11 +28,16 @@ use thiserror::Error;
 /// casing is preserved in the parsed [`Condition`].
 const CONDITION_KEYWORDS: [&str; 4] = ["While", "When", "If", "Where"];
 
-/// The guarantee marker. A well-formed statement contains exactly one guarantee
-/// clause, introduced by the subject determiner and pivoting on this modal.
-const GUARANTEE_MODAL: &str = "shall";
+/// The accepted guarantee modals. A well-formed statement contains exactly one
+/// guarantee clause, pivoting on one of these modals.
+const GUARANTEE_MODALS: [&str; 3] = ["shall", "must", "should"];
 
-/// The subject determiner that opens the guarantee clause.
+/// The canonical modal used for rendering. The raw statement remains the source
+/// of truth, so the projection does not preserve which accepted modal appeared.
+const RENDER_MODAL: &str = "shall";
+
+/// Optional subject determiner stripped from the projected subject for the
+/// original EARS-style `The <subject> shall <response>` shape.
 const SUBJECT_DETERMINER: &str = "the";
 
 /// A single leading condition clause, e.g. `When the order is submitted`.
@@ -71,11 +77,13 @@ impl Assumption {
     }
 }
 
-/// The guarantee projected from the `the <subject> shall <response>` clause.
+/// The guarantee projected from the `<subject> <shall|must|should> <response>`
+/// clause.
 ///
-/// `subject` is the noun phrase between the determiner and the modal; `response`
-/// is everything after the modal. Neither is further decomposed at ingest —
-/// subject resolution and a formal predicate language are deliberately deferred.
+/// `subject` is the phrase before the modal, with a leading `the` stripped when
+/// present for EARS compatibility; `response` is everything after the modal.
+/// Neither is further decomposed at ingest — subject resolution and a formal
+/// predicate language are deliberately deferred.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Guarantee {
     pub subject: String,
@@ -84,7 +92,7 @@ pub struct Guarantee {
 
 impl Guarantee {
     pub fn render(&self) -> String {
-        format!("the {} shall {}", self.subject, self.response)
+        format!("the {} {RENDER_MODAL} {}", self.subject, self.response)
     }
 }
 
@@ -106,19 +114,12 @@ pub enum ParseError {
     #[error("condition clause opened with '{keyword}' has no text")]
     EmptyCondition { keyword: String },
     #[error(
-        "the guarantee clause must be of the form '{det} <subject> {modal} <response>' but no '{modal}' was found",
-        det = SUBJECT_DETERMINER,
-        modal = GUARANTEE_MODAL,
+        "the guarantee clause must be of the form '<subject> <shall|must|should> <response>' but no guarantee modal was found",
     )]
     MissingModal,
-    #[error(
-        "the guarantee clause must start with the determiner '{det}' but starts with '{found}'",
-        det = SUBJECT_DETERMINER,
-    )]
-    MissingDeterminer { found: String },
-    #[error("the guarantee clause has no subject between '{det}' and '{modal}'", det = SUBJECT_DETERMINER, modal = GUARANTEE_MODAL)]
+    #[error("the guarantee clause has no subject before the guarantee modal")]
     EmptySubject,
-    #[error("the guarantee clause has no response after '{modal}'", modal = GUARANTEE_MODAL)]
+    #[error("the guarantee clause has no response after the guarantee modal")]
     EmptyResponse,
 }
 
@@ -206,46 +207,80 @@ fn strip_leading_then(s: &str) -> String {
     }
 }
 
-/// Parse the guarantee clause `the <subject> shall <response>`.
+/// Parse the guarantee clause `<subject> <shall|must|should> <response>`.
 fn parse_guarantee(clause: &str) -> Result<Guarantee, ParseError> {
-    let has_modal = find_word(clause, GUARANTEE_MODAL).is_some();
+    // Preserve the original projection for EARS-style statements by stripping a
+    // leading "the" from the subject, but do not require it. This lets natural
+    // technical subjects such as "AddContract", "Tracing", or "Each node" stand
+    // on their own.
+    let subject_area = if starts_with_word(clause, SUBJECT_DETERMINER) {
+        clause[SUBJECT_DETERMINER.len()..].trim_start()
+    } else {
+        clause
+    };
 
-    // The clause must open with the determiner at a word boundary.
-    let opens_with_determiner = starts_with_word(clause, SUBJECT_DETERMINER);
-    if !opens_with_determiner {
-        // A missing modal is the more fundamental defect; report it first.
-        if !has_modal {
-            return Err(ParseError::MissingModal);
+    let candidates = modal_candidates(subject_area);
+    if candidates.is_empty() {
+        return Err(ParseError::MissingModal);
+    }
+
+    let mut saw_empty_subject = false;
+    let mut saw_empty_response = false;
+    for candidate in candidates {
+        let subject = subject_area[..candidate.offset].trim();
+        let response = subject_area[candidate.offset + candidate.modal.len()..].trim();
+        if subject.is_empty() {
+            saw_empty_subject = true;
+            continue;
         }
-        let found = clause.split_whitespace().next().unwrap_or("").to_string();
-        return Err(ParseError::MissingDeterminer { found });
+        if response.is_empty() {
+            saw_empty_response = true;
+            continue;
+        }
+        return Ok(Guarantee {
+            subject: subject.to_string(),
+            response: response.to_string(),
+        });
     }
 
-    let after_determiner = clause[SUBJECT_DETERMINER.len()..].trim_start();
-    let modal_at = find_word(after_determiner, GUARANTEE_MODAL).ok_or(ParseError::MissingModal)?;
-    let subject = after_determiner[..modal_at].trim().to_string();
-    let response = after_determiner[modal_at + GUARANTEE_MODAL.len()..]
-        .trim()
-        .to_string();
-    if subject.is_empty() {
-        return Err(ParseError::EmptySubject);
+    if saw_empty_response {
+        Err(ParseError::EmptyResponse)
+    } else if saw_empty_subject {
+        Err(ParseError::EmptySubject)
+    } else {
+        Err(ParseError::MissingModal)
     }
-    if response.is_empty() {
-        return Err(ParseError::EmptyResponse);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ModalCandidate {
+    offset: usize,
+    modal: &'static str,
+}
+
+fn modal_candidates(haystack: &str) -> Vec<ModalCandidate> {
+    let mut candidates = Vec::new();
+    for modal in GUARANTEE_MODALS {
+        let mut start = 0;
+        while let Some(offset) = find_word_from(haystack, modal, start) {
+            candidates.push(ModalCandidate { offset, modal });
+            start = offset + modal.len();
+        }
     }
-    Ok(Guarantee { subject, response })
+    candidates.sort_by_key(|candidate| candidate.offset);
+    candidates
 }
 
 /// Find the byte offset of `word` in `haystack` as a whole ASCII word
 /// (alphanumeric boundaries), case-insensitively. Returns the offset into
 /// `haystack`. `word` must be ASCII.
-fn find_word(haystack: &str, word: &str) -> Option<usize> {
+fn find_word_from(haystack: &str, word: &str, start: usize) -> Option<usize> {
     let hay = haystack.as_bytes();
     let w = word.as_bytes();
-    if w.is_empty() || hay.len() < w.len() {
+    if w.is_empty() || hay.len() < w.len() || start >= hay.len() {
         return None;
     }
-    let mut i = 0;
+    let mut i = start;
     while i + w.len() <= hay.len() {
         if hay[i..i + w.len()].eq_ignore_ascii_case(w) {
             let before_ok = i == 0 || !hay[i - 1].is_ascii_alphanumeric();
@@ -344,6 +379,18 @@ mod tests {
     }
 
     #[test]
+    fn reject_non_requirement_modals() {
+        assert_eq!(
+            parse("The client may retry."),
+            Err(ParseError::MissingModal)
+        );
+        assert_eq!(
+            parse("The client can retry."),
+            Err(ParseError::MissingModal)
+        );
+    }
+
+    #[test]
     fn reject_conditional_without_comma() {
         assert_eq!(
             parse("When the order is submitted the system shall record the total."),
@@ -354,13 +401,59 @@ mod tests {
     }
 
     #[test]
-    fn reject_missing_determiner() {
+    fn accepts_subject_without_determiner() {
+        let c = parse("System shall record the total.").unwrap();
+        assert_eq!(c.guarantee.subject, "System");
+        assert_eq!(c.guarantee.response, "record the total");
+    }
+
+    #[test]
+    fn accepts_must_as_guarantee_modal() {
+        let c = parse("The daemon crate must provide the specd binary.").unwrap();
+        assert_eq!(c.guarantee.subject, "daemon crate");
+        assert_eq!(c.guarantee.response, "provide the specd binary");
+    }
+
+    #[test]
+    fn accepts_should_as_guarantee_modal() {
+        let c = parse(
+            "The tracing library should default OTLP HTTP export to http://192.168.10.4:4318 when no OTLP endpoint is configured.",
+        )
+        .unwrap();
+        assert_eq!(c.assumption, Assumption::Top);
+        assert_eq!(c.guarantee.subject, "tracing library");
         assert_eq!(
-            parse("System shall record the total."),
-            Err(ParseError::MissingDeterminer {
-                found: "System".to_string()
-            })
+            c.guarantee.response,
+            "default OTLP HTTP export to http://192.168.10.4:4318 when no OTLP endpoint is configured",
         );
+    }
+
+    #[test]
+    fn accepts_should_under_condition() {
+        let c = parse(
+            "When OpenTelemetry is enabled, the tracing library should install TraceContext and Baggage propagators.",
+        )
+        .unwrap();
+        assert_eq!(c.assumption, conds(&[("When", "OpenTelemetry is enabled")]));
+        assert_eq!(c.guarantee.subject, "tracing library");
+        assert_eq!(
+            c.guarantee.response,
+            "install TraceContext and Baggage propagators",
+        );
+    }
+
+    #[test]
+    fn skips_empty_subject_modal_candidate() {
+        let c = parse("The shall clause in a statement shall become the guarantee.").unwrap();
+        assert_eq!(c.guarantee.subject, "shall clause in a statement");
+        assert_eq!(c.guarantee.response, "become the guarantee");
+    }
+
+    #[test]
+    fn skips_empty_subject_should_candidate() {
+        let c = parse("The should clause in a statement should become the guarantee.").unwrap();
+        assert_eq!(c.guarantee.subject, "should clause in a statement");
+        assert_eq!(c.guarantee.response, "become the guarantee");
     }
 
     #[test]
@@ -426,5 +519,12 @@ mod tests {
         let c = parse("The marshalling yard shall be clear.").unwrap();
         assert_eq!(c.guarantee.subject, "marshalling yard");
         assert_eq!(c.guarantee.response, "be clear");
+    }
+
+    #[test]
+    fn should_inside_subject_word_is_not_a_boundary() {
+        let c = parse("The shoulder harness should lock.").unwrap();
+        assert_eq!(c.guarantee.subject, "shoulder harness");
+        assert_eq!(c.guarantee.response, "lock");
     }
 }

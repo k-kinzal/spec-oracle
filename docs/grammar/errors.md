@@ -8,24 +8,23 @@ The grammar is a **total recognizer**: every input either parses into exactly on
 confidence" middle ground, no partial parse, and no human review. If `parse`
 returns `Err`, the statement is not in the language and nothing downstream runs.
 
-Every variant carries a fixed, human-readable `Display` message. The seven
+Every variant carries a fixed, human-readable `Display` message. The six
 variants below are exhaustive; each states the exact message, what triggers it,
 a minimal example, and how to fix it. The rules each error enforces are defined
 in [forms.md](./forms.md) and [lexical.md](./lexical.md).
 
-## The seven variants at a glance
+## The six variants at a glance
 
-Placeholders (`<keyword>`, `<found>`) are substituted with text from the input.
+Placeholders (`<keyword>`) are substituted with text from the input.
 
 | Variant | `Display` message | Triggered when |
 | --- | --- | --- |
 | `Empty` | `statement is empty` | Input is blank, or reduces to blank after trimming and stripping one trailing period. |
 | `MissingComma` | `a condition clause opened with '<keyword>' must be closed by a comma before the guarantee clause` | A condition keyword opens a clause but no comma closes it. |
 | `EmptyCondition` | `condition clause opened with '<keyword>' has no text` | A condition keyword is followed only by whitespace before its closing comma. |
-| `MissingModal` | `the guarantee clause must be of the form 'the <subject> shall <response>' but no 'shall' was found` | The guarantee clause contains no `shall` as a whole word. |
-| `MissingDeterminer` | `the guarantee clause must start with the determiner 'the' but starts with '<found>'` | The guarantee clause does not open with `the` (but a `shall` is present). |
-| `EmptySubject` | `the guarantee clause has no subject between 'the' and 'shall'` | Nothing sits between the determiner `the` and the modal `shall`. |
-| `EmptyResponse` | `the guarantee clause has no response after 'shall'` | Nothing follows the modal `shall`. |
+| `MissingModal` | `the guarantee clause must be of the form '<subject> <shall\|must\|should> <response>' but no guarantee modal was found` | The guarantee clause contains no `shall`, `must`, or `should` as a whole word. |
+| `EmptySubject` | `the guarantee clause has no subject before the guarantee modal` | No non-empty subject appears before any usable modal. |
+| `EmptyResponse` | `the guarantee clause has no response after the guarantee modal` | No non-empty response follows any usable modal. |
 
 ## Per-variant detail
 
@@ -82,85 +81,54 @@ Placeholders (`<keyword>`, `<found>`) are substituted with text from the input.
 
 ### `MissingModal`
 
-- **Message:** `the guarantee clause must be of the form 'the <subject> shall <response>' but no 'shall' was found`
-- **Trigger:** The guarantee clause contains no `shall` as a whole word.
-  `shall` is matched with alphanumeric boundaries on both sides, so an inner
-  `shall` inside another word (e.g. `marshalling`) does **not** count as the
-  modal. This is also the error you get when the whole statement simply omits the
-  modal.
+- **Message:** `the guarantee clause must be of the form '<subject> <shall|must|should> <response>' but no guarantee modal was found`
+- **Trigger:** The guarantee clause contains no `shall`, `must`, or `should` as
+  a whole word. Modals are matched with alphanumeric boundaries on both sides,
+  so an inner `shall` inside another word (e.g. `marshalling`), `must` inside
+  another word (e.g. `mustard`), or `should` inside another word (e.g.
+  `shoulder`) does **not** count as the modal. This is also the error you get
+  when the whole statement simply omits the modal. Permission and capability
+  modals such as `may` and `can` do not count as guarantee modals.
 - **Example:**
 
   ```text
   "The sales amount is always greater than zero."
-    ->  the guarantee clause must be of the form 'the <subject> shall <response>' but no 'shall' was found
+    ->  the guarantee clause must be of the form '<subject> <shall|must|should> <response>' but no guarantee modal was found
   ```
 
-- **Fix:** Pivot the guarantee on the modal `shall`:
-  `The sales amount shall be greater than zero.`
-
-### `MissingDeterminer`
-
-- **Message:** `the guarantee clause must start with the determiner 'the' but starts with '<found>'`
-  (`<found>` is the first whitespace-delimited token of the clause, e.g. `System`).
-- **Trigger:** The guarantee clause does not open with the determiner `the` (as a
-  word, followed by whitespace), **and** a `shall` is present. If both the
-  determiner and the modal are missing, the missing modal is reported instead —
-  see [Precedence](#precedence-missing-modal-before-missing-determiner) below.
-- **Example:**
-
-  ```text
-  "System shall record the total."
-    ->  the guarantee clause must start with the determiner 'the' but starts with 'System'
-  ```
-
-- **Fix:** Open the guarantee clause with `the`:
-  `The system shall record the total.`
+- **Fix:** Pivot the guarantee on `shall`, `must`, or `should`:
+  `The sales amount shall be greater than zero.` or
+  `The sales amount must be greater than zero.` or
+  `The sales amount should be greater than zero.`
 
 ### `EmptySubject`
 
-- **Message:** `the guarantee clause has no subject between 'the' and 'shall'`
-- **Trigger:** The clause opens with `the` and contains `shall`, but the text
-  between them is empty.
+- **Message:** `the guarantee clause has no subject before the guarantee modal`
+- **Trigger:** The clause contains a guarantee modal, but no usable modal leaves
+  a non-empty subject before it.
 - **Example:**
 
   ```text
   "The shall run."
-    ->  the guarantee clause has no subject between 'the' and 'shall'
+    ->  the guarantee clause has no subject before the guarantee modal
   ```
 
-- **Fix:** Name the subject between the determiner and the modal:
+- **Fix:** Name the subject before the modal:
   `The engine shall run.`
 
 ### `EmptyResponse`
 
-- **Message:** `the guarantee clause has no response after 'shall'`
-- **Trigger:** The clause opens with `the` and contains `shall`, a non-empty
-  subject precedes the modal, but nothing follows the modal.
+- **Message:** `the guarantee clause has no response after the guarantee modal`
+- **Trigger:** The clause contains a guarantee modal with a non-empty subject
+  before it, but no usable modal leaves a non-empty response after it.
 - **Example:**
 
   ```text
   "The pump shall."
-    ->  the guarantee clause has no response after 'shall'
+    ->  the guarantee clause has no response after the guarantee modal
   ```
 
-- **Fix:** State the response after `shall`: `The pump shall stop.`
-
-## Precedence: missing modal before missing determiner
-
-When the guarantee clause does **not** open with the determiner `the`, the parser
-first checks whether a `shall` exists anywhere in the clause:
-
-- If **no** `shall` is present, it reports `MissingModal` — the absent modal is
-  treated as the more fundamental defect and is reported *before* the missing
-  determiner.
-- Only if a `shall` **is** present does it report `MissingDeterminer`.
-
-So a clause that lacks both surfaces as `MissingModal`, not `MissingDeterminer`:
-
-```text
-"System records the total."   ->  the guarantee clause must be of the form 'the <subject> shall <response>' but no 'shall' was found   (MissingModal)
-"System shall record the total."  ->  the guarantee clause must start with the determiner 'the' but starts with 'System'   (MissingDeterminer)
-```
+- **Fix:** State the response after the modal: `The pump shall stop.`
 
 ## How errors surface in the CLI
 

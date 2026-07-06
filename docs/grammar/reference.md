@@ -17,7 +17,7 @@ score, and no probabilistic parse.
 
 The grammar below captures the recognizer's *structure*. It is an **aid**: pure
 EBNF cannot express the whitespace-vs-alphanumeric boundary asymmetry, the
-"first comma" / "first `shall`" longest-match choices, or the case-insensitive
+"first comma" / "first usable modal" choices, or the case-insensitive
 terminal matching. Those are pinned down in [§2](#2-terminals--case-insensitivity)
 and [§3](#3-authoritative-disambiguation-rules), which **govern** wherever the EBNF
 is loose.
@@ -35,9 +35,10 @@ condition-clause = keyword , WS , condition-text , "," , [ WS , "then" ] ;
 condition-text   = ? one or more characters, none of which is "," ? ;
 
 (* ── Guarantee clause ──────────────────────────────────────────────── *)
-guarantee-clause = "the" , WS , subject , WS , "shall" , WS , response ;
-subject          = ? text between the determiner and the first whole-word "shall" ? ;
-response         = ? text after the first whole-word "shall" ? ;
+guarantee-clause = [ "the" , WS ] , subject , WS , modal , WS , response ;
+subject          = ? text before the first usable whole-word modal ? ;
+modal            = "shall" | "must" | "should" ;
+response         = ? text after the selected whole-word modal ? ;
 
 (* ── Terminals ─────────────────────────────────────────────────────── *)
 keyword          = "While" | "When" | "If" | "Where" ;   (* ASCII case-insensitive *)
@@ -61,14 +62,14 @@ legally appear (see [§3](#3-authoritative-disambiguation-rules)).
 
 ## 2. Terminals & case-insensitivity
 
-There are exactly four condition keywords plus three fixed lexemes. All are ASCII
-and all are matched **ASCII-case-insensitively**.
+There are exactly four condition keywords plus fixed guarantee lexemes. All are
+ASCII and all are matched **ASCII-case-insensitively**.
 
 | Terminal | Value(s) | Notes |
 | --- | --- | --- |
 | `keyword` | `While`, `When`, `If`, `Where` | Surface casing from the input is **preserved** in the parsed [`Condition.keyword`](./projection.md); only matching is case-insensitive (so `when` and `WHEN` both match, and the exact bytes are kept). |
-| determiner | `the` | Opens every guarantee clause. |
-| modal | `shall` | The single pivot of the guarantee clause. |
+| optional determiner | `the` | Stripped from the projected subject when it opens a guarantee clause. |
+| modal | `shall`, `must`, `should` | Accepted guarantee pivots. |
 | `then` | `then` | Optional filler after a condition comma; discarded, never stored. |
 
 Non-terminal captures (`subject`, `response`, `condition-text`) are **opaque free
@@ -83,33 +84,38 @@ Where the EBNF is ambiguous, these rules — as implemented — decide the parse
 **a. Greedy, left-to-right condition consumption.** `body` is scanned from the
 left; as long as the remaining text begins with a `keyword` at a whitespace
 boundary, another `condition-clause` is consumed. The loop halts at the first
-token that is not a keyword. The guarantee clause opens with `the`, which is not a
-keyword, so consumption naturally stops there.
+token that is not a keyword. The guarantee clause begins with subject text, so
+consumption naturally stops there unless that subject itself begins with a
+condition keyword.
 
 **b. Each condition clause ends at the FIRST comma.** `condition-text` runs from
 just after the keyword to the *first* comma in the remaining text. A condition
 phrase therefore **cannot contain a comma** — the first comma always terminates it.
-(A comma placed inside intended condition text splits it early and usually
-surfaces as [`MissingDeterminer`](./errors.md).)
+A comma placed inside intended condition text splits it early, so the following
+segment is parsed as the guarantee clause and must contain a usable guarantee
+modal.
 
-**c. The subject ends at the FIRST whole-word `shall`.** Within a guarantee
-clause, the subject is the text between the determiner and the *first* whole-word
-occurrence of `shall`; everything after that `shall` is the response.
+**c. The subject ends at the FIRST usable whole-word modal.** Within a guarantee
+clause, an opening `the` is stripped when present, then the parser scans for
+whole-word `shall`, `must`, and `should` candidates. It chooses the first
+candidate that leaves both a non-empty subject and a non-empty response. This
+preserves natural literal-token subjects such as `The shall clause shall become
+the guarantee.`
 
 **d. Boundary asymmetry — two different notions of "word".** This asymmetry is
 real and load-bearing:
 
 | Token(s) | Boundary function | Requirement |
 | --- | --- | --- |
-| `keyword`, `the`, `then` | `starts_with_word` | case-insensitive prefix **immediately followed by a whitespace character** |
-| `shall` | `find_word` | case-insensitive match whose neighbors on **both** sides are non-alphanumeric (or a string edge) |
+| `keyword`, optional `the`, `then` | `starts_with_word` | case-insensitive prefix **immediately followed by a whitespace character** |
+| `shall`, `must`, `should` | `find_word_from` | case-insensitive match whose neighbors on **both** sides are non-alphanumeric (or a string edge) |
 
 Consequences (full walkthroughs in [lexical.md](./lexical.md)):
 
 - `Whenever …` is **not** the keyword `When` — the next character is `e`, not whitespace.
 - `If,` is **not** the keyword `If` — the next character is `,`, not whitespace; a keyword must be followed by a space.
 - `marshalling` does **not** contain the modal — the inner `shall` is preceded by `r` (alphanumeric). See the accepted example `The marshalling yard shall be clear.`
-- `shall,` or `(shall)` **would** match the modal — the neighbors are non-alphanumeric.
+- `shall,`, `(must)`, or `[should]` **would** match a modal — the neighbors are non-alphanumeric.
 
 ## 4. The parse algorithm
 
@@ -139,18 +145,18 @@ a [`ParseError`](./errors.md); the first defect encountered wins.
 
 Input is the text remaining after the condition loop, trimmed.
 
-1. Compute `has_modal = find_word(clause, "shall").is_some()`.
-2. Check `opens_with_determiner = starts_with_word(clause, "the")`.
-3. If it does **not** open with the determiner:
-   - if `!has_modal` → `MissingModal` — a missing modal is treated as the **more
-     fundamental** defect and reported first;
-   - else → `MissingDeterminer { found }`, where `found` is the first
-     whitespace-delimited token of the clause.
-4. `after_determiner = clause[3..].trim_start()` (past `the`).
-5. `modal_at = find_word(after_determiner, "shall")`. If none → `MissingModal`.
-6. `subject = after_determiner[..modal_at].trim()`. If empty → `EmptySubject`.
-7. `response = after_determiner[modal_at + 5..].trim()`. If empty → `EmptyResponse`.
-8. Return `Guarantee { subject, response }`.
+1. If `starts_with_word(clause, "the")`, strip that determiner and leading
+   whitespace from the subject area; otherwise the whole clause is the subject
+   area.
+2. Collect every whole-word `shall`, `must`, and `should` modal candidate in the
+   subject area. If none exist → `MissingModal`.
+3. Visit modal candidates in byte-offset order. For each candidate:
+   1. `subject = subject_area[..candidate.offset].trim()`.
+   2. `response = subject_area[candidate.offset + candidate.modal.len()..].trim()`.
+   3. If both are non-empty, return `Guarantee { subject, response }`.
+4. If every candidate leaves an empty subject → `EmptySubject`.
+5. Otherwise, if every candidate with a non-empty subject leaves an empty
+   response → `EmptyResponse`.
 
 ### Worked traces
 
@@ -164,7 +170,7 @@ Two end-to-end walkthroughs; the [cookbook](./cookbook.md) has the full gallery.
 | loop: `When ` is a keyword | first comma at `ships,`; `text = "the order ships"` → push `Condition { "When", "the order ships" }` |
 | after comma, no `then` | `rest = "the system shall notify the customer"` |
 | loop halts | `the` is not a keyword |
-| guarantee | opens with `the`; first whole-word `shall` splits `subject = "system"`, `response = "notify the customer"` |
+| guarantee | optional `the` is stripped; `shall` splits `subject = "system"`, `response = "notify the customer"` |
 | assumption | one clause → `Conditions[("When","the order ships")]` |
 
 `If the balance is negative, then the account shall be frozen.`:
@@ -185,13 +191,14 @@ arbitrary multibyte / UTF-8 input. Two facts guarantee this:
 - `starts_with_word` slices with `s.get(..len)`, which returns `None` (rather than
   panicking) when `len` would fall inside a codepoint — exactly the "not this
   keyword/determiner" outcome.
-- `find_word` scans **bytes** with ASCII-only boundary checks, so it never slices
+- `find_word_from` scans **bytes** with ASCII-only boundary checks, so it never slices
   inside a codepoint and treats any multibyte byte as a non-alphanumeric neighbor,
   which satisfies the whole-word boundary condition just like a space or
   punctuation (it counts as a boundary, matching §3d).
 
-The four keywords, `the`, `shall`, and `then` are all ASCII and matched
-ASCII-case-insensitively; every other span (subject, response, condition text) is
-captured verbatim. Consequently inputs such as `€`, `中文`, `🔥 shall stop`, or
-`The café shall serve crêpes.` all yield a well-defined `Ok` or `Err` — never a
-panic. This is a language requirement, verified by the recognizer's test suite.
+The four keywords, optional `the`, `shall`, `must`, `should`, and `then` are all
+ASCII and matched ASCII-case-insensitively; every other span (subject, response,
+condition text) is captured verbatim. Consequently inputs such as `€`, `中文`,
+`🔥 shall stop`, or `The café shall serve crêpes.` all yield a well-defined `Ok`
+or `Err` — never a panic. This is a language requirement, verified by the
+recognizer's test suite.

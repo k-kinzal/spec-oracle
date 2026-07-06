@@ -6,7 +6,7 @@ constrained natural language.
 Each specification statement is written in an EARS-derived controlled language
 and projected — deterministically, with no inference and no human-in-the-loop
 review — into an AG contract: a leading condition becomes the **assumption**,
-the `the <subject> shall <response>` clause becomes the **guarantee**. Every
+the `<subject> <shall|must|should> <response>` clause becomes the **guarantee**. Every
 node is also a *grounded* claim: it carries the evidence it was ingested from,
 captured at ingest time.
 
@@ -50,9 +50,9 @@ else with a precise syntax error (the recognizer is *total* — parseability is 
 language requirement, not a score):
 
 ```text
-Ubiquitous:   The <subject> shall <response>.
-Conditional:  <While|When|If|Where> <condition>, [then] the <subject> shall <response>.
-Complex:      <kw> <c1>, <kw> <c2>, ... the <subject> shall <response>.
+Ubiquitous:   <subject> <shall|must|should> <response>.
+Conditional:  <While|When|If|Where> <condition>, [then] <subject> <shall|must|should> <response>.
+Complex:      <kw> <c1>, <kw> <c2>, ... <subject> <shall|must|should> <response>.
 ```
 
 See [`docs/grammar/`](docs/grammar/) for the full reference; the single source
