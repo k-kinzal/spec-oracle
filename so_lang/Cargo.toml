@@ -2,7 +2,7 @@
 name = "so-lang"
 version.workspace = true
 edition.workspace = true
-description = "The constrained natural-language (EARS-derived) grammar and its assume-guarantee projection."
+description = "The constrained specification language: parser, AST, and derived semantic interpretations."
 
 [lib]
 name = "so_lang"
@@ -11,3 +11,6 @@ path = "src/lib.rs"
 [dependencies]
 serde.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

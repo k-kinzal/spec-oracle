@@ -6,9 +6,11 @@
 
 The workspace is split by ownership boundary:
 
-- `so-lang`: the constrained natural-language grammar. It is pure and I/O-free;
-  it parses a statement into an assume-guarantee contract or returns a precise
-  syntax error.
+- `so-lang`: the constrained specification language. It is pure and I/O-free;
+  it parses a specification into its sentence structure — speech-act cores,
+  circumstance frames, a phrase grammar — or returns a precise syntax error,
+  and derives the semantic interpretations (speech acts, assertions, the
+  assume-guarantee ingest projection) over that structure.
 - `so-protocol`: generated `spec_oracle.v1` protobuf messages and tonic gRPC
   stubs only. Do not put domain types, storage models, business logic, or manual
   conversion logic here.
@@ -92,22 +94,41 @@ see the shape of what we are really building.
 
 ## Thought
 
-**Assume-guarantee contracts are the foundation.** Every specification, however
-it is phrased, is read as a contract: under some assumption about the
-environment, a guarantee holds. A leading condition is the assumption; the
-response is the guarantee; an unconditional statement is a guarantee under the
-trivial assumption. This is the single lens through which every statement is
-understood, and it is what gives words like *refine*, *compose*, and
-*contradict* a precise meaning rather than a rhetorical one.
+**Assume-guarantee contracts are the foundation.** Every behavioral
+statement — one that obliges, forbids, recommends, permits, or describes —
+denotes one assertion: a single property of system behavior; a definitional
+statement contributes vocabulary rather than behavior. A statement's leading
+conditions — scope, state, trigger — are the internal temporal structure of
+its assertion, not a contract split. Assumption
+and guarantee are the roles an assertion plays relative to a responsible
+subject: a statement whose subject is the component itself is a guarantee of
+that component's contract; a statement constraining the component's
+environment becomes an assumption when paired with a guarantee that relies on
+it. A contract is such a pairing — a guarantee read under its assumptions, and
+relieved where they are violated — and a statement taken alone is a guarantee
+under the trivial assumption, except a permission: a permission admits
+behavior rather than constraining it, so it enters a contract only through
+pairing, on the environment side. The specification set as a whole is the
+conjunction of these contracts. This is the single lens through which every
+statement is understood, and it is what gives words like *refine*, *compose*,
+and *contradict* a precise meaning rather than a rhetorical one.
 
-**A specification stays in the words it was written in.** People state what a
-system must do in words, and those words carry context that a formalization
-would strip away — context that is itself information. So the specification is
-held in natural language, constrained only far enough, by an EARS-derived
-grammar, that each statement has one unambiguous, machine-checkable meaning.
-Because it remains language, it stays open to linguistic and natural-language
-methods, and whatever structure we later derive is derived over the words
-themselves.
+**A specification is formal, and it stays in the words it was written in.**
+People state what a system must do in words, and those words carry context that
+a symbolic formalization would strip away — context that is itself information.
+So instead of translating the words into logic, we make the words themselves
+formal: an EARS-derived grammar constrains the language until every statement
+has exactly one unambiguous, machine-checkable meaning. The result is a formal
+specification whose medium is constrained natural language — not a
+natural-language document read loosely, and not a symbolic notation that has
+discarded the words. The constraint removes ambiguity; it is not there to limit
+what can be said. Expressiveness is what lets the specification carry the
+system, so the language is meant to be as expressive as real specifications
+demand and to grow as they do — keeping it small is not a goal, and a language
+too thin to state the specification would defeat the Vision it serves. Because
+its surface stays in words, the specification remains open to linguistic and
+natural-language methods, and whatever structure we later derive is derived over
+the words themselves.
 
 **Meaning is relational, so it takes volume.** A statement's force is not
 contained within it. Each statement is a node, and the relationships between
@@ -139,14 +160,19 @@ prohibitive can now be defaulted on rather than paid for. Once volume is no
 longer the binding constraint, an approach that depends on it becomes available
 for the first time.
 
-**The method is an intuition, still held loosely.** How the graph gets its
-structure is genuinely open, and deliberately so. The direction is to derive two
-things from the words: **node meta-information** — clustering, labeling,
-part-of-speech decomposition of the constrained language, whatever lets a node
-be understood in relation to its neighbors — and **means of generating edges** —
-partial use of SMT and other formal methods, language-level modeling aimed at
-detecting when two specifications conflict. Managed through a graph view, these
-are what make a collection of sentences into a specification that can be
-reasoned about. None of this is settled; what is settled is only the direction —
-words at volume, structure derived over them, and a specification that stays
-alive.
+**The method is the open question — where we dig deepest, not where we leave
+things thin.** How the graph gets its structure is genuinely not yet known, and
+that is the point: there is a direction but not yet an answer, so this is the
+part to be pressed on and sharpened — never the part left vague because it is
+hard. The direction is to derive two things from the words: **node
+meta-information** — clustering, labeling, part-of-speech decomposition of the
+constrained language, whatever lets a node be understood in relation to its
+neighbors — and **means of generating edges** — partial use of SMT and other
+formal methods, language-level modeling aimed at detecting when two
+specifications conflict. Managed through a graph view, these are what make a
+collection of sentences into a specification that can be reasoned about. None of
+this is settled; what is settled is only the direction — words at volume,
+structure derived over them, and a specification that stays alive. And unlike
+the others, this thought is provisional: it is scaffolding around a question
+still open, and as the method is worked out and made precise it dissolves — once
+the structure is understood, there is nothing left here to state.

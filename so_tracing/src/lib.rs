@@ -32,7 +32,7 @@ const SPEC_ORACLE_TELEMETRY_CAPTURE: &str = "SPEC_ORACLE_TELEMETRY_CAPTURE";
 pub enum CapturePolicy {
     /// Operational shape only: durations, counts, stages, broad error category.
     Ops,
-    /// Improvement diagnostics: parser/error kinds, expected forms, stable hashes.
+    /// Improvement diagnostics: parser/error kinds, stable hashes.
     Diagnostic,
     /// Full local-development content: raw statements and other content-bearing values.
     Content,
@@ -140,18 +140,26 @@ pub fn capture_policy() -> CapturePolicy {
     CapturePolicy::current()
 }
 
-pub fn statement_hash(statement: &str) -> String {
-    let digest = Sha256::digest(statement.as_bytes());
+/// Stable SHA-256 hash of a whole specification (the full, possibly
+/// multi-sentence request text), for grouping telemetry without content.
+pub fn specification_hash(specification: &str) -> String {
+    let digest = Sha256::digest(specification.as_bytes());
     hex_lower(&digest)
 }
 
-pub fn record_statement_on_span(span: &tracing::Span, policy: CapturePolicy, statement: &str) {
+/// Record the whole specification on a request-level span, subject to the
+/// capture policy: the hash under `diagnostic`, the raw text under `content`.
+pub fn record_specification_on_span(
+    span: &tracing::Span,
+    policy: CapturePolicy,
+    specification: &str,
+) {
     if policy.allows_diagnostic() {
-        let hash = statement_hash(statement);
-        span.record("spec.statement.hash", hash.as_str());
+        let hash = specification_hash(specification);
+        span.record("spec.specification.hash", hash.as_str());
     }
     if policy.allows_content() {
-        span.record("spec.statement.text", statement);
+        span.record("spec.specification.text", specification);
     }
 }
 

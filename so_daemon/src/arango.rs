@@ -12,7 +12,9 @@
 //!
 //! Data model (the only collection this scope touches):
 //!   * database `spec_oracle`;
-//!   * document collection `contracts`, one document per node, `_key` = node id;
+//!   * document collection `nodes`, one document per node, `_key` = node id.
+//!     (An earlier iteration used a `contracts` collection; that data was
+//!     dev-only and is deliberately left behind, not migrated.)
 //!   * evidence embedded in the document. Snapshot *bytes* are not stored here —
 //!     only the `content_hash` pointer into the [`BlobStore`](crate::store);
 //!     `Snapshot::content` is `#[serde(skip)]`, so a fetched node's content is
@@ -31,8 +33,8 @@ use crate::domain::Node;
 
 use crate::store::{NodeStore, StoreError};
 
-/// The document collection holding one contract node per document.
-const COLLECTION: &str = "contracts";
+/// The document collection holding one specification node per document.
+const COLLECTION: &str = "nodes";
 
 /// Connection parameters for an ArangoDB deployment. Borrowed so the caller owns
 /// the strings (typically CLI flags and environment variables).
@@ -49,7 +51,7 @@ pub struct ArangoNodeStore {
 }
 
 impl ArangoNodeStore {
-    /// Connect and ensure the target database and the `contracts` collection
+    /// Connect and ensure the target database and the `nodes` collection
     /// exist. Idempotent: an existing database/collection is reused, and a
     /// concurrent creation (409) is tolerated.
     pub fn connect(cfg: &ArangoConfig) -> Result<ArangoNodeStore, StoreError> {
@@ -68,9 +70,9 @@ impl ArangoNodeStore {
 }
 
 impl NodeStore for ArangoNodeStore {
-    fn add_contract(&self, node: &Node) -> Result<(), StoreError> {
+    fn add_node(&self, node: &Node) -> Result<(), StoreError> {
         let _span = tracing::debug_span!(
-            "spec.store.arango.add_contract",
+            "spec.store.arango.add_node",
             "db.system" = "arangodb",
             "db.collection.name" = COLLECTION,
             "node.id" = %node.id,
@@ -93,9 +95,9 @@ impl NodeStore for ArangoNodeStore {
         Ok(())
     }
 
-    fn get_contract(&self, id: &str) -> Result<Option<Node>, StoreError> {
+    fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError> {
         let _span = tracing::debug_span!(
-            "spec.store.arango.get_contract",
+            "spec.store.arango.get_node",
             "db.system" = "arangodb",
             "db.collection.name" = COLLECTION,
             "node.id" = %id,
@@ -111,6 +113,23 @@ impl NodeStore for ArangoNodeStore {
         vars.insert("key", Value::String(id.to_string()));
         let nodes: Vec<Node> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
         Ok(nodes.into_iter().next())
+    }
+
+    fn delete_node(&self, id: &str) -> Result<(), StoreError> {
+        let _span = tracing::debug_span!(
+            "spec.store.arango.delete_node",
+            "db.system" = "arangodb",
+            "db.collection.name" = COLLECTION,
+            "node.id" = %id,
+        )
+        .entered();
+        // Idempotent: `ignoreErrors` tolerates an already-absent key, so a
+        // rollback of a partially-persisted specification can always be retried.
+        let query = format!("REMOVE @key IN {COLLECTION} OPTIONS {{ ignoreErrors: true }}");
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("key", Value::String(id.to_string()));
+        let _: Vec<Value> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        Ok(())
     }
 }
 

@@ -1,11 +1,11 @@
-//! Persistence seam: how contract nodes and their evidence blobs are stored.
+//! Persistence seam: how specification nodes and their evidence blobs are stored.
 //!
 //! Two responsibilities are split behind two traits so the graph topology and
 //! the (potentially large) captured bytes can live in different systems and
 //! scale independently:
 //!
-//!   * [`NodeStore`] — the contract nodes: identity, the projected
-//!     assume-guarantee contract, and embedded evidence *metadata*. The
+//!   * [`NodeStore`] — the specification nodes: identity, the raw sentence
+//!     text with its language version, and embedded evidence *metadata*. The
 //!     production implementation is [`crate::arango::ArangoNodeStore`], a graph
 //!     database chosen so the same product scales from a laptop to a cluster by
 //!     relocation rather than by swapping engines.
@@ -25,7 +25,7 @@ use thiserror::Error;
 
 use crate::domain::Node;
 
-/// Persists and retrieves contract nodes (the graph vertices).
+/// Persists and retrieves specification nodes (the graph vertices).
 ///
 /// Edge methods (refinement/composition/conjunction/quotient) are deliberately
 /// absent — edges are out of scope — but they slot in behind this same seam
@@ -33,10 +33,15 @@ use crate::domain::Node;
 pub trait NodeStore {
     /// Persist a node. Idempotent on the node id: re-persisting the same id
     /// replaces it with identical content.
-    fn add_contract(&self, node: &Node) -> Result<(), StoreError>;
+    fn add_node(&self, node: &Node) -> Result<(), StoreError>;
 
     /// Fetch a node by id, or `None` if no such node exists.
-    fn get_contract(&self, id: &str) -> Result<Option<Node>, StoreError>;
+    fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError>;
+
+    /// Remove a node by id. Idempotent: deleting an absent id succeeds.
+    /// Ingest uses this to roll back already-persisted sentences when a later
+    /// sentence of the same specification fails to persist.
+    fn delete_node(&self, id: &str) -> Result<(), StoreError>;
 }
 
 /// Stores content-addressed snapshot bytes, keyed by their SHA-256 hex hash.
@@ -147,15 +152,20 @@ impl InMemoryNodeStore {
 }
 
 impl NodeStore for InMemoryNodeStore {
-    fn add_contract(&self, node: &Node) -> Result<(), StoreError> {
+    fn add_node(&self, node: &Node) -> Result<(), StoreError> {
         self.nodes
             .borrow_mut()
             .insert(node.id.clone(), node.clone());
         Ok(())
     }
 
-    fn get_contract(&self, id: &str) -> Result<Option<Node>, StoreError> {
+    fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError> {
         Ok(self.nodes.borrow().get(id).cloned())
+    }
+
+    fn delete_node(&self, id: &str) -> Result<(), StoreError> {
+        self.nodes.borrow_mut().remove(id);
+        Ok(())
     }
 }
 
@@ -194,17 +204,12 @@ mod tests {
     #[test]
     fn in_memory_node_store_round_trips() {
         use crate::domain::{Meta, Node};
-        use so_lang::grammar::{Assumption, Guarantee};
 
         let store = InMemoryNodeStore::new();
         let node = Node {
             id: "n1".to_string(),
             statement: "The pump shall stop.".to_string(),
-            assumption: Assumption::Top,
-            guarantee: Guarantee {
-                subject: "pump".to_string(),
-                response: "stop".to_string(),
-            },
+            lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
                 evidence: vec![],
                 created_at: "t".to_string(),
@@ -212,8 +217,8 @@ mod tests {
                 cli_version: "test".to_string(),
             },
         };
-        store.add_contract(&node).unwrap();
-        assert_eq!(store.get_contract("n1").unwrap().as_ref(), Some(&node));
-        assert!(store.get_contract("absent").unwrap().is_none());
+        store.add_node(&node).unwrap();
+        assert_eq!(store.get_node("n1").unwrap().as_ref(), Some(&node));
+        assert!(store.get_node("absent").unwrap().is_none());
     }
 }

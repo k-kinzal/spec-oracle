@@ -16,7 +16,7 @@
 #
 # Only ArangoDB is containerized. The `specd` daemon runs on the HOST and
 # connects to ArangoDB over localhost:8529; the `spec` CLI connects to the daemon
-# over gRPC (default 127.0.0.1:50051). The `spec_oracle` database and `contracts`
+# over gRPC (default 127.0.0.1:50051). The `spec_oracle` database and `nodes`
 # collection are created automatically by the daemon on first use — no init step.
 
 services:

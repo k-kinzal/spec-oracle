@@ -1,17 +1,21 @@
 # spec-oracle
 
-An **assume-guarantee (AG) contract** specification graph, ingested from
-constrained natural language.
+A **specification graph** in constrained natural language, read through
+assume-guarantee contracts.
 
-Each specification statement is written in an EARS-derived controlled language
-and projected — deterministically, with no inference and no human-in-the-loop
-review — into an AG contract: a leading condition becomes the **assumption**,
-the `<subject> <shall|must|should> <response>` clause becomes the **guarantee**. Every
-node is also a *grounded* claim: it carries the evidence it was ingested from,
-captured at ingest time.
+A specification is written in an EARS-derived controlled language — one or more
+sentences, each performing one specification act (defining a term, describing
+the system, or obliging/forbidding/recommending/permitting behavior). The raw
+words are the stored truth; each behavioral sentence *denotes an assertion*,
+and the **assume-guarantee contract is a derived reading** of that assertion —
+computed deterministically, with no inference and no human-in-the-loop review,
+never persisted. (Definitions establish vocabulary and permissions merely
+*admit* behavior, so neither carries a lone-sentence contract; a permission
+enters contracts only through pairing, on the environment side.) Every node is also a *grounded* claim: it carries the evidence
+it was ingested from, captured at ingest time.
 
-> **Scope.** Today the tool does exactly one thing: `spec add` — recognize a
-> statement, capture its evidence, and persist a contract node. Edges
+> **Scope.** Today the tool does exactly one thing: `spec add` — parse a
+> specification, capture its evidence, and persist one node per sentence. Edges
 > (refinement, composition, conjunction, quotient), strength, the authority/trust
 > registry, and classify/review are deliberately out of scope for now.
 
@@ -23,7 +27,7 @@ they do not depend on each other.
 
 | Crate        | Kind                 | Role                                                                                     |
 | ------------ | -------------------- | ---------------------------------------------------------------------------------------- |
-| `so-lang`    | lib                  | The EARS-derived grammar: a *total* recognizer projecting a statement into a contract.    |
+| `so-lang`    | lib                  | The constrained specification language: a *total* parser over sentences, plus derived semantic interpretations (speech acts, assertions, the assume-guarantee ingest projection). |
 | `so-protocol` | lib                 | Generated `spec_oracle.v1` protobuf messages and tonic gRPC stubs only.                  |
 | `so-daemon`  | lib + `specd`        | Domain model, evidence capture, persistence, domain/protobuf conversion, and gRPC service. |
 | `so-client`  | lib                  | A thin gRPC client; resolves the caller's `@file`/`-`(stdin) input channels.              |
@@ -31,10 +35,10 @@ they do not depend on each other.
 | `so-tracing` | lib                  | Shared tracing/OpenTelemetry setup and gRPC trace propagation.                           |
 
 **Capture happens in the daemon.** `specd` parses the
-statement, snapshots what each locator points at, discovers source provenance,
-and persists the node. The client only resolves input *channels* — reading the
-descriptor from its own files/stdin — and forwards the statement plus the
-resolved evidence values. One consequence to keep in mind: **a file locator is
+specification, snapshots what each locator points at, discovers source
+provenance, and persists one node per sentence. The client only resolves input
+*channels* — reading the descriptor from its own files/stdin — and forwards the
+specification plus the resolved evidence values. One consequence to keep in mind: **a file locator is
 resolved against the daemon's filesystem/git**, so the daemon must run where
 the evidence lives (or where a checkout of it is reachable).
 
@@ -43,24 +47,27 @@ spec (CLI) ──▶ so-client ──gRPC──▶ specd ──▶ ArangoDB + bl
   resolves @file/-/inline                     captures, enriches, persists
 ```
 
-## The grammar
+## The language
 
-`spec add` accepts an EARS statement in one of three forms and rejects anything
-else with a precise syntax error (the recognizer is *total* — parseability is a
-language requirement, not a score):
+`spec add` accepts a specification of one or more sentences and rejects
+anything else with a precise syntax error (the parser is *total* —
+parseability is a language requirement, not a score). Each sentence performs
+one of six speech acts — **definition, description, obligation, prohibition,
+recommendation, permission** — under optional circumstance frames
+(`Where`/`While`/`When`/`If`), an optional `unless` exception, and an optional
+`so that` purpose:
 
 ```text
-Ubiquitous:   <subject> <shall|must|should> <response>.
-Conditional:  <While|When|If|Where> <condition>, [then] <subject> <shall|must|should> <response>.
-Complex:      <kw> <c1>, <kw> <c2>, ... <subject> <shall|must|should> <response>.
+When the order is submitted, the system shall record the total.
 ```
 
-See [`docs/grammar/`](docs/grammar/) for the full reference; the single source
-of truth is [`so_lang/src/grammar.rs`](so_lang/src/grammar.rs).
+See [`docs/grammar/`](docs/grammar/) for the full reference; the source of
+truth is [`so_lang/src/parse.rs`](so_lang/src/parse.rs) and
+[`so_lang/src/ast.rs`](so_lang/src/ast.rs).
 
 ## Persistence: one product across the deployment spectrum
 
-Contract nodes live in **ArangoDB** — chosen because a single graph-database
+Specification nodes live in **ArangoDB** — chosen because a single graph-database
 product spans the whole deployment spectrum: it runs on a laptop to start, is
 self-hostable on your own infrastructure, and is available as a managed cloud
 service. You scale by *relocating* the same product up that spectrum, not by
@@ -76,7 +83,7 @@ Storage is split by concern (both owned by the daemon):
   `#[serde(skip)]`, so bytes never travel into the database — or across the wire
   — only the hash does.
 
-A node's identity is a random UUID: adding the *same* statement twice yields two
+A node's identity is a random UUID: adding the *same* sentence twice yields two
 distinct nodes. Content-addressing applies to blobs only.
 
 ## Quickstart
@@ -100,14 +107,15 @@ set -a; . ./.env; set +a
 #    directory, so run it from the repo root. Listens on 127.0.0.1:50051.
 cargo run --bin specd
 
-# 5. In another shell, add your first contract (evidence must point at something
-#    the daemon can read — a file region here is captured and hashed at ingest).
+# 5. In another shell, add your first specification (evidence must point at
+#    something the daemon can read — a file region here is captured and hashed
+#    at ingest).
 cargo run --bin spec -- add \
   "When evidence is captured, the system shall record its content hash." \
   --evidence so_daemon/src/snapshot.rs:1
 ```
 
-The `spec_oracle` database and the `contracts` collection are created
+The `spec_oracle` database and the `nodes` collection are created
 automatically by the daemon on first connect — there is no init step in compose.
 
 Reset everything (drops the database volume) with `docker compose down -v`. The
@@ -138,7 +146,7 @@ it names is captured by the daemon.
 
 ```sh
 cargo run --bin spec -- add "The pump shall stop." \
-  --evidence '{"kind":"assertoric","locator":"so_lang/src/grammar.rs:12"}'
+  --evidence '{"kind":"assertoric","locator":"so_lang/src/parse.rs:1"}'
 ```
 
 ## Configuration
@@ -193,13 +201,13 @@ local development.
 | Policy | Captures |
 | ------ | -------- |
 | `ops` | Operational shape: span names, durations, counts, stages, broad error category. |
-| `diagnostic` | `ops` plus parse/error kinds, expected grammar form, and stable hashes for grouping failures. |
+| `diagnostic` | `ops` plus parse/error kinds and stable hashes for grouping failures. |
 | `content` | `diagnostic` plus raw statements and content-bearing values needed to improve spec-oracle locally. |
 
-For a `spec add` parse failure, `ops` records that statement parsing failed;
-`diagnostic` also records fields such as `spec.parse.error.kind`,
-`spec.parse.expected_form`, and `spec.statement.hash`; `content` additionally
-records `spec.statement.text` and the detailed error message.
+For a `spec add` parse failure, `ops` records that specification parsing
+failed; `diagnostic` also records fields such as `spec.parse.error.kind` and
+`spec.specification.hash`; `content` additionally records `spec.specification.text`
+and the detailed error message.
 
 Local verification against the shared stack:
 

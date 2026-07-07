@@ -1,9 +1,10 @@
 //! The `spec` command-line interface — a thin front end over the gRPC client.
 //!
-//! Capture and persistence happen in the daemon (`specd`); this binary
+//! Parsing, capture, and persistence happen in the daemon (`specd`); this binary
 //! only resolves the caller's input channels, sends the request, and renders the
-//! node the daemon returns. It therefore carries no `--arango-*`/`--dir` flags —
-//! those configure the daemon — only a `--server` address.
+//! nodes the daemon returns — one per sentence of the specification. It
+//! therefore carries no `--arango-*`/`--dir` flags — those configure the
+//! daemon — only a `--server` address.
 
 use std::process::ExitCode;
 
@@ -13,7 +14,7 @@ use so_client::Client;
 use so_protocol::pb;
 use tracing::Instrument;
 
-/// Exit code for a statement/evidence syntax error (bad input).
+/// Exit code for a specification/evidence syntax error (bad input).
 const EXIT_USAGE: u8 = 2;
 /// Exit code for a connection/capture/store failure (environment/runtime).
 const EXIT_RUNTIME: u8 = 1;
@@ -22,7 +23,7 @@ const EXIT_RUNTIME: u8 = 1;
 #[command(
     name = "spec",
     version,
-    about = "An assume-guarantee contract specification graph, ingested from constrained natural language."
+    about = "A specification graph in constrained natural language, read through assume-guarantee contracts."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -31,17 +32,17 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Add a specification node from a constrained-NL statement and its evidence.
+    /// Add a specification (one node per sentence) with its evidence.
     Add(AddArgs),
 }
 
 #[derive(clap::Args)]
 struct AddArgs {
-    /// The constrained-NL statement, e.g.
+    /// One or more sentences of the constrained specification language, e.g.
     /// "When the order is submitted, the system shall record the total."
-    statement: String,
+    specification: String,
 
-    /// Evidence grounding the statement. Repeatable. Each value is a JSON object
+    /// Evidence grounding the specification. Repeatable. Each value is a JSON object
     /// (or array) with `kind` and `locator` (and optional `origin`), or a bare
     /// locator string (recorded as kind "unknown"). Prefix with `@` to read a
     /// file, or use `-` to read stdin. Note: the locator is resolved by the
@@ -58,7 +59,7 @@ struct AddArgs {
     )]
     server: String,
 
-    /// Print the created node as JSON on success.
+    /// Print the created nodes as a JSON array on success.
     #[arg(long = "json")]
     json: bool,
 }
@@ -94,20 +95,20 @@ fn run_add(args: AddArgs) -> ExitCode {
     let span = tracing::info_span!(
         "spec.cli.add",
         "spec.telemetry.capture" = policy.as_str(),
-        "spec.statement.length" = args.statement.len() as u64,
+        "spec.specification.length" = args.specification.len() as u64,
         "spec.evidence.arg_count" = args.evidence.len() as u64,
-        "spec.statement.hash" = tracing::field::Empty,
-        "spec.statement.text" = tracing::field::Empty,
+        "spec.specification.hash" = tracing::field::Empty,
+        "spec.specification.text" = tracing::field::Empty,
         "server.address" = %args.server,
     );
-    so_tracing::record_statement_on_span(&span, policy, &args.statement);
+    so_tracing::record_specification_on_span(&span, policy, &args.specification);
 
     let result = runtime.block_on(
         async {
             let mut client = Client::connect(args.server.clone()).await?;
             client
                 .add(
-                    &args.statement,
+                    &args.specification,
                     &args.evidence,
                     "spec",
                     env!("CARGO_PKG_VERSION"),
@@ -118,17 +119,20 @@ fn run_add(args: AddArgs) -> ExitCode {
     );
 
     match result {
-        Ok(node) => {
+        Ok(nodes) => {
             if args.json {
-                match serde_json::to_string_pretty(&node_to_json(&node)) {
+                let rendered: Vec<serde_json::Value> = nodes.iter().map(node_to_json).collect();
+                match serde_json::to_string_pretty(&rendered) {
                     Ok(s) => println!("{s}"),
                     Err(e) => {
-                        eprintln!("error: failed to render node: {e}");
+                        eprintln!("error: failed to render nodes: {e}");
                         return ExitCode::from(EXIT_RUNTIME);
                     }
                 }
             } else {
-                println!("Added {}", node_summary(&node));
+                for node in &nodes {
+                    println!("Added {}", node_summary(node));
+                }
             }
             ExitCode::SUCCESS
         }
@@ -153,46 +157,55 @@ fn node_summary(node: &pb::Node) -> String {
         .as_ref()
         .map(|meta| meta.evidence.len())
         .unwrap_or_default();
-    format!("{}  ({} evidence)", node.id, evidence_count)
+    let speech_act = node
+        .sentence
+        .as_ref()
+        .map(|s| speech_act_to_str(s.speech_act))
+        .unwrap_or("unknown");
+    format!("{}  {}  ({} evidence)", node.id, speech_act, evidence_count)
 }
 
 fn node_to_json(node: &pb::Node) -> serde_json::Value {
     serde_json::json!({
         "id": &node.id,
         "statement": &node.statement,
-        "assumption": assumption_to_json(node.assumption.as_ref()),
-        "guarantee": guarantee_to_json(node.guarantee.as_ref()),
+        "lang_version": &node.lang_version,
+        "sentence": sentence_to_json(node.sentence.as_ref()),
         "meta": meta_to_json(node.meta.as_ref()),
     })
 }
 
-fn assumption_to_json(assumption: Option<&pb::Assumption>) -> serde_json::Value {
-    let conditions = assumption
-        .map(|a| a.conditions.as_slice())
-        .unwrap_or_default();
-    if conditions.is_empty() {
-        serde_json::json!({ "kind": "top" })
-    } else {
-        serde_json::json!({
-            "kind": "conditions",
-            "clauses": conditions
-                .iter()
-                .map(|c| serde_json::json!({
-                    "keyword": &c.keyword,
-                    "text": &c.text,
-                }))
-                .collect::<Vec<_>>()
-        })
+fn sentence_to_json(sentence: Option<&pb::SentenceView>) -> serde_json::Value {
+    match sentence {
+        Some(s) => serde_json::json!({
+            "speech_act": speech_act_to_str(s.speech_act),
+            "canonical": &s.canonical,
+            "contract": contract_to_json(s.contract.as_ref()),
+        }),
+        None => serde_json::Value::Null,
     }
 }
 
-fn guarantee_to_json(guarantee: Option<&pb::Guarantee>) -> serde_json::Value {
-    match guarantee {
-        Some(g) => serde_json::json!({
-            "subject": &g.subject,
-            "response": &g.response,
+fn contract_to_json(contract: Option<&pb::ContractView>) -> serde_json::Value {
+    match contract {
+        Some(c) => serde_json::json!({
+            "assumption": &c.assumption,
+            "guarantee": &c.guarantee,
+            "force": &c.force,
         }),
         None => serde_json::Value::Null,
+    }
+}
+
+fn speech_act_to_str(speech_act: i32) -> &'static str {
+    match pb::SpeechAct::try_from(speech_act).unwrap_or(pb::SpeechAct::Unspecified) {
+        pb::SpeechAct::Definition => "definition",
+        pb::SpeechAct::Description => "description",
+        pb::SpeechAct::Obligation => "obligation",
+        pb::SpeechAct::Prohibition => "prohibition",
+        pb::SpeechAct::Recommendation => "recommendation",
+        pb::SpeechAct::Permission => "permission",
+        pb::SpeechAct::Unspecified => "unknown",
     }
 }
 

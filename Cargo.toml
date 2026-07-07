@@ -15,7 +15,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-description = "An assume-guarantee contract specification graph, ingested from constrained natural language."
+description = "A specification graph in constrained natural language, read through assume-guarantee contracts."
 
 [workspace.dependencies]
 # Internal crates, addressed by path so the workspace builds standalone.

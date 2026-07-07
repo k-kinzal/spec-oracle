@@ -1,0 +1,181 @@
+syntax = "proto3";
+
+// The wire contract between the spec-oracle daemon and its clients.
+//
+// The wire carries specifications and their derived readings; the daemon owns
+// the domain. The client is thin: it sends a specification in the constrained
+// specification language plus the (channel-resolved) --evidence values. The
+// daemon parses, captures evidence, enriches origin, persists one node per
+// sentence, and returns the nodes. A node stores the raw sentence text (and
+// the language version that accepted it); the `SentenceView` on each returned
+// node — speech act, canonical rendering, contract view — is derived at
+// response time and never persisted.
+package spec_oracle.v1;
+
+// The specification graph service. Today it ingests specifications; edges
+// (refinement/composition/…) and queries attach here later.
+service SpecificationGraph {
+  // Ingest a specification (one or more sentences) with shared evidence;
+  // returns one persisted node per sentence, in input order. Persistence is
+  // all-or-nothing per request: on failure the daemon rolls back (best-effort)
+  // any nodes already persisted for the request, so a failed call leaves no
+  // partial specification behind and can simply be retried. Errors surface as
+  // gRPC statuses: INVALID_ARGUMENT for bad input (syntax, evidence values, a
+  // missing evidence file or out-of-range line — user-fixable), INTERNAL for
+  // other capture failures and store failures (environment/runtime).
+  rpc AddSpecification(AddSpecificationRequest) returns (AddSpecificationResponse);
+}
+
+message AddSpecificationRequest {
+  // The specification in the constrained specification language — one or more
+  // sentences, e.g.
+  // "When the order is submitted, the system shall record the total."
+  string specification = 1;
+  // Evidence values, shared by every sentence of the specification. Each is a
+  // JSON object/array (kind + locator [+ origin]) or a bare locator string.
+  // `@file`/`-`(stdin) channels are resolved client-side to text before
+  // sending — the daemon never reads the client's stdin/files.
+  repeated string evidence = 2;
+  // The creating tool's identity, recorded on each node (sense ③). Empty
+  // falls back to a daemon default.
+  string client = 3;
+  string client_version = 4;
+}
+
+message AddSpecificationResponse {
+  // One node per input sentence, in input order.
+  repeated Node nodes = 1;
+}
+
+// ---- domain mirror ---------------------------------------------------------
+
+// A persisted specification node. The raw sentence text (`statement`) is the
+// source of truth; `sentence` is a derived view computed at response time.
+message Node {
+  string id = 1;
+  // The raw sentence text, exactly as accepted.
+  string statement = 2;
+  // The version of the language that accepted the sentence.
+  string lang_version = 3;
+  // Derived reading of the sentence — never stored.
+  SentenceView sentence = 4;
+  Meta meta = 5;
+}
+
+// The specification act a sentence performs.
+enum SpeechAct {
+  SPEECH_ACT_UNSPECIFIED = 0;
+  SPEECH_ACT_DEFINITION = 1;
+  SPEECH_ACT_DESCRIPTION = 2;
+  SPEECH_ACT_OBLIGATION = 3;
+  SPEECH_ACT_PROHIBITION = 4;
+  SPEECH_ACT_RECOMMENDATION = 5;
+  SPEECH_ACT_PERMISSION = 6;
+}
+
+// The derived reading of one sentence.
+message SentenceView {
+  SpeechAct speech_act = 1;
+  // The canonical rendering of the sentence.
+  string canonical = 2;
+  // The assume-guarantee reading. Absent for definitions, which establish
+  // vocabulary, not behavior, and for permissions, which admit behavior
+  // rather than constrain it and enter a contract only through pairing, on
+  // the environment side.
+  ContractView contract = 3;
+}
+
+// The assume-guarantee reading of one sentence, as a display convenience.
+message ContractView {
+  // "⊤" at ingest: a sentence taken alone assumes nothing of its environment;
+  // non-trivial assumptions are graph-level pairings between sentences.
+  string assumption = 1;
+  // The rendered assertion: the canonical sentence without its purpose part.
+  string guarantee = 2;
+  // "binding" | "recommended" | "" (descriptions carry no force; permissions
+  // never produce a ContractView at all).
+  string force = 4;
+}
+
+message Meta {
+  repeated Evidence evidence = 1;
+  string created_at = 2;
+  string cli = 3;
+  string cli_version = 4;
+}
+
+message Evidence {
+  Kind kind = 1;
+  Locator locator = 2;
+  Snapshot snapshot = 3;
+  Origin origin = 4;
+}
+
+// Epistemic kind of a piece of evidence. UNSPECIFIED (the proto3 default) is
+// treated as UNKNOWN by the daemon, so an absent kind is never load-bearing.
+enum Kind {
+  KIND_UNSPECIFIED = 0;
+  KIND_UNKNOWN = 1;
+  KIND_CONSTITUTIVE = 2;
+  KIND_DEMONSTRATIVE = 3;
+  KIND_TESTIMONIAL = 4;
+  KIND_ASSERTORIC = 5;
+  KIND_CIRCUMSTANTIAL = 6;
+  KIND_COUNTER = 7;
+}
+
+message Locator {
+  oneof value {
+    FileLocator file = 1;
+    UrlLocator url = 2;
+  }
+}
+
+message FileLocator {
+  string path = 1;
+  optional uint32 line = 2;
+  optional uint32 col = 3;
+}
+
+message UrlLocator {
+  string url = 1;
+}
+
+// The captured observation of a locator (provenance sense ②). The captured
+// bytes are NOT carried on the wire — the content-addressed blob store is the
+// byte authority — only the hash pointer and metadata.
+message Snapshot {
+  string content_hash = 1;
+  uint64 bytes = 2;
+  string captured_at = 3;
+  Anchor anchor = 4;
+}
+
+message Anchor {
+  oneof value {
+    GitAnchor git = 1;
+    WorktreeAnchor worktree = 2;
+    WebAnchor web = 3;
+  }
+}
+
+message GitAnchor {
+  string commit = 1;
+  bool dirty = 2;
+}
+
+message WorktreeAnchor {}
+
+message WebAnchor {
+  string retrieved_at = 1;
+  uint32 status = 2;
+  optional string content_type = 3;
+  optional string last_modified = 4;
+}
+
+// The source artifact's own provenance (sense ①). Every field is optional.
+message Origin {
+  optional string author = 1;
+  optional string created_at = 2;
+  optional string updated_at = 3;
+}

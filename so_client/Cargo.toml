@@ -2,7 +2,7 @@
 name = "so-client"
 version.workspace = true
 edition.workspace = true
-description = "A thin gRPC client for the spec-oracle ContractGraph service."
+description = "A thin gRPC client for the spec-oracle SpecificationGraph service."
 
 [lib]
 name = "so_client"

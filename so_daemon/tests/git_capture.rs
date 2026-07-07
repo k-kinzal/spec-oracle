@@ -67,7 +67,7 @@ fn captures_dirty_flag_and_git_author_for_subdir_relative_path() {
     let nodes = InMemoryNodeStore::new();
     let blobs = FileBlobStore::open(&root.join("blobs")).unwrap();
     let req = AddRequest {
-        statement: "The total shall be positive.",
+        specification: "The total shall be positive.",
         evidence_values: &["pkg/order/total.rs:1".to_string()],
         now: "2026-07-05T00:00:00Z",
         cli: "spec",
@@ -77,8 +77,8 @@ fn captures_dirty_flag_and_git_author_for_subdir_relative_path() {
 
     std::env::set_current_dir(original_cwd).unwrap();
 
-    let node = result.expect("add should succeed");
-    let ev = &node.meta.evidence[0];
+    let persisted = result.expect("add should succeed");
+    let ev = &persisted[0].meta.evidence[0];
 
     // The commit is pinned and the dirty working tree is detected.
     match &ev.snapshot.anchor {

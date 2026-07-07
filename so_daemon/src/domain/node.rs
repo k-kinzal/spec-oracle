@@ -1,19 +1,19 @@
-//! The persisted node: an assume-guarantee contract that is also a grounded claim.
+//! The persisted node: one grounded sentence of a specification.
 //!
 //! A node carries two orthogonal layers:
-//!   * the **logical** layer — the contract `(assumption ⇒ guarantee)` projected
-//!     from the constrained-NL `statement` by the language crate, which remains
-//!     the source of truth;
+//!   * the **logical** layer — the sentence itself: the raw `statement` text in
+//!     the constrained specification language, plus the `lang_version` that
+//!     accepted it. The words are the source of truth; everything derivable
+//!     from them — the parse tree, the speech act, the assume-guarantee
+//!     contract reading — is a computed *view*, produced at response time and
+//!     never stored;
 //!   * the **epistemic** layer — the `meta.evidence` grounding the claim.
 //!
 //! `meta` holds only facts that are irreducible at ingest: each piece of
 //! evidence with its snapshot (sense ②) and origin (sense ①), plus the node's
-//! own creation facts (sense ③). Everything derivable — the subject, the
-//! strength, the conformance state — is a computed *view*, never stored here.
+//! own creation facts (sense ③).
 
 use serde::{Deserialize, Serialize};
-
-use so_lang::grammar::{Assumption, Guarantee};
 
 use crate::domain::locator::{Kind, Locator};
 use crate::domain::origin::Origin;
@@ -45,22 +45,24 @@ pub struct Meta {
     pub cli_version: String,
 }
 
-/// A specification node.
+/// A specification node: one sentence, grounded.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Node {
     pub id: String,
-    /// The constrained-NL statement — the source of truth.
+    /// The raw sentence text — the source of truth.
     pub statement: String,
-    /// Projected from `statement` by the grammar (`⊤` when ubiquitous).
-    pub assumption: Assumption,
-    /// Projected from `statement` by the grammar.
-    pub guarantee: Guarantee,
+    /// The version of the language that accepted the sentence. Every row the
+    /// store writes records it; the empty default is defensive robustness for
+    /// rows created out of band. (Pre-0.2 data lives in the abandoned
+    /// `contracts` collection and is never read — see `crate::arango`.)
+    #[serde(default)]
+    pub lang_version: String,
     pub meta: Meta,
 }
 
 impl Node {
-    /// A one-line human summary. Deliberately does not surface the A/G split as a
-    /// parse result to be confirmed — it is a convenience view only.
+    /// A one-line human summary. Deliberately does not surface any derived
+    /// reading as a parse result to be confirmed — it is a convenience view.
     pub fn summary(&self) -> String {
         format!("{}  ({} evidence)", self.id, self.meta.evidence.len())
     }
@@ -75,11 +77,7 @@ mod tests {
         Node {
             id: "test-id".to_string(),
             statement: "The pump shall stop.".to_string(),
-            assumption: Assumption::Top,
-            guarantee: Guarantee {
-                subject: "pump".to_string(),
-                response: "stop".to_string(),
-            },
+            lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
                 evidence: vec![Evidence {
                     kind: Kind::Constitutive,
@@ -131,5 +129,15 @@ mod tests {
     #[test]
     fn summary_counts_evidence() {
         assert!(sample_node().summary().contains("1 evidence"));
+    }
+
+    #[test]
+    fn rows_without_lang_version_still_deserialize() {
+        // Defensive: a row created out of band without `lang_version` (the
+        // store itself always writes it) still deserializes, defaulting to empty.
+        let mut json = serde_json::to_value(sample_node()).unwrap();
+        json.as_object_mut().unwrap().remove("lang_version");
+        let back: Node = serde_json::from_value(json).unwrap();
+        assert_eq!(back.lang_version, "");
     }
 }

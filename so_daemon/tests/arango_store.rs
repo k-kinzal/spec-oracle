@@ -8,20 +8,14 @@
 //! (defaulting to `spec_oracle_test`).
 
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
-use so_daemon::domain::{
-    Anchor, Assumption, Evidence, Guarantee, Kind, Locator, Meta, Node, Origin, Snapshot,
-};
+use so_daemon::domain::{Anchor, Evidence, Kind, Locator, Meta, Node, Origin, Snapshot};
 use so_daemon::store::NodeStore;
 
 fn sample_node(id: &str) -> Node {
     Node {
         id: id.to_string(),
         statement: "The pump shall stop.".to_string(),
-        assumption: Assumption::Top,
-        guarantee: Guarantee {
-            subject: "pump".to_string(),
-            response: "stop".to_string(),
-        },
+        lang_version: so_lang::LANG_VERSION.to_string(),
         meta: Meta {
             evidence: vec![Evidence {
                 kind: Kind::Constitutive,
@@ -68,18 +62,17 @@ fn arango_round_trip_when_available() {
     let store = ArangoNodeStore::connect(&cfg).expect("connect to ArangoDB");
 
     let node = sample_node("test-node-arango-roundtrip");
-    store.add_contract(&node).expect("add_contract");
+    store.add_node(&node).expect("add_node");
 
     let back = store
-        .get_contract(&node.id)
-        .expect("get_contract")
+        .get_node(&node.id)
+        .expect("get_node")
         .expect("node must exist after add");
 
     // Identity and the logical/epistemic metadata survive the round trip …
     assert_eq!(back.id, node.id);
     assert_eq!(back.statement, node.statement);
-    assert_eq!(back.assumption, node.assumption);
-    assert_eq!(back.guarantee, node.guarantee);
+    assert_eq!(back.lang_version, node.lang_version);
     assert_eq!(back.meta.evidence.len(), 1);
     assert_eq!(back.meta.evidence[0].kind, node.meta.evidence[0].kind);
     assert_eq!(
@@ -92,7 +85,7 @@ fn arango_round_trip_when_available() {
 
     // A missing key is a clean `None`, not an error.
     assert!(store
-        .get_contract("no-such-node-xyzzy")
-        .expect("get_contract missing")
+        .get_node("no-such-node-xyzzy")
+        .expect("get_node missing")
         .is_none());
 }

@@ -1,6 +1,6 @@
 //! `specd` — the spec-oracle ingest daemon.
 //!
-//! Serves the `spec_oracle.v1.ContractGraph` gRPC contract. Because capture runs
+//! Serves the `spec_oracle.v1.SpecificationGraph` gRPC contract. Because capture runs
 //! against *this process's* filesystem and git, the daemon must run where the
 //! evidence lives (or where a checkout of it is reachable). ArangoDB credentials
 //! are read from the environment only (`ARANGODB_USER` / `ARANGODB_PASSWORD`), so
@@ -16,15 +16,15 @@ use tonic::transport::Server;
 use tracing::Instrument;
 
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
-use so_daemon::service::ContractGraphService;
+use so_daemon::service::SpecificationGraphService;
 use so_daemon::store::FileBlobStore;
-use so_protocol::pb::contract_graph_server::ContractGraphServer;
+use so_protocol::pb::specification_graph_server::SpecificationGraphServer;
 
 #[derive(Parser)]
 #[command(
     name = "specd",
     version,
-    about = "The spec-oracle ingest daemon: a gRPC service that captures evidence and persists contract nodes."
+    about = "The spec-oracle ingest daemon: a gRPC service that captures evidence and persists specification nodes."
 )]
 struct Args {
     /// Address to listen on for gRPC.
@@ -37,8 +37,8 @@ struct Args {
     listen: SocketAddr,
 
     /// Directory whose `.spec-oracle/blobs/` holds the content-addressed snapshot
-    /// bytes (defaults to the current directory). Contract nodes themselves live
-    /// in ArangoDB, not here.
+    /// bytes (defaults to the current directory). Specification nodes live in
+    /// ArangoDB, not here.
     #[arg(long = "dir", env = "SPEC_ORACLE_DIR", value_name = "PATH")]
     dir: Option<PathBuf>,
 
@@ -111,7 +111,7 @@ fn run(args: Args) -> anyhow::Result<()> {
     tracing::info!("db.url" = %args.arango_url, "connecting to ArangoDB");
     let nodes = ArangoNodeStore::connect(&cfg)?;
 
-    let service = ContractGraphService::new(Arc::new(nodes), Arc::new(blobs));
+    let service = SpecificationGraphService::new(Arc::new(nodes), Arc::new(blobs));
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -121,7 +121,7 @@ fn run(args: Args) -> anyhow::Result<()> {
         async {
             tracing::info!("specd listening");
             Server::builder()
-                .add_service(ContractGraphServer::new(service))
+                .add_service(SpecificationGraphServer::new(service))
                 .serve_with_shutdown(args.listen, shutdown_signal())
                 .await
         }

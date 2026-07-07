@@ -1,12 +1,18 @@
 //! spec-oracle daemon: evidence capture, persistence, and the gRPC service.
 //!
-//! A node is a contract `(assumption ⇒ guarantee)` that is also a grounded
-//! claim. The contract is projected mechanically from a constrained
-//! natural-language `statement` (by the language crate); the grounding is
-//! captured here as evidence. This crate owns everything that touches the
-//! daemon's environment — parsing evidence values, snapshotting the locator's
-//! content, discovering source provenance, and persisting to ArangoDB + a blob
-//! store — and exposes it over the `spec_oracle.v1` contract via [`service`].
+//! The daemon ingests a *specification* — one or more sentences of the
+//! constrained specification language — and persists one node per sentence.
+//! A node is a grounded sentence: the raw words (plus the language version
+//! that accepted them) are the stored truth, and the `meta.evidence` captured
+//! here grounds the claim. The assume-guarantee *contract* is a derived
+//! reading of a sentence, not a stored fact: assumption and guarantee are
+//! roles an assertion plays relative to a responsible subject, and pairing a
+//! guarantee with a non-trivial assumption is a graph-level relationship
+//! between sentences — out of scope here. This crate owns everything that
+//! touches the daemon's environment — parsing evidence values, snapshotting
+//! the locator's content, discovering source provenance, and persisting to
+//! ArangoDB + a blob store — and exposes it over the `spec_oracle.v1` wire
+//! contract via [`service`].
 //!
 //! The daemon owns the domain model. The wire contract lives separately in
 //! `so-protocol` so clients can talk to the daemon without depending on this

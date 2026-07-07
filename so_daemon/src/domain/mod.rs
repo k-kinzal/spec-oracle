@@ -1,8 +1,8 @@
 //! The daemon-owned domain types — the serde model persisted by the daemon.
-//! The assume-guarantee vocabulary (`Assumption`,
-//! `Guarantee`, `Condition`) is re-exported from the language crate, since it is
-//! the output of the grammar; everything else (the node, its evidence, the
-//! snapshot/origin/locator) is defined here.
+//! The node holds the raw sentence text and its grounding; everything else
+//! (evidence, snapshot/origin/locator) is defined here. Derived readings of a
+//! sentence (parse tree, speech act, contract view) come from the language
+//! crate at response time and are never part of this model.
 
 pub mod locator;
 pub mod node;
@@ -13,5 +13,3 @@ pub use locator::{Kind, Locator};
 pub use node::{Evidence, Meta, Node};
 pub use origin::Origin;
 pub use snapshot::{Anchor, Snapshot};
-
-pub use so_lang::grammar::{Assumption, Condition, Contract, Guarantee};

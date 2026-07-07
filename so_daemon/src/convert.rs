@@ -2,15 +2,20 @@
 //! messages ([`so_protocol::pb`]).
 //!
 //! The two representations are kept deliberately separate: the domain types are
-//! the serde model the daemon persists; the protobuf
-//! messages are the wire form. This module is the single place that maps one to
-//! the other. Domain → proto is total ([`From`]); proto → domain is fallible
-//! ([`TryFrom`]) because a message received off the wire may omit a required
-//! field or oneof arm.
-
-use so_lang::grammar;
+//! the serde model the daemon persists; the protobuf messages are the wire
+//! form. This module is the single place that maps one to the other.
+//!
+//! Domain → proto ([`node_to_pb`]) also *derives* the wire-only
+//! [`pb::SentenceView`] — speech act, canonical rendering, contract view — by
+//! re-parsing the node's raw sentence with the language crate. The view is
+//! computed at response time and never persisted; if the re-parse impossibly
+//! fails (e.g. a row accepted by an older grammar), the view is simply absent —
+//! degrade, never panic. Proto → domain is fallible ([`TryFrom`]) because a
+//! message received off the wire may omit a required field or oneof arm; the
+//! derived `sentence` view is ignored on receive.
 
 use crate::domain;
+use so_lang::semantics;
 use so_protocol::pb;
 
 /// A malformed wire message: a required field or oneof arm was absent.
@@ -48,52 +53,48 @@ fn kind_from_pb(v: i32) -> domain::Kind {
     }
 }
 
-// ---- Assumption / Guarantee (language types) -------------------------------
+// ---- SentenceView (derived, wire-only) ---------------------------------------
 
-fn assumption_to_pb(a: &grammar::Assumption) -> pb::Assumption {
-    let conditions = match a {
-        grammar::Assumption::Top => Vec::new(),
-        grammar::Assumption::Conditions { clauses } => clauses
-            .iter()
-            .map(|c| pb::Condition {
-                keyword: c.keyword.clone(),
-                text: c.text.clone(),
-            })
-            .collect(),
+fn speech_act_to_pb(act: semantics::SpeechAct) -> pb::SpeechAct {
+    match act {
+        semantics::SpeechAct::Definition => pb::SpeechAct::Definition,
+        semantics::SpeechAct::Description => pb::SpeechAct::Description,
+        semantics::SpeechAct::Obligation => pb::SpeechAct::Obligation,
+        semantics::SpeechAct::Prohibition => pb::SpeechAct::Prohibition,
+        semantics::SpeechAct::Recommendation => pb::SpeechAct::Recommendation,
+        semantics::SpeechAct::Permission => pb::SpeechAct::Permission,
+    }
+}
+
+/// Derive the wire-only sentence view from a node's raw sentence text.
+/// `None` when the text does not (re-)parse as exactly one sentence — a row
+/// from an older grammar degrades to a view-less node rather than an error.
+fn sentence_view(statement: &str) -> Option<pb::SentenceView> {
+    let specification = so_lang::parse::parse(statement).ok()?;
+    let sentence = match specification.sentences.as_slice() {
+        [sentence] => sentence,
+        _ => return None,
     };
-    pb::Assumption { conditions }
-}
-
-fn assumption_from_pb(a: pb::Assumption) -> grammar::Assumption {
-    // An empty condition list is the ubiquitous case ⊤.
-    if a.conditions.is_empty() {
-        grammar::Assumption::Top
-    } else {
-        grammar::Assumption::Conditions {
-            clauses: a
-                .conditions
-                .into_iter()
-                .map(|c| grammar::Condition {
-                    keyword: c.keyword,
-                    text: c.text,
-                })
-                .collect(),
+    let contract = semantics::ingest_contract(sentence).map(|ic| {
+        // The guarantee is the assertion: the canonical sentence without its
+        // purpose adjunct (a purpose is intent, not behavior).
+        let mut assertion = sentence.clone();
+        assertion.purpose = None;
+        pb::ContractView {
+            assumption: ic.assumption.render().to_string(),
+            guarantee: assertion.render(),
+            force: match ic.force {
+                Some(semantics::Force::Binding) => "binding".to_string(),
+                Some(semantics::Force::Recommended) => "recommended".to_string(),
+                None => String::new(),
+            },
         }
-    }
-}
-
-fn guarantee_to_pb(g: &grammar::Guarantee) -> pb::Guarantee {
-    pb::Guarantee {
-        subject: g.subject.clone(),
-        response: g.response.clone(),
-    }
-}
-
-fn guarantee_from_pb(g: pb::Guarantee) -> grammar::Guarantee {
-    grammar::Guarantee {
-        subject: g.subject,
-        response: g.response,
-    }
+    });
+    Some(pb::SentenceView {
+        speech_act: speech_act_to_pb(semantics::speech_act(sentence)) as i32,
+        canonical: sentence.render(),
+        contract,
+    })
 }
 
 // ---- Locator ---------------------------------------------------------------
@@ -256,33 +257,28 @@ fn meta_from_pb(m: pb::Meta) -> Result<domain::Meta, ConvertError> {
 
 // ---- Node ------------------------------------------------------------------
 
-impl From<&domain::Node> for pb::Node {
-    fn from(n: &domain::Node) -> pb::Node {
-        pb::Node {
-            id: n.id.clone(),
-            statement: n.statement.clone(),
-            assumption: Some(assumption_to_pb(&n.assumption)),
-            guarantee: Some(guarantee_to_pb(&n.guarantee)),
-            meta: Some(meta_to_pb(&n.meta)),
-        }
+/// Convert a persisted node to its wire form, deriving the response-time
+/// [`pb::SentenceView`] from the raw sentence text.
+pub fn node_to_pb(n: &domain::Node) -> pb::Node {
+    pb::Node {
+        id: n.id.clone(),
+        statement: n.statement.clone(),
+        lang_version: n.lang_version.clone(),
+        sentence: sentence_view(&n.statement),
+        meta: Some(meta_to_pb(&n.meta)),
     }
 }
 
 impl TryFrom<pb::Node> for domain::Node {
     type Error = ConvertError;
 
+    /// Only the stored truth crosses back: id, statement, lang_version, meta.
+    /// The `sentence` view is derived — ignored on receive.
     fn try_from(n: pb::Node) -> Result<domain::Node, ConvertError> {
         Ok(domain::Node {
             id: n.id,
             statement: n.statement,
-            assumption: assumption_from_pb(
-                n.assumption
-                    .ok_or(ConvertError::MissingField("node.assumption"))?,
-            ),
-            guarantee: guarantee_from_pb(
-                n.guarantee
-                    .ok_or(ConvertError::MissingField("node.guarantee"))?,
-            ),
+            lang_version: n.lang_version,
             meta: meta_from_pb(n.meta.ok_or(ConvertError::MissingField("node.meta"))?)?,
         })
     }
@@ -297,16 +293,7 @@ mod tests {
         Node {
             id: "n1".into(),
             statement: "When the order ships, the system shall notify the customer.".into(),
-            assumption: grammar::Assumption::Conditions {
-                clauses: vec![grammar::Condition {
-                    keyword: "When".into(),
-                    text: "the order ships".into(),
-                }],
-            },
-            guarantee: grammar::Guarantee {
-                subject: "system".into(),
-                response: "notify the customer".into(),
-            },
+            lang_version: so_lang::LANG_VERSION.into(),
             meta: Meta {
                 evidence: vec![
                     Evidence {
@@ -362,7 +349,7 @@ mod tests {
     #[test]
     fn node_round_trips_through_proto_dropping_only_content() {
         let node = sample();
-        let wire = pb::Node::from(&node);
+        let wire = node_to_pb(&node);
         let back = Node::try_from(wire).unwrap();
 
         // Content is not carried on the wire; everything else is identical.
@@ -374,20 +361,74 @@ mod tests {
     }
 
     #[test]
-    fn ubiquitous_assumption_survives_as_top() {
-        let mut node = sample();
-        node.assumption = grammar::Assumption::Top;
-        let back = Node::try_from(pb::Node::from(&node)).unwrap();
-        assert_eq!(back.assumption, grammar::Assumption::Top);
+    fn sentence_view_is_derived_for_an_obligation() {
+        let wire = node_to_pb(&sample());
+        let view = wire.sentence.expect("view must be derived");
+        assert_eq!(view.speech_act, pb::SpeechAct::Obligation as i32);
+        assert_eq!(
+            view.canonical,
+            "When the order ships, the system shall notify the customer."
+        );
+        let contract = view.contract.expect("obligations have a contract view");
+        assert_eq!(contract.assumption, "⊤");
+        assert_eq!(contract.force, "binding");
     }
 
     #[test]
-    fn missing_guarantee_is_a_convert_error() {
-        let mut wire = pb::Node::from(&sample());
-        wire.guarantee = None;
+    fn contract_guarantee_omits_the_purpose_adjunct() {
+        let mut node = sample();
+        // Round 11 (fail-closed verb boundary): `stays live` was a
+        // boundary-less bare run — the ambiguous class — so the purpose
+        // clause is copular now (`remains` is a clause copula).
+        node.statement =
+            "The daemon shall persist the node, so that the claim remains live.".into();
+        let view = node_to_pb(&node).sentence.unwrap();
+        let contract = view.contract.unwrap();
+        // Closed-class words render in canonical (lowercase) casing.
+        assert_eq!(contract.guarantee, "the daemon shall persist the node.");
+        // The canonical rendering keeps the purpose; only the guarantee drops it.
+        assert!(view.canonical.contains("so that"));
+    }
+
+    #[test]
+    fn definitions_have_no_contract_view() {
+        let mut node = sample();
+        node.statement = "A session means a sequence of requests.".into();
+        let view = node_to_pb(&node).sentence.unwrap();
+        assert_eq!(view.speech_act, pb::SpeechAct::Definition as i32);
+        assert!(view.contract.is_none());
+    }
+
+    #[test]
+    fn permissions_have_no_contract_view() {
+        // A permission admits behavior rather than constraining it: it keeps
+        // its speech act but carries no lone-sentence (⊤, G) contract view —
+        // it enters contracts only through pairing, on the environment side.
+        let mut node = sample();
+        node.statement = "The client may retry.".into();
+        let view = node_to_pb(&node).sentence.unwrap();
+        assert_eq!(view.speech_act, pb::SpeechAct::Permission as i32);
+        assert!(view.contract.is_none());
+    }
+
+    #[test]
+    fn unparseable_statement_degrades_to_no_view() {
+        let mut node = sample();
+        // A pre-0.2 row accepted by an older grammar: no pivot for 0.2.
+        node.statement = "The pump quickly.".into();
+        let wire = node_to_pb(&node);
+        assert!(wire.sentence.is_none());
+        // The node itself still crosses the wire and converts back.
+        assert!(Node::try_from(wire).is_ok());
+    }
+
+    #[test]
+    fn missing_meta_is_a_convert_error() {
+        let mut wire = node_to_pb(&sample());
+        wire.meta = None;
         assert_eq!(
             Node::try_from(wire),
-            Err(ConvertError::MissingField("node.guarantee"))
+            Err(ConvertError::MissingField("node.meta"))
         );
     }
 }

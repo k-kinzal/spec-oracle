@@ -1,11 +1,11 @@
-//! A thin client for the `spec_oracle.v1.ContractGraph` service.
+//! A thin client for the `spec_oracle.v1.SpecificationGraph` service.
 //!
 //! The client is deliberately minimal: it resolves the caller's input *channels*
 //! (`@file` / `-`(stdin) / inline) into concrete text — the one thing that cannot
 //! cross the wire, because it names the client's own streams — and forwards the
-//! statement plus the resolved evidence values to the daemon, which performs all
-//! capture and persistence. The returned protobuf node is handed back unchanged;
-//! the daemon owns the domain model.
+//! specification plus the resolved evidence values to the daemon, which performs
+//! all parsing, capture, and persistence. The returned protobuf nodes (one per
+//! sentence) are handed back unchanged; the daemon owns the domain model.
 //!
 //! Note the division of labor: **channel** resolution (reading the client's files
 //! and stdin) happens here; **locator** capture (snapshotting whatever the
@@ -18,7 +18,7 @@ use std::io::Read;
 use thiserror::Error;
 
 use so_protocol::pb;
-use so_protocol::pb::contract_graph_client::ContractGraphClient;
+use so_protocol::pb::specification_graph_client::SpecificationGraphClient;
 
 use tonic::transport::Channel;
 use tonic::Request;
@@ -45,8 +45,8 @@ pub enum ClientError {
     Connect(tonic::transport::Error),
     #[error("daemon returned an error: {0}")]
     Status(#[from] tonic::Status),
-    #[error("daemon response did not contain a node")]
-    MissingNode,
+    #[error("daemon response contained no nodes")]
+    EmptyResponse,
 }
 
 impl ClientError {
@@ -83,9 +83,9 @@ pub fn resolve_channel(arg: &str) -> Result<String, ChannelError> {
     Ok(arg.to_string())
 }
 
-/// A connected client for the ContractGraph service.
+/// A connected client for the SpecificationGraph service.
 pub struct Client {
-    inner: ContractGraphClient<Channel>,
+    inner: SpecificationGraphClient<Channel>,
 }
 
 impl Client {
@@ -96,7 +96,7 @@ impl Client {
             "server.address" = %endpoint
         );
         async move {
-            let inner = ContractGraphClient::connect(endpoint)
+            let inner = SpecificationGraphClient::connect(endpoint)
                 .await
                 .map_err(ClientError::Connect)?;
             Ok(Client { inner })
@@ -105,31 +105,32 @@ impl Client {
         .await
     }
 
-    /// Add a contract: resolve each evidence channel to text, send the request,
-    /// and return the persisted node in its protobuf form.
+    /// Add a specification: resolve each evidence channel to text, send the
+    /// request, and return the persisted nodes (one per sentence, in input
+    /// order) in their protobuf form.
     pub async fn add(
         &mut self,
-        statement: &str,
+        specification: &str,
         evidence_args: &[String],
         client: &str,
         client_version: &str,
-    ) -> Result<pb::Node, ClientError> {
+    ) -> Result<Vec<pb::Node>, ClientError> {
         let policy = so_tracing::capture_policy();
         let span = tracing::info_span!(
-            "spec.client.add_contract",
+            "spec.client.add_specification",
             "spec.telemetry.capture" = policy.as_str(),
             "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.ContractGraph",
-            "rpc.method" = "AddContract",
-            "spec.statement.length" = statement.len() as u64,
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "AddSpecification",
+            "spec.specification.length" = specification.len() as u64,
             "spec.evidence.arg_count" = evidence_args.len() as u64,
             "spec.evidence.resolved_count" = tracing::field::Empty,
-            "spec.statement.hash" = tracing::field::Empty,
-            "spec.statement.text" = tracing::field::Empty,
+            "spec.specification.hash" = tracing::field::Empty,
+            "spec.specification.text" = tracing::field::Empty,
             "client.name" = %client,
             "client.version" = %client_version,
         );
-        so_tracing::record_statement_on_span(&span, policy, statement);
+        so_tracing::record_specification_on_span(&span, policy, specification);
         async {
             let mut evidence = Vec::with_capacity(evidence_args.len());
             for arg in evidence_args {
@@ -137,18 +138,23 @@ impl Client {
             }
             tracing::Span::current().record("spec.evidence.resolved_count", evidence.len() as u64);
 
-            let mut request = Request::new(pb::AddContractRequest {
-                statement: statement.to_string(),
+            let mut request = Request::new(pb::AddSpecificationRequest {
+                specification: specification.to_string(),
                 evidence,
                 client: client.to_string(),
                 client_version: client_version.to_string(),
             });
             so_tracing::inject_context(request.metadata_mut());
 
-            let response = self.inner.add_contract(request).await?.into_inner();
-            let node = response.node.ok_or(ClientError::MissingNode)?;
-            tracing::info!("node.id" = %node.id, "contract add completed");
-            Ok(node)
+            let response = self.inner.add_specification(request).await?.into_inner();
+            if response.nodes.is_empty() {
+                return Err(ClientError::EmptyResponse);
+            }
+            tracing::info!(
+                "node.count" = response.nodes.len() as u64,
+                "specification add completed"
+            );
+            Ok(response.nodes)
         }
         .instrument(span)
         .await
