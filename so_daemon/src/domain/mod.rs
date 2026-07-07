@@ -4,11 +4,13 @@
 //! sentence (parse tree, speech act, contract view) come from the language
 //! crate at response time and are never part of this model.
 
+pub mod edge;
 pub mod locator;
 pub mod node;
 pub mod origin;
 pub mod snapshot;
 
+pub use edge::{Edge, EdgeKind};
 pub use locator::{Kind, Locator};
 pub use node::{Evidence, Meta, Node};
 pub use origin::Origin;

@@ -15,25 +15,35 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use tracing::Instrument;
 
-use crate::domain::Node;
+use crate::domain::{Edge, Node};
 use so_protocol::pb;
 use so_protocol::pb::specification_graph_server::SpecificationGraph;
 
 use crate::add::{self, AddError, AddRequest};
 use crate::convert;
-use crate::store::{BlobStore, NodeStore};
+use crate::store::{BlobStore, GraphStore, NodePage, StoreError};
 
-/// The ingest service, holding the two persistence seams behind `Arc`s so each
-/// request can hand them to a blocking task. Both trait objects are `Send + Sync`
-/// so they can cross the `spawn_blocking` boundary and be shared across requests.
+/// Page size used when the request leaves `page_size` at 0.
+const DEFAULT_PAGE_SIZE: u32 = 100;
+/// Hard cap on a page: the server never returns more nodes than this in one
+/// response, whatever the caller asks for. This is the backstop that keeps a
+/// graph read bounded no matter how large the graph grows.
+const MAX_PAGE_SIZE: u32 = 1000;
+
+/// The service, holding the two persistence seams behind `Arc`s so each request
+/// can hand them to a blocking task. Both trait objects are `Send + Sync` so they
+/// can cross the `spawn_blocking` boundary and be shared across requests.
+///
+/// The node store is a [`GraphStore`] (which extends [`NodeStore`]): ingest uses
+/// its write side, and `GetGraph` its read side, from one shared handle.
 pub struct SpecificationGraphService {
-    nodes: Arc<dyn NodeStore + Send + Sync>,
+    nodes: Arc<dyn GraphStore + Send + Sync>,
     blobs: Arc<dyn BlobStore + Send + Sync>,
 }
 
 impl SpecificationGraphService {
     pub fn new(
-        nodes: Arc<dyn NodeStore + Send + Sync>,
+        nodes: Arc<dyn GraphStore + Send + Sync>,
         blobs: Arc<dyn BlobStore + Send + Sync>,
     ) -> SpecificationGraphService {
         SpecificationGraphService { nodes, blobs }
@@ -69,6 +79,30 @@ impl SpecificationGraph for SpecificationGraphService {
         );
         so_tracing::set_span_parent_from_metadata(&span, request.metadata());
         async move { self.add_specification_inner(request).await }
+            .instrument(span)
+            .await
+    }
+
+    async fn get_graph(
+        &self,
+        request: Request<pb::GetGraphRequest>,
+    ) -> Result<Response<pb::GetGraphResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.get_graph",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "GetGraph",
+            "spec.page.requested_size" = tracing::field::Empty,
+            "spec.page.limit" = tracing::field::Empty,
+            "spec.page.has_cursor" = tracing::field::Empty,
+            "spec.page.node_count" = tracing::field::Empty,
+            "spec.page.edge_count" = tracing::field::Empty,
+            "spec.page.has_next" = tracing::field::Empty,
+            "spec.graph.total_nodes" = tracing::field::Empty,
+            "error.message" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move { self.get_graph_inner(request).await }
             .instrument(span)
             .await
     }
@@ -148,6 +182,87 @@ impl SpecificationGraphService {
             nodes: persisted.iter().map(convert::node_to_pb).collect(),
         }))
     }
+
+    async fn get_graph_inner(
+        &self,
+        request: Request<pb::GetGraphRequest>,
+    ) -> Result<Response<pb::GetGraphResponse>, Status> {
+        let req = request.into_inner();
+
+        // Resolve the page size against the server's own bounds: 0 means "use
+        // the default", and any request is clamped to the hard maximum. The
+        // caller can never coerce an unbounded read.
+        let requested = req.page_size;
+        let limit = clamp_page_size(requested) as usize;
+        let after = if req.page_token.is_empty() {
+            None
+        } else {
+            Some(req.page_token)
+        };
+        tracing::Span::current().record("spec.page.requested_size", requested as u64);
+        tracing::Span::current().record("spec.page.limit", limit as u64);
+        tracing::Span::current().record("spec.page.has_cursor", after.is_some());
+
+        let nodes = self.nodes.clone();
+
+        // The ArangoDB driver is blocking, so the read runs off the async
+        // reactor, mirroring the ingest path. The page's edges are the ones
+        // induced among exactly the nodes returned, so the client can draw the
+        // subgraph it holds without a second call; the total is a cheap
+        // maintained count, not a scan.
+        let read_span = tracing::info_span!("spec.daemon.read_blocking");
+        let outcome = tokio::task::spawn_blocking(
+            move || -> Result<(NodePage, Vec<Edge>, u64), StoreError> {
+                let _entered = read_span.enter();
+                let page = nodes.list_nodes(after.as_deref(), limit)?;
+                let ids: Vec<String> = page.nodes.iter().map(|n| n.id.clone()).collect();
+                let edges = nodes.list_edges(&ids)?;
+                let total = nodes.count_nodes()?;
+                Ok((page, edges, total))
+            },
+        )
+        .await
+        .map_err(|e| Status::internal(format!("graph read task failed to run: {e}")))?;
+
+        let (page, edges, total) = match outcome {
+            Ok(triple) => triple,
+            Err(e) => {
+                let message = e.to_string();
+                tracing::Span::current().record("error.message", message.as_str());
+                tracing::warn!("error.message" = %message, "graph read failed");
+                return Err(Status::internal(message));
+            }
+        };
+
+        let next_page_token = page.next_cursor.unwrap_or_default();
+        tracing::Span::current().record("spec.page.node_count", page.nodes.len() as u64);
+        tracing::Span::current().record("spec.page.edge_count", edges.len() as u64);
+        tracing::Span::current().record("spec.page.has_next", !next_page_token.is_empty());
+        tracing::Span::current().record("spec.graph.total_nodes", total);
+        tracing::info!(
+            "spec.page.node_count" = page.nodes.len() as u64,
+            "spec.graph.total_nodes" = total,
+            "graph read completed"
+        );
+
+        Ok(Response::new(pb::GetGraphResponse {
+            nodes: page.nodes.iter().map(convert::node_to_pb).collect(),
+            edges: edges.iter().map(convert::edge_to_pb).collect(),
+            next_page_token,
+            total_nodes: total,
+        }))
+    }
+}
+
+/// Resolve a requested page size to a concrete limit: `0` becomes the default,
+/// and any value is capped at [`MAX_PAGE_SIZE`]. Always returns at least 1.
+fn clamp_page_size(requested: u32) -> u32 {
+    let size = if requested == 0 {
+        DEFAULT_PAGE_SIZE
+    } else {
+        requested
+    };
+    size.clamp(1, MAX_PAGE_SIZE)
 }
 
 fn record_add_error(policy: so_tracing::CapturePolicy, error: &AddError) {
@@ -216,4 +331,80 @@ fn snapshot_is_bad_input(e: &crate::snapshot::SnapshotError) -> bool {
         e,
         SnapshotError::NotFound(_) | SnapshotError::LineOutOfRange { .. }
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::{Meta, Node};
+    use crate::store::{InMemoryNodeStore, NodeStore, StoreError};
+
+    #[test]
+    fn clamp_page_size_applies_default_floor_and_ceiling() {
+        assert_eq!(clamp_page_size(0), DEFAULT_PAGE_SIZE); // 0 → default
+        assert_eq!(clamp_page_size(50), 50); // within range → passthrough
+        assert_eq!(clamp_page_size(MAX_PAGE_SIZE + 1), MAX_PAGE_SIZE); // clamped
+        assert_eq!(clamp_page_size(u32::MAX), MAX_PAGE_SIZE); // never unbounded
+    }
+
+    struct NoBlobs;
+    impl BlobStore for NoBlobs {
+        fn put_blob(&self, _hash: &str, _bytes: &[u8]) -> Result<(), StoreError> {
+            Ok(())
+        }
+        fn get_blob(&self, _hash: &str) -> Result<Option<Vec<u8>>, StoreError> {
+            Ok(None)
+        }
+    }
+
+    fn node(id: &str) -> Node {
+        Node {
+            id: id.to_string(),
+            statement: "The pump shall stop.".to_string(),
+            lang_version: so_lang::LANG_VERSION.to_string(),
+            meta: Meta {
+                evidence: vec![],
+                created_at: "t".to_string(),
+                cli: "spec".to_string(),
+                cli_version: "test".to_string(),
+            },
+        }
+    }
+
+    #[tokio::test]
+    async fn get_graph_returns_a_bounded_page_with_cursor_and_total() {
+        // The production in-memory backend — no bespoke test double needed.
+        let store = InMemoryNodeStore::new();
+        for id in ["n1", "n2", "n3"] {
+            store.add_node(&node(id)).unwrap();
+        }
+        let service = SpecificationGraphService::new(Arc::new(store), Arc::new(NoBlobs));
+
+        // Page size 2 over 3 nodes: a full page plus a continuation token.
+        let resp = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 2,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(resp.nodes.len(), 2);
+        assert_eq!(resp.total_nodes, 3);
+        assert!(resp.edges.is_empty(), "no edges exist yet");
+        assert!(!resp.next_page_token.is_empty(), "a further page remains");
+
+        // Following the cursor yields the last node and ends the walk.
+        let resp2 = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 2,
+                page_token: resp.next_page_token.clone(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(resp2.nodes.len(), 1);
+        assert_eq!(resp2.nodes[0].id, "n3");
+        assert!(resp2.next_page_token.is_empty(), "walk is complete");
+    }
 }

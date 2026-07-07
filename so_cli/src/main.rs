@@ -34,6 +34,8 @@ struct Cli {
 enum Command {
     /// Add a specification (one node per sentence) with its evidence.
     Add(AddArgs),
+    /// Read one bounded page of the specification graph (nodes + edges).
+    Graph(GraphArgs),
 }
 
 #[derive(clap::Args)]
@@ -64,6 +66,34 @@ struct AddArgs {
     json: bool,
 }
 
+#[derive(clap::Args)]
+struct GraphArgs {
+    /// Maximum nodes to return in this page. 0 lets the daemon choose its
+    /// default; the daemon clamps to a hard maximum, so a graph read is always
+    /// bounded — there is deliberately no "fetch everything" option.
+    #[arg(long = "page-size", default_value_t = 0, value_name = "N")]
+    page_size: u32,
+
+    /// Opaque continuation token from a previous page's `next_page_token`. Omit
+    /// to start from the beginning.
+    #[arg(long = "page-token", default_value = "", value_name = "TOKEN")]
+    page_token: String,
+
+    /// Address of the spec-oracle daemon.
+    #[arg(
+        long = "server",
+        env = "SPEC_ORACLE_SERVER",
+        default_value = "http://127.0.0.1:50051",
+        value_name = "URL"
+    )]
+    server: String,
+
+    /// Print the page as a JSON graph object ({nodes, edges, next_page_token,
+    /// total_nodes}) instead of a human summary.
+    #[arg(long = "json")]
+    json: bool,
+}
+
 fn main() -> ExitCode {
     let _telemetry = match so_tracing::init("spec", env!("CARGO_PKG_VERSION")) {
         Ok(guard) => guard,
@@ -76,6 +106,7 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
         Command::Add(args) => run_add(args),
+        Command::Graph(args) => run_graph(args),
     }
 }
 
@@ -151,6 +182,79 @@ fn run_add(args: AddArgs) -> ExitCode {
     }
 }
 
+fn run_graph(args: GraphArgs) -> ExitCode {
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("error: failed to start async runtime: {e}");
+            return ExitCode::from(EXIT_RUNTIME);
+        }
+    };
+
+    let span = tracing::info_span!(
+        "spec.cli.graph",
+        "spec.page.requested_size" = args.page_size as u64,
+        "spec.page.has_cursor" = !args.page_token.is_empty(),
+        "server.address" = %args.server,
+    );
+
+    let result = runtime.block_on(
+        async {
+            let mut client = Client::connect(args.server.clone()).await?;
+            client.get_graph(args.page_size, &args.page_token).await
+        }
+        .instrument(span),
+    );
+
+    match result {
+        Ok(page) => {
+            if args.json {
+                let rendered = serde_json::json!({
+                    "nodes": page.nodes.iter().map(node_to_json).collect::<Vec<_>>(),
+                    "edges": page.edges.iter().map(edge_to_json).collect::<Vec<_>>(),
+                    "next_page_token": page.next_page_token,
+                    "total_nodes": page.total_nodes,
+                });
+                match serde_json::to_string_pretty(&rendered) {
+                    Ok(s) => println!("{s}"),
+                    Err(e) => {
+                        eprintln!("error: failed to render graph: {e}");
+                        return ExitCode::from(EXIT_RUNTIME);
+                    }
+                }
+            } else {
+                println!(
+                    "{} of {} node(s), {} edge(s)",
+                    page.nodes.len(),
+                    page.total_nodes,
+                    page.edges.len()
+                );
+                for node in &page.nodes {
+                    println!("  {}", node_summary(node));
+                }
+                if page.next_page_token.is_empty() {
+                    println!("(end of graph)");
+                } else {
+                    println!("next page: --page-token {}", page.next_page_token);
+                }
+            }
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            let code = if e.is_bad_input() {
+                EXIT_USAGE
+            } else {
+                EXIT_RUNTIME
+            };
+            ExitCode::from(code)
+        }
+    }
+}
+
 fn node_summary(node: &pb::Node) -> String {
     let evidence_count = node
         .meta
@@ -173,6 +277,24 @@ fn node_to_json(node: &pb::Node) -> serde_json::Value {
         "sentence": sentence_to_json(node.sentence.as_ref()),
         "meta": meta_to_json(node.meta.as_ref()),
     })
+}
+
+fn edge_to_json(edge: &pb::Edge) -> serde_json::Value {
+    serde_json::json!({
+        "id": &edge.id,
+        "source": &edge.source,
+        "target": &edge.target,
+        "kind": edge_kind_to_str(edge.kind),
+    })
+}
+
+fn edge_kind_to_str(kind: i32) -> &'static str {
+    match pb::EdgeKind::try_from(kind).unwrap_or(pb::EdgeKind::Unspecified) {
+        pb::EdgeKind::Refines => "refines",
+        pb::EdgeKind::Composes => "composes",
+        pb::EdgeKind::Contradicts => "contradicts",
+        pb::EdgeKind::Unspecified => "unspecified",
+    }
 }
 
 fn sentence_to_json(sentence: Option<&pb::SentenceView>) -> serde_json::Value {

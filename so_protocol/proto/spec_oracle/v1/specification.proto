@@ -12,8 +12,9 @@ syntax = "proto3";
 // response time and never persisted.
 package spec_oracle.v1;
 
-// The specification graph service. Today it ingests specifications; edges
-// (refinement/composition/…) and queries attach here later.
+// The specification graph service. It ingests specifications and reads the
+// graph back a bounded page at a time; edge derivation (refinement/composition/
+// contradiction) attaches behind the already graph-shaped read.
 service SpecificationGraph {
   // Ingest a specification (one or more sentences) with shared evidence;
   // returns one persisted node per sentence, in input order. Persistence is
@@ -24,6 +25,15 @@ service SpecificationGraph {
   // missing evidence file or out-of-range line — user-fixable), INTERNAL for
   // other capture failures and store failures (environment/runtime).
   rpc AddSpecification(AddSpecificationRequest) returns (AddSpecificationResponse);
+
+  // Read the specification graph one bounded page at a time. The graph can hold
+  // billions of nodes, so there is deliberately no "return everything" call:
+  // the caller walks the graph with keyset pagination (an opaque `page_token`),
+  // and the server hard-caps the page size. The response is graph-shaped — it
+  // carries `edges` alongside `nodes` — even though edges are not yet part of
+  // the model (the list is empty today, populated the moment edge derivation
+  // lands, without a wire change). Store/runtime failures surface as INTERNAL.
+  rpc GetGraph(GetGraphRequest) returns (GetGraphResponse);
 }
 
 message AddSpecificationRequest {
@@ -45,6 +55,53 @@ message AddSpecificationRequest {
 message AddSpecificationResponse {
   // One node per input sentence, in input order.
   repeated Node nodes = 1;
+}
+
+// ---- graph read ------------------------------------------------------------
+
+message GetGraphRequest {
+  // Maximum number of nodes to return in this page. `0` means the server
+  // default; the server clamps any value to a hard maximum. A graph view never
+  // asks for "everything" — it walks the graph one bounded page at a time.
+  uint32 page_size = 1;
+  // Opaque continuation token from a previous response's `next_page_token`.
+  // Empty starts from the beginning. It is keyset-based (not an offset), so
+  // paging cost is independent of how deep into the graph the cursor sits.
+  // Treat it as opaque: do not parse or construct it.
+  string page_token = 2;
+}
+
+message GetGraphResponse {
+  // A bounded page of nodes, ordered by a stable key so paging is deterministic.
+  repeated Node nodes = 1;
+  // The edges induced among the nodes on this page (both endpoints present).
+  // Empty today — edges are not yet part of the model — but the graph shape is
+  // stable, so a client renders edges the moment they exist.
+  repeated Edge edges = 2;
+  // Opaque token to fetch the next page; empty when this is the last page.
+  string next_page_token = 3;
+  // Best-effort total node count for the whole graph (maintained count, not a
+  // scan), so a client can show scale and progress without fetching every node.
+  uint64 total_nodes = 4;
+}
+
+// A derived relationship between two specification nodes. Not yet produced —
+// the shape exists so the read is graph-shaped ahead of edge derivation.
+message Edge {
+  string id = 1;
+  // Source and target node ids.
+  string source = 2;
+  string target = 3;
+  EdgeKind kind = 4;
+}
+
+// The kind of relationship an edge asserts. Grounded in the graph vocabulary:
+// one statement refining another, two composing, two in contradiction.
+enum EdgeKind {
+  EDGE_KIND_UNSPECIFIED = 0;
+  EDGE_KIND_REFINES = 1;
+  EDGE_KIND_COMPOSES = 2;
+  EDGE_KIND_CONTRADICTS = 3;
 }
 
 // ---- domain mirror ---------------------------------------------------------

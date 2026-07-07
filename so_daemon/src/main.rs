@@ -17,8 +17,18 @@ use tracing::Instrument;
 
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
 use so_daemon::service::SpecificationGraphService;
-use so_daemon::store::FileBlobStore;
+use so_daemon::store::{FileBlobStore, GraphStore, InMemoryNodeStore};
 use so_protocol::pb::specification_graph_server::SpecificationGraphServer;
+
+/// Which node-store backend `specd` serves from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum StoreKind {
+    /// Persist to ArangoDB (the production default).
+    Arango,
+    /// A non-persistent in-memory store — no database required. For local runs,
+    /// demos, and the graph UI without ArangoDB; data is lost on restart.
+    Memory,
+}
 
 #[derive(Parser)]
 #[command(
@@ -60,6 +70,18 @@ struct Args {
         value_name = "NAME"
     )]
     arango_db: String,
+
+    /// Node-store backend. `arango` (default) persists to ArangoDB; `memory`
+    /// runs without a database (non-persistent, for local dev/demos/UI). With
+    /// `memory` the `--arango-*` flags are ignored.
+    #[arg(
+        long = "store",
+        env = "SPEC_ORACLE_STORE",
+        value_enum,
+        default_value_t = StoreKind::Arango,
+        value_name = "BACKEND"
+    )]
+    store: StoreKind,
 }
 
 fn main() -> ExitCode {
@@ -98,20 +120,32 @@ fn run(args: Args) -> anyhow::Result<()> {
     tracing::info!("blob.dir" = %blobs_dir.display(), "opening blob store");
     let blobs = FileBlobStore::open(&blobs_dir)?;
 
-    // Credentials come from the environment, never the command line, so they do
-    // not leak into shell history or the process table.
-    let username = std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
-    let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
-    let cfg = ArangoConfig {
-        url: &args.arango_url,
-        database: &args.arango_db,
-        username: &username,
-        password: &password,
+    // Build the selected node-store backend. Both implement the same
+    // `GraphStore` seam, so the service is identical either way.
+    let nodes: Arc<dyn GraphStore + Send + Sync> = match args.store {
+        StoreKind::Arango => {
+            // Credentials come from the environment, never the command line, so
+            // they do not leak into shell history or the process table.
+            let username = std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
+            let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
+            let cfg = ArangoConfig {
+                url: &args.arango_url,
+                database: &args.arango_db,
+                username: &username,
+                password: &password,
+            };
+            tracing::info!("db.url" = %args.arango_url, "connecting to ArangoDB");
+            Arc::new(ArangoNodeStore::connect(&cfg)?)
+        }
+        StoreKind::Memory => {
+            tracing::warn!(
+                "using the in-memory node store: nodes are NOT persisted and are lost on restart"
+            );
+            Arc::new(InMemoryNodeStore::new())
+        }
     };
-    tracing::info!("db.url" = %args.arango_url, "connecting to ArangoDB");
-    let nodes = ArangoNodeStore::connect(&cfg)?;
 
-    let service = SpecificationGraphService::new(Arc::new(nodes), Arc::new(blobs));
+    let service = SpecificationGraphService::new(nodes, Arc::new(blobs));
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

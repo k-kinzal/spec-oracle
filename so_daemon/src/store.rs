@@ -17,19 +17,32 @@
 //! the blob store; the captured bytes themselves are never written into the
 //! graph (`Snapshot::content` is `#[serde(skip)]`).
 
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use thiserror::Error;
 
-use crate::domain::Node;
+use crate::domain::{Edge, Node};
 
-/// Persists and retrieves specification nodes (the graph vertices).
+/// A bounded, keyset-paginated page of nodes.
 ///
-/// Edge methods (refinement/composition/conjunction/quotient) are deliberately
-/// absent — edges are out of scope — but they slot in behind this same seam
-/// without disturbing the ingest use case.
+/// The read path never materializes the whole graph; it hands back one page and
+/// a cursor to resume from. `next_cursor` is `Some` while more pages remain and
+/// `None` on the final page. Treat the cursor as opaque — it is the store's
+/// resume key (today, the last node id), not a stable public handle.
+pub struct NodePage {
+    pub nodes: Vec<Node>,
+    pub next_cursor: Option<String>,
+}
+
+/// Persists and retrieves individual specification nodes — the write seam the
+/// ingest use case (`spec add`) needs, and nothing more.
+///
+/// This is deliberately narrow: reading the graph back is a separate concern
+/// ([`GraphStore`]), so an ingest-only collaborator (a test fault-injector, a
+/// write-only backend) is not forced to know about pagination. Growing the read
+/// surface never disturbs this trait or its implementors.
 pub trait NodeStore {
     /// Persist a node. Idempotent on the node id: re-persisting the same id
     /// replaces it with identical content.
@@ -42,6 +55,40 @@ pub trait NodeStore {
     /// Ingest uses this to roll back already-persisted sentences when a later
     /// sentence of the same specification fails to persist.
     fn delete_node(&self, id: &str) -> Result<(), StoreError>;
+}
+
+/// Reads the graph topology back, a bounded page at a time.
+///
+/// Separated from [`NodeStore`] (which it extends) so only the graph read path
+/// depends on it. It is deliberately paginated: the graph can hold billions of
+/// nodes, so there is no "return everything" method — only [`list_nodes`], a
+/// bounded keyset page. Edges have no producer yet (the model is all vertices),
+/// but [`list_edges`] is present so the read is graph-shaped ahead of edge
+/// derivation; it returns an empty set until an edge collection lands.
+///
+/// [`list_nodes`]: GraphStore::list_nodes
+/// [`list_edges`]: GraphStore::list_edges
+pub trait GraphStore: NodeStore {
+    /// Read one bounded page of nodes, ordered by a stable key.
+    ///
+    /// Keyset pagination: `after` is the cursor from a prior page's
+    /// `next_cursor` (`None` starts from the beginning), and `limit` bounds the
+    /// page. Cost is independent of how deep the cursor sits — never an offset
+    /// scan — so paging stays O(page) at any graph size. The returned page's
+    /// `next_cursor` is `Some` iff at least one more node follows.
+    fn list_nodes(&self, after: Option<&str>, limit: usize) -> Result<NodePage, StoreError>;
+
+    /// Best-effort total node count for the whole graph. Must be cheap at any
+    /// scale (a maintained count, never a full scan): it exists so a caller can
+    /// show progress without ever fetching every node.
+    fn count_nodes(&self) -> Result<u64, StoreError>;
+
+    /// The edges induced among a set of nodes (both endpoints in `among`).
+    ///
+    /// Returns empty today — the model has no edges yet — but the seam is here
+    /// so the read is graph-shaped: when refinement/composition/contradiction
+    /// edges land, this returns the ones internal to the page the caller passes.
+    fn list_edges(&self, among: &[String]) -> Result<Vec<Edge>, StoreError>;
 }
 
 /// Stores content-addressed snapshot bytes, keyed by their SHA-256 hex hash.
@@ -129,11 +176,19 @@ impl BlobStore for FileBlobStore {
     }
 }
 
-/// An in-memory [`NodeStore`] for tests, so the ingest use case can be exercised
-/// hermetically without a running graph database.
+/// A non-persistent, in-memory graph store — a first-class backend, not a test
+/// helper. It implements the full seam ([`NodeStore`] + [`GraphStore`]) and is
+/// selectable in `specd` (`--store memory`) to run the daemon without ArangoDB,
+/// e.g. for local development, demos, or the graph UI. Its state lives only in
+/// process memory and is lost on restart.
+///
+/// Backed by a `Mutex`-guarded `BTreeMap`: the mutex makes it `Send + Sync` (so
+/// it can cross the daemon's `spawn_blocking` boundary, exactly as the ArangoDB
+/// store does), and the `BTreeMap`'s sorted key order *is* the keyset order, so
+/// pagination reads a contiguous range with no separate sort.
 #[derive(Default)]
 pub struct InMemoryNodeStore {
-    nodes: RefCell<HashMap<String, Node>>,
+    nodes: Mutex<BTreeMap<String, Node>>,
 }
 
 impl InMemoryNodeStore {
@@ -141,31 +196,85 @@ impl InMemoryNodeStore {
         InMemoryNodeStore::default()
     }
 
-    /// Number of nodes held — a test convenience.
+    /// Number of nodes held.
     pub fn len(&self) -> usize {
-        self.nodes.borrow().len()
+        self.nodes.lock().expect("node store mutex poisoned").len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.nodes.borrow().is_empty()
+        self.nodes
+            .lock()
+            .expect("node store mutex poisoned")
+            .is_empty()
     }
 }
 
 impl NodeStore for InMemoryNodeStore {
     fn add_node(&self, node: &Node) -> Result<(), StoreError> {
         self.nodes
-            .borrow_mut()
+            .lock()
+            .expect("node store mutex poisoned")
             .insert(node.id.clone(), node.clone());
         Ok(())
     }
 
     fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError> {
-        Ok(self.nodes.borrow().get(id).cloned())
+        Ok(self
+            .nodes
+            .lock()
+            .expect("node store mutex poisoned")
+            .get(id)
+            .cloned())
     }
 
     fn delete_node(&self, id: &str) -> Result<(), StoreError> {
-        self.nodes.borrow_mut().remove(id);
+        self.nodes
+            .lock()
+            .expect("node store mutex poisoned")
+            .remove(id);
         Ok(())
+    }
+}
+
+impl GraphStore for InMemoryNodeStore {
+    fn list_nodes(&self, after: Option<&str>, limit: usize) -> Result<NodePage, StoreError> {
+        let nodes = self.nodes.lock().expect("node store mutex poisoned");
+        // The BTreeMap iterates in sorted key order — the keyset order — so this
+        // is a range scan from just past `after`. Take one past `limit` to learn
+        // whether a further page exists, mirroring the ArangoDB backend.
+        let mut page: Vec<Node> = nodes
+            .range::<str, _>((cursor_bound(after), std::ops::Bound::Unbounded))
+            .take(limit + 1)
+            .map(|(_, node)| node.clone())
+            .collect();
+        let next_cursor = if page.len() > limit {
+            page.truncate(limit);
+            page.last().map(|n| n.id.clone())
+        } else {
+            None
+        };
+        Ok(NodePage {
+            nodes: page,
+            next_cursor,
+        })
+    }
+
+    fn count_nodes(&self) -> Result<u64, StoreError> {
+        Ok(self.nodes.lock().expect("node store mutex poisoned").len() as u64)
+    }
+
+    fn list_edges(&self, _among: &[String]) -> Result<Vec<Edge>, StoreError> {
+        // No edges are produced yet; the graph is all vertices.
+        Ok(Vec::new())
+    }
+}
+
+/// The exclusive lower bound for a keyset scan: everything strictly after the
+/// cursor, or the whole map when there is no cursor.
+fn cursor_bound(after: Option<&str>) -> std::ops::Bound<&str> {
+    match after {
+        Some(cursor) => std::ops::Bound::Excluded(cursor),
+        None => std::ops::Bound::Unbounded,
     }
 }
 
@@ -220,5 +329,92 @@ mod tests {
         store.add_node(&node).unwrap();
         assert_eq!(store.get_node("n1").unwrap().as_ref(), Some(&node));
         assert!(store.get_node("absent").unwrap().is_none());
+    }
+
+    fn node_with_id(id: &str) -> crate::domain::Node {
+        use crate::domain::{Meta, Node};
+        Node {
+            id: id.to_string(),
+            statement: "The pump shall stop.".to_string(),
+            lang_version: so_lang::LANG_VERSION.to_string(),
+            meta: Meta {
+                evidence: vec![],
+                created_at: "t".to_string(),
+                cli: "spec".to_string(),
+                cli_version: "test".to_string(),
+            },
+        }
+    }
+
+    #[test]
+    fn list_nodes_pages_by_keyset_covering_every_node_once() {
+        let store = InMemoryNodeStore::new();
+        // Insert out of order; paging must still be by sorted key.
+        for id in ["n03", "n01", "n05", "n02", "n04"] {
+            store.add_node(&node_with_id(id)).unwrap();
+        }
+
+        // Walk the whole graph in pages of 2, following the cursor.
+        let mut seen = Vec::new();
+        let mut cursor: Option<String> = None;
+        let mut pages = 0;
+        loop {
+            let page = store.list_nodes(cursor.as_deref(), 2).unwrap();
+            assert!(page.nodes.len() <= 2, "a page never exceeds the limit");
+            seen.extend(page.nodes.iter().map(|n| n.id.clone()));
+            pages += 1;
+            match page.next_cursor {
+                Some(c) => cursor = Some(c),
+                None => break,
+            }
+            assert!(pages < 10, "cursor must terminate");
+        }
+
+        // Every node exactly once, in sorted order, no duplicates across pages.
+        assert_eq!(seen, ["n01", "n02", "n03", "n04", "n05"]);
+        assert_eq!(pages, 3); // 2 + 2 + 1
+    }
+
+    #[test]
+    fn list_nodes_cursor_terminates_on_exact_multiple() {
+        let store = InMemoryNodeStore::new();
+        for id in ["a", "b", "c", "d"] {
+            store.add_node(&node_with_id(id)).unwrap();
+        }
+        // A full page whose successor is empty: the cursor may be Some here, but
+        // following it yields an empty final page with no further cursor.
+        let first = store.list_nodes(None, 4).unwrap();
+        assert_eq!(first.nodes.len(), 4);
+        assert!(first.next_cursor.is_none(), "exact fill has no next page");
+    }
+
+    #[test]
+    fn list_nodes_from_cursor_excludes_the_cursor_itself() {
+        let store = InMemoryNodeStore::new();
+        for id in ["a", "b", "c"] {
+            store.add_node(&node_with_id(id)).unwrap();
+        }
+        let page = store.list_nodes(Some("a"), 10).unwrap();
+        let ids: Vec<&str> = page.nodes.iter().map(|n| n.id.as_str()).collect();
+        assert_eq!(ids, ["b", "c"]);
+    }
+
+    #[test]
+    fn count_nodes_tracks_inserts() {
+        let store = InMemoryNodeStore::new();
+        assert_eq!(store.count_nodes().unwrap(), 0);
+        store.add_node(&node_with_id("a")).unwrap();
+        store.add_node(&node_with_id("b")).unwrap();
+        assert_eq!(store.count_nodes().unwrap(), 2);
+    }
+
+    #[test]
+    fn list_edges_is_empty_until_edges_exist() {
+        let store = InMemoryNodeStore::new();
+        store.add_node(&node_with_id("a")).unwrap();
+        assert!(store
+            .list_edges(&["a".to_string()])
+            .unwrap()
+            .is_empty());
     }
 }

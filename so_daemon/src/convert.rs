@@ -97,6 +97,28 @@ fn sentence_view(statement: &str) -> Option<pb::SentenceView> {
     })
 }
 
+// ---- Edge ------------------------------------------------------------------
+
+fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
+    match k {
+        domain::EdgeKind::Refines => pb::EdgeKind::Refines,
+        domain::EdgeKind::Composes => pb::EdgeKind::Composes,
+        domain::EdgeKind::Contradicts => pb::EdgeKind::Contradicts,
+    }
+}
+
+/// Convert a derived edge to its wire form. Symmetric `from_pb` is deliberately
+/// absent: nothing receives edges into the domain yet — they are derived, not
+/// ingested — so that direction attaches with edge derivation.
+pub fn edge_to_pb(e: &domain::Edge) -> pb::Edge {
+    pb::Edge {
+        id: e.id.clone(),
+        source: e.source.clone(),
+        target: e.target.clone(),
+        kind: edge_kind_to_pb(e.kind) as i32,
+    }
+}
+
 // ---- Locator ---------------------------------------------------------------
 
 fn locator_to_pb(l: &domain::Locator) -> pb::Locator {
@@ -430,5 +452,21 @@ mod tests {
             Node::try_from(wire),
             Err(ConvertError::MissingField("node.meta"))
         );
+    }
+
+    #[test]
+    fn edge_maps_endpoints_and_kind_to_pb() {
+        use crate::domain::{Edge, EdgeKind};
+        let edge = Edge {
+            id: "e1".into(),
+            source: "n1".into(),
+            target: "n2".into(),
+            kind: EdgeKind::Refines,
+        };
+        let wire = edge_to_pb(&edge);
+        assert_eq!(wire.id, "e1");
+        assert_eq!(wire.source, "n1");
+        assert_eq!(wire.target, "n2");
+        assert_eq!(wire.kind, pb::EdgeKind::Refines as i32);
     }
 }

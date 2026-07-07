@@ -9,7 +9,7 @@
 
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
 use so_daemon::domain::{Anchor, Evidence, Kind, Locator, Meta, Node, Origin, Snapshot};
-use so_daemon::store::NodeStore;
+use so_daemon::store::{GraphStore, NodeStore};
 
 fn sample_node(id: &str) -> Node {
     Node {
@@ -88,4 +88,28 @@ fn arango_round_trip_when_available() {
         .get_node("no-such-node-xyzzy")
         .expect("get_node missing")
         .is_none());
+
+    // The maintained count includes our node, and keyset paging can page to it.
+    assert!(store.count_nodes().expect("count_nodes") >= 1);
+
+    // Keyset pagination is bounded and terminates: walk the whole collection in
+    // small pages, following the cursor, and confirm our node is reachable and
+    // no page exceeds the limit.
+    let mut cursor: Option<String> = None;
+    let mut found = false;
+    let mut pages = 0;
+    loop {
+        let page = store.list_nodes(cursor.as_deref(), 100).expect("list_nodes");
+        assert!(page.nodes.len() <= 100, "a page never exceeds the limit");
+        if page.nodes.iter().any(|n| n.id == node.id) {
+            found = true;
+        }
+        pages += 1;
+        assert!(pages < 100_000, "cursor must terminate");
+        match page.next_cursor {
+            Some(c) => cursor = Some(c),
+            None => break,
+        }
+    }
+    assert!(found, "the round-tripped node must appear in a page");
 }

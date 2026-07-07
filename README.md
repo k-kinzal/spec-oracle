@@ -14,10 +14,12 @@ never persisted. (Definitions establish vocabulary and permissions merely
 enters contracts only through pairing, on the environment side.) Every node is also a *grounded* claim: it carries the evidence
 it was ingested from, captured at ingest time.
 
-> **Scope.** Today the tool does exactly one thing: `spec add` — parse a
-> specification, capture its evidence, and persist one node per sentence. Edges
-> (refinement, composition, conjunction, quotient), strength, the authority/trust
-> registry, and classify/review are deliberately out of scope for now.
+> **Scope.** The tool ingests (`spec add` — parse a specification, capture its
+> evidence, and persist one node per sentence) and reads the graph back a bounded
+> page at a time (`spec graph`, and the `ui/` graph view). Edges (refinement,
+> composition, conjunction, quotient), strength, the authority/trust registry, and
+> classify/review are deliberately out of scope for now — but the read is already
+> graph-shaped (it returns an `edges` list, empty until edge derivation lands).
 
 ## Architecture
 
@@ -33,6 +35,7 @@ they do not depend on each other.
 | `so-client`  | lib                  | A thin gRPC client; resolves the caller's `@file`/`-`(stdin) input channels.              |
 | `so-cli`     | bin `spec`           | The command-line front end over the client.                                              |
 | `so-tracing` | lib                  | Shared tracing/OpenTelemetry setup and gRPC trace propagation.                           |
+| `ui`         | Next.js app          | Graph visualization (Cosmograph, GPU/WebGL). A thin BFF speaks gRPC to `specd`; not a Cargo crate. See [`ui/README.md`](ui/README.md). |
 
 **Capture happens in the daemon.** `specd` parses the
 specification, snapshots what each locator points at, discovers source
@@ -122,6 +125,38 @@ Reset everything (drops the database volume) with `docker compose down -v`. The
 daemon-side blob store under `./.spec-oracle/` is separate and is removed by
 deleting that directory.
 
+### Reading the graph
+
+Read the graph back one **bounded page** at a time — never wholesale, so it
+scales from thousands to billions of nodes without change:
+
+```sh
+# A page of nodes + induced edges, with an opaque cursor to the next page.
+cargo run --bin spec -- graph --page-size 100          # human summary
+cargo run --bin spec -- graph --page-size 100 --json   # {nodes, edges, next_page_token, total_nodes}
+cargo run --bin spec -- graph --page-token <token>     # continue from a prior page
+```
+
+The daemon (`GetGraph` RPC) hard-caps the page size and returns a keyset cursor
+and a cheap total count; the read is graph-shaped now (it carries `edges`, empty
+until edge derivation lands).
+
+### Graph view (`ui/`)
+
+A Next.js app visualizes the graph as a force-directed cloud (Cosmograph,
+GPU/WebGL), coloring each node by its speech act. It pages the graph in bounded
+batches and caps what it renders, showing "loaded X of TOTAL". A thin Next.js
+backend-for-frontend speaks gRPC to `specd`, so the browser never needs gRPC.
+
+```sh
+cd ui
+cp .env.local.example .env.local     # SPEC_ORACLE_GRPC_ADDR → specd (default 127.0.0.1:50051)
+npm install
+npm run dev                          # http://localhost:3000
+```
+
+See [`ui/README.md`](ui/README.md) for details.
+
 ### Evidence
 
 `--evidence` is repeatable. Each value is either:
@@ -160,10 +195,17 @@ so they do not leak into shell history or the process table.
 | ------------------- | --------------- | ------------------------ | --------------------------------------------------- |
 | `SPEC_ORACLE_LISTEN`| `--listen`      | `127.0.0.1:50051`        | gRPC listen address.                                |
 | `SPEC_ORACLE_DIR`   | `--dir`         | *(current directory)*    | Base dir whose `.spec-oracle/blobs/` holds the bytes. |
-| `ARANGODB_URL`      | `--arango-url`  | `http://localhost:8529`  | Where ArangoDB currently lives.                     |
+| `SPEC_ORACLE_STORE` | `--store`       | `arango`                 | Node-store backend: `arango` (persistent) or `memory` (non-persistent, no DB required). |
+| `ARANGODB_URL`      | `--arango-url`  | `http://localhost:8529`  | Where ArangoDB currently lives (ignored with `--store memory`). |
 | `ARANGODB_DB`       | `--arango-db`   | `spec_oracle`            | Database name (auto-created).                        |
 | `ARANGODB_USER`     | *(env only)*    | `root`                   | Authenticating user.                                 |
 | `ARANGODB_PASSWORD` | *(env only)*    | *(empty)*                | Password. Must match the container's root password.  |
+
+The store backend is **selectable**: `--store arango` (default) persists to
+ArangoDB, while `--store memory` runs a first-class in-memory backend with no
+database — handy for local development, demos, and driving the graph UI without
+standing up ArangoDB (its data is lost on restart). Both implement the same
+`GraphStore` seam, so the service behaves identically.
 
 ### CLI (`spec`)
 

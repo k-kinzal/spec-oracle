@@ -83,6 +83,16 @@ pub fn resolve_channel(arg: &str) -> Result<String, ChannelError> {
     Ok(arg.to_string())
 }
 
+/// One bounded page of the specification graph, as returned by [`Client::get_graph`].
+/// The nodes and their induced edges are handed back in their protobuf form (the
+/// daemon owns the domain model); `next_page_token` is empty on the last page.
+pub struct GraphPage {
+    pub nodes: Vec<pb::Node>,
+    pub edges: Vec<pb::Edge>,
+    pub next_page_token: String,
+    pub total_nodes: u64,
+}
+
 /// A connected client for the SpecificationGraph service.
 pub struct Client {
     inner: SpecificationGraphClient<Channel>,
@@ -155,6 +165,60 @@ impl Client {
                 "specification add completed"
             );
             Ok(response.nodes)
+        }
+        .instrument(span)
+        .await
+    }
+
+    /// Read one bounded page of the specification graph. `page_size` of 0 lets
+    /// the daemon choose its default; the daemon clamps it to a hard maximum, so
+    /// this never fetches the whole graph. `page_token` is the opaque cursor from
+    /// a previous page's `next_page_token` (empty starts from the beginning).
+    ///
+    /// An empty page is a valid result (the graph may be empty, or the cursor may
+    /// have reached the end), so — unlike [`Client::add`] — this returns it rather
+    /// than treating it as an error.
+    pub async fn get_graph(
+        &mut self,
+        page_size: u32,
+        page_token: &str,
+    ) -> Result<GraphPage, ClientError> {
+        let span = tracing::info_span!(
+            "spec.client.get_graph",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "GetGraph",
+            "spec.page.requested_size" = page_size as u64,
+            "spec.page.has_cursor" = !page_token.is_empty(),
+            "spec.page.node_count" = tracing::field::Empty,
+            "spec.page.edge_count" = tracing::field::Empty,
+            "spec.page.has_next" = tracing::field::Empty,
+            "spec.graph.total_nodes" = tracing::field::Empty,
+        );
+        async {
+            let mut request = Request::new(pb::GetGraphRequest {
+                page_size,
+                page_token: page_token.to_string(),
+            });
+            so_tracing::inject_context(request.metadata_mut());
+
+            let response = self.inner.get_graph(request).await?.into_inner();
+            tracing::Span::current().record("spec.page.node_count", response.nodes.len() as u64);
+            tracing::Span::current().record("spec.page.edge_count", response.edges.len() as u64);
+            tracing::Span::current()
+                .record("spec.page.has_next", !response.next_page_token.is_empty());
+            tracing::Span::current().record("spec.graph.total_nodes", response.total_nodes);
+            tracing::info!(
+                "spec.page.node_count" = response.nodes.len() as u64,
+                "spec.graph.total_nodes" = response.total_nodes,
+                "graph page fetched"
+            );
+            Ok(GraphPage {
+                nodes: response.nodes,
+                edges: response.edges,
+                next_page_token: response.next_page_token,
+                total_nodes: response.total_nodes,
+            })
         }
         .instrument(span)
         .await

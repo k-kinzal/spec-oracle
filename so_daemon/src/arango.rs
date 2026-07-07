@@ -29,9 +29,9 @@ use arangors::client::reqwest::ReqwestClient;
 use arangors::{ClientError, Connection, Database};
 use serde_json::Value;
 
-use crate::domain::Node;
+use crate::domain::{Edge, Node};
 
-use crate::store::{NodeStore, StoreError};
+use crate::store::{GraphStore, NodePage, NodeStore, StoreError};
 
 /// The document collection holding one specification node per document.
 const COLLECTION: &str = "nodes";
@@ -130,6 +130,78 @@ impl NodeStore for ArangoNodeStore {
         vars.insert("key", Value::String(id.to_string()));
         let _: Vec<Value> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
         Ok(())
+    }
+}
+
+impl GraphStore for ArangoNodeStore {
+    fn list_nodes(&self, after: Option<&str>, limit: usize) -> Result<NodePage, StoreError> {
+        let _span = tracing::debug_span!(
+            "spec.store.arango.list_nodes",
+            "db.system" = "arangodb",
+            "db.collection.name" = COLLECTION,
+            "spec.page.limit" = limit as u64,
+            "spec.page.after" = tracing::field::Empty,
+            "spec.page.returned" = tracing::field::Empty,
+        )
+        .entered();
+
+        // Keyset pagination on `_key`, served by the primary index (a sorted
+        // index on `_key`): `FILTER d._key > @after SORT d._key ASC` is a range
+        // scan, not an offset scan, so cost stays O(page) at any graph size. Two
+        // query shapes keep the first page free of a redundant filter. Fetch one
+        // past `limit` to learn whether a further page exists in the same round
+        // trip. `UNSET` strips the system attributes so each row deserializes
+        // straight back into a `Node` (whose own `id` field mirrors `_key`).
+        let fetch = limit.saturating_add(1);
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("limit", Value::from(fetch as u64));
+        let query = match after {
+            Some(cursor) => {
+                tracing::Span::current().record("spec.page.after", cursor);
+                vars.insert("after", Value::String(cursor.to_string()));
+                format!(
+                    "FOR d IN {COLLECTION} FILTER d._key > @after SORT d._key ASC \
+                     LIMIT @limit RETURN UNSET(d, \"_key\", \"_id\", \"_rev\")"
+                )
+            }
+            None => format!(
+                "FOR d IN {COLLECTION} SORT d._key ASC \
+                 LIMIT @limit RETURN UNSET(d, \"_key\", \"_id\", \"_rev\")"
+            ),
+        };
+        let mut rows: Vec<Node> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        let next_cursor = if rows.len() > limit {
+            rows.truncate(limit);
+            rows.last().map(|n| n.id.clone())
+        } else {
+            None
+        };
+        tracing::Span::current().record("spec.page.returned", rows.len() as u64);
+        Ok(NodePage {
+            nodes: rows,
+            next_cursor,
+        })
+    }
+
+    fn count_nodes(&self) -> Result<u64, StoreError> {
+        let _span = tracing::debug_span!(
+            "spec.store.arango.count_nodes",
+            "db.system" = "arangodb",
+            "db.collection.name" = COLLECTION,
+        )
+        .entered();
+        // `LENGTH(collection)` reads ArangoDB's maintained document count in
+        // O(1) — it does not scan — so this stays cheap as the graph grows.
+        let query = format!("RETURN LENGTH({COLLECTION})");
+        let counts: Vec<u64> = self.db.aql_str(&query).map_err(backend)?;
+        Ok(counts.into_iter().next().unwrap_or(0))
+    }
+
+    fn list_edges(&self, _among: &[String]) -> Result<Vec<Edge>, StoreError> {
+        // No edge collection exists yet; the graph is all vertices. When
+        // refinement/composition/contradiction edges land, query the edges
+        // induced among `among` here (both endpoints on the page).
+        Ok(Vec::new())
     }
 }
 
