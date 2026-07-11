@@ -259,7 +259,10 @@ pub struct ClauseGroup {
 impl ClauseGroup {
     /// A group of one clause, for construction in tests.
     pub fn single(clause: Clause) -> ClauseGroup {
-        ClauseGroup { conj: None, items: vec![clause] }
+        ClauseGroup {
+            conj: None,
+            items: vec![clause],
+        }
     }
 
     pub fn render(&self) -> String {
@@ -450,9 +453,15 @@ pub enum Det {
     No,
     // Struct variants (not newtypes over the bare number): an internally
     // tagged enum cannot serialize a newtype variant holding a primitive.
-    AtLeast { n: u64 },
-    AtMost { n: u64 },
-    Exactly { n: u64 },
+    AtLeast {
+        n: u64,
+    },
+    AtMost {
+        n: u64,
+    },
+    Exactly {
+        n: u64,
+    },
 }
 
 impl Det {
@@ -877,7 +886,12 @@ impl Definiens {
 impl Clause {
     pub fn render(&self) -> String {
         match &self.body {
-            ClauseBody::Copular { copula, predicate, agent, roles } => {
+            ClauseBody::Copular {
+                copula,
+                predicate,
+                agent,
+                roles,
+            } => {
                 let mut parts: Vec<String> = vec![
                     self.subject.render(),
                     copula.as_str().to_string(),
@@ -891,7 +905,14 @@ impl Clause {
                 }
                 parts.join(" ")
             }
-            ClauseBody::Verbal { verb, particle, manner, object, roles, content } => {
+            ClauseBody::Verbal {
+                verb,
+                particle,
+                manner,
+                object,
+                roles,
+                content,
+            } => {
                 let mut parts: Vec<String> = vec![self.subject.render(), verb.clone()];
                 if let Some(particle) = particle {
                     parts.push(particle.clone());
@@ -947,9 +968,7 @@ impl NpGroup {
     pub fn heads(&self) -> Vec<&str> {
         match self {
             NpGroup::Single(np) => vec![np.head.as_str()],
-            NpGroup::Coordinated { items, .. } => {
-                items.iter().map(|np| np.head.as_str()).collect()
-            }
+            NpGroup::Coordinated { items, .. } => items.iter().map(|np| np.head.as_str()).collect(),
         }
     }
 }
@@ -975,7 +994,12 @@ impl Np {
 impl Relative {
     pub fn render(&self) -> String {
         match &self.body {
-            RelativeBody::Copular { copula, predicate, agent, roles } => {
+            RelativeBody::Copular {
+                copula,
+                predicate,
+                agent,
+                roles,
+            } => {
                 let mut parts: Vec<String> = vec![
                     self.marker.as_str().to_string(),
                     copula.as_str().to_string(),
@@ -989,9 +1013,14 @@ impl Relative {
                 }
                 parts.join(" ")
             }
-            RelativeBody::Verbal { verb, particle, manner, object, roles } => {
-                let mut parts: Vec<String> =
-                    vec![self.marker.as_str().to_string(), verb.clone()];
+            RelativeBody::Verbal {
+                verb,
+                particle,
+                manner,
+                object,
+                roles,
+            } => {
+                let mut parts: Vec<String> = vec![self.marker.as_str().to_string(), verb.clone()];
                 if let Some(particle) = particle {
                     parts.push(particle.clone());
                 }
@@ -1004,7 +1033,13 @@ impl Relative {
                 }
                 parts.join(" ")
             }
-            RelativeBody::ObjectGap { subject, verb, particle, manner, roles } => {
+            RelativeBody::ObjectGap {
+                subject,
+                verb,
+                particle,
+                manner,
+                roles,
+            } => {
                 let mut parts: Vec<String> = vec![
                     self.marker.as_str().to_string(),
                     subject.render(),
@@ -1098,7 +1133,12 @@ impl Measure {
         };
         match self {
             Measure::Quantity { number, unit } => with_unit(number.clone(), unit),
-            Measure::Bounded { op, number, unit, upper } => match (op, upper) {
+            Measure::Bounded {
+                op,
+                number,
+                unit,
+                upper,
+            } => match (op, upper) {
                 (ComparisonOp::Between, Some(upper)) => {
                     with_unit(format!("between {number} and {upper}"), unit)
                 }

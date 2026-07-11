@@ -88,17 +88,27 @@ pub enum Formula {
     /// One opaque atom. A struct variant (not a newtype): an internally
     /// tagged enum cannot serialize a newtype variant holding some payloads,
     /// and the rest of the crate keeps struct variants for that reason.
-    Atom { atom: AtomRef },
-    And { items: Vec<Formula> },
-    Or { items: Vec<Formula> },
-    Not { inner: Box<Formula> },
+    Atom {
+        atom: AtomRef,
+    },
+    And {
+        items: Vec<Formula>,
+    },
+    Or {
+        items: Vec<Formula>,
+    },
+    Not {
+        inner: Box<Formula>,
+    },
     Top,
     Bottom,
 }
 
 impl Formula {
     fn not(inner: Formula) -> Formula {
-        Formula::Not { inner: Box::new(inner) }
+        Formula::Not {
+            inner: Box::new(inner),
+        }
     }
 }
 
@@ -238,7 +248,10 @@ pub struct Proposition {
 impl BehaviorAtom {
     /// The atom's [`Proposition`] — its logical key (see there).
     pub fn proposition(&self) -> Proposition {
-        Proposition { subject: self.subject.clone(), atom: self.atom.clone() }
+        Proposition {
+            subject: self.subject.clone(),
+            atom: self.atom.clone(),
+        }
     }
 }
 
@@ -814,7 +827,10 @@ impl ContractFormula {
             return self.guarantee.clone();
         }
         Formula::Or {
-            items: vec![self.guarantee.clone(), Formula::not(self.assumption.clone())],
+            items: vec![
+                self.guarantee.clone(),
+                Formula::not(self.assumption.clone()),
+            ],
         }
     }
 
@@ -950,8 +966,11 @@ impl ContractFormula {
     /// proven but SHARED-KEY or merely RECOMMENDED shows `false` there.
     /// [`WellFormedness::source_issues`] itemizes WHY, per source.
     pub fn well_formed(&self) -> WellFormedness {
-        let assumption_side =
-            || self.sources.iter().filter(|s| s.kind != EdgeKind::AdmissibilityEnvelope);
+        let assumption_side = || {
+            self.sources
+                .iter()
+                .filter(|s| s.kind != EdgeKind::AdmissibilityEnvelope)
+        };
         let source_issues = self
             .sources
             .iter()
@@ -1094,7 +1113,11 @@ fn group_formula(group: &ClauseGroup, role: GuardRole) -> Formula {
         .into_iter()
         .zip(&group.items)
         .map(|(clause, ast)| Formula::Atom {
-            atom: AtomRef::Guard { clause, source: ast.render(), role },
+            atom: AtomRef::Guard {
+                clause,
+                source: ast.render(),
+                role,
+            },
         })
         .collect();
     if items.len() == 1 {
@@ -1122,7 +1145,10 @@ pub fn applicability(sentence: &Sentence) -> Formula {
         parts.push(group_formula(&frame.clause, GuardRole::State));
     }
     if let Some(trigger) = &sentence.frames.trigger {
-        parts.push(group_formula(&trigger.clause, GuardRole::Trigger { kind: trigger.kind }));
+        parts.push(group_formula(
+            &trigger.clause,
+            GuardRole::Trigger { kind: trigger.kind },
+        ));
     }
     if let Some(exception) = &sentence.exception {
         parts.push(Formula::not(group_formula(
@@ -1157,7 +1183,14 @@ fn normalized_subject(np: &Np) -> SubjectSkeleton {
 fn atom_anchor(core: &Core, np: &Np, alternative: Option<&Vp>) -> String {
     let subject = NpGroup::Single(np.clone());
     match core {
-        Core::Description { copula, adverb, predicate, agent, roles, .. } => Core::Description {
+        Core::Description {
+            copula,
+            adverb,
+            predicate,
+            agent,
+            roles,
+            ..
+        } => Core::Description {
             subject,
             copula: *copula,
             adverb: *adverb,
@@ -1166,7 +1199,9 @@ fn atom_anchor(core: &Core, np: &Np, alternative: Option<&Vp>) -> String {
             roles: roles.clone(),
         }
         .render(),
-        Core::Deontic { modal, negated, vp, .. } => Core::Deontic {
+        Core::Deontic {
+            modal, negated, vp, ..
+        } => Core::Deontic {
             subject,
             modal: *modal,
             negated: *negated,
@@ -1206,10 +1241,13 @@ pub fn claim_formula(sentence: &Sentence) -> Option<Formula> {
     // (state, capability, single deontic) pair their one kernel with `None`
     // — the anchor is the core as written.
     let alternatives: Vec<Option<&Vp>> = match &assertion.claim {
-        Claim::Action { vp: VpGroup::Alternatives { items }, .. }
-        | Claim::Admissible { vp: VpGroup::Alternatives { items } } => {
-            items.iter().map(Some).collect()
+        Claim::Action {
+            vp: VpGroup::Alternatives { items },
+            ..
         }
+        | Claim::Admissible {
+            vp: VpGroup::Alternatives { items },
+        } => items.iter().map(Some).collect(),
         _ => vec![None],
     };
     debug_assert_eq!(kernels.len(), alternatives.len());
@@ -1217,8 +1255,7 @@ pub fn claim_formula(sentence: &Sentence) -> Option<Formula> {
     // flip back out of the combined polarity; each atom then re-composes it
     // with its own item's determiner.
     let combined = claim_polarity(&assertion.claim, &assertion.subject);
-    let site_negative =
-        (combined == Polarity::Negative) != assertion.subject.has_no_item();
+    let site_negative = (combined == Polarity::Negative) != assertion.subject.has_no_item();
     let admissible = matches!(assertion.claim, Claim::Admissible { .. });
     let act = speech_act(sentence);
     let force = force(sentence);
@@ -1285,7 +1322,9 @@ fn guarded_claim(sentence: &Sentence) -> Option<Formula> {
     Some(if applicability == Formula::Top {
         claim
     } else {
-        Formula::Or { items: vec![Formula::not(applicability), claim] }
+        Formula::Or {
+            items: vec![Formula::not(applicability), claim],
+        }
     })
 }
 
@@ -1304,5 +1343,9 @@ pub fn contract_formula(sentence: &Sentence) -> Option<ContractFormula> {
         return None;
     }
     let guarantee = guarded_claim(sentence)?;
-    Some(ContractFormula { assumption: Formula::Top, guarantee, sources: Vec::new() })
+    Some(ContractFormula {
+        assumption: Formula::Top,
+        guarantee,
+        sources: Vec::new(),
+    })
 }

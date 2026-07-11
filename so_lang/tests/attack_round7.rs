@@ -41,7 +41,11 @@ use so_lang::semantics::skeleton;
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("parse {input:?}: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -50,7 +54,9 @@ fn claim(input: &str) -> Formula {
 }
 
 fn guarantee(input: &str) -> Formula {
-    contract_formula(&one(input)).expect("contract-bearing sentence").guarantee
+    contract_formula(&one(input))
+        .expect("contract-bearing sentence")
+        .guarantee
 }
 
 // =====================================================================================
@@ -236,7 +242,12 @@ fn unconditional_refines_conditional() {
         ),
         Ternary::Yes
     );
-    assert_eq!(assess(&unframed, &framed), Outcome::Refinement { concrete_is_a: true });
+    assert_eq!(
+        assess(&unframed, &framed),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
 }
 
 /// Guard equality survives render → reparse: the canonical form of a
@@ -263,7 +274,11 @@ fn guard_outcomes_survive_render_reparse() {
     for (a, b, expected) in pairs {
         let a2 = one(&one(a).render());
         let b2 = one(&one(b).render());
-        assert_eq!(assess(&a2, &b2), expected, "outcome drifts through render for {a:?}");
+        assert_eq!(
+            assess(&a2, &b2),
+            expected,
+            "outcome drifts through render for {a:?}"
+        );
     }
 }
 
@@ -283,8 +298,9 @@ fn vacuous_guard_must_not_witness_overlap() {
     let top = one("The system shall not issue the receipt.");
     assert_eq!(assess(&vacuous, &top), Outcome::Unknown);
     // Equal vacuous guards on both sides: the shared region is still empty.
-    let vacuous_not =
-        one("When the order ships, the system shall not issue the receipt, unless the order ships.");
+    let vacuous_not = one(
+        "When the order ships, the system shall not issue the receipt, unless the order ships.",
+    );
     assert_eq!(assess(&vacuous, &vacuous_not), Outcome::Unknown);
 }
 
@@ -308,8 +324,16 @@ fn envelope_with_explicit_relied_stays_out_of_assumption() {
     )
     .unwrap();
     let paired = contract_formula(&target).unwrap().paired(&[envelope]);
-    assert_eq!(paired.assumption, Formula::Top, "envelope reliance must not enter A");
-    assert_eq!(paired.sources.len(), 1, "the envelope is retained as compatibility data");
+    assert_eq!(
+        paired.assumption,
+        Formula::Top,
+        "envelope reliance must not enter A"
+    );
+    assert_eq!(
+        paired.sources.len(),
+        1,
+        "the envelope is retained as compatibility data"
+    );
     // Saturation therefore never negates the permission.
     assert_eq!(paired.saturated(), paired.guarantee);
 }
@@ -365,7 +389,10 @@ fn relied_top_and_bottom_pin_the_documented_conservatism() {
     )
     .unwrap();
     assert_eq!(
-        contract_formula(&target).unwrap().paired(std::slice::from_ref(&top)).assumption,
+        contract_formula(&target)
+            .unwrap()
+            .paired(std::slice::from_ref(&top))
+            .assumption,
         Formula::Top
     );
     let bottom = AssumptionSource::for_guarantee_with_relied(
@@ -391,7 +418,9 @@ fn relied_null_json_defaults_to_source_formula() {
     let s =
         AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &source, &target).unwrap();
     let mut json = serde_json::to_value(&s).unwrap();
-    json.as_object_mut().unwrap().insert("relied".into(), serde_json::Value::Null);
+    json.as_object_mut()
+        .unwrap()
+        .insert("relied".into(), serde_json::Value::Null);
     let back: AssumptionSource = serde_json::from_value(json).unwrap();
     assert_eq!(back.relied, back.formula);
     assert_eq!(back, s);
@@ -407,15 +436,24 @@ fn relied_null_json_defaults_to_source_formula() {
 #[test]
 fn at_most_containment_and_strict_exclusion() {
     assert_eq!(
-        implies(&claim("At most 3 replicas shall run."), &claim("At most 7 replicas shall run.")),
+        implies(
+            &claim("At most 3 replicas shall run."),
+            &claim("At most 7 replicas shall run.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&claim("At most 7 replicas shall run."), &claim("At most 3 replicas shall run.")),
+        implies(
+            &claim("At most 7 replicas shall run."),
+            &claim("At most 3 replicas shall run.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
-        contradicts(&claim("At least 4 replicas shall run."), &claim("At most 3 replicas shall run.")),
+        contradicts(
+            &claim("At least 4 replicas shall run."),
+            &claim("At most 3 replicas shall run.")
+        ),
         Ternary::Yes
     );
 }
@@ -425,11 +463,17 @@ fn at_most_containment_and_strict_exclusion() {
 #[test]
 fn exactly_points_exclude_and_self_compare_no() {
     assert_eq!(
-        contradicts(&claim("Exactly 5 replicas shall run."), &claim("Exactly 3 replicas shall run.")),
+        contradicts(
+            &claim("Exactly 5 replicas shall run."),
+            &claim("Exactly 3 replicas shall run.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        contradicts(&claim("Exactly 3 replicas shall run."), &claim("Exactly 3 replicas shall run.")),
+        contradicts(
+            &claim("Exactly 3 replicas shall run."),
+            &claim("Exactly 3 replicas shall run.")
+        ),
         Ternary::No
     );
 }
@@ -636,7 +680,11 @@ fn content_shapes_render_round_trip() {
         let rendered = s.render();
         let re = one(&rendered);
         assert_eq!(re.render(), rendered, "canonical form re-parses: {input}");
-        assert_eq!(re, one(&re.render()), "second round trip is a fixpoint: {input}");
+        assert_eq!(
+            re,
+            one(&re.render()),
+            "second round trip is a fixpoint: {input}"
+        );
     }
 }
 
@@ -648,7 +696,9 @@ fn content_shapes_render_round_trip() {
 fn relative_that_wins_after_object_and_role_nouns() {
     // After the verb: content.
     let s = one("The daemon shall record that the token is valid.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("deontic")
+    };
     let vp = vp.single().unwrap();
     assert!(vp.object.is_none());
     assert!(vp.content.is_some());
@@ -668,10 +718,14 @@ fn relative_that_wins_after_object_and_role_nouns() {
     ));
     // A WELL-FORMED relative in the role NP stays a relative — no content.
     let s = one("The daemon shall report to the auditor that holds the seal.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("deontic")
+    };
     let vp = vp.single().unwrap();
     assert!(vp.content.is_none());
-    let RolePp::Recipient(NpGroup::Single(np)) = &vp.roles[0] else { panic!("recipient") };
+    let RolePp::Recipient(NpGroup::Single(np)) = &vp.roles[0] else {
+        panic!("recipient")
+    };
     assert!(np.relative.is_some(), "the role noun claimed the `that`");
 }
 
@@ -681,7 +735,9 @@ fn relative_that_wins_after_object_and_role_nouns() {
 #[test]
 fn content_stays_inside_its_alternative() {
     let s = one("The server shall either ensure that the token is valid or reject the request.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("deontic")
+    };
     let items = vp.items();
     assert_eq!(items.len(), 2, "the or-split survives the content clause");
     assert_eq!(items[0].verb, "ensure");
@@ -698,7 +754,9 @@ fn content_stays_inside_its_alternative() {
 #[test]
 fn content_after_be_complement_is_legislated() {
     let s = one("The status shall be valid that the token is valid.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("deontic")
+    };
     let vp = vp.single().unwrap();
     assert!(matches!(vp.complement, Some(Predicate::Words { .. })));
     assert!(vp.content.is_some());
@@ -716,12 +774,20 @@ fn content_after_be_complement_is_legislated() {
 #[test]
 fn deadline_after_content_is_structured_inside_the_content_clause() {
     let s = one("The system shall verify that the token is valid within 5 seconds.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("deontic")
+    };
     let vp = vp.single().unwrap();
-    assert!(vp.roles.is_empty(), "no outer deadline role: attachment stays inner");
+    assert!(
+        vp.roles.is_empty(),
+        "no outer deadline role: attachment stays inner"
+    );
     let content = vp.content.as_ref().expect("content");
-    let ClauseBody::Copular { predicate: Predicate::Words { words }, roles, .. } =
-        &content.body
+    let ClauseBody::Copular {
+        predicate: Predicate::Words { words },
+        roles,
+        ..
+    } = &content.body
     else {
         panic!("copular content, got {:?}", content.body);
     };
@@ -796,7 +862,10 @@ fn content_depth_stays_bounded() {
         "The monitor shall ensure that the owner {} is active.",
         "of the owner ".repeat(70)
     );
-    assert!(matches!(parse(&deep), Err(ParseError::PhraseTooDeep { .. })));
+    assert!(matches!(
+        parse(&deep),
+        Err(ParseError::PhraseTooDeep { .. })
+    ));
 }
 
 // =====================================================================================
@@ -835,8 +904,10 @@ fn object_relative_roles_are_identity() {
     );
     let sk = skeleton(&one("The daemon shall close each session that times out.")).unwrap();
     assert_eq!(sk.atoms[0].objects[0].full, "session that times out");
-    let sk =
-        skeleton(&one("At least 5 requests that arrive from the gateway shall be logged.")).unwrap();
+    let sk = skeleton(&one(
+        "At least 5 requests that arrive from the gateway shall be logged.",
+    ))
+    .unwrap();
     assert_eq!(sk.subject.full, "requests that arrive from the gateway");
 }
 
@@ -869,7 +940,10 @@ fn relative_role_depth_stays_bounded() {
         "Each request that arrives from the owner {} shall be logged.",
         "of the owner ".repeat(70)
     );
-    assert!(matches!(parse(&deep), Err(ParseError::PhraseTooDeep { .. })));
+    assert!(matches!(
+        parse(&deep),
+        Err(ParseError::PhraseTooDeep { .. })
+    ));
 }
 
 /// FINDING 4 — relative-tail acceptance is POSITION-DEPENDENT for clausal
@@ -909,7 +983,10 @@ fn object_gap_relatives_must_be_rejected() {
         "Each request that the gateway forwards shall be logged.",
         "The daemon shall close each session that the scheduler owns.",
     ] {
-        assert!(parse(input).is_ok(), "a well-formed object-gap relative parses now: {input}");
+        assert!(
+            parse(input).is_ok(),
+            "a well-formed object-gap relative parses now: {input}"
+        );
     }
     assert!(
         parse("Each request that the gateway shall be logged.").is_err(),
@@ -933,7 +1010,13 @@ fn object_gap_relative_rejection_is_determiner_as_verb() {
     // The subject-gap twin stays accepted: the gate rejects determiners at
     // VERB position only, never a verb-led relative body.
     let s = one("Each request that arrives shall be logged.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!("single") };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!("single")
+    };
     let RelativeBody::Verbal { verb, .. } = &np.relative.as_ref().unwrap().body else {
         panic!("verbal relative")
     };
@@ -950,11 +1033,17 @@ fn object_gap_relative_rejection_is_determiner_as_verb() {
 #[test]
 fn universal_permission_vs_no_subject_prohibition_conflicts() {
     assert_eq!(
-        assess(&one("Each client may retry."), &one("No client shall retry.")),
+        assess(
+            &one("Each client may retry."),
+            &one("No client shall retry.")
+        ),
         Outcome::EnvelopeConflict
     );
     assert_eq!(
-        assess(&one("No client shall retry."), &one("Each client may retry.")),
+        assess(
+            &one("No client shall retry."),
+            &one("Each client may retry.")
+        ),
         Outcome::EnvelopeConflict
     );
 }
@@ -985,7 +1074,10 @@ fn envelope_conflict_requires_full_proposition_identity() {
 #[test]
 fn permission_vs_negative_state_description_conflicts() {
     assert_eq!(
-        assess(&one("The client may be active."), &one("The client is never active.")),
+        assess(
+            &one("The client may be active."),
+            &one("The client is never active.")
+        ),
         Outcome::EnvelopeConflict
     );
 }
@@ -1025,11 +1117,17 @@ fn envelope_conflict_guard_matrix() {
 #[test]
 fn envelope_conflict_scope_pins() {
     assert_eq!(
-        assess(&one("At least 3 clients may retry."), &one("At least 3 clients shall retry.")),
+        assess(
+            &one("At least 3 clients may retry."),
+            &one("At least 3 clients shall retry.")
+        ),
         Outcome::Unknown
     );
     assert_eq!(
-        assess(&one("The client may retry."), &one("The client should not retry.")),
+        assess(
+            &one("The client may retry."),
+            &one("The client should not retry.")
+        ),
         Outcome::Unknown
     );
     assert_eq!(
@@ -1180,7 +1278,10 @@ struct Lcg(u64);
 
 impl Lcg {
     fn next(&mut self) -> u64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         self.0 >> 33
     }
     fn pick<'a>(&mut self, items: &'a [&'a str]) -> &'a str {
@@ -1250,9 +1351,8 @@ fn seeded_fuzz_over_round7_constructs_is_total() {
         for s in spec.sentences {
             // Canonical form re-parses to a fixpoint.
             let rendered = s.render();
-            let re = parse(&rendered).unwrap_or_else(|e| {
-                panic!("canonical form must re-parse: {rendered:?}: {e}")
-            });
+            let re = parse(&rendered)
+                .unwrap_or_else(|e| panic!("canonical form must re-parse: {rendered:?}: {e}"));
             assert_eq!(
                 re.sentences[0].render(),
                 rendered,
@@ -1266,7 +1366,10 @@ fn seeded_fuzz_over_round7_constructs_is_total() {
             accepted.push(s);
         }
     }
-    assert!(accepted.len() > 100, "the fuzz corpus must exercise accepted sentences");
+    assert!(
+        accepted.len() > 100,
+        "the fuzz corpus must exercise accepted sentences"
+    );
     // Pairwise relation totality over a sliding window.
     for pair in accepted.windows(2) {
         let _ = assess(&pair[0], &pair[1]);

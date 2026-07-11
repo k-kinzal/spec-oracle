@@ -23,7 +23,11 @@ use so_lang::semantics::*;
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("parse failed for {input:?}: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -34,7 +38,11 @@ fn cf(input: &str) -> Formula {
 fn render_round_trips(s: &Sentence) {
     let rendered = s.render();
     let re = one(&rendered);
-    assert_eq!(re.render(), rendered, "canonical render must be a fixed point");
+    assert_eq!(
+        re.render(),
+        rendered,
+        "canonical render must be a fixed point"
+    );
 }
 
 /// Round 11 (change 3): the satisfiability pins build their reliances with
@@ -56,8 +64,16 @@ fn until_and_after_over_the_same_nested_words_never_meet() {
     // identity, so neither implication nor contradiction may fire.
     let until = cf("The pump shall run until the valve is open.");
     let after = cf("The pump shall run after the valve is open.");
-    assert_eq!(implies(&until, &after), Ternary::Unknown, "no false Yes across kinds");
-    assert_eq!(implies(&after, &until), Ternary::Unknown, "no false Yes across kinds");
+    assert_eq!(
+        implies(&until, &after),
+        Ternary::Unknown,
+        "no false Yes across kinds"
+    );
+    assert_eq!(
+        implies(&after, &until),
+        Ternary::Unknown,
+        "no false Yes across kinds"
+    );
     assert_eq!(contradicts(&until, &after), Ternary::Unknown);
 }
 
@@ -74,10 +90,19 @@ fn nested_verbal_object_drop_is_anchored_by_the_full_render() {
     let kb = skeleton(&b).unwrap();
     match (&ka.atoms[0].roles[0].value, &kb.atoms[0].roles[0].value) {
         (
-            RoleValue::Clause { skeleton: sa, full: fa },
-            RoleValue::Clause { skeleton: sb, full: fb },
+            RoleValue::Clause {
+                skeleton: sa,
+                full: fa,
+            },
+            RoleValue::Clause {
+                skeleton: sb,
+                full: fb,
+            },
         ) => {
-            assert_ne!(sa, sb, "round 11: the nested digests separate in the INDEX too");
+            assert_ne!(
+                sa, sb,
+                "round 11: the nested digests separate in the INDEX too"
+            );
             assert_eq!(sa.objects[0].head, "limit");
             assert_eq!(sb.objects[0].head, "threshold");
             assert_ne!(fa, fb, "the full render stays the lossiness anchor");
@@ -85,7 +110,11 @@ fn nested_verbal_object_drop_is_anchored_by_the_full_render() {
         other => panic!("expected clause digests, got {other:?}"),
     }
     let (fa, fb) = (cf(a.source.as_str()), cf(b.source.as_str()));
-    assert_eq!(implies(&fa, &fb), Ternary::Unknown, "coarse match, full mismatch: no Yes");
+    assert_eq!(
+        implies(&fa, &fb),
+        Ternary::Unknown,
+        "coarse match, full mismatch: no Yes"
+    );
     assert_eq!(implies(&fb, &fa), Ternary::Unknown);
     assert_eq!(contradicts(&fa, &fb), Ternary::Unknown);
 }
@@ -135,11 +164,19 @@ fn nested_comparison_intervals_never_ground_across_clausal_roles() {
     // claim.
     let a = cf("The pump shall run until the reading is at most 5.");
     let b = cf("The pump shall run until the reading is at most 7.");
-    assert_eq!(implies(&a, &b), Ternary::Unknown, "no interval Yes through until");
+    assert_eq!(
+        implies(&a, &b),
+        Ternary::Unknown,
+        "no interval Yes through until"
+    );
     assert_eq!(implies(&b, &a), Ternary::Unknown);
     let lo = cf("The pump shall run until the reading is at most 3.");
     let hi = cf("The pump shall run until the reading is at least 5.");
-    assert_eq!(contradicts(&lo, &hi), Ternary::Unknown, "no interval No through until");
+    assert_eq!(
+        contradicts(&lo, &hi),
+        Ternary::Unknown,
+        "no interval No through until"
+    );
 }
 
 #[test]
@@ -160,7 +197,10 @@ fn nested_clause_depth_bound_is_an_error_not_a_crash() {
 #[test]
 fn clause_role_serde_keeps_nested_roles_and_rejects_the_old_flat_shape() {
     // Nested roles and polarity survive the JSON round trip.
-    let k = skeleton(&one("The pump shall run until the tank is full at the depot.")).unwrap();
+    let k = skeleton(&one(
+        "The pump shall run until the tank is full at the depot.",
+    ))
+    .unwrap();
     let j = serde_json::to_value(&k).unwrap();
     let value = &j["atoms"][0]["roles"][0]["value"];
     assert_eq!(value["kind"], "clause");
@@ -247,9 +287,11 @@ fn weakened_relied_is_proven_and_envelope_defaults_are_proven() {
     .unwrap();
     assert!(s.proven, "a provable weakening is a proven reliance");
     // The default-relied envelope constructor is self-entailment too.
-    let env =
-        AssumptionSource::from_sentence(EdgeKind::AdmissibilityEnvelope, &one("The client may retry."))
-            .unwrap();
+    let env = AssumptionSource::from_sentence(
+        EdgeKind::AdmissibilityEnvelope,
+        &one("The client may retry."),
+    )
+    .unwrap();
     assert!(env.proven);
 }
 
@@ -267,7 +309,10 @@ fn pre_round7_json_without_relied_or_proven_loads_with_the_defaults() {
     obj.remove("relied");
     obj.remove("proven");
     let back: AssumptionSource = serde_json::from_value(json).unwrap();
-    assert_eq!(back.relied, back.formula, "relied defaults to the source formula");
+    assert_eq!(
+        back.relied, back.formula,
+        "relied defaults to the source formula"
+    );
     assert!(!back.proven, "pre-round-8 sources load unproven");
 }
 
@@ -362,7 +407,10 @@ fn satisfiable_is_never_yes_even_for_the_trivial_assumption() {
         &target,
     )
     .unwrap();
-    assert_eq!(assumption_satisfiable(&c.paired(&[reliance])), Ternary::Unknown);
+    assert_eq!(
+        assumption_satisfiable(&c.paired(&[reliance])),
+        Ternary::Unknown
+    );
     let mut top = contract_formula(&target).unwrap();
     top.assumption = Formula::Top;
     assert_eq!(assumption_satisfiable(&top), Ternary::Unknown);
@@ -412,7 +460,9 @@ fn by_in_a_verbal_guard_tail_stays_rejected() {
     // The round-8 tail admits `by` in COPULAR bodies only (a passive
     // site); an active verbal guard keeps the round-5 rejection.
     assert_eq!(
-        parse("When the daemon stores the record by the archive, the auditor shall sign the record."),
+        parse(
+            "When the daemon stores the record by the archive, the auditor shall sign the record."
+        ),
         Err(ParseError::ByOutsidePassive)
     );
 }
@@ -421,19 +471,30 @@ fn by_in_a_verbal_guard_tail_stays_rejected() {
 fn relative_until_tail_stops_at_the_enclosing_modal() {
     let s = one("Each request that is valid until the session expires shall be logged.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Single(np), .. } => {
-            match &np.relative.as_ref().unwrap().body {
-                RelativeBody::Copular { predicate, roles, .. } => {
-                    assert_eq!(predicate, &Predicate::Words { words: vec!["valid".into()] });
-                    assert!(matches!(roles.as_slice(), [RolePp::Until(_)]));
-                }
-                other => panic!("expected copular relative with until, got {other:?}"),
+        Core::Deontic {
+            subject: NpGroup::Single(np),
+            ..
+        } => match &np.relative.as_ref().unwrap().body {
+            RelativeBody::Copular {
+                predicate, roles, ..
+            } => {
+                assert_eq!(
+                    predicate,
+                    &Predicate::Words {
+                        words: vec!["valid".into()]
+                    }
+                );
+                assert!(matches!(roles.as_slice(), [RolePp::Until(_)]));
             }
-        }
+            other => panic!("expected copular relative with until, got {other:?}"),
+        },
         other => panic!("expected deontic, got {other:?}"),
     }
     let k = skeleton(&s).unwrap();
-    assert_eq!(k.subject.full, "request that is valid until the session expires");
+    assert_eq!(
+        k.subject.full,
+        "request that is valid until the session expires"
+    );
     render_round_trips(&s);
 }
 
@@ -443,22 +504,29 @@ fn copular_relative_late_by_is_the_agent_role() {
     // round-5 passive rules mirrored into relatives.
     let s = one("Each record that is stored in the archive by the daemon shall be retained.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Single(np), .. } => {
-            match &np.relative.as_ref().unwrap().body {
-                RelativeBody::Copular { agent, roles, .. } => {
-                    assert!(agent.is_none(), "the late `by` is a role, not the agent slot");
-                    assert!(matches!(
-                        roles.as_slice(),
-                        [RolePp::Location { .. }, RolePp::Agent(_)]
-                    ));
-                }
-                other => panic!("expected copular relative, got {other:?}"),
+        Core::Deontic {
+            subject: NpGroup::Single(np),
+            ..
+        } => match &np.relative.as_ref().unwrap().body {
+            RelativeBody::Copular { agent, roles, .. } => {
+                assert!(
+                    agent.is_none(),
+                    "the late `by` is a role, not the agent slot"
+                );
+                assert!(matches!(
+                    roles.as_slice(),
+                    [RolePp::Location { .. }, RolePp::Agent(_)]
+                ));
             }
-        }
+            other => panic!("expected copular relative, got {other:?}"),
+        },
         other => panic!("expected deontic, got {other:?}"),
     }
     let k = skeleton(&s).unwrap();
-    assert_eq!(k.subject.full, "record that is stored in the archive by the daemon");
+    assert_eq!(
+        k.subject.full,
+        "record that is stored in the archive by the daemon"
+    );
     render_round_trips(&s);
 }
 
@@ -485,11 +553,19 @@ fn inner_content_deadlines_never_ground_but_outer_deadlines_do() {
     // while the roles-first outer spelling grounds containment as always.
     let i5 = cf("The system shall verify that the token is valid within 5 seconds.");
     let i10 = cf("The system shall verify that the token is valid within 10 seconds.");
-    assert_eq!(implies(&i5, &i10), Ternary::Unknown, "inner deadlines are content identity");
+    assert_eq!(
+        implies(&i5, &i10),
+        Ternary::Unknown,
+        "inner deadlines are content identity"
+    );
     assert_eq!(implies(&i10, &i5), Ternary::Unknown);
     let o5 = cf("The system shall verify within 5 seconds that the token is valid.");
     let o10 = cf("The system shall verify within 10 seconds that the token is valid.");
-    assert_eq!(implies(&o5, &o10), Ternary::Yes, "outer deadlines ground containment");
+    assert_eq!(
+        implies(&o5, &o10),
+        Ternary::Yes,
+        "outer deadlines ground containment"
+    );
     assert_eq!(implies(&o10, &o5), Ternary::Unknown);
 }
 
@@ -505,11 +581,18 @@ fn description_passive_with_deadline_meets_the_deontic_passive() {
     // agent phrase is collected in verb-phrase context and a structured
     // role tail follows it, so both spellings digest [Agent daemon,
     // Deadline 5 seconds].
-    let described = skeleton(&one("The request is logged by the daemon within 5 seconds.")).unwrap();
-    let obliged =
-        skeleton(&one("The request shall be logged by the daemon within 5 seconds.")).unwrap();
+    let described = skeleton(&one(
+        "The request is logged by the daemon within 5 seconds.",
+    ))
+    .unwrap();
+    let obliged = skeleton(&one(
+        "The request shall be logged by the daemon within 5 seconds.",
+    ))
+    .unwrap();
     assert_eq!(described.atoms[0], obliged.atoms[0]);
-    render_round_trips(&one("The request is logged by the daemon within 5 seconds."));
+    render_round_trips(&one(
+        "The request is logged by the daemon within 5 seconds.",
+    ));
 }
 
 // ====================================================================================
@@ -547,7 +630,10 @@ fn able_to_guard_roles_meet_the_description_atom_roles() {
     assert_eq!(guard.words, vec!["able", "to", "publish"]);
     let d = skeleton(&one("The client is able to publish to the topic.")).unwrap();
     assert_eq!(d.atoms[0].words, vec!["publish"]);
-    assert_eq!(d.atoms[0].roles, guard.roles, "description and guard meet on roles");
+    assert_eq!(
+        d.atoms[0].roles, guard.roles,
+        "description and guard meet on roles"
+    );
     render_round_trips(&s);
 }
 
@@ -560,7 +646,9 @@ fn differing_able_to_guard_objects_do_not_witness_overlap() {
     // The assess() outcome is unchanged — no shared-region witness, no
     // false HardContradiction.
     let a = one("While the client is able to hold the lock, the gateway shall throttle the queue.");
-    let b = one("While the client is able to hold the token, the gateway shall not throttle the queue.");
+    let b = one(
+        "While the client is able to hold the token, the gateway shall not throttle the queue.",
+    );
     let ka = skeleton(&a).unwrap();
     let kb = skeleton(&b).unwrap();
     assert_ne!(
@@ -569,7 +657,11 @@ fn differing_able_to_guard_objects_do_not_witness_overlap() {
     );
     assert_eq!(ka.guards.states[0].objects[0].head, "lock");
     assert_eq!(kb.guards.states[0].objects[0].head, "token");
-    assert_eq!(assess(&a, &b), Outcome::Unknown, "still no manufactured witness");
+    assert_eq!(
+        assess(&a, &b),
+        Outcome::Unknown,
+        "still no manufactured witness"
+    );
 }
 
 #[test]
@@ -577,10 +669,22 @@ fn able_to_guards_ground_a_deadline_refinement() {
     // A concrete implies-hit through a capability guard: one written
     // able-to guard scopes both sides, the claims differ in one contained
     // deadline interval.
-    let concrete = one("While the client is able to retry, the gateway shall stop within 5 seconds.");
-    let abstract_ = one("While the client is able to retry, the gateway shall stop within 10 seconds.");
-    assert_eq!(assess(&concrete, &abstract_), Outcome::Refinement { concrete_is_a: true });
-    assert_eq!(assess(&abstract_, &concrete), Outcome::Refinement { concrete_is_a: false });
+    let concrete =
+        one("While the client is able to retry, the gateway shall stop within 5 seconds.");
+    let abstract_ =
+        one("While the client is able to retry, the gateway shall stop within 10 seconds.");
+    assert_eq!(
+        assess(&concrete, &abstract_),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
+    assert_eq!(
+        assess(&abstract_, &concrete),
+        Outcome::Refinement {
+            concrete_is_a: false
+        }
+    );
 }
 
 #[test]
@@ -597,7 +701,9 @@ fn adverbed_able_to_stays_flat_in_clauses_and_relatives() {
     };
     let s = one("While the client is always able to retry, the pump shall run.");
     match &s.frames.states[0].clause.items[0].body {
-        ClauseBody::Copular { predicate, roles, .. } => {
+        ClauseBody::Copular {
+            predicate, roles, ..
+        } => {
             assert_eq!(predicate, &flat);
             assert!(roles.is_empty(), "no role is carved out of the flat tail");
         }
@@ -606,15 +712,18 @@ fn adverbed_able_to_stays_flat_in_clauses_and_relatives() {
     render_round_trips(&s);
     let s = one("Each client that is always able to retry shall register.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Single(np), .. } => {
-            match &np.relative.as_ref().unwrap().body {
-                RelativeBody::Copular { predicate, roles, .. } => {
-                    assert_eq!(predicate, &flat);
-                    assert!(roles.is_empty(), "no role is carved out of the flat tail");
-                }
-                other => panic!("expected flat copular relative, got {other:?}"),
+        Core::Deontic {
+            subject: NpGroup::Single(np),
+            ..
+        } => match &np.relative.as_ref().unwrap().body {
+            RelativeBody::Copular {
+                predicate, roles, ..
+            } => {
+                assert_eq!(predicate, &flat);
+                assert!(roles.is_empty(), "no role is carved out of the flat tail");
             }
-        }
+            other => panic!("expected flat copular relative, got {other:?}"),
+        },
         other => panic!("expected deontic, got {other:?}"),
     }
     render_round_trips(&s);
@@ -637,9 +746,11 @@ fn able_to_is_not_a_passive_site() {
 #[test]
 fn universal_subject_envelope_violation_is_no() {
     let target = one("Each client shall not retry.");
-    let envelope =
-        AssumptionSource::from_sentence(EdgeKind::AdmissibilityEnvelope, &one("Each client may retry."))
-            .unwrap();
+    let envelope = AssumptionSource::from_sentence(
+        EdgeKind::AdmissibilityEnvelope,
+        &one("Each client may retry."),
+    )
+    .unwrap();
     let paired = contract_formula(&target).unwrap().paired(&[envelope]);
     assert_eq!(envelope_compatible(&paired), Ternary::No);
 }
@@ -674,27 +785,36 @@ fn differing_guards_stay_unknown() {
 fn an_empty_guard_region_never_witnesses_a_violation() {
     // A prohibition whose applicability is provably empty (trigger equal to
     // its own exception) asserts nothing anywhere: no violation provable.
-    let target = one("When the breaker is open, the client shall not retry, unless the breaker is open.");
-    let envelope =
-        AssumptionSource::from_sentence(EdgeKind::AdmissibilityEnvelope, &one("The client may retry."))
-            .unwrap();
+    let target =
+        one("When the breaker is open, the client shall not retry, unless the breaker is open.");
+    let envelope = AssumptionSource::from_sentence(
+        EdgeKind::AdmissibilityEnvelope,
+        &one("The client may retry."),
+    )
+    .unwrap();
     let paired = contract_formula(&target).unwrap().paired(&[envelope]);
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
 }
 
 #[test]
 fn obligations_recommendations_and_count_admissions_stay_unknown() {
-    let envelope =
-        AssumptionSource::from_sentence(EdgeKind::AdmissibilityEnvelope, &one("The client may retry."))
-            .unwrap();
+    let envelope = AssumptionSource::from_sentence(
+        EdgeKind::AdmissibilityEnvelope,
+        &one("The client may retry."),
+    )
+    .unwrap();
     // An obligation of the admitted behavior: compatible in fact, but
     // compatibility is never provable — Unknown, not Yes.
     let target = one("The client shall retry.");
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
     // A merely recommended prohibition does not bound.
     let target = one("The client should not retry.");
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
     // A count-subject admission never grounds (witness-set argument).
     let target = one("The clients shall not retry.");
@@ -715,10 +835,14 @@ fn one_violated_envelope_among_several_is_no() {
         &one("The gateway may compress the payload."),
     )
     .unwrap();
-    let violated =
-        AssumptionSource::from_sentence(EdgeKind::AdmissibilityEnvelope, &one("The client may retry."))
-            .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(&[unrelated, violated]);
+    let violated = AssumptionSource::from_sentence(
+        EdgeKind::AdmissibilityEnvelope,
+        &one("The client may retry."),
+    )
+    .unwrap();
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(&[unrelated, violated]);
     assert_eq!(envelope_compatible(&paired), Ternary::No);
 }
 
@@ -740,10 +864,15 @@ fn the_edge_kind_gates_the_envelope_check_not_the_formula_shape() {
         // what this pin tests.
         explicit_relied: true,
     };
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&reliance));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&reliance));
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
     // The same formula under the envelope kind IS the violation.
-    let envelope = AssumptionSource { kind: EdgeKind::AdmissibilityEnvelope, ..reliance };
+    let envelope = AssumptionSource {
+        kind: EdgeKind::AdmissibilityEnvelope,
+        ..reliance
+    };
     let paired = contract_formula(&target).unwrap().paired(&[envelope]);
     assert_eq!(envelope_compatible(&paired), Ternary::No);
 }
@@ -817,7 +946,10 @@ fn seeded_fuzz_over_round8_shapes_never_panics() {
             }
         }
     }
-    assert!(parsed.len() > 300, "the corpus must actually exercise the grammar");
+    assert!(
+        parsed.len() > 300,
+        "the corpus must actually exercise the grammar"
+    );
     // Seeded pair sampling: assess must be total over every parsed pair.
     let mut state: u64 = 0x5DEECE66D;
     let mut next = |m: usize| {

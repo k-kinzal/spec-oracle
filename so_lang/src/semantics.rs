@@ -100,8 +100,14 @@ pub fn speech_act(sentence: &Sentence) -> SpeechAct {
 /// `should` recommends. Definitions, descriptions, and permissions have none.
 pub fn force(sentence: &Sentence) -> Option<Force> {
     match &sentence.core {
-        Core::Deontic { modal: Modal::Shall | Modal::Must, .. } => Some(Force::Binding),
-        Core::Deontic { modal: Modal::Should, .. } => Some(Force::Recommended),
+        Core::Deontic {
+            modal: Modal::Shall | Modal::Must,
+            ..
+        } => Some(Force::Binding),
+        Core::Deontic {
+            modal: Modal::Should,
+            ..
+        } => Some(Force::Recommended),
         _ => None,
     }
 }
@@ -204,19 +210,27 @@ pub fn denote(sentence: &Sentence) -> Denotation {
             term: term.clone(),
             definiens: definiens.clone(),
         },
-        Core::Description { subject, copula, adverb, predicate, agent, roles } => {
+        Core::Description {
+            subject,
+            copula,
+            adverb,
+            predicate,
+            agent,
+            roles,
+        } => {
             // Capability descriptions denote behavior through their verb
             // phrase, not a state predicate. Round 5: the description
             // adverb composes into the capability's polarity (`is never
             // able to` denies it).
             if let Predicate::AbleTo { vp } = predicate {
-                let polarity = combined_polarity(
-                    matches!(adverb, Some(DescriptionAdverb::Never)),
-                    subject,
-                );
+                let polarity =
+                    combined_polarity(matches!(adverb, Some(DescriptionAdverb::Never)), subject);
                 return Denotation::Behavior(circumstance(
                     subject.clone(),
-                    Claim::Capability { polarity, vp: (**vp).clone() },
+                    Claim::Capability {
+                        polarity,
+                        vp: (**vp).clone(),
+                    },
                 ));
             }
             let polarity =
@@ -233,19 +247,33 @@ pub fn denote(sentence: &Sentence) -> Denotation {
                 },
             ))
         }
-        Core::Deontic { subject, modal, negated, vp } => {
+        Core::Deontic {
+            subject,
+            modal,
+            negated,
+            vp,
+        } => {
             let polarity = combined_polarity(*negated, subject);
             match modal {
-                Modal::May => Denotation::Admissibility(
-                    circumstance(subject.clone(), Claim::Admissible { vp: vp.clone() }),
-                ),
+                Modal::May => Denotation::Admissibility(circumstance(
+                    subject.clone(),
+                    Claim::Admissible { vp: vp.clone() },
+                )),
                 Modal::Shall | Modal::Must => Denotation::Behavior(circumstance(
                     subject.clone(),
-                    Claim::Action { polarity, force: Force::Binding, vp: vp.clone() },
+                    Claim::Action {
+                        polarity,
+                        force: Force::Binding,
+                        vp: vp.clone(),
+                    },
                 )),
                 Modal::Should => Denotation::Behavior(circumstance(
                     subject.clone(),
-                    Claim::Action { polarity, force: Force::Recommended, vp: vp.clone() },
+                    Claim::Action {
+                        polarity,
+                        force: Force::Recommended,
+                        vp: vp.clone(),
+                    },
                 )),
             }
         }
@@ -379,7 +407,10 @@ pub struct ObjectSkeleton {
 /// determiner is quantification (carried separately as the quantifier),
 /// while nested determiners are part of what the phrase names.
 pub(crate) fn np_full(np: &Np) -> String {
-    let stripped = Np { det: None, ..np.clone() };
+    let stripped = Np {
+        det: None,
+        ..np.clone()
+    };
     stripped.render().to_lowercase()
 }
 
@@ -405,23 +436,33 @@ pub struct ComparisonSkeleton {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum MeasureSkeleton {
-    Quantity { number: String, unit: Option<String> },
-    Np { full: String },
+    Quantity {
+        number: String,
+        unit: Option<String>,
+    },
+    Np {
+        full: String,
+    },
 }
 
 /// The digest of one comparison predicate (round 6), shared by claim atoms
 /// and clause digests.
 fn comparison_skeleton(comparison: &Comparison) -> ComparisonSkeleton {
     let measure = |m: &Measure| match m {
-        Measure::Quantity { number, unit } => {
-            MeasureSkeleton::Quantity { number: number.clone(), unit: unit.clone() }
-        }
-        Measure::Np { np } => MeasureSkeleton::Np { full: np.render().to_lowercase() },
+        Measure::Quantity { number, unit } => MeasureSkeleton::Quantity {
+            number: number.clone(),
+            unit: unit.clone(),
+        },
+        Measure::Np { np } => MeasureSkeleton::Np {
+            full: np.render().to_lowercase(),
+        },
         // A bounded measure never reaches comparison position through the
         // grammar (`Bounded` is admitted under `for` only); a hand-built
         // tree digests it as an opaque identity string — conservative, no
         // interval grounding.
-        Measure::Bounded { .. } => MeasureSkeleton::Np { full: m.render().to_lowercase() },
+        Measure::Bounded { .. } => MeasureSkeleton::Np {
+            full: m.render().to_lowercase(),
+        },
     };
     ComparisonSkeleton {
         op: comparison.op,
@@ -555,7 +596,10 @@ pub enum RoleValue {
     },
     /// A measured role (Deadline/Duration over a quantity): number and unit
     /// kept AS WRITTEN — comparability (5 < 10, seconds vs ms) is downstream.
-    Measure { number: String, unit: Option<String> },
+    Measure {
+        number: String,
+        unit: Option<String>,
+    },
     /// A BOUNDED measured role (round 6): `for at least 30 days`, `for
     /// between 5 and 10 seconds`. Everything as written; `upper` is the
     /// second bound of `between`.
@@ -758,9 +802,18 @@ fn quantifier_of(det: &Option<Det>) -> Quantifier {
             Quantifier::Universal
         }
         Some(Det::No) => Quantifier::Negative,
-        Some(Det::AtLeast { n }) => Quantifier::Count { op: CountOp::AtLeast, n: *n },
-        Some(Det::AtMost { n }) => Quantifier::Count { op: CountOp::AtMost, n: *n },
-        Some(Det::Exactly { n }) => Quantifier::Count { op: CountOp::Exactly, n: *n },
+        Some(Det::AtLeast { n }) => Quantifier::Count {
+            op: CountOp::AtLeast,
+            n: *n,
+        },
+        Some(Det::AtMost { n }) => Quantifier::Count {
+            op: CountOp::AtMost,
+            n: *n,
+        },
+        Some(Det::Exactly { n }) => Quantifier::Count {
+            op: CountOp::Exactly,
+            n: *n,
+        },
     }
 }
 
@@ -815,7 +868,12 @@ pub(crate) fn claim_polarity(claim: &Claim, subject: &NpGroup) -> Polarity {
 /// alternatives (round 6), which yields one atom PER ALTERNATIVE.
 pub(crate) fn claim_atoms(claim: &Claim) -> Vec<Atom> {
     match claim {
-        Claim::State { predicate, agent, roles, .. } => vec![Atom {
+        Claim::State {
+            predicate,
+            agent,
+            roles,
+            ..
+        } => vec![Atom {
             words: lowercased_words(&predicate.render()),
             manner: Vec::new(),
             objects: Vec::new(),
@@ -861,9 +919,7 @@ fn vp_atom(vp: &Vp) -> Atom {
     // digests structurally, exactly as the described form does —
     // the two claims must keep meeting at one atom.
     let comparison = match &vp.complement {
-        Some(complement) if vp.verb.eq_ignore_ascii_case("be") => {
-            predicate_comparison(complement)
-        }
+        Some(complement) if vp.verb.eq_ignore_ascii_case("be") => predicate_comparison(complement),
         _ => None,
     };
     let manner = vp.manner.iter().map(|w| w.to_lowercase()).collect();
@@ -877,7 +933,15 @@ fn vp_atom(vp: &Vp) -> Atom {
         clause: clause_skeleton(clause),
         full: clause.render().to_lowercase(),
     });
-    Atom { words, manner, objects, objects_conj, roles, comparison, content }
+    Atom {
+        words,
+        manner,
+        objects,
+        objects_conj,
+        roles,
+        comparison,
+        content,
+    }
 }
 
 /// All heads of a noun-phrase group, lowercased.
@@ -914,7 +978,10 @@ fn group_conj(group: &NpGroup) -> Option<Conj> {
 fn agent_skeleton(agent: &NpGroup) -> RoleSkeleton {
     RoleSkeleton {
         kind: RoleKind::Agent,
-        value: RoleValue::Heads { items: object_skeletons(agent), conj: group_conj(agent) },
+        value: RoleValue::Heads {
+            items: object_skeletons(agent),
+            conj: group_conj(agent),
+        },
         marker: None,
     }
 }
@@ -923,24 +990,36 @@ fn agent_skeleton(agent: &NpGroup) -> RoleSkeleton {
 fn role_skeleton(role: &RolePp) -> RoleSkeleton {
     let heads = |kind: RoleKind, np: &NpGroup| RoleSkeleton {
         kind,
-        value: RoleValue::Heads { items: object_skeletons(np), conj: group_conj(np) },
+        value: RoleValue::Heads {
+            items: object_skeletons(np),
+            conj: group_conj(np),
+        },
         marker: None,
     };
     let measured = |kind: RoleKind, measure: &Measure| RoleSkeleton {
         kind,
         value: match measure {
             // Number and unit AS WRITTEN: comparability is downstream.
-            Measure::Quantity { number, unit } => {
-                RoleValue::Measure { number: number.clone(), unit: unit.clone() }
-            }
+            Measure::Quantity { number, unit } => RoleValue::Measure {
+                number: number.clone(),
+                unit: unit.clone(),
+            },
             // Round 6: bounded quantities keep their bound structurally.
-            Measure::Bounded { op, number, unit, upper } => RoleValue::BoundedMeasure {
+            Measure::Bounded {
+                op,
+                number,
+                unit,
+                upper,
+            } => RoleValue::BoundedMeasure {
                 op: *op,
                 number: number.clone(),
                 unit: unit.clone(),
                 upper: upper.clone(),
             },
-            Measure::Np { np } => RoleValue::Heads { items: object_skeletons(np), conj: group_conj(np) },
+            Measure::Np { np } => RoleValue::Heads {
+                items: object_skeletons(np),
+                conj: group_conj(np),
+            },
         },
         marker: None,
     };
@@ -999,7 +1078,10 @@ fn clause_skeleton(clause: &Clause) -> ClauseSkeleton {
     // Round 9: a verbal body's content complement digests with the shared
     // lossiness-anchor discipline (digest + full render).
     let content = match &clause.body {
-        ClauseBody::Verbal { content: Some(content), .. } => Some(Box::new(ContentSkeleton {
+        ClauseBody::Verbal {
+            content: Some(content),
+            ..
+        } => Some(Box::new(ContentSkeleton {
             clause: clause_skeleton(content),
             full: content.render().to_lowercase(),
         })),
@@ -1016,7 +1098,12 @@ fn clause_skeleton(clause: &Clause) -> ClauseSkeleton {
         // hold the lock` and `is able to hold the token` differ in the
         // index; the clause render in the guard anchor keeps full
         // fidelity, as always.
-        ClauseBody::Copular { predicate: Predicate::AbleTo { vp }, agent, roles, .. } => {
+        ClauseBody::Copular {
+            predicate: Predicate::AbleTo { vp },
+            agent,
+            roles,
+            ..
+        } => {
             let mut words = vec!["able".to_string(), "to".to_string(), vp.verb.to_lowercase()];
             if let Some(particle) = &vp.particle {
                 words.push(particle.to_lowercase());
@@ -1035,7 +1122,12 @@ fn clause_skeleton(clause: &Clause) -> ClauseSkeleton {
                 None,
             )
         }
-        ClauseBody::Copular { predicate, agent, roles, .. } => (
+        ClauseBody::Copular {
+            predicate,
+            agent,
+            roles,
+            ..
+        } => (
             lowercased_words(&predicate.render()),
             Vec::new(),
             // The passive agent digests as an Agent role (round 5); the
@@ -1049,13 +1141,24 @@ fn clause_skeleton(clause: &Clause) -> ClauseSkeleton {
             // Round 6: a comparison predicate digests structurally too.
             predicate_comparison(predicate),
         ),
-        ClauseBody::Verbal { verb, particle, manner, roles, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            particle,
+            manner,
+            roles,
+            ..
+        } => {
             let words = match particle {
                 Some(particle) => vec![verb.to_lowercase(), particle.to_lowercase()],
                 None => vec![verb.to_lowercase()],
             };
             let manner = manner.iter().map(|w| w.to_lowercase()).collect();
-            (words, manner, roles.iter().map(role_skeleton).collect(), None)
+            (
+                words,
+                manner,
+                roles.iter().map(role_skeleton).collect(),
+                None,
+            )
         }
     };
     // Round 11 (change 2): a verbal body's object digests enter the
@@ -1067,13 +1170,26 @@ fn clause_skeleton(clause: &Clause) -> ClauseSkeleton {
     // Plain copular bodies stay object-free (a predicate has no object;
     // see the field doc).
     let objects = match &clause.body {
-        ClauseBody::Verbal { object: Some(object), .. } => object_skeletons(object),
-        ClauseBody::Copular { predicate: Predicate::AbleTo { vp }, .. } => {
-            vp.object.as_ref().map(object_skeletons).unwrap_or_default()
-        }
+        ClauseBody::Verbal {
+            object: Some(object),
+            ..
+        } => object_skeletons(object),
+        ClauseBody::Copular {
+            predicate: Predicate::AbleTo { vp },
+            ..
+        } => vp.object.as_ref().map(object_skeletons).unwrap_or_default(),
         _ => Vec::new(),
     };
-    ClauseSkeleton { subject_head, polarity, words, manner, objects, roles, comparison, content }
+    ClauseSkeleton {
+        subject_head,
+        polarity,
+        words,
+        manner,
+        objects,
+        roles,
+        comparison,
+        content,
+    }
 }
 
 /// The digests of one clause group's items, in order. Crate-internal: the
@@ -1175,7 +1291,13 @@ fn group_keys(group: &NpGroup) -> Vec<String> {
 pub fn responsible_subject_keys(sentence: &Sentence) -> Vec<String> {
     match &sentence.core {
         Core::Definition { .. } => Vec::new(),
-        Core::Description { subject, predicate, agent, roles, .. } => {
+        Core::Description {
+            subject,
+            predicate,
+            agent,
+            roles,
+            ..
+        } => {
             // A capability (`is able to …`) is active — its subject acts —
             // so a hand-built agent never overrides it.
             if matches!(predicate, Predicate::AbleTo { .. }) {
@@ -1304,10 +1426,7 @@ fn participle_stems(participle: &str) -> Vec<String> {
             stems.push(s.to_string());
         }
     };
-    if let Some((_, stem)) = IRREGULAR_PARTICIPLES
-        .iter()
-        .find(|(p, _)| *p == word)
-    {
+    if let Some((_, stem)) = IRREGULAR_PARTICIPLES.iter().find(|(p, _)| *p == word) {
         push(stem);
     }
     if word.len() > 3 && (word.ends_with("ed") || word.ends_with("en")) {
@@ -1335,7 +1454,13 @@ fn participle_stems(participle: &str) -> Vec<String> {
 /// The extracted passive site of [`normalization_candidates`]: participle,
 /// agent group, patient (grammatical subject) group, manner, non-Agent
 /// role tail.
-type PassiveSite<'a> = (&'a str, &'a NpGroup, &'a NpGroup, &'a [String], Vec<&'a RolePp>);
+type PassiveSite<'a> = (
+    &'a str,
+    &'a NpGroup,
+    &'a NpGroup,
+    &'a [String],
+    Vec<&'a RolePp>,
+);
 
 /// Active/passive candidate alignment (round 11, change 6): for a PASSIVE
 /// behavioral claim with a stated Agent — a description's agent slot (or a
@@ -1372,53 +1497,61 @@ pub fn normalization_candidates(sentence: &Sentence) -> Vec<NormalizationCandida
                         text before proposing an edge";
     // The passive site: (participle, agent group, subject group, manner,
     // non-Agent roles).
-    let site: Option<PassiveSite<'_>> =
-        match &sentence.core {
-            Core::Description {
-                subject,
-                predicate: Predicate::Words { words },
-                agent,
-                roles,
-                adverb,
-                ..
-            } if words.len() == 1 && *adverb != Some(DescriptionAdverb::Never) => {
-                let stated = agent.as_ref().or_else(|| {
-                    roles.iter().find_map(|role| match role {
+    let site: Option<PassiveSite<'_>> = match &sentence.core {
+        Core::Description {
+            subject,
+            predicate: Predicate::Words { words },
+            agent,
+            roles,
+            adverb,
+            ..
+        } if words.len() == 1 && *adverb != Some(DescriptionAdverb::Never) => {
+            let stated = agent.as_ref().or_else(|| {
+                roles.iter().find_map(|role| match role {
+                    RolePp::Agent(np) => Some(np),
+                    _ => None,
+                })
+            });
+            stated.map(|agent_np| {
+                let tail: Vec<&RolePp> = roles
+                    .iter()
+                    .filter(|r| !matches!(r, RolePp::Agent(_)))
+                    .collect();
+                (words[0].as_str(), agent_np, subject, &[][..], tail)
+            })
+        }
+        Core::Deontic {
+            subject,
+            vp: VpGroup::Single(vp),
+            modal,
+            negated,
+        } if vp.verb.eq_ignore_ascii_case("be") && !*negated && *modal != Modal::May => {
+            match &vp.complement {
+                Some(Predicate::Words { words }) if words.len() == 1 => {
+                    let agent_np = vp.roles.iter().find_map(|role| match role {
                         RolePp::Agent(np) => Some(np),
                         _ => None,
+                    });
+                    agent_np.map(|agent_np| {
+                        let tail: Vec<&RolePp> = vp
+                            .roles
+                            .iter()
+                            .filter(|r| !matches!(r, RolePp::Agent(_)))
+                            .collect();
+                        (
+                            words[0].as_str(),
+                            agent_np,
+                            subject,
+                            vp.manner.as_slice(),
+                            tail,
+                        )
                     })
-                });
-                stated.map(|agent_np| {
-                    let tail: Vec<&RolePp> =
-                        roles.iter().filter(|r| !matches!(r, RolePp::Agent(_))).collect();
-                    (words[0].as_str(), agent_np, subject, &[][..], tail)
-                })
-            }
-            Core::Deontic { subject, vp: VpGroup::Single(vp), modal, negated }
-                if vp.verb.eq_ignore_ascii_case("be")
-                    && !*negated
-                    && *modal != Modal::May =>
-            {
-                match &vp.complement {
-                    Some(Predicate::Words { words }) if words.len() == 1 => {
-                        let agent_np = vp.roles.iter().find_map(|role| match role {
-                            RolePp::Agent(np) => Some(np),
-                            _ => None,
-                        });
-                        agent_np.map(|agent_np| {
-                            let tail: Vec<&RolePp> = vp
-                                .roles
-                                .iter()
-                                .filter(|r| !matches!(r, RolePp::Agent(_)))
-                                .collect();
-                            (words[0].as_str(), agent_np, subject, vp.manner.as_slice(), tail)
-                        })
-                    }
-                    _ => None,
                 }
+                _ => None,
             }
-            _ => None,
-        };
+        }
+        _ => None,
+    };
     let Some((participle, agent, patient, manner, tail)) = site else {
         return Vec::new();
     };
@@ -1494,7 +1627,9 @@ pub enum Resolution {
     /// reference does not select one (round 12, change 3): the candidates,
     /// deduplicated by full identity (most recent introduction each), in
     /// reading order.
-    Ambiguous { candidates: Vec<AntecedentCandidate> },
+    Ambiguous {
+        candidates: Vec<AntecedentCandidate>,
+    },
     /// No antecedent: deixis to the system under specification, not an error.
     Unresolved,
 }
@@ -1530,7 +1665,11 @@ pub fn references(specification: &Specification) -> Vec<Reference> {
                 }
                 Some(Det::The) => {
                     let resolution = resolve_definite(np, &introduced);
-                    references.push(Reference { sentence: index, head: np.head.clone(), resolution });
+                    references.push(Reference {
+                        sentence: index,
+                        head: np.head.clone(),
+                        resolution,
+                    });
                 }
                 _ => {}
             }
@@ -1542,13 +1681,17 @@ pub fn references(specification: &Specification) -> Vec<Reference> {
 /// Resolve one definite noun phrase against the introductions so far
 /// (the rules on [`Resolution`]).
 fn resolve_definite(np: &Np, introduced: &[(String, String, usize)]) -> Resolution {
-    let candidates: Vec<&(String, String, usize)> =
-        introduced.iter().filter(|(head, _, _)| *head == np.head).collect();
+    let candidates: Vec<&(String, String, usize)> = introduced
+        .iter()
+        .filter(|(head, _, _)| *head == np.head)
+        .collect();
     if candidates.is_empty() {
         return Resolution::Unresolved;
     }
     let most_recent = |set: &[&(String, String, usize)]| -> Resolution {
-        Resolution::Unique { antecedent_sentence: set.last().expect("non-empty").2 }
+        Resolution::Unique {
+            antecedent_sentence: set.last().expect("non-empty").2,
+        }
     };
     let one_full = |set: &[&(String, String, usize)]| -> bool {
         set.iter().all(|(_, full, _)| *full == set[0].1)
@@ -1572,12 +1715,16 @@ fn resolve_definite(np: &Np, introduced: &[(String, String, usize)]) -> Resoluti
             return most_recent(&selected);
         }
         if !selected.is_empty() {
-            return Resolution::Ambiguous { candidates: dedup_by_full(&selected) };
+            return Resolution::Ambiguous {
+                candidates: dedup_by_full(&selected),
+            };
         }
         // No candidate carries the modifiers: ambiguous over all
         // (legislated — see [`Resolution`]).
     }
-    Resolution::Ambiguous { candidates: dedup_by_full(&candidates) }
+    Resolution::Ambiguous {
+        candidates: dedup_by_full(&candidates),
+    }
 }
 
 /// Deduplicate candidates by full identity, keeping each full's MOST
@@ -1588,7 +1735,10 @@ fn dedup_by_full(set: &[&(String, String, usize)]) -> Vec<AntecedentCandidate> {
         if let Some(existing) = out.iter_mut().find(|c| c.full == *full) {
             existing.sentence = *sentence;
         } else {
-            out.push(AntecedentCandidate { sentence: *sentence, full: full.clone() });
+            out.push(AntecedentCandidate {
+                sentence: *sentence,
+                full: full.clone(),
+            });
         }
     }
     out
@@ -1619,7 +1769,13 @@ fn sentence_nps(sentence: &Sentence) -> Vec<&Np> {
                 Definiens::Clause(clause) => clause_nps(clause, &mut out),
             }
         }
-        Core::Description { subject, predicate, agent, roles, .. } => {
+        Core::Description {
+            subject,
+            predicate,
+            agent,
+            roles,
+            ..
+        } => {
             group_nps(subject, &mut out);
             predicate_nps(predicate, &mut out);
             if let Some(agent) = agent {
@@ -1656,7 +1812,12 @@ fn clause_group_nps<'a>(group: &'a ClauseGroup, out: &mut Vec<&'a Np>) {
 fn clause_nps<'a>(clause: &'a Clause, out: &mut Vec<&'a Np>) {
     group_nps(&clause.subject, out);
     match &clause.body {
-        ClauseBody::Copular { predicate, agent, roles, .. } => {
+        ClauseBody::Copular {
+            predicate,
+            agent,
+            roles,
+            ..
+        } => {
             predicate_nps(predicate, out);
             if let Some(agent) = agent {
                 group_nps(agent, out);
@@ -1665,7 +1826,12 @@ fn clause_nps<'a>(clause: &'a Clause, out: &mut Vec<&'a Np>) {
                 role_nps(role, out);
             }
         }
-        ClauseBody::Verbal { object, roles, content, .. } => {
+        ClauseBody::Verbal {
+            object,
+            roles,
+            content,
+            ..
+        } => {
             if let Some(object) = object {
                 group_nps(object, out);
             }
@@ -1697,7 +1863,12 @@ fn np_nps<'a>(np: &'a Np, out: &mut Vec<&'a Np>) {
     }
     if let Some(relative) = &np.relative {
         match &relative.body {
-            RelativeBody::Copular { predicate, agent, roles, .. } => {
+            RelativeBody::Copular {
+                predicate,
+                agent,
+                roles,
+                ..
+            } => {
                 predicate_nps(predicate, out);
                 if let Some(agent) = agent {
                     group_nps(agent, out);
@@ -1787,7 +1958,10 @@ mod tests {
 
     #[test]
     fn speech_acts_by_pivot() {
-        assert_eq!(speech_act(&sentence("The pump shall stop.")), SpeechAct::Obligation);
+        assert_eq!(
+            speech_act(&sentence("The pump shall stop.")),
+            SpeechAct::Obligation
+        );
         assert_eq!(
             speech_act(&sentence("The daemon shall not store derived views.")),
             SpeechAct::Prohibition
@@ -1800,7 +1974,10 @@ mod tests {
             speech_act(&sentence("A session means a sequence of requests.")),
             SpeechAct::Definition
         );
-        assert_eq!(speech_act(&sentence("The client may retry.")), SpeechAct::Permission);
+        assert_eq!(
+            speech_act(&sentence("The client may retry.")),
+            SpeechAct::Permission
+        );
         assert_eq!(
             speech_act(&sentence("The library should install propagators.")),
             SpeechAct::Recommendation
@@ -1809,9 +1986,18 @@ mod tests {
 
     #[test]
     fn force_by_modal() {
-        assert_eq!(force(&sentence("The pump shall stop.")), Some(Force::Binding));
-        assert_eq!(force(&sentence("The pump must stop.")), Some(Force::Binding));
-        assert_eq!(force(&sentence("The pump should stop.")), Some(Force::Recommended));
+        assert_eq!(
+            force(&sentence("The pump shall stop.")),
+            Some(Force::Binding)
+        );
+        assert_eq!(
+            force(&sentence("The pump must stop.")),
+            Some(Force::Binding)
+        );
+        assert_eq!(
+            force(&sentence("The pump should stop.")),
+            Some(Force::Recommended)
+        );
         assert_eq!(force(&sentence("The pump may stop.")), None);
         assert_eq!(force(&sentence("The pump is stopped.")), None);
     }
@@ -1826,14 +2012,21 @@ mod tests {
         }
         match denote(&sentence("The daemon shall not store derived views.")) {
             Denotation::Behavior(assertion) => match assertion.claim {
-                Claim::Action { polarity: Polarity::Negative, force: Force::Binding, .. } => {}
+                Claim::Action {
+                    polarity: Polarity::Negative,
+                    force: Force::Binding,
+                    ..
+                } => {}
                 other => panic!("expected negative binding action, got {other:?}"),
             },
             other => panic!("expected behavior, got {other:?}"),
         }
         match denote(&sentence("The temperature is never above the limit.")) {
             Denotation::Behavior(assertion) => match assertion.claim {
-                Claim::State { polarity: Polarity::Negative, .. } => {}
+                Claim::State {
+                    polarity: Polarity::Negative,
+                    ..
+                } => {}
                 other => panic!("expected negative state, got {other:?}"),
             },
             other => panic!("expected behavior, got {other:?}"),
@@ -1939,7 +2132,9 @@ mod tests {
         assert_eq!(refs[1].head, "session");
         assert_eq!(
             refs[1].resolution,
-            Resolution::Unique { antecedent_sentence: 1 },
+            Resolution::Unique {
+                antecedent_sentence: 1
+            },
             "the frame's own `a session` is the most recent introduction"
         );
     }

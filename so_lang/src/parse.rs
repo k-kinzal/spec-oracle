@@ -109,7 +109,9 @@ pub enum ParseError {
     #[error("the `{keyword}` frame has an empty clause")]
     EmptyFrame { keyword: String },
     /// Frames out of canonical order (`Where`, then `While`, then the trigger).
-    #[error("the `{keyword}` frame must come before {after}: frames read Where, While, then When/If")]
+    #[error(
+        "the `{keyword}` frame must come before {after}: frames read Where, While, then When/If"
+    )]
     FrameOrder { keyword: String, after: String },
     /// Two trigger frames; a sentence has at most one `When`/`If`.
     #[error("a sentence takes one trigger frame: `{second}` cannot follow `{first}`")]
@@ -138,7 +140,9 @@ pub enum ParseError {
     #[error("`no` with `may` is a denial of permission: write `<subject> shall not <response>` for a prohibition")]
     NoWithMay,
     /// `is not` / `are not` in a description.
-    #[error("a description is not negated with `not`: write `never`, or `shall not` for an obligation")]
+    #[error(
+        "a description is not negated with `not`: write `never`, or `shall not` for an obligation"
+    )]
     NegatedDescription,
     /// A pivot with no subject before it.
     #[error("the sentence has no subject before its pivot")]
@@ -482,7 +486,9 @@ fn is_reserved(word: &str) -> bool {
         || in_list(UNSUPPORTED_MODALS, word)
         || in_list(FRAME_KEYWORDS, word)
         || in_list(
-            &["of", "that", "who", "and", "or", "both", "either", "remains", "then", "not"],
+            &[
+                "of", "that", "who", "and", "or", "both", "either", "remains", "then", "not",
+            ],
             word,
         )
 }
@@ -555,7 +561,9 @@ fn unknown_number_word_at(tokens: &[Token], pos: usize) -> Option<ParseError> {
         && word.bytes().any(|b| b.is_ascii_alphabetic())
         && !is_reserved(word)
         && parse_det(tokens, pos).is_none())
-    .then(|| ParseError::UnknownNumberWord { word: word.to_string() })
+    .then(|| ParseError::UnknownNumberWord {
+        word: word.to_string(),
+    })
 }
 
 /// The unknown-number-word check behind a QUANTIFIER OPENER (round 12,
@@ -676,8 +684,9 @@ fn broken_quantifier(tokens: &[Token], pos: usize) -> Option<ParseError> {
         return None;
     };
     let number = word_at(tokens, number_at)?;
-    (is_number(number) && number_value(number).is_none())
-        .then(|| ParseError::QuantifierNotWhole { word: number.to_string() })
+    (is_number(number) && number_value(number).is_none()).then(|| ParseError::QuantifierNotWhole {
+        word: number.to_string(),
+    })
 }
 
 /// Parse a measure: a number (kept as written) with an optional unit word, or
@@ -708,7 +717,12 @@ fn parse_measure_single(
         return Ok((measure, next));
     }
     let (np, next) = parse_np(tokens, pos, ctx, ParseError::EmptyPredicate, depth)?;
-    Ok((Measure::Np { np: Box::new(NpGroup::Single(np)) }, next))
+    Ok((
+        Measure::Np {
+            np: Box::new(NpGroup::Single(np)),
+        },
+        next,
+    ))
 }
 
 /// A BOUNDED quantity (round 6), admitted in the `for` (Duration) role:
@@ -727,19 +741,26 @@ fn parse_bounded_quantity(
     ctx: NpCtx,
 ) -> Option<Result<(Measure, usize), ParseError>> {
     let word = word_at(tokens, pos)?;
-    let simple = |op: ComparisonOp, number_at: usize| -> Result<(Measure, usize), ParseError> {
-        match parse_quantity(tokens, number_at, ctx) {
-            Some((Measure::Quantity { number, unit }, next)) => {
-                Ok((Measure::Bounded { op, number, unit, upper: None }, next))
+    let simple =
+        |op: ComparisonOp, number_at: usize| -> Result<(Measure, usize), ParseError> {
+            match parse_quantity(tokens, number_at, ctx) {
+                Some((Measure::Quantity { number, unit }, next)) => Ok((
+                    Measure::Bounded {
+                        op,
+                        number,
+                        unit,
+                        upper: None,
+                    },
+                    next,
+                )),
+                // Round 12 (change 4): a bound opener demands a number, so an
+                // unknown number word there names itself (`for at least
+                // eleventy days`); anything else keeps the round-6 rewrite
+                // (`for at least the limit` stays ForRequiresMeasure).
+                _ => Err(unknown_number_word_at(tokens, number_at)
+                    .unwrap_or(ParseError::ForRequiresMeasure)),
             }
-            // Round 12 (change 4): a bound opener demands a number, so an
-            // unknown number word there names itself (`for at least
-            // eleventy days`); anything else keeps the round-6 rewrite
-            // (`for at least the limit` stays ForRequiresMeasure).
-            _ => Err(unknown_number_word_at(tokens, number_at)
-                .unwrap_or(ParseError::ForRequiresMeasure)),
-        }
-    };
+        };
     if word.eq_ignore_ascii_case("at") {
         if kw_at(tokens, pos + 1, "least") {
             return Some(simple(ComparisonOp::AtLeast, pos + 2));
@@ -759,8 +780,13 @@ fn parse_bounded_quantity(
         let between = || -> Result<(Measure, usize), ParseError> {
             // `and` is reserved, so the lower quantity's unit scan never
             // swallows the separator (`between 5 and 10 seconds`).
-            let Some((Measure::Quantity { number, unit: lower_unit }, at)) =
-                parse_quantity(tokens, pos + 1, ctx)
+            let Some((
+                Measure::Quantity {
+                    number,
+                    unit: lower_unit,
+                },
+                at,
+            )) = parse_quantity(tokens, pos + 1, ctx)
             else {
                 // Round 12 (change 4): an unknown number word in a bound
                 // names itself; anything else keeps the round-6 rewrite.
@@ -770,8 +796,13 @@ fn parse_bounded_quantity(
             if !kw_at(tokens, at, "and") {
                 return Err(unexpected(tokens, at));
             }
-            let Some((Measure::Quantity { number: upper, unit: upper_unit }, next)) =
-                parse_quantity(tokens, at + 1, ctx)
+            let Some((
+                Measure::Quantity {
+                    number: upper,
+                    unit: upper_unit,
+                },
+                next,
+            )) = parse_quantity(tokens, at + 1, ctx)
             else {
                 return Err(unknown_number_word_at(tokens, at + 1)
                     .unwrap_or(ParseError::ForRequiresMeasure));
@@ -791,7 +822,12 @@ fn parse_bounded_quantity(
             // Round 9: a descending pair is a typo, not an empty interval.
             check_between_order(&number, &upper)?;
             Ok((
-                Measure::Bounded { op: ComparisonOp::Between, number, unit, upper: Some(upper) },
+                Measure::Bounded {
+                    op: ComparisonOp::Between,
+                    number,
+                    unit,
+                    upper: Some(upper),
+                },
                 next,
             ))
         };
@@ -855,7 +891,9 @@ fn parse_np_at(
     of_link: bool,
 ) -> Result<(Np, usize), ParseError> {
     if depth >= MAX_NP_DEPTH {
-        return Err(ParseError::PhraseTooDeep { limit: MAX_NP_DEPTH });
+        return Err(ParseError::PhraseTooDeep {
+            limit: MAX_NP_DEPTH,
+        });
     }
     let (det, mut at) = match parse_det(tokens, pos) {
         Some((det, next)) => (Some(det), next),
@@ -893,8 +931,14 @@ fn parse_np_at(
         return Err(on_empty);
     };
     let of = if kw_at(tokens, at, "of") {
-        let (of_np, next) =
-            parse_np_at(tokens, at + 1, ctx, unexpected(tokens, at + 1), depth + 1, true)?;
+        let (of_np, next) = parse_np_at(
+            tokens,
+            at + 1,
+            ctx,
+            unexpected(tokens, at + 1),
+            depth + 1,
+            true,
+        )?;
         at = next;
         Some(Box::new(of_np))
     } else {
@@ -903,8 +947,8 @@ fn parse_np_at(
     let relative = match word_at(tokens, at) {
         // `that`: nearest attachment — any link takes it. `who`: root
         // attachment — an of-chain link leaves it for the root.
-        Some(w) if w.eq_ignore_ascii_case("that")
-            || (w.eq_ignore_ascii_case("who") && !of_link) =>
+        Some(w)
+            if w.eq_ignore_ascii_case("that") || (w.eq_ignore_ascii_case("who") && !of_link) =>
         {
             let marker = if w.eq_ignore_ascii_case("that") {
                 RelMarker::That
@@ -917,7 +961,16 @@ fn parse_np_at(
         }
         _ => None,
     };
-    Ok((Np { det, modifiers: words, head, of, relative }, at))
+    Ok((
+        Np {
+            det,
+            modifiers: words,
+            head,
+            of,
+            relative,
+        },
+        at,
+    ))
 }
 
 /// The body of a restrictive relative clause: its own copula and predicate
@@ -955,7 +1008,15 @@ fn parse_relative_body(
         resume_flat_able_predicate(tokens, &mut predicate, &mut next);
         let (agent, next) = parse_optional_agent(tokens, next)?;
         let (roles, next) = parse_roles(tokens, next, depth, true)?;
-        return Ok((RelativeBody::Copular { copula, predicate, agent, roles }, next));
+        return Ok((
+            RelativeBody::Copular {
+                copula,
+                predicate,
+                agent,
+                roles,
+            },
+            next,
+        ));
     }
     // Round 9: the OBJECT-GAP reading — `that the gateway forwards` — is
     // tried before the verbal tail whenever a determiner/quantifier-led
@@ -976,7 +1037,16 @@ fn parse_relative_body(
     // The tail stops where its roles stop; the caller places what follows.
     let (verb, particle, manner, object, roles, next) =
         parse_verbal_tail_parts(tokens, pos, depth)?;
-    Ok((RelativeBody::Verbal { verb, particle, manner, object, roles }, next))
+    Ok((
+        RelativeBody::Verbal {
+            verb,
+            particle,
+            manner,
+            object,
+            roles,
+        },
+        next,
+    ))
 }
 
 /// The object-gap relative reading (round 9): a determiner/quantifier-led
@@ -1069,7 +1139,16 @@ fn parse_object_gap(
     let (subject, verb, particle, manner, at) = split?;
     // Committed: the gap's role tail parses like any verbal tail's.
     Some(parse_roles(tokens, at, depth, false).map(|(roles, next)| {
-        (RelativeBody::ObjectGap { subject, verb, particle, manner, roles }, next)
+        (
+            RelativeBody::ObjectGap {
+                subject,
+                verb,
+                particle,
+                manner,
+                roles,
+            },
+            next,
+        )
     }))
 }
 
@@ -1139,7 +1218,14 @@ fn parse_np_group(
             if !marker_ok {
                 return Err(ParseError::MixedCoordination);
             }
-            Ok((NpGroup::Coordinated { conj, marker, items }, at))
+            Ok((
+                NpGroup::Coordinated {
+                    conj,
+                    marker,
+                    items,
+                },
+                at,
+            ))
         }
         (Some(_), None) => Err(ParseError::MixedCoordination),
     }
@@ -1172,7 +1258,9 @@ fn parse_clause(tokens: &[Token], depth: usize) -> Result<Clause, ParseError> {
     // `before`/`after` roles nest clauses inside clauses; the shared depth
     // budget bounds that recursion the same way it bounds `of` chains.
     if depth >= MAX_NP_DEPTH {
-        return Err(ParseError::PhraseTooDeep { limit: MAX_NP_DEPTH });
+        return Err(ParseError::PhraseTooDeep {
+            limit: MAX_NP_DEPTH,
+        });
     }
     let mut first_subject_err: Option<ParseError> = None;
     for i in (0..tokens.len()).filter(|&i| parse_clause_copula(tokens, i).is_some()) {
@@ -1197,10 +1285,10 @@ fn parse_clause(tokens: &[Token], depth: usize) -> Result<Clause, ParseError> {
         // the verbal reading, which gives the preposition its role; fall
         // back to the copular split only when no verbal reading exists
         // (`the after image is ready` stays copular).
-        if tokens[..i]
-            .iter()
-            .any(|t| t.word().is_some_and(|w| in_list(&["before", "after", "until"], w)))
-        {
+        if tokens[..i].iter().any(|t| {
+            t.word()
+                .is_some_and(|w| in_list(&["before", "after", "until"], w))
+        }) {
             if let Ok(clause) = parse_verbal_clause(tokens, depth) {
                 return Ok(clause);
             }
@@ -1242,7 +1330,12 @@ fn parse_clause(tokens: &[Token], depth: usize) -> Result<Clause, ParseError> {
         }
         return Ok(Clause {
             subject,
-            body: ClauseBody::Copular { copula, predicate, agent, roles },
+            body: ClauseBody::Copular {
+                copula,
+                predicate,
+                agent,
+                roles,
+            },
         });
     }
     if let Some(error) = first_subject_err {
@@ -1339,7 +1432,11 @@ fn boundary_verbal(tokens: &[Token], depth: usize) -> Result<(Clause, usize), Pa
             // object group starts at the marker. Only when there is room for
             // a subject and a verb before it — a sentence-initial marker
             // belongs to the subject.
-            let j = if j >= 3 && group_marker_at(tokens, j - 1) { j - 1 } else { j };
+            let j = if j >= 3 && group_marker_at(tokens, j - 1) {
+                j - 1
+            } else {
+                j
+            };
             j.saturating_sub(1)
         }
         None => {
@@ -1534,12 +1631,26 @@ fn parse_verbal_tail(
             return Err(unexpected(tokens, next + 1));
         }
         let content = Some(Box::new(parse_clause(rest, depth + 1)?));
-        return Ok(ClauseBody::Verbal { verb, particle, manner, object, roles, content });
+        return Ok(ClauseBody::Verbal {
+            verb,
+            particle,
+            manner,
+            object,
+            roles,
+            content,
+        });
     }
     if next < tokens.len() {
         return Err(unexpected(tokens, next));
     }
-    Ok(ClauseBody::Verbal { verb, particle, manner, object, roles, content: None })
+    Ok(ClauseBody::Verbal {
+        verb,
+        particle,
+        manner,
+        object,
+        roles,
+        content: None,
+    })
 }
 
 /// The SHARED verbal tail after a verb — `verb [particle] [manner…]
@@ -1552,8 +1663,17 @@ fn parse_verbal_tail_parts(
     tokens: &[Token],
     verb_at: usize,
     depth: usize,
-) -> Result<(String, Option<String>, Vec<String>, Option<NpGroup>, Vec<RolePp>, usize), ParseError>
-{
+) -> Result<
+    (
+        String,
+        Option<String>,
+        Vec<String>,
+        Option<NpGroup>,
+        Vec<RolePp>,
+        usize,
+    ),
+    ParseError,
+> {
     if locative_at(tokens, verb_at).is_some() {
         return Err(unexpected(tokens, verb_at));
     }
@@ -1567,7 +1687,9 @@ fn parse_verbal_tail_parts(
     // verb `the` and object head `forwards`. Object-gap relatives are not
     // supported; the precise rejection replaces the wrong reading.
     if parse_det(tokens, verb_at).is_some() {
-        return Err(ParseError::DeterminerAsVerb { word: verb.to_string() });
+        return Err(ParseError::DeterminerAsVerb {
+            word: verb.to_string(),
+        });
     }
     let verb = verb.to_string();
     let mut at = verb_at + 1;
@@ -1649,7 +1771,9 @@ fn pop_object_particle(object: &mut Option<NpGroup>, particle: &mut Option<Strin
     if np.of.is_some() || np.relative.is_some() || !in_list(PARTICLES, &np.head) {
         return;
     }
-    let Some(new_head) = np.modifiers.pop() else { return };
+    let Some(new_head) = np.modifiers.pop() else {
+        return;
+    };
     *particle = Some(std::mem::replace(&mut np.head, new_head));
 }
 
@@ -1728,13 +1852,20 @@ fn parse_coordinated_clauses(
     depth: usize,
 ) -> Option<Result<ClauseGroup, ParseError>> {
     for i in 1..tokens.len() {
-        let Some(conj) = conj_at(tokens, i) else { continue };
-        let Ok(first) = parse_clause(&tokens[..i], depth) else { continue };
+        let Some(conj) = conj_at(tokens, i) else {
+            continue;
+        };
+        let Ok(first) = parse_clause(&tokens[..i], depth) else {
+            continue;
+        };
         match coordinated_tail(&tokens[i + 1..], depth, conj) {
             Some(Ok(tail)) => {
                 let mut items = vec![first];
                 items.extend(tail);
-                return Some(Ok(ClauseGroup { conj: Some(conj), items }));
+                return Some(Ok(ClauseGroup {
+                    conj: Some(conj),
+                    items,
+                }));
             }
             Some(Err(error)) => return Some(Err(error)),
             // The remainder is not a clause sequence: try a later split.
@@ -1755,8 +1886,12 @@ fn coordinated_tail(
     conj: Conj,
 ) -> Option<Result<Vec<Clause>, ParseError>> {
     for i in 1..tokens.len() {
-        let Some(this) = conj_at(tokens, i) else { continue };
-        let Ok(clause) = parse_clause(&tokens[..i], depth) else { continue };
+        let Some(this) = conj_at(tokens, i) else {
+            continue;
+        };
+        let Ok(clause) = parse_clause(&tokens[..i], depth) else {
+            continue;
+        };
         if this != conj {
             return Some(Err(ParseError::MixedCoordination));
         }
@@ -1802,14 +1937,13 @@ fn conj_at(tokens: &[Token], pos: usize) -> Option<Conj> {
 /// otherwise be reused by a later buffer), and is capped as a memory
 /// backstop; semantics are untouched — the parser stays a pure function
 /// of its input.
-fn parse_np_group_exact(
-    tokens: &[Token],
-    ctx: NpCtx,
-    depth: usize,
-) -> Result<NpGroup, ParseError> {
+fn parse_np_group_exact(tokens: &[Token], ctx: NpCtx, depth: usize) -> Result<NpGroup, ParseError> {
     let key = (tokens.as_ptr() as usize, tokens.len(), ctx, depth);
-    let hit = NP_EXACT_MEMO
-        .with(|memo| memo.borrow().as_ref().and_then(|table| table.get(&key).cloned()));
+    let hit = NP_EXACT_MEMO.with(|memo| {
+        memo.borrow()
+            .as_ref()
+            .and_then(|table| table.get(&key).cloned())
+    });
     if let Some(hit) = hit {
         return hit;
     }
@@ -1871,7 +2005,9 @@ fn parse_vp(tokens: &[Token], pos: usize, depth: usize) -> Result<(Vp, usize), P
         return Err(ParseError::EmptyVp);
     };
     if in_list(FRAME_KEYWORDS, verb) {
-        return Err(ParseError::MidSentenceFrame { keyword: verb.to_string() });
+        return Err(ParseError::MidSentenceFrame {
+            keyword: verb.to_string(),
+        });
     }
     if is_reserved(verb) {
         return Err(unexpected(tokens, pos));
@@ -1881,7 +2017,9 @@ fn parse_vp(tokens: &[Token], pos: usize, depth: usize) -> Result<(Vp, usize), P
     // TAIL of an `either … or …` alternative — accepted the determiner as
     // an open-class verb, freezing an accepted-but-wrong tree.
     if parse_det(tokens, pos).is_some() {
-        return Err(ParseError::DeterminerAsVerb { word: verb.to_string() });
+        return Err(ParseError::DeterminerAsVerb {
+            word: verb.to_string(),
+        });
     }
     let verb = verb.to_string();
     let mut at = pos + 1;
@@ -1955,7 +2093,18 @@ fn parse_vp(tokens: &[Token], pos: usize, depth: usize) -> Result<(Vp, usize), P
     } else {
         None
     };
-    Ok((Vp { verb, particle, manner, object, roles, complement, content }, next))
+    Ok((
+        Vp {
+            verb,
+            particle,
+            manner,
+            object,
+            roles,
+            complement,
+            content,
+        },
+        next,
+    ))
 }
 
 /// Parse the thematic-role phrases available after a verb (or a definiens
@@ -2054,7 +2203,12 @@ fn parse_roles(
                 np_role(RolePp::Agent)?
             }
             "per" => match word_at(tokens, at + 1).filter(|w| !is_np_stop(w, NpCtx::Vp)) {
-                Some(unit) => (RolePp::Rate { unit: unit.to_string() }, at + 2),
+                Some(unit) => (
+                    RolePp::Rate {
+                        unit: unit.to_string(),
+                    },
+                    at + 2,
+                ),
                 None => return Err(unexpected(tokens, at + 1)),
             },
             "before" | "after" | "until" => {
@@ -2072,9 +2226,8 @@ fn parse_roles(
                 // [`MAX_NP_DEPTH`].
                 let end = (at + 1..tokens.len())
                     .find(|&i| {
-                        word_at(tokens, i).is_some_and(|w| {
-                            in_list(&["shall", "must", "should", "may"], w)
-                        })
+                        word_at(tokens, i)
+                            .is_some_and(|w| in_list(&["shall", "must", "should", "may"], w))
                     })
                     .unwrap_or(tokens.len());
                 let clause = parse_clause(&tokens[at + 1..end], depth + 1)?;
@@ -2119,7 +2272,13 @@ fn parse_predicate(
             // stray material.
             let (np, next) =
                 parse_np_group(tokens, pos + 1, ctx, ParseError::EmptyPredicate, depth)?;
-            return Ok((Predicate::Pp { preposition: word.to_string(), np }, next));
+            return Ok((
+                Predicate::Pp {
+                    preposition: word.to_string(),
+                    np,
+                },
+                next,
+            ));
         }
     }
     let mut words: Vec<String> = Vec::new();
@@ -2155,9 +2314,10 @@ fn parse_predicate(
 /// locative prepositions open again; `by` still ends collection): the
 /// whole tail stays flat words, exactly as the legislation reads.
 fn resume_flat_able_predicate(tokens: &[Token], predicate: &mut Predicate, at: &mut usize) {
-    let Predicate::Words { words } = predicate else { return };
-    if !words.last().is_some_and(|w| w.eq_ignore_ascii_case("able")) || !kw_at(tokens, *at, "to")
-    {
+    let Predicate::Words { words } = predicate else {
+        return;
+    };
+    if !words.last().is_some_and(|w| w.eq_ignore_ascii_case("able")) || !kw_at(tokens, *at, "to") {
         return;
     }
     while let Some(word) = word_at(tokens, *at) {
@@ -2182,7 +2342,14 @@ fn parse_comparison(
     };
     let simple = |op: ComparisonOp, measure_pos: usize| -> Result<_, ParseError> {
         let (value, next) = parse_measure(tokens, measure_pos, ctx, depth)?;
-        Ok(Some((Comparison { op, value, upper: None }, next)))
+        Ok(Some((
+            Comparison {
+                op,
+                value,
+                upper: None,
+            },
+            next,
+        )))
     };
     if (word.eq_ignore_ascii_case("greater") || word.eq_ignore_ascii_case("less"))
         && kw_at(tokens, pos + 1, "than")
@@ -2222,7 +2389,11 @@ fn parse_comparison(
             check_between_order(lo, hi)?;
         }
         return Ok(Some((
-            Comparison { op: ComparisonOp::Between, value, upper: Some(upper) },
+            Comparison {
+                op: ComparisonOp::Between,
+                value,
+                upper: Some(upper),
+            },
             next,
         )));
     }
@@ -2254,12 +2425,12 @@ fn parse_core(tokens: &[Token]) -> Result<Core, ParseError> {
         "shall" | "must" | "should" | "may" => parse_deontic(tokens, at, subject),
         "is" | "are" => parse_description(tokens, at, subject),
         "means" => parse_definition(tokens, at, subject),
-        w if in_list(UNSUPPORTED_MODALS, w) => {
-            Err(ParseError::UnsupportedModal { word: pivot.to_string() })
-        }
-        w if in_list(FRAME_KEYWORDS, w) => {
-            Err(ParseError::MidSentenceFrame { keyword: pivot.to_string() })
-        }
+        w if in_list(UNSUPPORTED_MODALS, w) => Err(ParseError::UnsupportedModal {
+            word: pivot.to_string(),
+        }),
+        w if in_list(FRAME_KEYWORDS, w) => Err(ParseError::MidSentenceFrame {
+            keyword: pivot.to_string(),
+        }),
         _ => Err(unexpected(tokens, at)),
     }
 }
@@ -2311,7 +2482,12 @@ fn parse_deontic(tokens: &[Token], at: usize, subject: NpGroup) -> Result<Core, 
     }
     let (vp, next) = parse_vp(tokens, pos, 0)?;
     expect_core_end(tokens, next)?;
-    Ok(Core::Deontic { subject, modal, negated, vp: VpGroup::Single(vp) })
+    Ok(Core::Deontic {
+        subject,
+        modal,
+        negated,
+        vp: VpGroup::Single(vp),
+    })
 }
 
 /// The verb phrases of an `either … or …` alternation (round 6): the slice
@@ -2335,7 +2511,9 @@ fn parse_vp_alternatives(tokens: &[Token]) -> Result<Vec<Vp>, ParseError> {
         if !kw_at(tokens, i, "or") {
             continue;
         }
-        let Ok((first, next)) = parse_vp(&tokens[..i], 0, 0) else { continue };
+        let Ok((first, next)) = parse_vp(&tokens[..i], 0, 0) else {
+            continue;
+        };
         if next != i {
             continue;
         }
@@ -2377,7 +2555,9 @@ fn vp_alternatives_tail(tokens: &[Token]) -> Option<Vec<Vp>> {
         if !kw_at(tokens, i, "or") {
             continue;
         }
-        let Ok((first, next)) = parse_vp(&tokens[..i], 0, 0) else { continue };
+        let Ok((first, next)) = parse_vp(&tokens[..i], 0, 0) else {
+            continue;
+        };
         if next != i {
             continue;
         }
@@ -2395,7 +2575,11 @@ fn vp_alternatives_tail(tokens: &[Token]) -> Option<Vec<Vp>> {
 
 /// `<subject> is/are [always|never] <predicate>`.
 fn parse_description(tokens: &[Token], at: usize, subject: NpGroup) -> Result<Core, ParseError> {
-    let copula = if kw_at(tokens, at, "is") { Copula::Is } else { Copula::Are };
+    let copula = if kw_at(tokens, at, "is") {
+        Copula::Is
+    } else {
+        Copula::Are
+    };
     let mut pos = at + 1;
     let adverb = match word_at(tokens, pos).map(str::to_ascii_lowercase).as_deref() {
         Some("always") => Some(DescriptionAdverb::Always),
@@ -2444,7 +2628,14 @@ fn parse_description(tokens: &[Token], at: usize, subject: NpGroup) -> Result<Co
         (Vec::new(), next)
     };
     expect_core_end(tokens, next)?;
-    Ok(Core::Description { subject, copula, adverb, predicate, agent, roles })
+    Ok(Core::Description {
+        subject,
+        copula,
+        adverb,
+        predicate,
+        agent,
+        roles,
+    })
 }
 
 /// The optional passive-agent phrase after a description's or a copular
@@ -2470,7 +2661,9 @@ fn parse_definition(tokens: &[Token], at: usize, subject: NpGroup) -> Result<Cor
     let term = match subject {
         NpGroup::Single(np) => np,
         NpGroup::Coordinated { conj, .. } => {
-            return Err(ParseError::UnexpectedTokens { token: conj.as_str().to_string() });
+            return Err(ParseError::UnexpectedTokens {
+                token: conj.as_str().to_string(),
+            });
         }
     };
     let rest = &tokens[at + 1..];
@@ -2521,7 +2714,9 @@ fn parse_definiens(tokens: &[Token]) -> Result<Definiens, ParseError> {
     let np_reading = np_reading();
     match np_reading {
         Ok(definiens) => Ok(definiens),
-        Err(np_err) => parse_clause(tokens, 0).map(Definiens::Clause).map_err(|_| np_err),
+        Err(np_err) => parse_clause(tokens, 0)
+            .map(Definiens::Clause)
+            .map_err(|_| np_err),
     }
 }
 
@@ -2530,9 +2725,9 @@ fn parse_definiens(tokens: &[Token]) -> Result<Definiens, ParseError> {
 fn expect_core_end(tokens: &[Token], pos: usize) -> Result<(), ParseError> {
     match word_at(tokens, pos) {
         None if pos >= tokens.len() => Ok(()),
-        Some(w) if in_list(FRAME_KEYWORDS, w) => {
-            Err(ParseError::MidSentenceFrame { keyword: w.to_string() })
-        }
+        Some(w) if in_list(FRAME_KEYWORDS, w) => Err(ParseError::MidSentenceFrame {
+            keyword: w.to_string(),
+        }),
         _ => Err(unexpected(tokens, pos)),
     }
 }
@@ -2546,9 +2741,9 @@ fn parse_frames(tokens: &[Token]) -> Result<(Frames, usize), ParseError> {
     let mut frames = Frames::default();
     let mut at = 0;
     loop {
-        let Some(keyword) = word_at(tokens, at).filter(|w| {
-            in_list(&["where", "while", "when", "if"], w)
-        }) else {
+        let Some(keyword) =
+            word_at(tokens, at).filter(|w| in_list(&["where", "while", "when", "if"], w))
+        else {
             return Ok((frames, at));
         };
         let keyword = keyword.to_string();
@@ -2561,11 +2756,17 @@ fn parse_frames(tokens: &[Token]) -> Result<(Frames, usize), ParseError> {
                     second: keyword,
                 });
             }
-            return Err(ParseError::FrameOrder { keyword, after: trigger.keyword.clone() });
+            return Err(ParseError::FrameOrder {
+                keyword,
+                after: trigger.keyword.clone(),
+            });
         }
         if lower == "where" {
             if let Some(state) = frames.states.last() {
-                return Err(ParseError::FrameOrder { keyword, after: state.keyword.clone() });
+                return Err(ParseError::FrameOrder {
+                    keyword,
+                    after: state.keyword.clone(),
+                });
             }
         }
         // The clause runs to the frame's comma.
@@ -2608,12 +2809,18 @@ fn parse_frames(tokens: &[Token]) -> Result<(Frames, usize), ParseError> {
             "where" => frames.scopes.push(Frame { keyword, clause }),
             "while" => frames.states.push(Frame { keyword, clause }),
             "when" => {
-                frames.trigger =
-                    Some(Trigger { kind: TriggerKind::Event, keyword, clause });
+                frames.trigger = Some(Trigger {
+                    kind: TriggerKind::Event,
+                    keyword,
+                    clause,
+                });
             }
             _ => {
-                frames.trigger =
-                    Some(Trigger { kind: TriggerKind::Contingency, keyword, clause });
+                frames.trigger = Some(Trigger {
+                    kind: TriggerKind::Contingency,
+                    keyword,
+                    clause,
+                });
             }
         }
     }
@@ -2683,7 +2890,13 @@ fn parse_sentence(tokens: &[Token], source: &str) -> Result<Sentence, ParseError
             return Err(ParseError::FrameOnDefinition { keyword });
         }
     }
-    Ok(Sentence { source: source.to_string(), frames, core, exception, purpose })
+    Ok(Sentence {
+        source: source.to_string(),
+        frames,
+        core,
+        exception,
+        purpose,
+    })
 }
 
 /// Split the input into per-sentence slices: a sentence ends at a word whose
@@ -2769,7 +2982,10 @@ mod tests {
 
     #[test]
     fn tokenizer_handles_multibyte_and_lone_punctuation() {
-        assert_eq!(toks("café."), vec![Token::Word("café".into()), Token::Terminator]);
+        assert_eq!(
+            toks("café."),
+            vec![Token::Word("café".into()), Token::Terminator]
+        );
         assert_eq!(toks("."), vec![Token::Terminator]);
         assert_eq!(toks(","), vec![Token::Comma]);
         assert_eq!(toks("×"), vec![Token::Word("×".into())]);
@@ -2778,9 +2994,18 @@ mod tests {
     #[test]
     fn det_forms() {
         assert_eq!(parse_det(&toks("the pump"), 0), Some((Det::The, 1)));
-        assert_eq!(parse_det(&toks("at least 3 nodes"), 0), Some((Det::AtLeast { n: 3 }, 3)));
-        assert_eq!(parse_det(&toks("at most two"), 0), Some((Det::AtMost { n: 2 }, 3)));
-        assert_eq!(parse_det(&toks("exactly 7"), 0), Some((Det::Exactly { n: 7 }, 2)));
+        assert_eq!(
+            parse_det(&toks("at least 3 nodes"), 0),
+            Some((Det::AtLeast { n: 3 }, 3))
+        );
+        assert_eq!(
+            parse_det(&toks("at most two"), 0),
+            Some((Det::AtMost { n: 2 }, 3))
+        );
+        assert_eq!(
+            parse_det(&toks("exactly 7"), 0),
+            Some((Det::Exactly { n: 7 }, 2))
+        );
         // `at` without a bound+number stays open-class.
         assert_eq!(parse_det(&toks("at the door"), 0), None);
         assert_eq!(parse_det(&toks("pump"), 0), None);
@@ -2802,7 +3027,11 @@ mod tests {
         let (group, next) = parse_np_group(&t, 0, NpCtx::Vp, ParseError::EmptySubject, 0).unwrap();
         assert_eq!(next, 4);
         match group {
-            NpGroup::Coordinated { conj: Conj::And, marker: None, items } => {
+            NpGroup::Coordinated {
+                conj: Conj::And,
+                marker: None,
+                items,
+            } => {
                 assert_eq!(items[0].head, "TraceContext");
                 assert_eq!(items[1].head, "propagators");
                 assert_eq!(items[1].modifiers, vec!["Baggage".to_string()]);
@@ -2834,7 +3063,10 @@ mod tests {
             p,
             Predicate::Comparison(Comparison {
                 op: ComparisonOp::GreaterThan,
-                value: Measure::Quantity { number: "zero".into(), unit: None },
+                value: Measure::Quantity {
+                    number: "zero".into(),
+                    unit: None
+                },
                 upper: None,
             })
         );
@@ -2844,15 +3076,25 @@ mod tests {
             p,
             Predicate::Comparison(Comparison {
                 op: ComparisonOp::Between,
-                value: Measure::Quantity { number: "5".into(), unit: None },
-                upper: Some(Measure::Quantity { number: "30".into(), unit: Some("seconds".into()) }),
+                value: Measure::Quantity {
+                    number: "5".into(),
+                    unit: None
+                },
+                upper: Some(Measure::Quantity {
+                    number: "30".into(),
+                    unit: Some("seconds".into())
+                }),
             })
         );
     }
 
     fn one(input: &str) -> Sentence {
         let spec = parse(input).unwrap();
-        assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+        assert_eq!(
+            spec.sentences.len(),
+            1,
+            "expected one sentence in {input:?}"
+        );
         spec.sentences.into_iter().next().unwrap()
     }
 
@@ -2862,7 +3104,12 @@ mod tests {
         assert_eq!(s.source, "The pump shall stop.");
         assert!(s.frames.is_empty());
         match &s.core {
-            Core::Deontic { subject, modal: Modal::Shall, negated: false, vp } => {
+            Core::Deontic {
+                subject,
+                modal: Modal::Shall,
+                negated: false,
+                vp,
+            } => {
                 assert_eq!(subject.heads(), vec!["pump"]);
                 assert_eq!(vp.single().unwrap().verb, "stop");
                 assert!(vp.single().unwrap().object.is_none());
@@ -2880,7 +3127,10 @@ mod tests {
         assert_eq!(trigger.clause.items[0].subject.heads(), vec!["order"]);
         assert!(matches!(
             &trigger.clause.items[0].body,
-            ClauseBody::Copular { copula: ClauseCopula::Is, .. }
+            ClauseBody::Copular {
+                copula: ClauseCopula::Is,
+                ..
+            }
         ));
     }
 
@@ -2901,19 +3151,29 @@ mod tests {
     fn frame_errors() {
         assert_eq!(
             parse("When the order is submitted the system shall record the total."),
-            Err(ParseError::UnterminatedFrame { keyword: "When".into() })
+            Err(ParseError::UnterminatedFrame {
+                keyword: "When".into()
+            })
         );
         assert_eq!(
             parse("When , the pump shall stop."),
-            Err(ParseError::EmptyFrame { keyword: "When".into() })
+            Err(ParseError::EmptyFrame {
+                keyword: "When".into()
+            })
         );
         assert_eq!(
             parse("When the order ships, while the engine runs, the pump shall stop."),
-            Err(ParseError::FrameOrder { keyword: "while".into(), after: "When".into() })
+            Err(ParseError::FrameOrder {
+                keyword: "while".into(),
+                after: "When".into()
+            })
         );
         assert_eq!(
             parse("When x occurs, if y occurs, the pump shall stop."),
-            Err(ParseError::MultipleTriggers { first: "When".into(), second: "if".into() })
+            Err(ParseError::MultipleTriggers {
+                first: "When".into(),
+                second: "if".into()
+            })
         );
         assert_eq!(
             parse("While the engine is running, then the pump shall stop."),
@@ -2955,7 +3215,9 @@ mod tests {
         }
         assert_eq!(
             parse("While the engine is running, a workspace means a shared folder."),
-            Err(ParseError::FrameOnDefinition { keyword: "While".into() })
+            Err(ParseError::FrameOnDefinition {
+                keyword: "While".into()
+            })
         );
     }
 
@@ -2967,7 +3229,10 @@ mod tests {
         assert_eq!(parse("The pump quickly."), Err(ParseError::MissingPivot));
         assert_eq!(parse("The shall run."), Err(ParseError::EmptySubject));
         assert_eq!(parse("The pump shall."), Err(ParseError::EmptyVp));
-        assert_eq!(parse("The client may not retry."), Err(ParseError::AmbiguousModal));
+        assert_eq!(
+            parse("The client may not retry."),
+            Err(ParseError::AmbiguousModal)
+        );
         assert_eq!(
             parse("The client can retry."),
             Err(ParseError::UnsupportedModal { word: "can".into() })
@@ -2978,7 +3243,9 @@ mod tests {
         );
         assert_eq!(
             parse("The tracing library should default export to X when no endpoint is configured."),
-            Err(ParseError::MidSentenceFrame { keyword: "when".into() })
+            Err(ParseError::MidSentenceFrame {
+                keyword: "when".into()
+            })
         );
     }
 
@@ -2992,7 +3259,15 @@ mod tests {
         }
         let t = toks("frozen");
         let (p, _) = parse_predicate(&t, 0, NpCtx::Plain, 0).unwrap();
-        assert_eq!(p, Predicate::Words { words: vec!["frozen".into()] });
-        assert_eq!(parse_predicate(&toks(""), 0, NpCtx::Plain, 0), Err(ParseError::EmptyPredicate));
+        assert_eq!(
+            p,
+            Predicate::Words {
+                words: vec!["frozen".into()]
+            }
+        );
+        assert_eq!(
+            parse_predicate(&toks(""), 0, NpCtx::Plain, 0),
+            Err(ParseError::EmptyPredicate)
+        );
     }
 }

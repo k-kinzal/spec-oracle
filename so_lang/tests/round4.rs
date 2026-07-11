@@ -17,7 +17,11 @@ use so_lang::semantics::{
 /// Parse an input expected to hold exactly one sentence.
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -37,7 +41,11 @@ fn render_round_trips(s: &Sentence) {
         (&r.frames, &r.core, &r.exception, &r.purpose),
         "render {rendered:?} must re-parse to the same tree"
     );
-    assert_eq!(r.render(), rendered, "render must be a fixpoint for {rendered:?}");
+    assert_eq!(
+        r.render(),
+        rendered,
+        "render must be a fixpoint for {rendered:?}"
+    );
 }
 
 // ====================================================================================
@@ -62,7 +70,14 @@ fn clause_final_ly_word_is_manner_not_the_verb() {
     let s = one("When the export completes successfully, the daemon shall archive the export.");
     let trigger = s.frames.trigger.as_ref().unwrap();
     match &trigger.clause.items[0].body {
-        ClauseBody::Verbal { verb, particle, manner, object, roles, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            particle,
+            manner,
+            object,
+            roles,
+            ..
+        } => {
             assert_eq!(verb, "completes");
             assert_eq!(particle, &None);
             assert_eq!(manner, &vec!["successfully".to_string()]);
@@ -91,7 +106,13 @@ fn manner_composes_with_particle_and_deadline() {
     let s = one("When the user logs out quickly before the timer expires, the session shall end.");
     let trigger = s.frames.trigger.as_ref().unwrap();
     match &trigger.clause.items[0].body {
-        ClauseBody::Verbal { verb, particle, manner, roles, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            particle,
+            manner,
+            roles,
+            ..
+        } => {
             assert_eq!(verb, "logs");
             assert_eq!(particle.as_deref(), Some("out"));
             assert_eq!(manner, &vec!["quickly".to_string()]);
@@ -158,15 +179,25 @@ fn juxtaposed_manner_words_only_a_conjunction_ends_the_run() {
     // place in the grammar (legislated: `quickly and safely` unsupported).
     assert_eq!(
         parse("The pump shall stop quickly and safely."),
-        Err(ParseError::UnexpectedTokens { token: "and".into() })
+        Err(ParseError::UnexpectedTokens {
+            token: "and".into()
+        })
     );
 }
 
 #[test]
 fn manner_reaches_the_skeleton_without_entering_words() {
     let sk = skeleton(&one("The pump shall stop Immediately.")).unwrap();
-    assert_eq!(sk.atoms[0].words, vec!["stop"], "words do not absorb manner");
-    assert_eq!(sk.atoms[0].manner, vec!["immediately"], "manner is lowercased");
+    assert_eq!(
+        sk.atoms[0].words,
+        vec!["stop"],
+        "words do not absorb manner"
+    );
+    assert_eq!(
+        sk.atoms[0].manner,
+        vec!["immediately"],
+        "manner is lowercased"
+    );
     assert!(sk.atoms[0].objects.is_empty());
     // A manner-free atom differs from the mannered one exactly in `manner`.
     let plain = skeleton(&one("The pump shall stop.")).unwrap();
@@ -190,12 +221,18 @@ fn manner_serializes_in_tree_and_skeleton() {
     assert_eq!(vp.particle.as_deref(), Some("out"));
     assert_eq!(vp.manner, vec!["immediately"]);
     let json = serde_json::to_value(&s).unwrap();
-    assert_eq!(json["core"]["vp"]["manner"], serde_json::json!(["immediately"]));
+    assert_eq!(
+        json["core"]["vp"]["manner"],
+        serde_json::json!(["immediately"])
+    );
     let back: Sentence = serde_json::from_value(json).unwrap();
     assert_eq!(back, s);
     let sk = skeleton(&s).unwrap();
     let json = serde_json::to_value(&sk).unwrap();
-    assert_eq!(json["atoms"][0]["manner"], serde_json::json!(["immediately"]));
+    assert_eq!(
+        json["atoms"][0]["manner"],
+        serde_json::json!(["immediately"])
+    );
     render_round_trips(&s);
 }
 
@@ -206,7 +243,9 @@ fn manner_serializes_in_tree_and_skeleton() {
 /// The behavior atom inside a formula that must be a bare (unnegated) atom.
 fn behavior(f: &Formula) -> &BehaviorAtom {
     match f {
-        Formula::Atom { atom: AtomRef::Behavior { behavior } } => behavior,
+        Formula::Atom {
+            atom: AtomRef::Behavior { behavior },
+        } => behavior,
         other => panic!("expected bare behavior atom, got {other:?}"),
     }
 }
@@ -350,15 +389,23 @@ fn anchors_reparse_to_the_digested_material() {
         other => panic!("expected conditional guarantee, got {other:?}"),
     };
     let b = behavior(claim);
-    assert_eq!(b.source, "the daemon shall alert the operator within 5 seconds");
+    assert_eq!(
+        b.source,
+        "the daemon shall alert the operator within 5 seconds"
+    );
     let reparsed = one(&format!("{}.", b.source));
-    assert_eq!(reparsed.core, s.core, "the anchor re-parses to the digested core");
+    assert_eq!(
+        reparsed.core, s.core,
+        "the anchor re-parses to the digested core"
+    );
     // The guard anchor: the clause render — re-parses (as a frame clause)
     // to the same clause.
     let app = applicability(&s);
     let guard_source = match &app {
         Formula::And { items } => match &items[0] {
-            Formula::Atom { atom: AtomRef::Guard { source, .. } } => source.clone(),
+            Formula::Atom {
+                atom: AtomRef::Guard { source, .. },
+            } => source.clone(),
             other => panic!("expected guard atom, got {other:?}"),
         },
         other => panic!("expected conjunction, got {other:?}"),
@@ -376,7 +423,9 @@ fn anchors_reparse_to_the_digested_material() {
 fn permissions_produce_admissibility_atoms() {
     let f = claim_formula(&one("The client may retry.")).unwrap();
     match &f {
-        Formula::Atom { atom: AtomRef::Admissibility { behavior } } => {
+        Formula::Atom {
+            atom: AtomRef::Admissibility { behavior },
+        } => {
             assert_eq!(behavior.subject.head, "client");
             assert_eq!(behavior.atom.words, vec!["retry"]);
             assert_eq!(behavior.force, None);
@@ -454,7 +503,9 @@ fn paired_replaces_the_provisional_top_assumption() {
             assert_eq!(items[0], paired.guarantee);
             assert_eq!(
                 items[1],
-                Formula::Not { inner: Box::new(paired.assumption.clone()) }
+                Formula::Not {
+                    inner: Box::new(paired.assumption.clone())
+                }
             );
         }
         other => panic!("expected saturated disjunction, got {other:?}"),
@@ -471,7 +522,12 @@ fn paired_replaces_the_provisional_top_assumption() {
 fn able_to_parses_as_a_capability_predicate() {
     let s = one("The client is able to retry.");
     match &s.core {
-        Core::Description { copula: Copula::Is, adverb: None, predicate, .. } => match predicate {
+        Core::Description {
+            copula: Copula::Is,
+            adverb: None,
+            predicate,
+            ..
+        } => match predicate {
             Predicate::AbleTo { vp } => {
                 assert_eq!(vp.verb, "retry");
                 assert!(vp.object.is_none());
@@ -507,7 +563,10 @@ fn able_to_parses_as_a_capability_predicate() {
 fn able_to_carries_the_full_verb_phrase_grammar() {
     let s = one("The daemon is able to shut down gracefully within 5 seconds.");
     match &s.core {
-        Core::Description { predicate: Predicate::AbleTo { vp }, .. } => {
+        Core::Description {
+            predicate: Predicate::AbleTo { vp },
+            ..
+        } => {
             assert_eq!(vp.verb, "shut");
             assert_eq!(vp.particle.as_deref(), Some("down"));
             assert_eq!(vp.manner, vec!["gracefully"]);
@@ -526,7 +585,11 @@ fn no_subject_denies_the_capability() {
     let s = one("No client is able to retry.");
     let sk = skeleton(&s).unwrap();
     assert_eq!(sk.polarity, Polarity::Negative);
-    assert_eq!(sk.subject.quantifier, Quantifier::Negative, "the index keeps the surface `no`");
+    assert_eq!(
+        sk.subject.quantifier,
+        Quantifier::Negative,
+        "the index keeps the surface `no`"
+    );
     // The formula: Not(atom{client, Universal}) — an ordinary Behavior atom
     // (a capability claim is a descriptive behavior property).
     let f = claim_formula(&s).unwrap();
@@ -553,7 +616,10 @@ fn able_to_needs_the_exact_postcopular_position() {
     // `can` remains rejected; the hint now names the faithful rewrite.
     let err = parse("The client can retry.").unwrap_err();
     assert_eq!(err, ParseError::UnsupportedModal { word: "can".into() });
-    assert!(err.to_string().contains("is able to"), "hint mentions the rewrite: {err}");
+    assert!(
+        err.to_string().contains("is able to"),
+        "hint mentions the rewrite: {err}"
+    );
     // An empty capability is an empty verb phrase.
     assert_eq!(parse("The client is able to."), Err(ParseError::EmptyVp));
 }
@@ -606,7 +672,10 @@ fn until_works_in_guard_clauses_and_respects_the_depth_budget() {
     // The same depth accounting as before/after: adversarial nesting is an
     // error, not an abort.
     let deep = format!("The pump shall run{}.", " until the pump runs".repeat(70));
-    assert!(matches!(parse(&deep), Err(ParseError::PhraseTooDeep { .. })));
+    assert!(matches!(
+        parse(&deep),
+        Err(ParseError::PhraseTooDeep { .. })
+    ));
 }
 
 #[test]

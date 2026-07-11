@@ -22,7 +22,11 @@ fn one(input: &str) -> so_lang::ast::Sentence {
 #[test]
 fn passive_deontic_responsible_subject_is_the_agent() {
     let s = one("Each request shall be logged by the daemon.");
-    assert_eq!(subject_keys(&s), vec!["request"], "the grammatical (patient) view is unchanged");
+    assert_eq!(
+        subject_keys(&s),
+        vec!["request"],
+        "the grammatical (patient) view is unchanged"
+    );
     assert_eq!(responsible_subject_keys(&s), vec!["daemon"]);
 }
 
@@ -87,19 +91,32 @@ fn definition_has_no_responsible_subject() {
 #[test]
 fn proven_recommended_source_never_forms_the_assumption() {
     let target = one("The daemon shall persist the Node.");
-    let recommended =
-        AssumptionSource::for_guarantee(
-            EdgeKind::OccurrenceReliance,
-            &one("The client should send the Node."),
-            &target,
-        )
-        .unwrap();
-    assert!(recommended.proven, "the default reliance is self-entailment — proven");
-    assert!(!recommended.contract_forming(), "recommended: candidate only, never in A");
+    let recommended = AssumptionSource::for_guarantee(
+        EdgeKind::OccurrenceReliance,
+        &one("The client should send the Node."),
+        &target,
+    )
+    .unwrap();
+    assert!(
+        recommended.proven,
+        "the default reliance is self-entailment — proven"
+    );
+    assert!(
+        !recommended.contract_forming(),
+        "recommended: candidate only, never in A"
+    );
     let contract = contract_formula(&target).unwrap();
     let paired = contract.paired(std::slice::from_ref(&recommended));
-    assert_eq!(paired.assumption, Formula::Top, "A is unchanged by a recommended source");
-    assert_eq!(paired.sources.len(), 1, "the candidate is retained, visibly recommended");
+    assert_eq!(
+        paired.assumption,
+        Formula::Top,
+        "A is unchanged by a recommended source"
+    );
+    assert_eq!(
+        paired.sources.len(),
+        1,
+        "the candidate is retained, visibly recommended"
+    );
 }
 
 /// A binding source still forms A — with an explicitly selected reliance
@@ -142,7 +159,10 @@ fn description_source_still_forms_a() {
     let queue = one("The queue is empty.");
     let default =
         AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &queue, &target).unwrap();
-    assert!(!default.contract_forming(), "default reliance: candidate only (round 11)");
+    assert!(
+        !default.contract_forming(),
+        "default reliance: candidate only (round 11)"
+    );
     let description = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::OccurrenceReliance,
         &queue,
@@ -167,14 +187,20 @@ fn guard_clause(sentence: &so_lang::ast::Sentence) -> &so_lang::ast::Clause {
     if let Some(frame) = sentence.frames.states.first() {
         return &frame.clause.items[0];
     }
-    sentence.exception.as_ref().expect("a guard or exception clause")
+    sentence
+        .exception
+        .as_ref()
+        .expect("a guard or exception clause")
 }
 
 fn verbal(clause: &so_lang::ast::Clause) -> (&str, Option<&str>, Option<&so_lang::ast::NpGroup>) {
     match &clause.body {
-        so_lang::ast::ClauseBody::Verbal { verb, particle, object, .. } => {
-            (verb.as_str(), particle.as_deref(), object.as_ref())
-        }
+        so_lang::ast::ClauseBody::Verbal {
+            verb,
+            particle,
+            object,
+            ..
+        } => (verb.as_str(), particle.as_deref(), object.as_ref()),
         other => panic!("expected a verbal body, got {other:?}"),
     }
 }
@@ -243,9 +269,17 @@ fn svo_particle_interaction() {
 #[test]
 fn svo_length_one_runs_unchanged() {
     for (text, subject_head, verb) in [
-        ("When a session expires, the system shall close the session.", "session", "expires"),
+        (
+            "When a session expires, the system shall close the session.",
+            "session",
+            "expires",
+        ),
         ("While the pump runs, the fan shall run.", "pump", "runs"),
-        ("When no backup completes, the operator shall act.", "backup", "completes"),
+        (
+            "When no backup completes, the operator shall act.",
+            "backup",
+            "completes",
+        ),
     ] {
         let s = one(text);
         let clause = guard_clause(&s);
@@ -308,7 +342,11 @@ fn svo_render_round_trips() {
         // The canonical render keeps every word (case-insensitively: a
         // sentence-initial determiner renders lowercased).
         assert!(rendered.eq_ignore_ascii_case(text), "{rendered} vs {text}");
-        assert_eq!(one(&rendered).render(), rendered, "re-parse is a fixed point");
+        assert_eq!(
+            one(&rendered).render(),
+            rendered,
+            "re-parse is a fixed point"
+        );
     }
 }
 
@@ -327,7 +365,9 @@ fn shared_key_source_constructs_and_stays_out_of_a() {
     assert_eq!(shared.subject_relation, SubjectRelation::SharedKeys);
     assert!(shared.proven, "default reliance is self-entailment");
     assert!(!shared.contract_forming(), "shared keys never form A");
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&shared));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&shared));
     assert_eq!(paired.assumption, Formula::Top);
     assert_eq!(paired.sources.len(), 1, "retained as a visible candidate");
 }
@@ -341,7 +381,10 @@ fn disjoint_key_source_forms_a() {
     let default =
         AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &source, &target).unwrap();
     assert_eq!(default.subject_relation, SubjectRelation::DisjointKeys);
-    assert!(!default.contract_forming(), "default reliance: candidate only (round 11)");
+    assert!(
+        !default.contract_forming(),
+        "default reliance: candidate only (round 11)"
+    );
     let ok = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::OccurrenceReliance,
         &source,
@@ -350,7 +393,9 @@ fn disjoint_key_source_forms_a() {
     )
     .unwrap();
     assert!(ok.contract_forming());
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&ok));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&ok));
     assert_eq!(paired.assumption, ok.relied);
 }
 
@@ -413,24 +458,41 @@ fn subject_relation_serde_default() {
 #[test]
 fn guard_atoms_carry_their_frame_role() {
     let role_of = |text: &str| match applicability(&one(text)) {
-        Formula::Atom { atom: AtomRef::Guard { role, .. } } => role,
+        Formula::Atom {
+            atom: AtomRef::Guard { role, .. },
+        } => role,
         Formula::Not { inner } => match *inner {
-            Formula::Atom { atom: AtomRef::Guard { role, .. } } => role,
+            Formula::Atom {
+                atom: AtomRef::Guard { role, .. },
+            } => role,
             other => panic!("expected a guard atom, got {other:?}"),
         },
         other => panic!("expected a guard atom, got {other:?}"),
     };
-    assert_eq!(role_of("Where the mode is active, the pump shall run."), GuardRole::Scope);
-    assert_eq!(role_of("While the pump runs, the fan shall run."), GuardRole::State);
+    assert_eq!(
+        role_of("Where the mode is active, the pump shall run."),
+        GuardRole::Scope
+    );
+    assert_eq!(
+        role_of("While the pump runs, the fan shall run."),
+        GuardRole::State
+    );
     assert_eq!(
         role_of("When the order ships, the fan shall run."),
-        GuardRole::Trigger { kind: TriggerKind::Event }
+        GuardRole::Trigger {
+            kind: TriggerKind::Event
+        }
     );
     assert_eq!(
         role_of("If the order ships, then the fan shall run."),
-        GuardRole::Trigger { kind: TriggerKind::Contingency }
+        GuardRole::Trigger {
+            kind: TriggerKind::Contingency
+        }
     );
-    assert_eq!(role_of("The fan shall run, unless the order ships."), GuardRole::Exception);
+    assert_eq!(
+        role_of("The fan shall run, unless the order ships."),
+        GuardRole::Exception
+    );
 }
 
 /// The motivating false overlap: `While the pump runs,` and `When the pump
@@ -473,7 +535,10 @@ fn exception_role_atoms_are_distinct_from_state_atoms() {
     let Formula::Not { inner } = exception else {
         panic!("an exception applicability is a negation");
     };
-    assert_ne!(state, *inner, "same words, different roles — different atoms");
+    assert_ne!(
+        state, *inner,
+        "same words, different roles — different atoms"
+    );
 }
 
 /// The round-7 vacuous-region gate survives role identity: a trigger equal
@@ -500,7 +565,10 @@ fn trigger_equal_to_its_own_exception_still_asserts_nothing() {
 fn guard_role_serde_shapes() {
     let f = applicability(&one("When the order ships, the fan shall run."));
     let json = serde_json::to_value(&f).unwrap();
-    assert_eq!(json["atom"]["role"], serde_json::json!({ "kind": "trigger", "trigger": "event" }));
+    assert_eq!(
+        json["atom"]["role"],
+        serde_json::json!({ "kind": "trigger", "trigger": "event" })
+    );
     let back: Formula = serde_json::from_value(json).unwrap();
     assert_eq!(back, f);
     // Legacy: no role field → State, documented as the pre-round-10 reading.
@@ -508,7 +576,9 @@ fn guard_role_serde_shapes() {
     legacy["atom"].as_object_mut().unwrap().remove("role");
     let back: Formula = serde_json::from_value(legacy).unwrap();
     match back {
-        Formula::Atom { atom: AtomRef::Guard { role, .. } } => {
+        Formula::Atom {
+            atom: AtomRef::Guard { role, .. },
+        } => {
             assert_eq!(role, GuardRole::State);
         }
         other => panic!("expected a guard atom, got {other:?}"),

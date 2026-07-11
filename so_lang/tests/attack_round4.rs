@@ -32,7 +32,11 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 /// Parse an input expected to hold exactly one sentence.
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -57,7 +61,11 @@ fn render_round_trips(s: &Sentence) {
         (&r.frames, &r.core, &r.exception, &r.purpose),
         "render {rendered:?} must re-parse to the same tree"
     );
-    assert_eq!(r.render(), rendered, "render must be a fixpoint for {rendered:?}");
+    assert_eq!(
+        r.render(),
+        rendered,
+        "render must be a fixpoint for {rendered:?}"
+    );
 }
 
 /// Every behavior/admissibility atom in a formula, with its negation flag and
@@ -65,13 +73,15 @@ fn render_round_trips(s: &Sentence) {
 fn behavior_atoms(f: &Formula) -> Vec<(bool, bool, &BehaviorAtom)> {
     fn walk<'a>(f: &'a Formula, neg: bool, out: &mut Vec<(bool, bool, &'a BehaviorAtom)>) {
         match f {
-            Formula::Atom { atom: AtomRef::Behavior { behavior } } => {
-                out.push((neg, false, behavior))
-            }
-            Formula::Atom { atom: AtomRef::Admissibility { behavior } } => {
-                out.push((neg, true, behavior))
-            }
-            Formula::Atom { atom: AtomRef::Guard { .. } } => {}
+            Formula::Atom {
+                atom: AtomRef::Behavior { behavior },
+            } => out.push((neg, false, behavior)),
+            Formula::Atom {
+                atom: AtomRef::Admissibility { behavior },
+            } => out.push((neg, true, behavior)),
+            Formula::Atom {
+                atom: AtomRef::Guard { .. },
+            } => {}
             Formula::And { items } | Formula::Or { items } => {
                 for item in items {
                     walk(item, neg, out);
@@ -90,9 +100,9 @@ fn behavior_atoms(f: &Formula) -> Vec<(bool, bool, &BehaviorAtom)> {
 fn guard_atoms(f: &Formula) -> Vec<(bool, &ClauseSkeleton, &str)> {
     fn walk<'a>(f: &'a Formula, neg: bool, out: &mut Vec<(bool, &'a ClauseSkeleton, &'a str)>) {
         match f {
-            Formula::Atom { atom: AtomRef::Guard { clause, source, .. } } => {
-                out.push((neg, clause, source))
-            }
+            Formula::Atom {
+                atom: AtomRef::Guard { clause, source, .. },
+            } => out.push((neg, clause, source)),
             Formula::Atom { .. } => {}
             Formula::And { items } | Formula::Or { items } => {
                 for item in items {
@@ -109,7 +119,9 @@ fn guard_atoms(f: &Formula) -> Vec<(bool, &ClauseSkeleton, &str)> {
 }
 
 fn not(inner: Formula) -> Formula {
-    Formula::Not { inner: Box::new(inner) }
+    Formula::Not {
+        inner: Box::new(inner),
+    }
 }
 
 // ====================================================================================
@@ -124,7 +136,10 @@ fn bare_ly_object_without_determiner_is_swept_into_manner_and_backticks_restore_
     let vp = deontic_vp(&s);
     assert_eq!(vp.verb, "record");
     assert_eq!(vp.manner, vec!["supply"]);
-    assert!(vp.object.is_none(), "bare `supply` is (documented) manner, not the object");
+    assert!(
+        vp.object.is_none(),
+        "bare `supply` is (documented) manner, not the object"
+    );
     render_round_trips(&s);
 
     let s = one("The depot shall record `supply`.");
@@ -186,7 +201,13 @@ fn clause_final_verb_guard_takes_trailing_ly_words_as_manner() {
     let s = one("When the export completes successfully, the system shall log the event.");
     let trigger = s.frames.trigger.as_ref().unwrap();
     match &trigger.clause.items[0].body {
-        ClauseBody::Verbal { verb, manner, object, roles, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            manner,
+            object,
+            roles,
+            ..
+        } => {
             assert_eq!(verb, "completes");
             assert_eq!(manner, &vec!["successfully".to_string()]);
             assert!(object.is_none());
@@ -202,7 +223,12 @@ fn manner_between_clause_verb_and_role_opener() {
     let s = one("When the pump stops immediately at the depot, the alarm shall sound.");
     let trigger = s.frames.trigger.as_ref().unwrap();
     match &trigger.clause.items[0].body {
-        ClauseBody::Verbal { verb, manner, roles, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            manner,
+            roles,
+            ..
+        } => {
             assert_eq!(verb, "stops");
             assert_eq!(manner, &vec!["immediately".to_string()]);
             assert!(matches!(roles[0], RolePp::Location { .. }));
@@ -309,7 +335,9 @@ fn multiple_juxtaposed_manner_words_and_conjunction_ends_the_run() {
     // ends the manner run and the leftover is diagnosed.
     assert_eq!(
         parse("The daemon shall stop quickly and safely."),
-        Err(ParseError::UnexpectedTokens { token: "and".into() })
+        Err(ParseError::UnexpectedTokens {
+            token: "and".into()
+        })
     );
 }
 
@@ -325,7 +353,10 @@ fn manner_particle_and_roles_ordering() {
 
     let s = one("The daemon shall shut down gracefully within 5 seconds.");
     let vp = deontic_vp(&s);
-    assert_eq!((vp.verb.as_str(), vp.particle.as_deref()), ("shut", Some("down")));
+    assert_eq!(
+        (vp.verb.as_str(), vp.particle.as_deref()),
+        ("shut", Some("down"))
+    );
     assert_eq!(vp.manner, vec!["gracefully"]);
     render_round_trips(&s);
 
@@ -360,7 +391,10 @@ fn manner_before_trailing_particle_leaves_the_particle_as_object() {
     render_round_trips(&s);
     let canonical = one("The daemon shall shut down gracefully.");
     assert_eq!(deontic_vp(&canonical), vp);
-    assert_eq!(skeleton(&s).unwrap().atoms[0], skeleton(&canonical).unwrap().atoms[0]);
+    assert_eq!(
+        skeleton(&s).unwrap().atoms[0],
+        skeleton(&canonical).unwrap().atoms[0]
+    );
 }
 
 #[test]
@@ -376,7 +410,10 @@ fn manner_casing_is_preserved_in_the_tree_and_lowercased_in_digests() {
     // Guard digests lowercase manner too.
     let s = one("When the export completes SUCCESSFULLY, the system shall log the event.");
     let k = skeleton(&s).unwrap();
-    assert_eq!(k.guards.trigger.as_ref().unwrap().clauses[0].manner, vec!["successfully"]);
+    assert_eq!(
+        k.guards.trigger.as_ref().unwrap().clauses[0].manner,
+        vec!["successfully"]
+    );
 }
 
 #[test]
@@ -391,7 +428,11 @@ fn multibyte_words_ending_in_ly_are_never_manner_and_never_panic() {
         let s = one(input);
         let vp = deontic_vp(&s);
         assert!(vp.manner.is_empty(), "in {input:?}");
-        assert_eq!(vp.object.as_ref().unwrap().heads(), vec![head], "in {input:?}");
+        assert_eq!(
+            vp.object.as_ref().unwrap().heads(),
+            vec![head],
+            "in {input:?}"
+        );
         render_round_trips(&s);
     }
 }
@@ -451,7 +492,10 @@ fn and_coordination_builds_a_conjunction_of_per_item_atoms() {
 
 #[test]
 fn or_and_marker_shapes() {
-    assert!(matches!(claim("The pump or the valve shall stop."), Formula::Or { .. }));
+    assert!(matches!(
+        claim("The pump or the valve shall stop."),
+        Formula::Or { .. }
+    ));
     // Markers do not change the logic: `both … and` conjoins exactly as the
     // unmarked group, `either … or` disjoins.
     let marked = claim("Both the pump and the valve shall stop.");
@@ -539,8 +583,14 @@ fn mixed_no_coordination_must_not_negate_the_plain_item() {
     // `no`), so a sibling's `no` never leaks onto a plain item.
     let f = claim("No pump and the valve shall run.");
     let atoms = behavior_atoms(&f);
-    let pump = atoms.iter().find(|(_, _, b)| b.subject.head == "pump").unwrap();
-    let valve = atoms.iter().find(|(_, _, b)| b.subject.head == "valve").unwrap();
+    let pump = atoms
+        .iter()
+        .find(|(_, _, b)| b.subject.head == "pump")
+        .unwrap();
+    let valve = atoms
+        .iter()
+        .find(|(_, _, b)| b.subject.head == "valve")
+        .unwrap();
     assert!(pump.0, "the `no pump` atom is negated");
     assert!(!valve.0, "the `the valve` atom must NOT be negated");
     assert_eq!(pump.2.subject.quantifier, Quantifier::Universal);
@@ -557,9 +607,18 @@ fn mixed_no_coordination_with_a_claim_site_not_composes_per_item() {
     // universal restrictor (∀p run(p)); valve: negated (¬run(valve)).
     let f = claim("No pump and the valve shall not run.");
     let atoms = behavior_atoms(&f);
-    let pump = atoms.iter().find(|(_, _, b)| b.subject.head == "pump").unwrap();
-    let valve = atoms.iter().find(|(_, _, b)| b.subject.head == "valve").unwrap();
-    assert!(!pump.0, "`no pump shall not run` composes to an un-negated universal atom");
+    let pump = atoms
+        .iter()
+        .find(|(_, _, b)| b.subject.head == "pump")
+        .unwrap();
+    let valve = atoms
+        .iter()
+        .find(|(_, _, b)| b.subject.head == "valve")
+        .unwrap();
+    assert!(
+        !pump.0,
+        "`no pump shall not run` composes to an un-negated universal atom"
+    );
     assert!(valve.0, "`the valve shall not run` stays negated");
     // The anchors carry each item's surface sites, so re-deriving a claim
     // formula from an anchor reproduces exactly that item's sub-formula.
@@ -576,7 +635,10 @@ fn coordination_formula_serde_shape() {
     let atom = &v["items"][0]["inner"]["atom"];
     assert_eq!(atom["kind"], "behavior");
     assert_eq!(atom["behavior"]["subject"]["head"], "pump");
-    assert_eq!(atom["behavior"]["subject"]["quantifier"]["kind"], "definite");
+    assert_eq!(
+        atom["behavior"]["subject"]["quantifier"]["kind"],
+        "definite"
+    );
     assert_eq!(atom["behavior"]["source"], "the pump shall not run");
     // Round trip.
     let back: Formula = serde_json::from_value(v).unwrap();
@@ -592,7 +654,9 @@ fn no_subject_normalizes_to_universal_under_exactly_one_negation() {
     let f = claim("No daemon shall sleep.");
     match &f {
         Formula::Not { inner } => match inner.as_ref() {
-            Formula::Atom { atom: AtomRef::Behavior { behavior } } => {
+            Formula::Atom {
+                atom: AtomRef::Behavior { behavior },
+            } => {
                 assert_eq!(behavior.subject.quantifier, Quantifier::Universal);
                 assert_eq!(behavior.subject.head, "daemon");
                 assert_eq!(behavior.atom.words, vec!["sleep"]);
@@ -642,16 +706,28 @@ fn skeleton_keeps_the_surface_negative_quantifier_the_formula_does_not() {
     // The pinned index/logic split.
     let s = one("No daemon shall sleep.");
     let k = skeleton(&s).unwrap();
-    assert_eq!(k.subject.quantifier, Quantifier::Negative, "skeleton = surface index");
+    assert_eq!(
+        k.subject.quantifier,
+        Quantifier::Negative,
+        "skeleton = surface index"
+    );
     assert_eq!(k.polarity, Polarity::Negative);
     let f = claim_formula(&s).unwrap();
     let (_, _, b) = behavior_atoms(&f)[0];
-    assert_eq!(b.subject.quantifier, Quantifier::Universal, "formula = normalized logic");
+    assert_eq!(
+        b.subject.quantifier,
+        Quantifier::Universal,
+        "formula = normalized logic"
+    );
 
     let s = one("No request shall not be logged.");
     let k = skeleton(&s).unwrap();
     assert_eq!(k.subject.quantifier, Quantifier::Negative);
-    assert_eq!(k.polarity, Polarity::Affirmative, "combined polarity XORs the two sites");
+    assert_eq!(
+        k.polarity,
+        Polarity::Affirmative,
+        "combined polarity XORs the two sites"
+    );
 }
 
 // ====================================================================================
@@ -685,10 +761,18 @@ fn every_behavior_anchor_reparses_to_the_same_atom() {
         assert!(!atoms.is_empty(), "{input:?} must yield atoms");
         for (neg, adm, behavior) in atoms {
             let reparsed = claim_formula(&one(&behavior.source)).unwrap_or_else(|| {
-                panic!("anchor {:?} of {input:?} must have a claim formula", behavior.source)
+                panic!(
+                    "anchor {:?} of {input:?} must have a claim formula",
+                    behavior.source
+                )
             });
             let ratoms = behavior_atoms(&reparsed);
-            assert_eq!(ratoms.len(), 1, "anchor {:?} is one atom's material", behavior.source);
+            assert_eq!(
+                ratoms.len(),
+                1,
+                "anchor {:?} is one atom's material",
+                behavior.source
+            );
             let (rneg, radm, rbehavior) = ratoms[0];
             assert_eq!(rneg, neg, "negation must survive the anchor of {input:?}");
             assert_eq!(radm, adm, "the arm must survive the anchor of {input:?}");
@@ -714,10 +798,8 @@ fn behavior_anchor_excludes_frames_exception_and_purpose() {
 
 #[test]
 fn guard_anchors_reparse_and_match_their_digests() {
-    let s = one(
-        "Where the mode is strict, While the engine remains hot, \
-         When the order ships, the pump shall stop, unless the override is active.",
-    );
+    let s = one("Where the mode is strict, While the engine remains hot, \
+         When the order ships, the pump shall stop, unless the override is active.");
     let app = applicability(&s);
     let guards = guard_atoms(&app);
     assert_eq!(guards.len(), 4);
@@ -729,14 +811,21 @@ fn guard_anchors_reparse_and_match_their_digests() {
     ];
     for ((neg, clause, source), expected) in guards.iter().zip(expected_sources) {
         assert_eq!(*source, expected);
-        assert_eq!(*neg, expected == "the override is active", "only the exception negates");
+        assert_eq!(
+            *neg,
+            expected == "the override is active",
+            "only the exception negates"
+        );
         // The anchor is a clause: re-parse it as a trigger guard and the
         // digest and anchor must reproduce exactly.
         let wrapped = one(&format!("When {source}, the pump shall stop."));
         let wrapped_app = applicability(&wrapped);
         let rguards = guard_atoms(&wrapped_app);
         assert_eq!(rguards.len(), 1);
-        assert_eq!(rguards[0].1, *clause, "guard digest must survive its anchor {source:?}");
+        assert_eq!(
+            rguards[0].1, *clause,
+            "guard digest must survive its anchor {source:?}"
+        );
         assert_eq!(rguards[0].2, *source, "guard anchor must be a fixpoint");
     }
 }
@@ -772,7 +861,9 @@ fn permissions_produce_the_admissibility_arm() {
     let s = one("The client may retry.");
     let f = claim_formula(&s).unwrap();
     match &f {
-        Formula::Atom { atom: AtomRef::Admissibility { behavior } } => {
+        Formula::Atom {
+            atom: AtomRef::Admissibility { behavior },
+        } => {
             assert_eq!(behavior.act, SpeechAct::Permission);
             assert_eq!(behavior.force, None);
             assert_eq!(behavior.source, "the client may retry");
@@ -785,7 +876,9 @@ fn permissions_produce_the_admissibility_arm() {
     assert!(ingest_contract(&s).is_none());
     // A binding sentence must NOT use the Admissibility arm.
     match claim("The client shall retry.") {
-        Formula::Atom { atom: AtomRef::Behavior { .. } } => {}
+        Formula::Atom {
+            atom: AtomRef::Behavior { .. },
+        } => {}
         other => panic!("expected the Behavior arm, got {other:?}"),
     }
 }
@@ -824,7 +917,9 @@ fn atomref_serde_shapes() {
 fn source_of(kind: EdgeKind, input: &str) -> AssumptionSource {
     let sentence = one(input);
     let target = one("The pump shall stop.");
-    let relied = AssumptionSource::from_sentence(kind, &sentence).unwrap().formula;
+    let relied = AssumptionSource::from_sentence(kind, &sentence)
+        .unwrap()
+        .formula;
     AssumptionSource::for_guarantee_with_relied(kind, &sentence, &target, relied).unwrap()
 }
 
@@ -833,7 +928,10 @@ fn paired_with_empty_sources_is_the_identity() {
     let c = contract_formula(&one("When the order ships, the pump shall stop.")).unwrap();
     assert_eq!(c.assumption, Formula::Top);
     let paired = c.paired(&[]);
-    assert_eq!(paired, c, "empty sources leave the contract unchanged (still ⊤)");
+    assert_eq!(
+        paired, c,
+        "empty sources leave the contract unchanged (still ⊤)"
+    );
     // With assumption Top, saturation is the guarantee itself.
     assert_eq!(c.saturated(), c.guarantee);
 }
@@ -841,7 +939,10 @@ fn paired_with_empty_sources_is_the_identity() {
 #[test]
 fn paired_single_source_replaces_top_without_a_wrapper() {
     let c = contract_formula(&one("The pump shall stop.")).unwrap();
-    let a1 = source_of(EdgeKind::GuaranteeDischarge, "The sensor shall send the signal.");
+    let a1 = source_of(
+        EdgeKind::GuaranteeDischarge,
+        "The sensor shall send the signal.",
+    );
     let paired = c.paired(std::slice::from_ref(&a1));
     // Supersession: the assumption IS the source formula — not And([Top, A]),
     // not And([A]).
@@ -855,17 +956,29 @@ fn paired_single_source_replaces_top_without_a_wrapper() {
             _ => false,
         }
     }
-    assert!(!contains_top(&paired.assumption), "⊤ is superseded, never conjoined");
+    assert!(
+        !contains_top(&paired.assumption),
+        "⊤ is superseded, never conjoined"
+    );
 }
 
 #[test]
 fn paired_multiple_sources_conjoin_in_order() {
     let c = contract_formula(&one("The pump shall stop.")).unwrap();
-    let a1 = source_of(EdgeKind::GuaranteeDischarge, "The sensor shall send the signal.");
+    let a1 = source_of(
+        EdgeKind::GuaranteeDischarge,
+        "The sensor shall send the signal.",
+    );
     // Round 5: a permission validates only as an envelope, so the reliance
     // source is a binding sentence (occurrence reliance on an obligation).
-    let a2 = source_of(EdgeKind::OccurrenceReliance, "The operator shall press the button.");
-    let a3 = source_of(EdgeKind::AdmissibilityEnvelope, "The network may drop each packet.");
+    let a2 = source_of(
+        EdgeKind::OccurrenceReliance,
+        "The operator shall press the button.",
+    );
+    let a3 = source_of(
+        EdgeKind::AdmissibilityEnvelope,
+        "The network may drop each packet.",
+    );
     let (a1_kept, a2_kept) = (a1.clone(), a2.clone());
     let paired = c.paired(&[a1.clone(), a2.clone(), a3.clone()]);
     // Round 6 (supersedes the round-4/5 shape that conjoined the envelope):
@@ -875,7 +988,9 @@ fn paired_multiple_sources_conjoin_in_order() {
     // complement). It stays in `sources`, in order.
     assert_eq!(
         paired.assumption,
-        Formula::And { items: vec![a1.formula, a2.formula] }
+        Formula::And {
+            items: vec![a1.formula, a2.formula]
+        }
     );
     assert_eq!(paired.sources, vec![a1_kept, a2_kept, a3]);
     assert_eq!(paired.guarantee, c.guarantee);
@@ -884,7 +999,10 @@ fn paired_multiple_sources_conjoin_in_order() {
 #[test]
 fn repairing_supersedes_the_previous_pairing() {
     let c = contract_formula(&one("The pump shall stop.")).unwrap();
-    let a1 = source_of(EdgeKind::GuaranteeDischarge, "The sensor shall send the signal.");
+    let a1 = source_of(
+        EdgeKind::GuaranteeDischarge,
+        "The sensor shall send the signal.",
+    );
     let a2 = source_of(EdgeKind::GuaranteeDischarge, "The relay shall close.");
     let repaired = c
         .paired(std::slice::from_ref(&a1))
@@ -892,13 +1010,21 @@ fn repairing_supersedes_the_previous_pairing() {
     // REPLACING, not accumulating: the second pairing's assumption stands
     // alone.
     assert_eq!(repaired.assumption, a2.formula);
-    assert_ne!(repaired.assumption, Formula::And { items: vec![a1.formula, a2.formula] });
+    assert_ne!(
+        repaired.assumption,
+        Formula::And {
+            items: vec![a1.formula, a2.formula]
+        }
+    );
 }
 
 #[test]
 fn saturation_over_a_paired_contract() {
     let c = contract_formula(&one("When the order ships, the pump shall stop.")).unwrap();
-    let a1 = source_of(EdgeKind::GuaranteeDischarge, "The sensor shall send the signal.");
+    let a1 = source_of(
+        EdgeKind::GuaranteeDischarge,
+        "The sensor shall send the signal.",
+    );
     let a2 = source_of(EdgeKind::OccurrenceReliance, "The clock shall tick.");
     let paired = c.paired(&[a1.clone(), a2.clone()]);
     // G ∨ ¬(∧ᵢAᵢ).
@@ -907,7 +1033,9 @@ fn saturation_over_a_paired_contract() {
         Formula::Or {
             items: vec![
                 paired.guarantee.clone(),
-                not(Formula::And { items: vec![a1.formula, a2.formula] }),
+                not(Formula::And {
+                    items: vec![a1.formula, a2.formula]
+                }),
             ],
         }
     );
@@ -928,13 +1056,18 @@ fn edge_kind_and_assumption_source_serde() {
         serde_json::json!("admissibility_envelope")
     );
     // Round 5: sources carry act + force provenance.
-    let source =
-        source_of(EdgeKind::GuaranteeDischarge, "The sensor shall send the signal.");
+    let source = source_of(
+        EdgeKind::GuaranteeDischarge,
+        "The sensor shall send the signal.",
+    );
     let v = serde_json::to_value(&source).unwrap();
     assert_eq!(v["kind"], "guarantee_discharge");
     assert_eq!(v["act"], "obligation");
     assert_eq!(v["force"], "binding");
-    assert_eq!(serde_json::from_value::<AssumptionSource>(v).unwrap(), source);
+    assert_eq!(
+        serde_json::from_value::<AssumptionSource>(v).unwrap(),
+        source
+    );
     // ContractFormula serde round trip.
     let c = contract_formula(&one("The pump shall stop.")).unwrap();
     let v = serde_json::to_value(&c).unwrap();
@@ -949,7 +1082,11 @@ fn edge_kind_and_assumption_source_serde() {
 fn is_able_to_parses_as_capability() {
     let s = one("The client is able to retry.");
     match &s.core {
-        Core::Description { adverb: None, predicate: Predicate::AbleTo { vp }, .. } => {
+        Core::Description {
+            adverb: None,
+            predicate: Predicate::AbleTo { vp },
+            ..
+        } => {
             assert_eq!(vp.verb, "retry");
         }
         other => panic!("expected AbleTo description, got {other:?}"),
@@ -995,7 +1132,10 @@ fn subject_no_denies_the_capability() {
 fn capability_vp_carries_particle_manner_and_roles() {
     let s = one("The daemon is able to shut down gracefully within 5 seconds.");
     match &s.core {
-        Core::Description { predicate: Predicate::AbleTo { vp }, .. } => {
+        Core::Description {
+            predicate: Predicate::AbleTo { vp },
+            ..
+        } => {
             assert_eq!(vp.verb, "shut");
             assert_eq!(vp.particle.as_deref(), Some("down"));
             assert_eq!(vp.manner, vec!["gracefully"]);
@@ -1014,7 +1154,10 @@ fn capability_vp_carries_particle_manner_and_roles() {
 fn able_to_is_case_insensitive_and_copula_agnostic() {
     let s = one("THE CLIENT IS ABLE TO RETRY.");
     match &s.core {
-        Core::Description { predicate: Predicate::AbleTo { vp }, .. } => {
+        Core::Description {
+            predicate: Predicate::AbleTo { vp },
+            ..
+        } => {
             assert_eq!(vp.verb, "RETRY", "open-class casing preserved");
         }
         other => panic!("expected AbleTo, got {other:?}"),
@@ -1023,7 +1166,11 @@ fn able_to_is_case_insensitive_and_copula_agnostic() {
     let s = one("The clients are able to retry.");
     assert!(matches!(
         &s.core,
-        Core::Description { copula: Copula::Are, predicate: Predicate::AbleTo { .. }, .. }
+        Core::Description {
+            copula: Copula::Are,
+            predicate: Predicate::AbleTo { .. },
+            ..
+        }
     ));
 }
 
@@ -1050,14 +1197,26 @@ fn able_to_triggers_only_immediately_after_the_copula() {
     // capability in one position and an opaque word run in another.
     let s = one("The client that is able to retry is active.");
     match &s.core {
-        Core::Description { subject: NpGroup::Single(np), predicate, .. } => {
+        Core::Description {
+            subject: NpGroup::Single(np),
+            predicate,
+            ..
+        } => {
             match &np.relative.as_ref().unwrap().body {
-                RelativeBody::Copular { predicate: Predicate::AbleTo { vp }, .. } => {
+                RelativeBody::Copular {
+                    predicate: Predicate::AbleTo { vp },
+                    ..
+                } => {
                     assert_eq!(vp.verb, "retry");
                 }
                 other => panic!("expected AbleTo in the relative, got {other:?}"),
             }
-            assert_eq!(predicate, &Predicate::Words { words: vec!["active".into()] });
+            assert_eq!(
+                predicate,
+                &Predicate::Words {
+                    words: vec!["active".into()]
+                }
+            );
         }
         other => panic!("expected description, got {other:?}"),
     }
@@ -1072,7 +1231,10 @@ fn able_to_triggers_only_immediately_after_the_copula() {
     // As NP material before a head: ordinary modifiers.
     let s = one("The able to retry flag is set.");
     match &s.core {
-        Core::Description { subject: NpGroup::Single(np), .. } => {
+        Core::Description {
+            subject: NpGroup::Single(np),
+            ..
+        } => {
             assert_eq!(np.modifiers, vec!["able", "to", "retry"]);
             assert_eq!(np.head, "flag");
         }
@@ -1127,7 +1289,9 @@ fn until_nests_clauses_like_before_and_after() {
         RolePp::Until(clause) => match &clause.body {
             ClauseBody::Verbal { verb, roles, .. } => {
                 assert_eq!(verb, "opens");
-                assert!(matches!(&roles[0], RolePp::After(inner) if inner.subject.heads() == vec!["tank"]));
+                assert!(
+                    matches!(&roles[0], RolePp::After(inner) if inner.subject.heads() == vec!["tank"])
+                );
             }
             other => panic!("expected verbal until-clause, got {other:?}"),
         },
@@ -1169,7 +1333,10 @@ fn until_inside_guard_clauses_and_capability() {
     // Capability + until compose.
     let s = one("The client is able to retry until the limit is reached.");
     match &s.core {
-        Core::Description { predicate: Predicate::AbleTo { vp }, .. } => {
+        Core::Description {
+            predicate: Predicate::AbleTo { vp },
+            ..
+        } => {
             assert!(matches!(vp.roles[0], RolePp::Until(_)));
         }
         other => panic!("expected AbleTo, got {other:?}"),
@@ -1188,9 +1355,8 @@ fn until_inside_guard_clauses_and_capability() {
 fn until_copular_clause_inside_a_guard_is_swallowed_by_the_copular_split() {
     // `before`/`after` go through the same machinery as `until`.
     for prep in ["until", "before", "after"] {
-        let input = format!(
-            "While the pump runs {prep} the tank is full, the alarm shall stay silent."
-        );
+        let input =
+            format!("While the pump runs {prep} the tank is full, the alarm shall stay silent.");
         let s = one(&input);
         let clause = &s.frames.states[0].clause.items[0];
         assert_eq!(clause.subject.heads(), vec!["pump"], "in {input:?}");
@@ -1232,7 +1398,9 @@ fn until_copular_clause_inside_a_guard_should_stay_an_until_role() {
     match &clause.body {
         ClauseBody::Verbal { verb, roles, .. } => {
             assert_eq!(verb, "runs");
-            assert!(matches!(&roles[0], RolePp::Until(inner) if inner.subject.heads() == vec!["tank"]));
+            assert!(
+                matches!(&roles[0], RolePp::Until(inner) if inner.subject.heads() == vec!["tank"])
+            );
         }
         other => panic!("expected verbal guard with an Until role, got {other:?}"),
     }
@@ -1246,14 +1414,81 @@ fn until_copular_clause_inside_a_guard_should_stay_an_until_role() {
 /// `able`/`to`, `until`, coordination, `no`, particles, measures, backticks,
 /// multibyte.
 const FUZZ_WORDS: &[&str] = &[
-    "the", "a", "an", "no", "each", "every", "all", "any", "both", "either", "and", "or", "not",
-    "is", "are", "shall", "must", "should", "may", "remains", "means", "that", "unless", "so",
-    "in", "order", "to", "able", "until", "before", "after", "within", "for", "per", "at",
-    "least", "most", "exactly", "pump", "valve", "supply", "reply", "apply", "fly", "ly",
-    "quickly", "immediately", "successfully", "gracefully", "only", "nightly", "assembly",
-    "stop", "run", "time", "shut", "log", "out", "down", "up", "off", "5", "5.5", "seconds",
-    "`supply`", "`immediately`", "café", "日本語ly", "e\u{0301}ly", "QuickLY", "When", "While,",
-    "then", ",", ".",
+    "the",
+    "a",
+    "an",
+    "no",
+    "each",
+    "every",
+    "all",
+    "any",
+    "both",
+    "either",
+    "and",
+    "or",
+    "not",
+    "is",
+    "are",
+    "shall",
+    "must",
+    "should",
+    "may",
+    "remains",
+    "means",
+    "that",
+    "unless",
+    "so",
+    "in",
+    "order",
+    "to",
+    "able",
+    "until",
+    "before",
+    "after",
+    "within",
+    "for",
+    "per",
+    "at",
+    "least",
+    "most",
+    "exactly",
+    "pump",
+    "valve",
+    "supply",
+    "reply",
+    "apply",
+    "fly",
+    "ly",
+    "quickly",
+    "immediately",
+    "successfully",
+    "gracefully",
+    "only",
+    "nightly",
+    "assembly",
+    "stop",
+    "run",
+    "time",
+    "shut",
+    "log",
+    "out",
+    "down",
+    "up",
+    "off",
+    "5",
+    "5.5",
+    "seconds",
+    "`supply`",
+    "`immediately`",
+    "café",
+    "日本語ly",
+    "e\u{0301}ly",
+    "QuickLY",
+    "When",
+    "While,",
+    "then",
+    ",",
+    ".",
 ];
 
 /// A tiny deterministic xorshift so the suite never depends on external
@@ -1323,5 +1558,8 @@ fn seeded_fuzz_never_panics_and_accepted_sentences_render_stably() {
         }
     }
     // The generator must actually exercise the accept path, not only rejects.
-    assert!(accepted > 0, "the fuzz vocabulary should accept at least one sentence");
+    assert!(
+        accepted > 0,
+        "the fuzz vocabulary should accept at least one sentence"
+    );
 }

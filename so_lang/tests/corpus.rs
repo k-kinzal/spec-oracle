@@ -8,7 +8,11 @@ use so_lang::semantics::{self, Force, SpeechAct};
 /// Parse an input expected to hold exactly one sentence.
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -52,13 +56,18 @@ fn c02_terminator_is_optional() {
 fn c03_description_with_always_and_comparison() {
     let s = one("The sales amount is always greater than zero.");
     match &s.core {
-        Core::Description { adverb, predicate, .. } => {
+        Core::Description {
+            adverb, predicate, ..
+        } => {
             assert_eq!(*adverb, Some(DescriptionAdverb::Always));
             assert_eq!(
                 *predicate,
                 Predicate::Comparison(Comparison {
                     op: ComparisonOp::GreaterThan,
-                    value: Measure::Quantity { number: "zero".into(), unit: None },
+                    value: Measure::Quantity {
+                        number: "zero".into(),
+                        unit: None
+                    },
                     upper: None,
                 })
             );
@@ -74,8 +83,17 @@ fn c04_event_trigger() {
     assert_eq!(trigger.kind, TriggerKind::Event);
     assert_eq!(trigger.clause.items[0].subject.heads(), vec!["order"]);
     match &trigger.clause.items[0].body {
-        ClauseBody::Copular { copula: ClauseCopula::Is, predicate, ..  } => {
-            assert_eq!(*predicate, Predicate::Words { words: vec!["submitted".into()] });
+        ClauseBody::Copular {
+            copula: ClauseCopula::Is,
+            predicate,
+            ..
+        } => {
+            assert_eq!(
+                *predicate,
+                Predicate::Words {
+                    words: vec!["submitted".into()]
+                }
+            );
         }
         other => panic!("expected copular clause, got {other:?}"),
     }
@@ -85,10 +103,18 @@ fn c04_event_trigger() {
 #[test]
 fn c05_contingency_with_then() {
     let s = one("If the balance is negative, then the account shall be frozen.");
-    assert_eq!(s.frames.trigger.as_ref().unwrap().kind, TriggerKind::Contingency);
+    assert_eq!(
+        s.frames.trigger.as_ref().unwrap().kind,
+        TriggerKind::Contingency
+    );
     let vp = vp(&s);
     assert_eq!(vp.verb, "be");
-    assert_eq!(vp.complement, Some(Predicate::Words { words: vec!["frozen".into()] }));
+    assert_eq!(
+        vp.complement,
+        Some(Predicate::Words {
+            words: vec!["frozen".into()]
+        })
+    );
 }
 
 #[test]
@@ -123,7 +149,10 @@ fn c07_state_frame_plus_trigger() {
 fn c08_scoped_definition() {
     let s = one("where the premium plan is enabled, a workspace means a shared folder.");
     assert_eq!(s.frames.scopes.len(), 1);
-    assert_eq!(s.frames.scopes[0].keyword, "where", "surface casing preserved");
+    assert_eq!(
+        s.frames.scopes[0].keyword, "where",
+        "surface casing preserved"
+    );
     match &s.core {
         Core::Definition { term, definiens } => {
             assert_eq!(term.det, Some(Det::A));
@@ -147,7 +176,10 @@ fn c09_definition_with_of_chain_and_source_role() {
         Core::Definition { term, definiens } => {
             assert_eq!(term.head, "session");
             match definiens {
-                Definiens::Np { np: NpGroup::Single(np), roles } => {
+                Definiens::Np {
+                    np: NpGroup::Single(np),
+                    roles,
+                } => {
                     assert_eq!(np.det, Some(Det::A));
                     assert_eq!(np.head, "sequence");
                     assert_eq!(np.of.as_ref().unwrap().head, "requests");
@@ -191,7 +223,11 @@ fn c12_recommendation_with_coordinated_object() {
     let s = one("The tracing library should install TraceContext and Baggage propagators.");
     assert_eq!(semantics::speech_act(&s), SpeechAct::Recommendation);
     match vp(&s).object.as_ref().unwrap() {
-        NpGroup::Coordinated { conj: Conj::And, marker: None, items } => {
+        NpGroup::Coordinated {
+            conj: Conj::And,
+            marker: None,
+            items,
+        } => {
             assert_eq!(items.len(), 2);
             assert_eq!(items[0].head, "TraceContext");
             assert_eq!(items[1].modifiers, vec!["Baggage".to_string()]);
@@ -219,7 +255,10 @@ fn c14_recipient_and_means_roles() {
     let vp = vp(&s);
     assert_eq!(vp.object.as_ref().unwrap().heads(), vec!["receipt"]);
     match vp.roles.as_slice() {
-        [RolePp::Recipient(recipient), RolePp::Means { marker: MeansMarker::Via, np }] => {
+        [RolePp::Recipient(recipient), RolePp::Means {
+            marker: MeansMarker::Via,
+            np,
+        }] => {
             assert_eq!(recipient.heads(), vec!["customer"]);
             assert_eq!(np.heads(), vec!["TLS"]);
         }
@@ -245,7 +284,12 @@ fn c16_each_with_passive_be() {
     }
     let vp = vp(&s);
     assert_eq!(vp.verb, "be");
-    assert_eq!(vp.complement, Some(Predicate::Words { words: vec!["logged".into()] }));
+    assert_eq!(
+        vp.complement,
+        Some(Predicate::Words {
+            words: vec!["logged".into()]
+        })
+    );
 }
 
 #[test]
@@ -253,7 +297,10 @@ fn c17_framed_description_with_pp_predicate() {
     let s = one("While the engine is running, the temperature is always below the limit.");
     assert_eq!(s.frames.states.len(), 1);
     match &s.core {
-        Core::Description { predicate: Predicate::Pp { preposition, np }, .. } => {
+        Core::Description {
+            predicate: Predicate::Pp { preposition, np },
+            ..
+        } => {
             assert_eq!(preposition, "below");
             assert_eq!(np.heads(), vec!["limit"]);
         }
@@ -324,8 +371,17 @@ fn c22_relative_clause_in_subject() {
             let relative = np.relative.as_ref().unwrap();
             assert_eq!(relative.marker, RelMarker::Who);
             match &relative.body {
-                RelativeBody::Copular { copula: ClauseCopula::Is, predicate, .. } => {
-                    assert_eq!(*predicate, Predicate::Words { words: vec!["authenticated".into()] });
+                RelativeBody::Copular {
+                    copula: ClauseCopula::Is,
+                    predicate,
+                    ..
+                } => {
+                    assert_eq!(
+                        *predicate,
+                        Predicate::Words {
+                            words: vec!["authenticated".into()]
+                        }
+                    );
                 }
                 other => panic!("expected copular relative, got {other:?}"),
             }
@@ -342,7 +398,10 @@ fn c23_at_most_comparison() {
             *predicate,
             Predicate::Comparison(Comparison {
                 op: ComparisonOp::AtMost,
-                value: Measure::Quantity { number: "3".into(), unit: None },
+                value: Measure::Quantity {
+                    number: "3".into(),
+                    unit: None
+                },
                 upper: None,
             })
         ),
@@ -358,8 +417,14 @@ fn c24_between_with_unit_on_upper() {
             *predicate,
             Predicate::Comparison(Comparison {
                 op: ComparisonOp::Between,
-                value: Measure::Quantity { number: "5".into(), unit: None },
-                upper: Some(Measure::Quantity { number: "30".into(), unit: Some("seconds".into()) }),
+                value: Measure::Quantity {
+                    number: "5".into(),
+                    unit: None
+                },
+                upper: Some(Measure::Quantity {
+                    number: "30".into(),
+                    unit: Some("seconds".into())
+                }),
             })
         ),
         other => panic!("expected description, got {other:?}"),
@@ -370,7 +435,13 @@ fn c24_between_with_unit_on_upper() {
 fn c25_bare_plural_description() {
     let s = one("Requests are logged.");
     match &s.core {
-        Core::Description { subject, copula: Copula::Are, adverb: None, predicate, .. } => {
+        Core::Description {
+            subject,
+            copula: Copula::Are,
+            adverb: None,
+            predicate,
+            ..
+        } => {
             match subject {
                 NpGroup::Single(np) => {
                     assert_eq!(np.det, None);
@@ -378,7 +449,12 @@ fn c25_bare_plural_description() {
                 }
                 other => panic!("expected single np, got {other:?}"),
             }
-            assert_eq!(*predicate, Predicate::Words { words: vec!["logged".into()] });
+            assert_eq!(
+                *predicate,
+                Predicate::Words {
+                    words: vec!["logged".into()]
+                }
+            );
         }
         other => panic!("expected description, got {other:?}"),
     }
@@ -403,7 +479,13 @@ fn c26_multi_sentence_and_references() {
 #[test]
 fn c27_case_insensitive_modal() {
     let s = one("the pump SHALL stop.");
-    assert!(matches!(s.core, Core::Deontic { modal: Modal::Shall, .. }));
+    assert!(matches!(
+        s.core,
+        Core::Deontic {
+            modal: Modal::Shall,
+            ..
+        }
+    ));
 }
 
 #[test]
@@ -430,7 +512,10 @@ fn l01_locative_does_not_fold_into_the_object() {
         other => panic!("expected [Location(in)], got {other:?}"),
     }
     // Canonical render: closed-class words in lowercase, the location kept.
-    assert_eq!(s.render(), "the system shall store the report in the archive.");
+    assert_eq!(
+        s.render(),
+        "the system shall store the report in the archive."
+    );
 }
 
 #[test]
@@ -481,7 +566,10 @@ fn l04_location_composes_with_other_roles_and_round_trips() {
     ] {
         let parsed = parse(input).unwrap();
         let rendered = parsed.render();
-        assert_eq!(parse(&rendered).unwrap().sentences[0].core, parsed.sentences[0].core);
+        assert_eq!(
+            parse(&rendered).unwrap().sentences[0].core,
+            parsed.sentences[0].core
+        );
     }
 }
 
@@ -494,7 +582,12 @@ fn l05_clause_locatives_open_location_roles() {
     // (`UnexpectedTokens { token: "in"/"at" }`) is gone.
     let s = one("When the clerk stores the report in the archive, the pump shall stop.");
     match &s.frames.trigger.as_ref().unwrap().clause.items[0].body {
-        ClauseBody::Verbal { verb, object, roles, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            object,
+            roles,
+            ..
+        } => {
             assert_eq!(verb, "stores");
             assert_eq!(object.as_ref().unwrap().heads(), vec!["report"]);
             assert!(matches!(
@@ -507,7 +600,12 @@ fn l05_clause_locatives_open_location_roles() {
     }
     let s = one("When the pump runs at the depot, the valve shall close.");
     match &s.frames.trigger.as_ref().unwrap().clause.items[0].body {
-        ClauseBody::Verbal { verb, object, roles, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            object,
+            roles,
+            ..
+        } => {
             assert_eq!(verb, "runs");
             assert!(object.is_none());
             assert!(matches!(
@@ -545,10 +643,15 @@ fn l06_predicate_pps_unchanged() {
 fn mt01_means_that_forces_the_verbal_clause_reading() {
     let s = one("A timeout means that the request expires.");
     match &s.core {
-        Core::Definition { term, definiens: Definiens::Clause(clause) } => {
+        Core::Definition {
+            term,
+            definiens: Definiens::Clause(clause),
+        } => {
             assert_eq!(term.head, "timeout");
             assert_eq!(clause.subject.heads(), vec!["request"]);
-            assert!(matches!(&clause.body, ClauseBody::Verbal { verb, object: None, .. } if verb == "expires"));
+            assert!(
+                matches!(&clause.body, ClauseBody::Verbal { verb, object: None, .. } if verb == "expires")
+            );
         }
         other => panic!("expected clause definiens, got {other:?}"),
     }
@@ -560,7 +663,10 @@ fn mt02_bare_means_keeps_the_documented_np_reading() {
     // pin in attack_conformance: `DET WORD WORD` is one shape).
     let s = one("A timeout means the request expires.");
     match &s.core {
-        Core::Definition { definiens: Definiens::Np { np, .. }, .. } => {
+        Core::Definition {
+            definiens: Definiens::Np { np, .. },
+            ..
+        } => {
             assert_eq!(np.heads(), vec!["expires"]);
         }
         other => panic!("expected np definiens, got {other:?}"),
@@ -571,7 +677,10 @@ fn mt02_bare_means_keeps_the_documented_np_reading() {
 fn mt03_means_that_copular_clause() {
     let s = one("A session means that a token is issued.");
     match &s.core {
-        Core::Definition { definiens: Definiens::Clause(clause), .. } => {
+        Core::Definition {
+            definiens: Definiens::Clause(clause),
+            ..
+        } => {
             assert_eq!(clause.subject.heads(), vec!["token"]);
             assert!(matches!(
                 &clause.body,
@@ -589,13 +698,22 @@ fn mt04_clause_definiens_renders_with_that_and_round_trips() {
     // re-parses to the same tree.
     let parsed = parse("A valid token means the signature is correct.").unwrap();
     let rendered = parsed.render();
-    assert_eq!(rendered, "a valid token means that the signature is correct.");
-    assert_eq!(parse(&rendered).unwrap().sentences[0].core, parsed.sentences[0].core);
+    assert_eq!(
+        rendered,
+        "a valid token means that the signature is correct."
+    );
+    assert_eq!(
+        parse(&rendered).unwrap().sentences[0].core,
+        parsed.sentences[0].core
+    );
     // The explicit form round-trips to itself.
     let parsed = parse("A timeout means that the request expires.").unwrap();
     let rendered = parsed.render();
     assert_eq!(rendered, "a timeout means that the request expires.");
-    assert_eq!(parse(&rendered).unwrap().sentences[0].core, parsed.sentences[0].core);
+    assert_eq!(
+        parse(&rendered).unwrap().sentences[0].core,
+        parsed.sentences[0].core
+    );
 }
 
 // ---- clause coordination inside frames (improvement round 1, change 3) ---------------
@@ -606,9 +724,8 @@ fn g01_joint_event_guard() {
     // clears` guard held two events under `and` — the simultaneity ambiguity
     // the single-trigger rule legislates away. A joint guard now keeps one
     // event; the other conjuncts are states read at the trigger instant.
-    let s = one(
-        "When the order ships and the payment is cleared, the system shall issue the receipt.",
-    );
+    let s =
+        one("When the order ships and the payment is cleared, the system shall issue the receipt.");
     let trigger = s.frames.trigger.as_ref().unwrap();
     assert_eq!(trigger.kind, TriggerKind::Event);
     let group = &trigger.clause;
@@ -654,7 +771,11 @@ fn g04_np_coordination_in_a_subject_stays_one_clause() {
     assert_eq!(group.conj, None);
     assert_eq!(group.items.len(), 1);
     match &group.items[0].subject {
-        NpGroup::Coordinated { conj: Conj::And, marker: None, items } => {
+        NpGroup::Coordinated {
+            conj: Conj::And,
+            marker: None,
+            items,
+        } => {
             assert_eq!(items[0].head, "pump");
             assert_eq!(items[1].head, "valve");
         }
@@ -662,7 +783,10 @@ fn g04_np_coordination_in_a_subject_stays_one_clause() {
     }
     assert!(matches!(
         &group.items[0].body,
-        ClauseBody::Copular { copula: ClauseCopula::Are, .. }
+        ClauseBody::Copular {
+            copula: ClauseCopula::Are,
+            ..
+        }
     ));
 }
 
@@ -698,7 +822,12 @@ fn o01_of_chain_subject_in_a_verbal_frame_clause() {
         other => panic!("expected single np subject, got {other:?}"),
     }
     match &clause.body {
-        ClauseBody::Verbal { verb, particle, object, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            particle,
+            object,
+            ..
+        } => {
             assert_eq!(verb, "logs");
             // SUPERSEDED PIN (round 3, change 2): `out` is now the verb's
             // particle from the closed list, no longer the bare-NP-object
@@ -766,7 +895,9 @@ fn b01_backticked_reserved_word_as_object_head() {
     let s = one("The system shall record the `will`.");
     assert_eq!(vp(&s).object.as_ref().unwrap().heads(), vec!["`will`"]);
     // Losslessness: the render re-emits the backticks and re-parses.
-    let rendered = parse("The system shall record the `will`.").unwrap().render();
+    let rendered = parse("The system shall record the `will`.")
+        .unwrap()
+        .render();
     assert_eq!(rendered, "the system shall record the `will`.");
     assert!(parse(&rendered).is_ok());
 }
@@ -816,26 +947,39 @@ fn rejects_with_exact_variants() {
         parse("The sales amount is not greater than zero."),
         Err(ParseError::NegatedDescription)
     );
-    assert_eq!(parse("The client may not retry."), Err(ParseError::AmbiguousModal));
+    assert_eq!(
+        parse("The client may not retry."),
+        Err(ParseError::AmbiguousModal)
+    );
     assert_eq!(
         parse("The client can retry."),
         Err(ParseError::UnsupportedModal { word: "can".into() })
     );
     assert_eq!(
         parse("When the order is submitted the system shall record the total."),
-        Err(ParseError::UnterminatedFrame { keyword: "When".into() })
+        Err(ParseError::UnterminatedFrame {
+            keyword: "When".into()
+        })
     );
     assert_eq!(
         parse("When , the pump shall stop."),
-        Err(ParseError::EmptyFrame { keyword: "When".into() })
+        Err(ParseError::EmptyFrame {
+            keyword: "When".into()
+        })
     );
     assert_eq!(
         parse("When the order ships, while the engine runs, the pump shall stop."),
-        Err(ParseError::FrameOrder { keyword: "while".into(), after: "When".into() })
+        Err(ParseError::FrameOrder {
+            keyword: "while".into(),
+            after: "When".into()
+        })
     );
     assert_eq!(
         parse("When x occurs, if y occurs, the pump shall stop."),
-        Err(ParseError::MultipleTriggers { first: "When".into(), second: "if".into() })
+        Err(ParseError::MultipleTriggers {
+            first: "When".into(),
+            second: "if".into()
+        })
     );
     assert_eq!(
         parse("While the engine is running, then the pump shall stop."),
@@ -843,7 +987,9 @@ fn rejects_with_exact_variants() {
     );
     assert_eq!(
         parse("While the engine is running, a workspace means a shared folder."),
-        Err(ParseError::FrameOnDefinition { keyword: "While".into() })
+        Err(ParseError::FrameOnDefinition {
+            keyword: "While".into()
+        })
     );
     assert_eq!(parse("The pump quickly."), Err(ParseError::MissingPivot));
     assert_eq!(parse("The shall run."), Err(ParseError::EmptySubject));
@@ -854,7 +1000,9 @@ fn rejects_with_exact_variants() {
     );
     assert_eq!(
         parse("The tracing library should default export to X when no endpoint is configured."),
-        Err(ParseError::MidSentenceFrame { keyword: "when".into() })
+        Err(ParseError::MidSentenceFrame {
+            keyword: "when".into()
+        })
     );
 }
 
@@ -863,7 +1011,11 @@ fn error_kinds_are_stable_names() {
     assert_eq!(ParseError::Empty.kind(), "empty");
     assert_eq!(ParseError::MissingPivot.kind(), "missing_pivot");
     assert_eq!(
-        ParseError::FrameOrder { keyword: "x".into(), after: "y".into() }.kind(),
+        ParseError::FrameOrder {
+            keyword: "x".into(),
+            after: "y".into()
+        }
+        .kind(),
         "frame_order"
     );
 }
@@ -926,20 +1078,30 @@ fn render_round_trips() {
 fn semantics_acts_and_projection() {
     let acts = [
         ("The pump shall stop.", SpeechAct::Obligation),
-        ("The sales amount is always greater than zero.", SpeechAct::Description),
+        (
+            "The sales amount is always greater than zero.",
+            SpeechAct::Description,
+        ),
         (
             "where the premium plan is enabled, a workspace means a shared folder.",
             SpeechAct::Definition,
         ),
         ("The client may retry.", SpeechAct::Permission),
-        ("The daemon shall not store derived views.", SpeechAct::Prohibition),
+        (
+            "The daemon shall not store derived views.",
+            SpeechAct::Prohibition,
+        ),
         (
             "The tracing library should install TraceContext and Baggage propagators.",
             SpeechAct::Recommendation,
         ),
     ];
     for (input, expected) in acts {
-        assert_eq!(semantics::speech_act(&one(input)), expected, "for {input:?}");
+        assert_eq!(
+            semantics::speech_act(&one(input)),
+            expected,
+            "for {input:?}"
+        );
     }
 
     assert!(semantics::ingest_contract(&one(
@@ -949,9 +1111,18 @@ fn semantics_acts_and_projection() {
     let contract = semantics::ingest_contract(&one("The pump shall stop.")).unwrap();
     assert_eq!(contract.assumption.render(), "⊤");
 
-    assert_eq!(semantics::force(&one("The pump shall stop.")), Some(Force::Binding));
-    assert_eq!(semantics::force(&one("The pump must stop.")), Some(Force::Binding));
-    assert_eq!(semantics::force(&one("The pump should stop.")), Some(Force::Recommended));
+    assert_eq!(
+        semantics::force(&one("The pump shall stop.")),
+        Some(Force::Binding)
+    );
+    assert_eq!(
+        semantics::force(&one("The pump must stop.")),
+        Some(Force::Binding)
+    );
+    assert_eq!(
+        semantics::force(&one("The pump should stop.")),
+        Some(Force::Recommended)
+    );
     assert_eq!(semantics::force(&one("The pump may stop.")), None);
     assert_eq!(semantics::force(&one("The pump is stopped.")), None);
 
@@ -992,15 +1163,63 @@ fn totality_random_word_soups_never_panic() {
     // A tiny deterministic LCG: no dependency, reproducible failures.
     let mut state: u64 = 0x5eed_5eed_5eed_5eed;
     let mut next = move || {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (state >> 33) as u32
     };
     let vocabulary = [
-        "the", "a", "pump", "shall", "must", "may", "not", "is", "are", "means", "when",
-        "while", "where", "if", "unless", "then", "so", "that", "in", "order", "to", "of",
-        "and", "or", "both", "either", "at", "least", "most", "between", "5", "5.5", "zero",
-        ",", ".", "..", "×", "café", "中文", "🔥", "http://192.168.10.4:4318", "within",
-        "via", "per", "before", "after", "greater", "than", "be", "who", "remains",
+        "the",
+        "a",
+        "pump",
+        "shall",
+        "must",
+        "may",
+        "not",
+        "is",
+        "are",
+        "means",
+        "when",
+        "while",
+        "where",
+        "if",
+        "unless",
+        "then",
+        "so",
+        "that",
+        "in",
+        "order",
+        "to",
+        "of",
+        "and",
+        "or",
+        "both",
+        "either",
+        "at",
+        "least",
+        "most",
+        "between",
+        "5",
+        "5.5",
+        "zero",
+        ",",
+        ".",
+        "..",
+        "×",
+        "café",
+        "中文",
+        "🔥",
+        "http://192.168.10.4:4318",
+        "within",
+        "via",
+        "per",
+        "before",
+        "after",
+        "greater",
+        "than",
+        "be",
+        "who",
+        "remains",
     ];
     for _ in 0..1000 {
         let length = (next() % 12) as usize;
@@ -1047,7 +1266,10 @@ fn n02_no_subject_description_denotes_negative_state() {
     let s = one("No request is logged.");
     match semantics::denote(&s) {
         semantics::Denotation::Behavior(assertion) => match assertion.claim {
-            semantics::Claim::State { polarity: semantics::Polarity::Negative, .. } => {}
+            semantics::Claim::State {
+                polarity: semantics::Polarity::Negative,
+                ..
+            } => {}
             other => panic!("expected negative state, got {other:?}"),
         },
         other => panic!("expected behavior, got {other:?}"),
@@ -1062,7 +1284,10 @@ fn n03_double_flip_cancels_in_the_claim() {
     let s = one("No request shall not be logged.");
     match semantics::denote(&s) {
         semantics::Denotation::Behavior(assertion) => match assertion.claim {
-            semantics::Claim::Action { polarity: semantics::Polarity::Affirmative, .. } => {}
+            semantics::Claim::Action {
+                polarity: semantics::Polarity::Affirmative,
+                ..
+            } => {}
             other => panic!("expected affirmative action, got {other:?}"),
         },
         other => panic!("expected behavior, got {other:?}"),
@@ -1080,7 +1305,10 @@ fn n04_object_no_does_not_flip_claim_polarity() {
     let s = one("The daemon shall log no request.");
     match semantics::denote(&s) {
         semantics::Denotation::Behavior(assertion) => match assertion.claim {
-            semantics::Claim::Action { polarity: semantics::Polarity::Affirmative, .. } => {}
+            semantics::Claim::Action {
+                polarity: semantics::Polarity::Affirmative,
+                ..
+            } => {}
             other => panic!("expected affirmative action, got {other:?}"),
         },
         other => panic!("expected behavior, got {other:?}"),
@@ -1121,7 +1349,8 @@ fn e01_location_roles_distinguish_archive_from_public_bucket() {
     assert_eq!(archive.atoms[0].words, bucket.atoms[0].words);
     let report = vec![semantics::ObjectSkeleton {
         quantifier: semantics::Quantifier::Definite,
-        head: "report".into(), full: "report".into()
+        head: "report".into(),
+        full: "report".into(),
     }];
     assert_eq!(archive.atoms[0].objects, report);
     assert_eq!(bucket.atoms[0].objects, report);
@@ -1132,12 +1361,16 @@ fn e01_location_roles_distinguish_archive_from_public_bucket() {
     let loc = |head: &str, full: &str| RoleValue::Heads {
         items: vec![semantics::ObjectSkeleton {
             quantifier: semantics::Quantifier::Definite,
-            head: head.into(), full: full.into()
+            head: head.into(),
+            full: full.into(),
         }],
         conj: None,
     };
     assert_eq!(archive.atoms[0].roles[0].value, loc("archive", "archive"));
-    assert_eq!(bucket.atoms[0].roles[0].value, loc("bucket", "public bucket"));
+    assert_eq!(
+        bucket.atoms[0].roles[0].value,
+        loc("bucket", "public bucket")
+    );
     assert_ne!(archive.atoms[0].roles, bucket.atoms[0].roles);
 }
 
@@ -1155,22 +1388,29 @@ fn e02_deadline_roles_distinguish_five_from_ten_seconds() {
     assert_eq!(five.atoms[0].roles[0].kind, RoleKind::Deadline);
     assert_eq!(
         five.atoms[0].roles[0].value,
-        RoleValue::Measure { number: "5".into(), unit: Some("seconds".into()) }
+        RoleValue::Measure {
+            number: "5".into(),
+            unit: Some("seconds".into())
+        }
     );
     assert_eq!(
         ten.atoms[0].roles[0].value,
-        RoleValue::Measure { number: "10".into(), unit: Some("seconds".into()) }
+        RoleValue::Measure {
+            number: "10".into(),
+            unit: Some("seconds".into())
+        }
     );
     assert_ne!(five.atoms[0].roles, ten.atoms[0].roles);
-    assert_eq!((five.subject, five.polarity), (ten.subject.clone(), ten.polarity));
+    assert_eq!(
+        (five.subject, five.polarity),
+        (ten.subject.clone(), ten.polarity)
+    );
 }
 
 #[test]
 fn e03_guards_digest_frames() {
-    let s = one(
-        "Where the cluster mode is enabled, While the pump runs, \
-         When the temperature exceeds the limit, the controller shall open the valve.",
-    );
+    let s = one("Where the cluster mode is enabled, While the pump runs, \
+         When the temperature exceeds the limit, the controller shall open the valve.");
     let sk = semantics::skeleton(&s).unwrap();
     assert_eq!(sk.guards.scopes.len(), 1);
     assert_eq!(sk.guards.scopes[0].subject_head, "mode");
@@ -1189,7 +1429,10 @@ fn e03_guards_digest_frames() {
     let s = one("When no endpoint is configured, the library shall use the default.");
     let sk = semantics::skeleton(&s).unwrap();
     let trigger = sk.guards.trigger.as_ref().unwrap();
-    assert_eq!(trigger.clauses[0].polarity, Some(semantics::Polarity::Negative));
+    assert_eq!(
+        trigger.clauses[0].polarity,
+        Some(semantics::Polarity::Negative)
+    );
     // An unframed sentence digests to empty guards.
     let sk = semantics::skeleton(&one("The pump shall stop.")).unwrap();
     assert_eq!(sk.guards, semantics::Guards::default());
@@ -1227,7 +1470,10 @@ fn t01_two_event_and_trigger_is_rejected() {
         parse("When the order ships and the payment clears, the system shall issue the receipt."),
         Err(ParseError::MultipleEventConjuncts)
     );
-    assert_eq!(ParseError::MultipleEventConjuncts.kind(), "multiple_event_conjuncts");
+    assert_eq!(
+        ParseError::MultipleEventConjuncts.kind(),
+        "multiple_event_conjuncts"
+    );
     // `If` triggers are held to the same rule.
     assert_eq!(
         parse("If the disk fails and the link drops, then the daemon shall alert."),

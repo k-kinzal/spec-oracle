@@ -25,7 +25,11 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("expected {input:?} to parse, got {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -39,7 +43,10 @@ fn claim_polarity(sentence: &Sentence) -> Polarity {
         Denotation::Behavior(a) | Denotation::Admissibility(a) => match a.claim {
             Claim::State { polarity, .. } | Claim::Action { polarity, .. } => polarity,
             Claim::Admissible { .. } | Claim::Capability { .. } => {
-                panic!("claim carries no claim-level polarity site: {:?}", sentence.source)
+                panic!(
+                    "claim carries no claim-level polarity site: {:?}",
+                    sentence.source
+                )
             }
         },
         Denotation::Vocabulary { .. } => panic!("vocabulary has no claim: {:?}", sentence.source),
@@ -77,7 +84,10 @@ fn objs(hs: &[&str]) -> Vec<ObjectSkeleton> {
 /// A Location role digest: like [`heads_role`], plus the preposition
 /// marker (round 9 — the preposition entered role identity).
 fn loc_role(prep: &str, hs: &[&str]) -> RoleSkeleton {
-    RoleSkeleton { marker: Some(prep.to_string()), ..heads_role(RoleKind::Location, hs) }
+    RoleSkeleton {
+        marker: Some(prep.to_string()),
+        ..heads_role(RoleKind::Location, hs)
+    }
 }
 
 /// The Rate role digests its bare unit word with no quantifier.
@@ -85,7 +95,11 @@ fn rate_role(unit: &str) -> RoleSkeleton {
     RoleSkeleton {
         kind: RoleKind::Rate,
         value: RoleValue::Heads {
-            items: vec![ObjectSkeleton { quantifier: Quantifier::None, head: unit.to_string(), full: unit.to_string() }],
+            items: vec![ObjectSkeleton {
+                quantifier: Quantifier::None,
+                head: unit.to_string(),
+                full: unit.to_string(),
+            }],
             conj: None,
         },
         marker: None,
@@ -95,7 +109,10 @@ fn rate_role(unit: &str) -> RoleSkeleton {
 fn measure_role(kind: RoleKind, number: &str, unit: Option<&str>) -> RoleSkeleton {
     RoleSkeleton {
         kind,
-        value: RoleValue::Measure { number: number.to_string(), unit: unit.map(str::to_string) },
+        value: RoleValue::Measure {
+            number: number.to_string(),
+            unit: unit.map(str::to_string),
+        },
         marker: None,
     }
 }
@@ -152,9 +169,18 @@ fn no_with_may_rejected_in_every_deontic_shape() {
     assert_eq!(parse("No client May retry."), Err(ParseError::NoWithMay));
     // Coordinated subjects: ANY item determined by `no` triggers it,
     // whichever position it sits in and under either conjunction.
-    assert_eq!(parse("The client and no server may retry."), Err(ParseError::NoWithMay));
-    assert_eq!(parse("No client and the server may retry."), Err(ParseError::NoWithMay));
-    assert_eq!(parse("The client or no server may retry."), Err(ParseError::NoWithMay));
+    assert_eq!(
+        parse("The client and no server may retry."),
+        Err(ParseError::NoWithMay)
+    );
+    assert_eq!(
+        parse("No client and the server may retry."),
+        Err(ParseError::NoWithMay)
+    );
+    assert_eq!(
+        parse("The client or no server may retry."),
+        Err(ParseError::NoWithMay)
+    );
     assert_eq!(
         parse("Either no client or the proxy may retry."),
         Err(ParseError::NoWithMay)
@@ -164,10 +190,16 @@ fn no_with_may_rejected_in_every_deontic_shape() {
         Err(ParseError::NoWithMay)
     );
     // A `no` on the HEAD noun phrase of an of-chain is subject-level.
-    assert_eq!(parse("No owner of the file may retry."), Err(ParseError::NoWithMay));
+    assert_eq!(
+        parse("No owner of the file may retry."),
+        Err(ParseError::NoWithMay)
+    );
     // `no` + `may not` stacks two legislated ambiguities; the subject rule
     // fires first (the modal is `may` and the subject carries `no`).
-    assert_eq!(parse("No client may not retry."), Err(ParseError::NoWithMay));
+    assert_eq!(
+        parse("No client may not retry."),
+        Err(ParseError::NoWithMay)
+    );
     // With a VP that carries objects and roles.
     assert_eq!(
         parse("No exporter may send the payload to the collector within 5 seconds."),
@@ -184,9 +216,18 @@ fn no_with_may_rejected_in_every_deontic_shape() {
 fn no_with_may_error_kind_and_message() {
     assert_eq!(ParseError::NoWithMay.kind(), "no_with_may");
     let message = ParseError::NoWithMay.to_string();
-    assert!(message.contains("shall not"), "message must direct to `shall not`: {message}");
-    assert!(message.contains("prohibition"), "message names the intended act: {message}");
-    assert!(message.contains("permission"), "message names the denied act: {message}");
+    assert!(
+        message.contains("shall not"),
+        "message must direct to `shall not`: {message}"
+    );
+    assert!(
+        message.contains("prohibition"),
+        "message names the intended act: {message}"
+    );
+    assert!(
+        message.contains("permission"),
+        "message names the denied act: {message}"
+    );
 }
 
 #[test]
@@ -223,7 +264,11 @@ fn object_position_no_does_not_flip_claim_polarity() {
     // but is now visible as the object's quantifier.
     assert_eq!(
         k.atoms[0].objects,
-        vec![ObjectSkeleton { quantifier: Quantifier::Negative, head: "request".into(), full: "request".into() }]
+        vec![ObjectSkeleton {
+            quantifier: Quantifier::Negative,
+            head: "request".into(),
+            full: "request".into()
+        }]
     );
     // Modal `not` still flips exactly once; the object `no` adds nothing.
     let s = one("The daemon shall not log no request.");
@@ -260,7 +305,11 @@ fn no_subject_with_should_and_must() {
     let s = one("No request shall be logged.");
     match denote(&s) {
         Denotation::Behavior(a) => match a.claim {
-            Claim::Action { polarity: Polarity::Negative, force: Force::Binding, .. } => {}
+            Claim::Action {
+                polarity: Polarity::Negative,
+                force: Force::Binding,
+                ..
+            } => {}
             other => panic!("expected negative binding action, got {other:?}"),
         },
         other => panic!("expected behavior, got {other:?}"),
@@ -283,10 +332,22 @@ fn double_negation_composes_in_claim_and_skeleton() {
         "No client should not retry.",
     ] {
         let s = one(input);
-        assert_eq!(claim_polarity(&s), Polarity::Affirmative, "claim polarity of {input:?}");
+        assert_eq!(
+            claim_polarity(&s),
+            Polarity::Affirmative,
+            "claim polarity of {input:?}"
+        );
         let k = skeleton(&s).unwrap();
-        assert_eq!(k.polarity, Polarity::Affirmative, "skeleton polarity of {input:?}");
-        assert_eq!(k.subject.quantifier, Quantifier::Negative, "quantifier of {input:?}");
+        assert_eq!(
+            k.polarity,
+            Polarity::Affirmative,
+            "skeleton polarity of {input:?}"
+        );
+        assert_eq!(
+            k.subject.quantifier,
+            Quantifier::Negative,
+            "quantifier of {input:?}"
+        );
     }
     // Description `never` XOR subject `no` cancels the same way.
     let s = one("No request is never logged.");
@@ -300,7 +361,13 @@ fn descriptions_compose_never_always_and_no() {
     let s = one("No request is logged.");
     assert!(matches!(
         denote(&s),
-        Denotation::Behavior(Assertion { claim: Claim::State { polarity: Polarity::Negative, .. }, .. })
+        Denotation::Behavior(Assertion {
+            claim: Claim::State {
+                polarity: Polarity::Negative,
+                ..
+            },
+            ..
+        })
     ));
     assert_eq!(sk("No requests are logged.").polarity, Polarity::Negative);
     // `always` strengthens but never flips: `no` + `always` stays Negative.
@@ -311,7 +378,10 @@ fn descriptions_compose_never_always_and_no() {
     // The adverb survives in the AST/claim even though the polarity is combined.
     match denote(&s) {
         Denotation::Behavior(a) => match a.claim {
-            Claim::State { adverb: Some(DescriptionAdverb::Always), .. } => {}
+            Claim::State {
+                adverb: Some(DescriptionAdverb::Always),
+                ..
+            } => {}
             other => panic!("expected retained `always`, got {other:?}"),
         },
         other => panic!("expected behavior, got {other:?}"),
@@ -324,9 +394,16 @@ fn coordinated_subject_no_flips_the_claim_even_without_a_skeleton() {
     // claim polarity still composes: any item with `no` flips once.
     let s = one("No pump and the valve shall run.");
     assert_eq!(claim_polarity(&s), Polarity::Negative);
-    assert!(skeleton(&s).is_none(), "coordinated subjects have no skeleton in v0.2");
+    assert!(
+        skeleton(&s).is_none(),
+        "coordinated subjects have no skeleton in v0.2"
+    );
     let s = one("The pump and no valve shall not run.");
-    assert_eq!(claim_polarity(&s), Polarity::Affirmative, "two flips cancel");
+    assert_eq!(
+        claim_polarity(&s),
+        Polarity::Affirmative,
+        "two flips cancel"
+    );
 }
 
 // ====================================================================================
@@ -336,10 +413,12 @@ fn coordinated_subject_no_flips_the_claim_even_without_a_skeleton() {
 #[test]
 fn role_skeletons_cover_every_role_kind() {
     // One sentence carrying ten of the eleven role kinds, in surface order.
-    let k = sk("The daemon shall send the report and the invoice to the operator and \
+    let k = sk(
+        "The daemon shall send the report and the invoice to the operator and \
                 the auditor via the queue about the outage within 5 seconds for two \
                 minutes per second from the sensor into the archive in the vault \
-                before the session expires.");
+                before the session expires.",
+    );
     assert_eq!(k.atoms[0].words, vec!["send"]);
     assert_eq!(k.atoms[0].objects, objs(&["report", "invoice"]));
     assert_eq!(
@@ -354,20 +433,33 @@ fn role_skeletons_cover_every_role_kind() {
             heads_role(RoleKind::Source, &["sensor"]),
             heads_role(RoleKind::Goal, &["archive"]),
             loc_role("in", &["vault"]),
-            clause_role(RoleKind::Before, "session", &["expires"], "the session expires"),
+            clause_role(
+                RoleKind::Before,
+                "session",
+                &["expires"],
+                "the session expires"
+            ),
         ]
     );
     // The eleventh: `after` (a clausal role, like `before`).
     let k = sk("The daemon shall retry after the payment clears.");
     assert_eq!(
         k.atoms[0].roles,
-        vec![clause_role(RoleKind::After, "payment", &["clears"], "the payment clears")]
+        vec![clause_role(
+            RoleKind::After,
+            "payment",
+            &["clears"],
+            "the payment clears"
+        )]
     );
     // `using` collapses to the same Means digest as `via` (the marker is
     // surface detail; the skeleton indexes the role).
     let via = sk("The daemon shall sign the report via the key.");
     let using = sk("The daemon shall sign the report using the key.");
-    assert_eq!(via.atoms[0].roles, vec![heads_role(RoleKind::Means, &["key"])]);
+    assert_eq!(
+        via.atoms[0].roles,
+        vec![heads_role(RoleKind::Means, &["key"])]
+    );
     assert_eq!(via.atoms[0].roles, using.atoms[0].roles);
 }
 
@@ -430,9 +522,18 @@ fn deadline_pair_differs_only_in_the_deadline_role() {
     assert_eq!(five.act, ten.act);
     assert_eq!(five.guards, ten.guards);
     assert_eq!(five.exception, ten.exception);
-    assert_ne!(five.atoms[0].roles, ten.atoms[0].roles, "the deadline must be visible");
-    assert_eq!(five.atoms[0].roles, vec![measure_role(RoleKind::Deadline, "5", Some("seconds"))]);
-    assert_eq!(ten.atoms[0].roles, vec![measure_role(RoleKind::Deadline, "10", Some("seconds"))]);
+    assert_ne!(
+        five.atoms[0].roles, ten.atoms[0].roles,
+        "the deadline must be visible"
+    );
+    assert_eq!(
+        five.atoms[0].roles,
+        vec![measure_role(RoleKind::Deadline, "5", Some("seconds"))]
+    );
+    assert_eq!(
+        ten.atoms[0].roles,
+        vec![measure_role(RoleKind::Deadline, "10", Some("seconds"))]
+    );
 }
 
 #[test]
@@ -443,9 +544,15 @@ fn archive_and_public_bucket_no_longer_collide() {
     assert_eq!(archive.atoms[0].words, vec!["store"]);
     assert_eq!(archive.atoms[0].words, bucket.atoms[0].words);
     assert_eq!(archive.atoms[0].objects, bucket.atoms[0].objects);
-    assert_ne!(archive.atoms[0].roles, bucket.atoms[0].roles, "Location heads must differ");
+    assert_ne!(
+        archive.atoms[0].roles, bucket.atoms[0].roles,
+        "Location heads must differ"
+    );
     assert_eq!(archive.atoms[0].roles, vec![loc_role("in", &["archive"])]);
-    assert_eq!(bucket.atoms[0].roles, vec![loc_role("on", &["public bucket"])]);
+    assert_eq!(
+        bucket.atoms[0].roles,
+        vec![loc_role("on", &["public bucket"])]
+    );
     assert_eq!(archive.polarity, Polarity::Affirmative);
     assert_eq!(bucket.polarity, Polarity::Negative);
     // SUPERSEDED PIN (round 9, recorded): the round-2 "known residual
@@ -454,7 +561,10 @@ fn archive_and_public_bucket_no_longer_collide() {
     // the Location digest now carries its preposition marker, so the two
     // digests differ exactly there.
     let on = sk("The daemon shall store the report on the archive.");
-    assert_ne!(archive.atoms[0], on.atoms[0], "the preposition is role identity now");
+    assert_ne!(
+        archive.atoms[0], on.atoms[0],
+        "the preposition is role identity now"
+    );
     assert_eq!(on.atoms[0].roles, vec![loc_role("on", &["archive"])]);
 }
 
@@ -467,10 +577,16 @@ fn multi_object_coordination_heads() {
     // Marked coordination works in ROLE position (and its heads digest).
     let k = sk("The daemon shall send the report to both the operator and the auditor.");
     assert_eq!(k.atoms[0].objects, objs(&["report"]));
-    assert_eq!(k.atoms[0].roles, vec![heads_role(RoleKind::Recipient, &["operator", "auditor"])]);
+    assert_eq!(
+        k.atoms[0].roles,
+        vec![heads_role(RoleKind::Recipient, &["operator", "auditor"])]
+    );
     // Three-way coordination, lowercasing, and modifiers dropped from heads.
     let k = sk("The daemon shall store the Report and the final Invoice and the audit Log.");
-    assert_eq!(k.atoms[0].objects, objs(&["report", "final invoice", "audit log"]));
+    assert_eq!(
+        k.atoms[0].objects,
+        objs(&["report", "final invoice", "audit log"])
+    );
     // State claims have no objects and no roles.
     let k = sk("The report is in the archive.");
     assert_eq!(k.atoms[0].words, vec!["in", "the", "archive"]);
@@ -492,7 +608,10 @@ fn marked_object_coordination_should_parse_like_role_position() {
     let k = sk("The daemon shall store either the report or the invoice in the archive.");
     assert_eq!(k.atoms[0].objects, objs(&["report", "invoice"]));
     // Clause-object position has the same hole.
-    assert!(parse("When the order ships both the report and the invoice, the system shall pack.").is_ok());
+    assert!(
+        parse("When the order ships both the report and the invoice, the system shall pack.")
+            .is_ok()
+    );
 }
 
 #[test]
@@ -509,35 +628,54 @@ fn object_no_is_visible_as_the_object_quantifier() {
     assert_eq!(no.atoms[0].words, the.atoms[0].words);
     assert_eq!(
         no.atoms[0].objects,
-        vec![ObjectSkeleton { quantifier: Quantifier::Negative, head: "request".into(), full: "request".into() }]
+        vec![ObjectSkeleton {
+            quantifier: Quantifier::Negative,
+            head: "request".into(),
+            full: "request".into()
+        }]
     );
     assert_eq!(
         the.atoms[0].objects,
-        vec![ObjectSkeleton { quantifier: Quantifier::Definite, head: "request".into(), full: "request".into() }]
+        vec![ObjectSkeleton {
+            quantifier: Quantifier::Definite,
+            head: "request".into(),
+            full: "request".into()
+        }]
     );
 }
 
 #[test]
 fn guards_digest_all_frame_families() {
-    let k = sk("Where the Flag is Enabled, Where the mode is strict, While the engine \
+    let k = sk(
+        "Where the Flag is Enabled, Where the mode is strict, While the engine \
                 is running, While the queue is empty, When the order ships and the \
                 payment is cleared, the system shall pack the crate, unless no \
-                operator is present.");
+                operator is present.",
+    );
     assert_eq!(
         k.guards.scopes,
-        vec![cs("flag", None, &["enabled"]), cs("mode", None, &["strict"])],
+        vec![
+            cs("flag", None, &["enabled"]),
+            cs("mode", None, &["strict"])
+        ],
         "scope digests are flattened across Where frames and lowercased"
     );
     assert_eq!(
         k.guards.states,
-        vec![cs("engine", None, &["running"]), cs("queue", None, &["empty"])]
+        vec![
+            cs("engine", None, &["running"]),
+            cs("queue", None, &["empty"])
+        ]
     );
     assert_eq!(
         k.guards.trigger,
         Some(TriggerSkeleton {
             kind: TriggerKind::Event,
             conj: Some(Conj::And),
-            clauses: vec![cs("order", None, &["ships"]), cs("payment", None, &["cleared"])],
+            clauses: vec![
+                cs("order", None, &["ships"]),
+                cs("payment", None, &["cleared"])
+            ],
         })
     );
     assert_eq!(
@@ -560,8 +698,10 @@ fn guard_digests_carry_no_subject_polarity_and_or_groups() {
         vec![cs("endpoint", Some(Polarity::Negative), &["configured"])]
     );
     // An `or` trigger group of three verbal clauses digests with its conj.
-    let k = sk("When the pump stops or the valve closes or the sensor fails, the \
-                system shall alert.");
+    let k = sk(
+        "When the pump stops or the valve closes or the sensor fails, the \
+                system shall alert.",
+    );
     assert_eq!(
         k.guards.trigger,
         Some(TriggerSkeleton {
@@ -637,8 +777,12 @@ fn skeleton_and_claim_polarity_agree_on_a_generated_matrix() {
     // 36 generated sentences: every subject determiner crossed with every
     // claim shape and negation site. The skeleton polarity and the claim's
     // combined polarity must never drift apart.
-    let dets: [(&str, bool); 4] =
-        [("The ", false), ("No ", true), ("Each ", false), ("A ", false)];
+    let dets: [(&str, bool); 4] = [
+        ("The ", false),
+        ("No ", true),
+        ("Each ", false),
+        ("A ", false),
+    ];
     let forms: [(&str, bool); 9] = [
         ("request shall be logged.", false),
         ("request shall not be logged.", true),
@@ -666,7 +810,10 @@ fn skeleton_and_claim_polarity_agree_on_a_generated_matrix() {
             checked += 1;
         }
     }
-    assert!(checked >= 20, "the matrix must cover at least 20 sentences, got {checked}");
+    assert!(
+        checked >= 20,
+        "the matrix must cover at least 20 sentences, got {checked}"
+    );
 }
 
 // ====================================================================================
@@ -682,14 +829,18 @@ fn and_group_with_two_or_three_verbal_conjuncts_is_rejected() {
     );
     // Three events.
     assert_eq!(
-        parse("When the order ships and the payment clears and the stock arrives, \
-               the system shall pack."),
+        parse(
+            "When the order ships and the payment clears and the stock arrives, \
+               the system shall pack."
+        ),
         Err(ParseError::MultipleEventConjuncts)
     );
     // Two events with a state between them: still two events.
     assert_eq!(
-        parse("When the order ships and the payment is cleared and the invoice posts, \
-               the system shall pack."),
+        parse(
+            "When the order ships and the payment is cleared and the invoice posts, \
+               the system shall pack."
+        ),
         Err(ParseError::MultipleEventConjuncts)
     );
     // `If` groups obey the same rule as `When`.
@@ -716,21 +867,27 @@ fn and_group_with_two_or_three_verbal_conjuncts_is_rejected() {
 #[test]
 fn and_group_with_one_verbal_conjunct_is_accepted_in_any_order() {
     // Verbal first.
-    let s = one("When the order ships and the payment is cleared, the system shall \
-                 issue the receipt.");
+    let s = one(
+        "When the order ships and the payment is cleared, the system shall \
+                 issue the receipt.",
+    );
     let group = &s.frames.trigger.as_ref().unwrap().clause;
     assert_eq!(group.conj, Some(Conj::And));
     assert!(matches!(&group.items[0].body, ClauseBody::Verbal { verb, .. } if verb == "ships"));
     assert!(matches!(&group.items[1].body, ClauseBody::Copular { .. }));
     // Copular first, verbal second: the rule counts, it does not order.
-    let s = one("When the payment is cleared and the order ships, the system shall \
-                 issue the receipt.");
+    let s = one(
+        "When the payment is cleared and the order ships, the system shall \
+                 issue the receipt.",
+    );
     let group = &s.frames.trigger.as_ref().unwrap().clause;
     assert!(matches!(&group.items[0].body, ClauseBody::Copular { .. }));
     assert!(matches!(&group.items[1].body, ClauseBody::Verbal { verb, .. } if verb == "ships"));
     // Verbal in the middle of three.
-    let s = one("When the stock is available and the order ships and the payment is \
-                 cleared, the system shall pack.");
+    let s = one(
+        "When the stock is available and the order ships and the payment is \
+                 cleared, the system shall pack.",
+    );
     let group = &s.frames.trigger.as_ref().unwrap().clause;
     assert_eq!(group.items.len(), 3);
     assert!(matches!(&group.items[1].body, ClauseBody::Verbal { verb, .. } if verb == "ships"));
@@ -741,7 +898,10 @@ fn and_group_with_one_verbal_conjunct_is_accepted_in_any_order() {
     let group = &s.frames.trigger.as_ref().unwrap().clause;
     assert!(matches!(
         &group.items[1].body,
-        ClauseBody::Copular { copula: ClauseCopula::Remains, .. }
+        ClauseBody::Copular {
+            copula: ClauseCopula::Remains,
+            ..
+        }
     ));
 }
 
@@ -752,8 +912,10 @@ fn or_groups_admit_any_number_of_verbal_conjuncts() {
     let group = &s.frames.trigger.as_ref().unwrap().clause;
     assert_eq!(group.conj, Some(Conj::Or));
     assert_eq!(group.items.len(), 2);
-    let s = one("When the pump stops or the valve closes or the sensor fails or the \
-                 breaker trips, the system shall alert.");
+    let s = one(
+        "When the pump stops or the valve closes or the sensor fails or the \
+                 breaker trips, the system shall alert.",
+    );
     assert_eq!(s.frames.trigger.as_ref().unwrap().clause.items.len(), 4);
     // Same exemption under `If`.
     let s = one("If the pump stops or the valve closes, then the system shall alert.");
@@ -766,14 +928,22 @@ fn while_and_where_groups_are_unrestricted() {
     let group = &s.frames.states[0].clause;
     assert_eq!(group.conj, Some(Conj::And));
     assert_eq!(group.items.len(), 2);
-    assert!(group.items.iter().all(|c| matches!(c.body, ClauseBody::Verbal { .. })));
+    assert!(group
+        .items
+        .iter()
+        .all(|c| matches!(c.body, ClauseBody::Verbal { .. })));
     let s = one("Where the pump runs and the fan spins, the daemon shall wait.");
     let group = &s.frames.scopes[0].clause;
     assert_eq!(group.items.len(), 2);
-    assert!(group.items.iter().all(|c| matches!(c.body, ClauseBody::Verbal { .. })));
+    assert!(group
+        .items
+        .iter()
+        .all(|c| matches!(c.body, ClauseBody::Verbal { .. })));
     // Three verbal conjuncts under While.
-    let s = one("While the pump runs and the fan spins and the belt turns, the daemon \
-                 shall wait.");
+    let s = one(
+        "While the pump runs and the fan spins and the belt turns, the daemon \
+                 shall wait.",
+    );
     assert_eq!(s.frames.states[0].clause.items.len(), 3);
 }
 
@@ -782,23 +952,36 @@ fn mixed_coordination_still_wins_over_the_event_count() {
     // A mixed group is diagnosed as MixedCoordination during group parsing,
     // before the event count is ever taken.
     assert_eq!(
-        parse("When the order ships and the payment clears or the stock exists, the \
-               system shall pack."),
+        parse(
+            "When the order ships and the payment clears or the stock exists, the \
+               system shall pack."
+        ),
         Err(ParseError::MixedCoordination)
     );
     assert_eq!(
-        parse("If the order ships or the payment clears and the stock exists, then \
-               the system shall halt."),
+        parse(
+            "If the order ships or the payment clears and the stock exists, then \
+               the system shall halt."
+        ),
         Err(ParseError::MixedCoordination)
     );
 }
 
 #[test]
 fn multiple_event_conjuncts_error_kind_and_message() {
-    assert_eq!(ParseError::MultipleEventConjuncts.kind(), "multiple_event_conjuncts");
+    assert_eq!(
+        ParseError::MultipleEventConjuncts.kind(),
+        "multiple_event_conjuncts"
+    );
     let message = ParseError::MultipleEventConjuncts.to_string();
-    assert!(message.contains("one event"), "message states the rule: {message}");
-    assert!(message.contains("While"), "message offers the While rewrite: {message}");
+    assert!(
+        message.contains("one event"),
+        "message states the rule: {message}"
+    );
+    assert!(
+        message.contains("While"),
+        "message offers the While rewrite: {message}"
+    );
     assert!(
         message.contains("is/are/remains"),
         "message offers the copular rewrite: {message}"
@@ -871,10 +1054,16 @@ fn directed_hostile_inputs_around_round2_constructs() {
     // A wide `or` trigger group of verbal clauses must stay total (and legal).
     let wide = format!(
         "When {}, the system shall alert.",
-        (0..40).map(|i| format!("the sensor{i} fails")).collect::<Vec<_>>().join(" or ")
+        (0..40)
+            .map(|i| format!("the sensor{i} fails"))
+            .collect::<Vec<_>>()
+            .join(" or ")
     );
     total(&wide);
-    assert!(parse(&wide).is_ok(), "a wide or-group of events is alternation and legal");
+    assert!(
+        parse(&wide).is_ok(),
+        "a wide or-group of events is alternation and legal"
+    );
 }
 
 /// Invariants every ACCEPTED parse must satisfy after round 2. The parser
@@ -900,7 +1089,12 @@ fn check_round2_invariants(input: &str, spec: &Specification) {
         }
         // Invariant 2: no accepted `may` core has a `no`-determined subject
         // item.
-        if let Core::Deontic { subject, modal: Modal::May, .. } = &sentence.core {
+        if let Core::Deontic {
+            subject,
+            modal: Modal::May,
+            ..
+        } = &sentence.core
+        {
             assert!(!subject.has_no_item(), "accepted `no` + may: {input:?}");
         }
         // Invariant 3: the skeleton polarity always equals the claim's
@@ -970,8 +1164,21 @@ fn seeded_fuzz_over_round2_constructs() {
         "The pump and the valve",
     ];
     let pivots = [
-        "shall", "shall not", "must", "must not", "should", "should not", "may", "may not",
-        "MAY", "is", "is never", "is always", "are", "are never", "means",
+        "shall",
+        "shall not",
+        "must",
+        "must not",
+        "should",
+        "should not",
+        "may",
+        "may not",
+        "MAY",
+        "is",
+        "is never",
+        "is always",
+        "are",
+        "are never",
+        "means",
     ];
     let tails = [
         " retry",
@@ -1021,6 +1228,9 @@ fn seeded_fuzz_over_round2_constructs() {
                 }
             }
         }));
-        assert!(outcome.is_ok(), "panic or invariant violation on fuzz input: {input:?}");
+        assert!(
+            outcome.is_ok(),
+            "panic or invariant violation on fuzz input: {input:?}"
+        );
     }
 }

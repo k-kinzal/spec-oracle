@@ -4,9 +4,7 @@
 //! candidates.
 
 use so_lang::ast::ClauseBody;
-use so_lang::formula::{
-    contract_formula, AssumptionSource, ContractFormula, EdgeKind, Formula,
-};
+use so_lang::formula::{contract_formula, AssumptionSource, ContractFormula, EdgeKind, Formula};
 use so_lang::parse::{parse, ParseError};
 use so_lang::relate::{assumption_satisfiable, refines, Ternary};
 use so_lang::semantics::{skeleton, Quantifier};
@@ -67,9 +65,16 @@ fn ambiguous_class_rejects() {
         "The pump shall stop after the client sends telemetry.",
         "An upload means that the client sends telemetry.",
     ] {
-        assert_eq!(parse(text), Err(ParseError::AmbiguousVerbBoundary), "{text}");
+        assert_eq!(
+            parse(text),
+            Err(ParseError::AmbiguousVerbBoundary),
+            "{text}"
+        );
     }
-    assert_eq!(ParseError::AmbiguousVerbBoundary.kind(), "ambiguous_verb_boundary");
+    assert_eq!(
+        ParseError::AmbiguousVerbBoundary.kind(),
+        "ambiguous_verb_boundary"
+    );
 }
 
 /// The class is decided by SHAPE (legislated): a run in the class rejects
@@ -109,13 +114,19 @@ fn rewrites_are_boundaried() {
 fn unchanged_shapes_still_parse() {
     for (text, verb) in [
         // Length-1 run after the minimal subject.
-        ("When a session expires, the system shall close the session.", "expires"),
+        (
+            "When a session expires, the system shall close the session.",
+            "expires",
+        ),
         // Det-led two-word run: verb-only and verb+none coincide.
         ("When the pump runs, the fan shall run.", "runs"),
         // Final particle.
         ("When the user logs out, the session shall end.", "logs"),
         // Final bare number.
-        ("When the counter reaches zero, the system shall reset.", "reaches"),
+        (
+            "When the counter reaches zero, the system shall reset.",
+            "reaches",
+        ),
         // Particle word never opens a run: SVO not admitted, final-word
         // stands.
         ("When the power up fails, the fan shall run.", "fails"),
@@ -123,7 +134,10 @@ fn unchanged_shapes_still_parse() {
         // verb), final-word stands.
         ("When the owner of files logs, the fan shall run.", "logs"),
         // Structured (np-first) subject with a verbal tail.
-        ("When the owner of the file sends telemetry, the fan shall run.", "sends"),
+        (
+            "When the owner of the file sends telemetry, the fan shall run.",
+            "sends",
+        ),
     ] {
         let s = one(text);
         let clause = &s.frames.trigger.as_ref().unwrap().clause.items[0];
@@ -141,8 +155,14 @@ fn unchanged_shapes_still_parse() {
 /// always did.
 #[test]
 fn verbal_guard_digests_carry_objects() {
-    let no = skeleton(&one("When the queue holds no message, the daemon shall idle.")).unwrap();
-    let the = skeleton(&one("When the queue holds the message, the daemon shall idle.")).unwrap();
+    let no = skeleton(&one(
+        "When the queue holds no message, the daemon shall idle.",
+    ))
+    .unwrap();
+    let the = skeleton(&one(
+        "When the queue holds the message, the daemon shall idle.",
+    ))
+    .unwrap();
     assert_ne!(no.guards, the.guards);
     let clause = &no.guards.trigger.as_ref().unwrap().clauses[0];
     assert_eq!(clause.words, vec!["holds"]);
@@ -158,7 +178,10 @@ fn verbal_guard_digests_carry_objects() {
 /// and a pre-round-11 digest without the field loads as empty.
 #[test]
 fn clause_skeleton_objects_serde() {
-    let k = skeleton(&one("When the queue holds the message, the daemon shall idle.")).unwrap();
+    let k = skeleton(&one(
+        "When the queue holds the message, the daemon shall idle.",
+    ))
+    .unwrap();
     let clause = &k.guards.trigger.as_ref().unwrap().clauses[0];
     let json = serde_json::to_value(clause).unwrap();
     assert!(json.get("objects").is_some());
@@ -188,21 +211,30 @@ fn contract_forming_requires_explicit_relied() {
     let default =
         AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &source, &target).unwrap();
     assert!(!default.explicit_relied);
-    assert!(default.proven, "the default reliance is self-entailment — proven, yet");
-    assert!(!default.contract_forming(), "… still a candidate: not explicit");
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&default));
+    assert!(
+        default.proven,
+        "the default reliance is self-entailment — proven, yet"
+    );
+    assert!(
+        !default.contract_forming(),
+        "… still a candidate: not explicit"
+    );
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&default));
     assert_eq!(paired.assumption, Formula::Top);
     assert_eq!(paired.sources.len(), 1, "retained as visible evidence");
     // from_sentence (bulk re-derivation) is a default too.
-    let bulk =
-        AssumptionSource::from_sentence(EdgeKind::OccurrenceReliance, &source).unwrap();
+    let bulk = AssumptionSource::from_sentence(EdgeKind::OccurrenceReliance, &source).unwrap();
     assert!(!bulk.explicit_relied);
     assert!(!bulk.contract_forming());
     // The explicit entry point flips the gate.
     let explicit = explicit_source(EdgeKind::OccurrenceReliance, &source, &target);
     assert!(explicit.explicit_relied);
     assert!(explicit.contract_forming());
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&explicit));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&explicit));
     assert_eq!(paired.assumption, explicit.relied);
 }
 
@@ -319,7 +351,9 @@ fn matching_obligation_never_refutes_and_never_certifies() {
         &target,
     )
     .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
 }
 
@@ -335,7 +369,9 @@ fn single_branch_conflict_routes_around() {
         &target,
     )
     .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
 }
 
@@ -353,13 +389,16 @@ fn all_branch_refutation_is_no() {
         &target,
     )
     .unwrap();
-    let mut paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let mut paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     // Conjoin the two prohibitions into one guarantee: ¬retry ∧ ¬escalate.
-    let no_escalate = so_lang::formula::claim_formula(
-        &one("The client shall not escalate the request."),
-    )
-    .unwrap();
-    paired.guarantee = Formula::And { items: vec![paired.guarantee.clone(), no_escalate] };
+    let no_escalate =
+        so_lang::formula::claim_formula(&one("The client shall not escalate the request."))
+            .unwrap();
+    paired.guarantee = Formula::And {
+        items: vec![paired.guarantee.clone(), no_escalate],
+    };
     assert_eq!(envelope_compatible(&paired), Ternary::No);
 }
 
@@ -375,8 +414,9 @@ fn single_atom_and_never_description_refutations() {
         &prohibition,
     )
     .unwrap();
-    let paired =
-        contract_formula(&prohibition).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&prohibition)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::No);
     // (c) The never-description: `is never logged` forbids what `may be
     // logged` admits — the claim shapes meet at one negated atom.
@@ -387,7 +427,9 @@ fn single_atom_and_never_description_refutations() {
         &never,
     )
     .unwrap();
-    let paired = contract_formula(&never).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&never)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::No);
 }
 
@@ -405,15 +447,24 @@ fn passive_deontic_emits_active_candidates() {
     let s = one("Each request shall be logged by the daemon.");
     let candidates = normalization_candidates(&s);
     assert_eq!(candidates.len(), 4);
-    let verbs: Vec<&str> =
-        candidates.iter().map(|c| c.atom.words[0].as_str()).collect();
-    assert_eq!(verbs, vec!["log", "logg", "logge", "logged"], "the exact legislated stripping");
+    let verbs: Vec<&str> = candidates
+        .iter()
+        .map(|c| c.atom.words[0].as_str())
+        .collect();
+    assert_eq!(
+        verbs,
+        vec!["log", "logg", "logge", "logged"],
+        "the exact legislated stripping"
+    );
     for c in &candidates {
         assert_eq!(c.kind, NormalizationKind::ActivePassive);
         assert_eq!(c.subject.head, "daemon");
         assert_eq!(c.atom.objects.len(), 1);
         assert_eq!(c.atom.objects[0].head, "request");
-        assert!(c.atom.roles.is_empty(), "the Agent role does not survive into the candidate");
+        assert!(
+            c.atom.roles.is_empty(),
+            "the Agent role does not survive into the candidate"
+        );
         assert!(!c.note.is_empty());
     }
 }
@@ -428,7 +479,10 @@ fn passive_description_candidates_and_no_strip_participle() {
     let candidates = normalization_candidates(&s);
     // `submitted`: undoubled strip, ed-strip, d-strip, participle.
     assert_eq!(
-        candidates.iter().map(|c| c.atom.words[0].as_str()).collect::<Vec<_>>(),
+        candidates
+            .iter()
+            .map(|c| c.atom.words[0].as_str())
+            .collect::<Vec<_>>(),
         vec!["submit", "submitt", "submitte", "submitted"]
     );
     assert_eq!(candidates[0].subject.head, "daemon");
@@ -441,7 +495,10 @@ fn passive_description_candidates_and_no_strip_participle() {
     assert_eq!(candidates[1].atom.words, vec!["sent"]);
     // The non-Agent role tail survives into the candidate.
     assert_eq!(candidates[0].atom.roles.len(), 1);
-    assert_eq!(candidates[0].atom.roles[0].kind, so_lang::semantics::RoleKind::Deadline);
+    assert_eq!(
+        candidates[0].atom.roles[0].kind,
+        so_lang::semantics::RoleKind::Deadline
+    );
 }
 
 /// A coordinated agent emits one candidate set per agent item, in surface

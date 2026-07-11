@@ -26,15 +26,27 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 /// Parse an input expected to hold exactly one sentence.
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
 fn deontic(s: &Sentence) -> (&NpGroup, Modal, bool, &Vp) {
     match &s.core {
-        Core::Deontic { subject, modal, negated, vp } => {
-            (subject, *modal, *negated, vp.single().expect("single vp fixture"))
-        }
+        Core::Deontic {
+            subject,
+            modal,
+            negated,
+            vp,
+        } => (
+            subject,
+            *modal,
+            *negated,
+            vp.single().expect("single vp fixture"),
+        ),
         other => panic!("expected deontic core, got {other:?}"),
     }
 }
@@ -71,7 +83,11 @@ fn roundtrip_tree(input: &str) {
         (&r.frames, &r.core, &r.exception, &r.purpose),
         "render {rendered:?} of {input:?} must re-parse to the same tree"
     );
-    assert_eq!(r.render(), rendered, "render must be a fixpoint for {input:?}");
+    assert_eq!(
+        r.render(),
+        rendered,
+        "render must be a fixpoint for {input:?}"
+    );
 }
 
 fn location(role: &RolePp) -> (&str, &NpGroup) {
@@ -99,7 +115,11 @@ fn canonical_inputs_render_to_themselves() {
         "If the disk fails or the link drops, then the daemon shall alert.",
         "When the owner of the file logs out, the session shall end.",
     ] {
-        assert_eq!(one(input).render(), input, "canonical input must render to itself");
+        assert_eq!(
+            one(input).render(),
+            input,
+            "canonical input must render to itself"
+        );
     }
 }
 
@@ -113,7 +133,10 @@ fn loc_object_stops_before_locative_and_location_role_opens() {
     let (_, _, _, vp) = deontic(&s);
     assert_eq!(vp.verb, "store");
     let object = single(vp.object.as_ref().expect("object"));
-    assert_eq!(object.head, "report", "the locative must NOT fold into the object");
+    assert_eq!(
+        object.head, "report",
+        "the locative must NOT fold into the object"
+    );
     assert!(object.modifiers.is_empty());
     assert_eq!(vp.roles.len(), 1);
     let (prep, np) = location(&vp.roles[0]);
@@ -128,7 +151,10 @@ fn loc_at_opens_location_when_not_a_comparison() {
     let s = one("The pump shall run at the depot.");
     let (_, _, _, vp) = deontic(&s);
     assert_eq!(vp.verb, "run");
-    assert!(vp.object.is_none(), "a locative directly after the verb is not an object");
+    assert!(
+        vp.object.is_none(),
+        "a locative directly after the verb is not an object"
+    );
     let (prep, np) = location(&vp.roles[0]);
     assert_eq!(prep, "at");
     assert_eq!(single(np).head, "depot");
@@ -144,7 +170,10 @@ fn loc_at_least_at_most_stay_on_the_comparison_and_quantifier_paths() {
             *predicate,
             Predicate::Comparison(Comparison {
                 op: ComparisonOp::AtMost,
-                value: Measure::Quantity { number: "3".into(), unit: None },
+                value: Measure::Quantity {
+                    number: "3".into(),
+                    unit: None
+                },
                 upper: None,
             })
         ),
@@ -157,7 +186,10 @@ fn loc_at_least_at_most_stay_on_the_comparison_and_quantifier_paths() {
     let object = single(vp.object.as_ref().expect("object"));
     assert_eq!(object.det, Some(Det::AtLeast { n: 3 }));
     assert_eq!(object.head, "copies");
-    assert!(vp.roles.is_empty(), "`at least` must not open a Location role");
+    assert!(
+        vp.roles.is_empty(),
+        "`at least` must not open a Location role"
+    );
     roundtrip_exact("The daemon shall retain at least 3 copies.");
 }
 
@@ -205,7 +237,11 @@ fn loc_location_np_may_coordinate_and_carry_quantifiers() {
     let (prep, np) = location(&vp.roles[0]);
     assert_eq!(prep, "in");
     match np {
-        NpGroup::Coordinated { conj: Conj::Or, marker: None, items } => {
+        NpGroup::Coordinated {
+            conj: Conj::Or,
+            marker: None,
+            items,
+        } => {
             assert_eq!(items[0].head, "archive");
             assert_eq!(items[1].head, "cache");
         }
@@ -226,7 +262,10 @@ fn loc_location_np_may_coordinate_and_carry_quantifiers() {
 fn loc_predicate_pps_are_unchanged() {
     let s = one("The temperature is below the limit.");
     match &s.core {
-        Core::Description { predicate: Predicate::Pp { preposition, np }, .. } => {
+        Core::Description {
+            predicate: Predicate::Pp { preposition, np },
+            ..
+        } => {
             assert_eq!(preposition, "below");
             assert_eq!(single(np).head, "limit");
         }
@@ -235,7 +274,10 @@ fn loc_predicate_pps_are_unchanged() {
     let s = one("The pump is at the depot.");
     assert!(matches!(
         &s.core,
-        Core::Description { predicate: Predicate::Pp { .. }, .. }
+        Core::Description {
+            predicate: Predicate::Pp { .. },
+            ..
+        }
     ));
     roundtrip_exact("The pump is at the depot.");
 }
@@ -246,7 +288,10 @@ fn loc_be_complement_pp_is_a_complement_not_a_location_role() {
     let (_, _, _, vp) = deontic(&s);
     assert_eq!(vp.verb, "be");
     assert!(vp.object.is_none());
-    assert!(vp.roles.is_empty(), "a be-complement PP is not a Location role");
+    assert!(
+        vp.roles.is_empty(),
+        "a be-complement PP is not a Location role"
+    );
     match vp.complement.as_ref().expect("complement") {
         Predicate::Pp { preposition, np } => {
             assert_eq!(preposition, "in");
@@ -266,7 +311,12 @@ fn loc_clause_locatives_open_location_roles() {
     // Frame clause.
     let s = one("When the pump runs at the depot, the system shall stop.");
     match &s.frames.trigger.as_ref().unwrap().clause.items[0].body {
-        ClauseBody::Verbal { verb, object, roles, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            object,
+            roles,
+            ..
+        } => {
             assert_eq!(verb, "runs");
             assert!(object.is_none());
             let (prep, np) = location(&roles[0]);
@@ -292,7 +342,10 @@ fn loc_clause_locatives_open_location_roles() {
     // locative is the predicate, not a role.
     let s = one("While the pump is in the bay, the system shall wait.");
     match &s.frames.states[0].clause.items[0].body {
-        ClauseBody::Copular { predicate: Predicate::Pp { preposition, .. }, .. } => {
+        ClauseBody::Copular {
+            predicate: Predicate::Pp { preposition, .. },
+            ..
+        } => {
             assert_eq!(preposition, "in");
         }
         other => panic!("expected pp-predicate copular clause, got {other:?}"),
@@ -303,7 +356,9 @@ fn loc_clause_locatives_open_location_roles() {
 fn loc_empty_location_np_is_an_error() {
     assert_eq!(
         parse("The pump shall run in."),
-        Err(ParseError::UnexpectedTokens { token: "end of sentence".into() })
+        Err(ParseError::UnexpectedTokens {
+            token: "end of sentence".into()
+        })
     );
 }
 
@@ -427,7 +482,10 @@ fn means_definiens_np_takes_a_location_role() {
 
 #[test]
 fn means_that_with_nothing_after_is_empty_definiens() {
-    assert_eq!(parse("A timeout means that."), Err(ParseError::EmptyDefiniens));
+    assert_eq!(
+        parse("A timeout means that."),
+        Err(ParseError::EmptyDefiniens)
+    );
     assert_eq!(parse("A timeout means."), Err(ParseError::EmptyDefiniens));
 }
 
@@ -472,9 +530,14 @@ fn coord_event_conjunction_is_one_joint_guard() {
     assert_eq!(trigger.clause.conj, Some(Conj::And));
     assert_eq!(trigger.clause.items.len(), 2);
     assert_eq!(single(&trigger.clause.items[0].subject).head, "order");
-    assert!(matches!(&trigger.clause.items[0].body, ClauseBody::Verbal { verb, .. } if verb == "ships"));
+    assert!(
+        matches!(&trigger.clause.items[0].body, ClauseBody::Verbal { verb, .. } if verb == "ships")
+    );
     assert_eq!(single(&trigger.clause.items[1].subject).head, "payment");
-    assert!(matches!(&trigger.clause.items[1].body, ClauseBody::Copular { .. }));
+    assert!(matches!(
+        &trigger.clause.items[1].body,
+        ClauseBody::Copular { .. }
+    ));
     roundtrip_exact(input);
 }
 
@@ -531,20 +594,33 @@ fn coord_np_coordination_in_a_subject_stays_one_clause() {
     assert_eq!(group.conj, None, "one clause, not a clause coordination");
     assert_eq!(group.items.len(), 1);
     match &group.items[0].subject {
-        NpGroup::Coordinated { conj: Conj::And, items, .. } => {
+        NpGroup::Coordinated {
+            conj: Conj::And,
+            items,
+            ..
+        } => {
             assert_eq!(items[0].head, "pump");
             assert_eq!(items[1].head, "valve");
         }
         other => panic!("expected coordinated subject, got {other:?}"),
     }
-    assert!(matches!(&group.items[0].body, ClauseBody::Copular { copula: ClauseCopula::Are, .. }));
+    assert!(matches!(
+        &group.items[0].body,
+        ClauseBody::Copular {
+            copula: ClauseCopula::Are,
+            ..
+        }
+    ));
     roundtrip_exact(input);
 
     // Same for a disjoined subject.
     let s = one("While the pump or the valve is open, the daemon shall wait.");
     let group = &s.frames.states[0].clause;
     assert_eq!(group.conj, None);
-    assert!(matches!(&group.items[0].subject, NpGroup::Coordinated { conj: Conj::Or, .. }));
+    assert!(matches!(
+        &group.items[0].subject,
+        NpGroup::Coordinated { conj: Conj::Or, .. }
+    ));
 }
 
 #[test]
@@ -556,7 +632,13 @@ fn coord_np_coordinated_subject_item_composes_with_a_clause_item() {
     let group = &s.frames.trigger.as_ref().unwrap().clause;
     assert_eq!(group.conj, Some(Conj::And));
     assert_eq!(group.items.len(), 2);
-    assert!(matches!(&group.items[0].subject, NpGroup::Coordinated { conj: Conj::And, .. }));
+    assert!(matches!(
+        &group.items[0].subject,
+        NpGroup::Coordinated {
+            conj: Conj::And,
+            ..
+        }
+    ));
     assert!(matches!(&group.items[1].body, ClauseBody::Verbal { verb, .. } if verb == "runs"));
     roundtrip_exact(input);
 }
@@ -636,7 +718,12 @@ fn npfirst_owner_of_the_file_logs_out() {
     assert_eq!(subject.head, "owner");
     assert_eq!(subject.of.as_ref().unwrap().head, "file");
     match &clause.body {
-        ClauseBody::Verbal { verb, particle, object, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            particle,
+            object,
+            ..
+        } => {
             assert_eq!(verb, "logs");
             // SUPERSEDED PIN (round 3, change 2): `out` is a particle from
             // the closed list (`out`/`down`/`up`/`off`), no longer the
@@ -698,7 +785,9 @@ fn npfirst_plain_subjects_keep_the_determiner_heuristic() {
     assert!(matches!(&clause.body, ClauseBody::Verbal { verb, .. } if verb == "exceeds"));
     let s = one("When a session expires, the system shall close the session.");
     let clause = &s.frames.trigger.as_ref().unwrap().clause.items[0];
-    assert!(matches!(&clause.body, ClauseBody::Verbal { verb, object: None, .. } if verb == "expires"));
+    assert!(
+        matches!(&clause.body, ClauseBody::Verbal { verb, object: None, .. } if verb == "expires")
+    );
 }
 
 // `the user who is authenticated logs out` — a verbal clause whose subject
@@ -725,7 +814,10 @@ fn bt_reserved_word_as_object_head() {
     let (_, _, _, vp) = deontic(&s);
     let object = single(vp.object.as_ref().expect("object"));
     assert_eq!(object.det, Some(Det::The));
-    assert_eq!(object.head, "`will`", "backticks are preserved in the token");
+    assert_eq!(
+        object.head, "`will`",
+        "backticks are preserved in the token"
+    );
     roundtrip_exact("The system shall record the `will`.");
 }
 
@@ -753,7 +845,10 @@ fn bt_backticked_pivot_does_not_end_the_subject() {
 #[test]
 fn bt_backticked_keywords_never_keyword_match() {
     // Modal position: a backticked modal is not a pivot, so no pivot exists.
-    assert_eq!(parse("The pump `shall` stop."), Err(ParseError::MissingPivot));
+    assert_eq!(
+        parse("The pump `shall` stop."),
+        Err(ParseError::MissingPivot)
+    );
     // Frame keyword position: a backticked `When` opens no frame.
     assert_eq!(
         parse("`When` the pump runs, the system shall stop."),
@@ -767,7 +862,9 @@ fn bt_backticked_keywords_never_keyword_match() {
     // Adjunct keyword position: a backticked `unless` is stray material.
     assert_eq!(
         parse("The pump shall stop, `unless` the valve is open."),
-        Err(ParseError::UnexpectedTokens { token: "`unless`".into() })
+        Err(ParseError::UnexpectedTokens {
+            token: "`unless`".into()
+        })
     );
 }
 
@@ -841,7 +938,10 @@ fn bt_backticked_determiner_and_conjunction() {
     let (_, _, _, vp) = deontic(&s);
     let object = single(vp.object.as_ref().unwrap());
     assert_eq!(object.head, "beta");
-    assert_eq!(object.modifiers, vec!["alpha".to_string(), "`and`".to_string()]);
+    assert_eq!(
+        object.modifiers,
+        vec!["alpha".to_string(), "`and`".to_string()]
+    );
     roundtrip_exact("The daemon shall merge alpha `and` beta.");
 }
 
@@ -951,18 +1051,33 @@ fn perm_skeleton_still_derived_for_permissions() {
 fn sk_polarity_composition_truth_table() {
     let polarity = |input: &str| skeleton(&one(input)).unwrap().polarity;
     // Zero flips.
-    assert_eq!(polarity("The request shall be logged."), Polarity::Affirmative);
+    assert_eq!(
+        polarity("The request shall be logged."),
+        Polarity::Affirmative
+    );
     assert_eq!(polarity("The request is logged."), Polarity::Affirmative);
-    assert_eq!(polarity("The request is always logged."), Polarity::Affirmative);
+    assert_eq!(
+        polarity("The request is always logged."),
+        Polarity::Affirmative
+    );
     // One flip, each site alone.
-    assert_eq!(polarity("The request shall not be logged."), Polarity::Negative);
+    assert_eq!(
+        polarity("The request shall not be logged."),
+        Polarity::Negative
+    );
     assert_eq!(polarity("The request is never logged."), Polarity::Negative);
     assert_eq!(polarity("No request shall be logged."), Polarity::Negative);
     assert_eq!(polarity("No request is logged."), Polarity::Negative);
     // Two flips cancel: modal `not` XOR subject `no`…
-    assert_eq!(polarity("No request shall not be logged."), Polarity::Affirmative);
+    assert_eq!(
+        polarity("No request shall not be logged."),
+        Polarity::Affirmative
+    );
     // …and description `never` XOR subject `no`.
-    assert_eq!(polarity("No request is never logged."), Polarity::Affirmative);
+    assert_eq!(
+        polarity("No request is never logged."),
+        Polarity::Affirmative
+    );
     // A third site cannot be stacked: `not` is a deontic-only site and
     // `never` a description-only site, so no sentence carries three flips.
     // Writing `never` after `shall not` does not add one — `never` is
@@ -994,28 +1109,49 @@ fn sk_quantifier_mapping_for_every_determiner() {
     // as an existential witness (round 1 had mapped it existential).
     assert_eq!(quantifier("Any request is logged."), Quantifier::Universal);
     assert_eq!(quantifier("Each request is logged."), Quantifier::Universal);
-    assert_eq!(quantifier("Every request is logged."), Quantifier::Universal);
-    assert_eq!(quantifier("All requests are logged."), Quantifier::Universal);
+    assert_eq!(
+        quantifier("Every request is logged."),
+        Quantifier::Universal
+    );
+    assert_eq!(
+        quantifier("All requests are logged."),
+        Quantifier::Universal
+    );
     assert_eq!(quantifier("No request is logged."), Quantifier::Negative);
     assert_eq!(quantifier("Requests are logged."), Quantifier::Universal);
     assert_eq!(
         quantifier("At least 3 replicas shall be available."),
-        Quantifier::Count { op: CountOp::AtLeast, n: 3 }
+        Quantifier::Count {
+            op: CountOp::AtLeast,
+            n: 3
+        }
     );
     assert_eq!(
         quantifier("At most two probes are active."),
-        Quantifier::Count { op: CountOp::AtMost, n: 2 }
+        Quantifier::Count {
+            op: CountOp::AtMost,
+            n: 2
+        }
     );
     assert_eq!(
         quantifier("Exactly ten nodes are active."),
-        Quantifier::Count { op: CountOp::Exactly, n: 10 }
+        Quantifier::Count {
+            op: CountOp::Exactly,
+            n: 10
+        }
     );
 }
 
 #[test]
 fn sk_count_quantifier_skeletons_keep_force_and_atom() {
     let sk = skeleton(&one("At least 3 replicas shall be available.")).unwrap();
-    assert_eq!(sk.subject.quantifier, Quantifier::Count { op: CountOp::AtLeast, n: 3 });
+    assert_eq!(
+        sk.subject.quantifier,
+        Quantifier::Count {
+            op: CountOp::AtLeast,
+            n: 3
+        }
+    );
     assert_eq!(sk.subject.head, "replicas");
     assert_eq!(sk.atoms[0].words, vec!["available"]);
     assert_eq!(sk.force, Some(Force::Binding));
@@ -1036,7 +1172,10 @@ fn sk_atoms_match_across_prohibition_and_never_description() {
     let each = skeleton(&one("Each request shall be logged.")).unwrap();
     assert_eq!(no.atoms[0], each.atoms[0]);
     assert_eq!(no.atoms[0].words, vec!["logged"]);
-    assert_eq!((no.polarity, each.polarity), (Polarity::Negative, Polarity::Affirmative));
+    assert_eq!(
+        (no.polarity, each.polarity),
+        (Polarity::Negative, Polarity::Affirmative)
+    );
     assert_eq!(no.subject.quantifier, Quantifier::Negative);
     assert_eq!(each.subject.quantifier, Quantifier::Universal);
 }
@@ -1062,17 +1201,22 @@ fn sk_action_atom_keeps_roles_out_of_its_words_and_lowercases() {
         sk.atoms[0].objects,
         vec![semantics::ObjectSkeleton {
             quantifier: semantics::Quantifier::Definite,
-            head: "report".into(), full: "report".into()
+            head: "report".into(),
+            full: "report".into()
         }]
     );
-    assert_eq!(sk.subject.head, "System", "subject skeleton keeps surface casing");
+    assert_eq!(
+        sk.subject.head, "System",
+        "subject skeleton keeps surface casing"
+    );
     // Backticked heads survive (lowercased inside the backticks).
     let sk = skeleton(&one("The system shall record the `Will`.")).unwrap();
     assert_eq!(
         sk.atoms[0].objects,
         vec![semantics::ObjectSkeleton {
             quantifier: semantics::Quantifier::Definite,
-            head: "`will`".into(), full: "`will`".into()
+            head: "`will`".into(),
+            full: "`will`".into()
         }]
     );
 }
@@ -1146,25 +1290,117 @@ fn total_and_render_stable(input: &str) {
 /// to form near-sentences.
 const FUZZ_VOCAB: &[&str] = &[
     // locatives and comparison material
-    "in", "on", "at", "under", "over", "above", "below", "least", "most", "exactly",
-    "between", "greater", "less", "than", "equal",
+    "in",
+    "on",
+    "at",
+    "under",
+    "over",
+    "above",
+    "below",
+    "least",
+    "most",
+    "exactly",
+    "between",
+    "greater",
+    "less",
+    "than",
+    "equal",
     // coordination
-    "and", "or", "both", "either",
+    "and",
+    "or",
+    "both",
+    "either",
     // frames, definition, clause skeleton
-    "means", "that", "who", "when", "while", "where", "if", "then", "unless", "so",
-    "shall", "must", "may", "should", "is", "are", "remains", "not", "never", "always",
-    "be", "of", "will",
+    "means",
+    "that",
+    "who",
+    "when",
+    "while",
+    "where",
+    "if",
+    "then",
+    "unless",
+    "so",
+    "shall",
+    "must",
+    "may",
+    "should",
+    "is",
+    "are",
+    "remains",
+    "not",
+    "never",
+    "always",
+    "be",
+    "of",
+    "will",
     // backtick escape-hatch variants: matched, unmatched, empty, multibyte
-    "`will`", "`while`", "`and`", "`or`", "`at`", "`in`", "`means`", "`is`", "`not`",
-    "`no`", "`least`", "`", "``", "```", "`x", "x`", "`日本語`", "`🔥`", "`5`",
+    "`will`",
+    "`while`",
+    "`and`",
+    "`or`",
+    "`at`",
+    "`in`",
+    "`means`",
+    "`is`",
+    "`not`",
+    "`no`",
+    "`least`",
+    "`",
+    "``",
+    "```",
+    "`x",
+    "x`",
+    "`日本語`",
+    "`🔥`",
+    "`5`",
     // determiners and numbers
-    "the", "a", "an", "no", "each", "every", "all", "any", "3", "5.5", "zero", "ten",
+    "the",
+    "a",
+    "an",
+    "no",
+    "each",
+    "every",
+    "all",
+    "any",
+    "3",
+    "5.5",
+    "zero",
+    "ten",
     // open-class filler
-    "pump", "valve", "report", "archive", "owner", "file", "system", "order", "payment",
-    "depot", "logs", "out", "stop", "store", "run", "clears", "ships",
+    "pump",
+    "valve",
+    "report",
+    "archive",
+    "owner",
+    "file",
+    "system",
+    "order",
+    "payment",
+    "depot",
+    "logs",
+    "out",
+    "stop",
+    "store",
+    "run",
+    "clears",
+    "ships",
     // role preps and punctuation fragments
-    "to", "from", "into", "via", "using", "within", "for", "per", "before", "after",
-    ",", ".", "x,", "x.", ",x",
+    "to",
+    "from",
+    "into",
+    "via",
+    "using",
+    "within",
+    "for",
+    "per",
+    "before",
+    "after",
+    ",",
+    ".",
+    "x,",
+    "x.",
+    ",x",
 ];
 
 #[test]
@@ -1258,7 +1494,11 @@ fn fuzz_valid_construct_combinations_roundtrip_exactly() {
         input.push_str(tails[rng.below(tails.len())]);
         input.push('.');
         let s = one(&input);
-        assert_eq!(s.render(), input, "canonical combination must render to itself");
+        assert_eq!(
+            s.render(),
+            input,
+            "canonical combination must render to itself"
+        );
         let r = one(&s.render());
         assert_eq!(
             (&s.frames, &s.core, &s.exception, &s.purpose),

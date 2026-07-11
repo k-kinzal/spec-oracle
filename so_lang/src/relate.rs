@@ -142,7 +142,9 @@ pub fn contradicts(a: &Formula, b: &Formula) -> Ternary {
         if count_subject_atom(&simplify(f)) {
             return None;
         }
-        Some(Formula::Not { inner: Box::new(f.clone()) })
+        Some(Formula::Not {
+            inner: Box::new(f.clone()),
+        })
     };
     if not(b).is_some_and(|nb| implies(a, &nb) == Ternary::Yes)
         || not(a).is_some_and(|na| implies(b, &na) == Ternary::Yes)
@@ -267,8 +269,22 @@ fn guards_witness_overlap(a: &Formula, b: &Formula) -> bool {
     // the roles must match — the witness point satisfies both WRITTEN
     // conditions only when both are conditions of the same frame family.
     if let (
-        Formula::Atom { atom: AtomRef::Guard { clause: ca, source: sa, role: ra } },
-        Formula::Atom { atom: AtomRef::Guard { clause: cb, source: sb, role: rb } },
+        Formula::Atom {
+            atom:
+                AtomRef::Guard {
+                    clause: ca,
+                    source: sa,
+                    role: ra,
+                },
+        },
+        Formula::Atom {
+            atom:
+                AtomRef::Guard {
+                    clause: cb,
+                    source: sb,
+                    role: rb,
+                },
+        },
     ) = (a, b)
     {
         return ra == rb && comparison_guards_overlap(ca, sa, cb, sb);
@@ -284,9 +300,15 @@ fn guards_witness_overlap(a: &Formula, b: &Formula) -> bool {
 /// idempotence), so sorting alone finishes the normalization.
 fn canonical(f: &Formula) -> Formula {
     match f {
-        Formula::And { items } => Formula::And { items: canonical_items(items) },
-        Formula::Or { items } => Formula::Or { items: canonical_items(items) },
-        Formula::Not { inner } => Formula::Not { inner: Box::new(canonical(inner)) },
+        Formula::And { items } => Formula::And {
+            items: canonical_items(items),
+        },
+        Formula::Or { items } => Formula::Or {
+            items: canonical_items(items),
+        },
+        Formula::Not { inner } => Formula::Not {
+            inner: Box::new(canonical(inner)),
+        },
         other => other.clone(),
     }
 }
@@ -378,8 +400,22 @@ fn region_provably_empty(f: &Formula) -> bool {
         }
         // Guard atoms match ignoring their role (documented above).
         if let (
-            Formula::Atom { atom: AtomRef::Guard { clause: ca, source: sa, .. } },
-            Formula::Atom { atom: AtomRef::Guard { clause: cb, source: sb, .. } },
+            Formula::Atom {
+                atom:
+                    AtomRef::Guard {
+                        clause: ca,
+                        source: sa,
+                        ..
+                    },
+            },
+            Formula::Atom {
+                atom:
+                    AtomRef::Guard {
+                        clause: cb,
+                        source: sb,
+                        ..
+                    },
+            },
         ) = (&**inner, x)
         {
             return ca == cb && sa == sb;
@@ -422,20 +458,27 @@ fn envelope_conflict(permission: &Sentence, other: &Sentence) -> bool {
     if force(other) == Some(Force::Recommended) {
         return false;
     }
-    let (Some((gp, cp)), Some((go, co))) = (guarded_parts(permission), guarded_parts(other))
-    else {
+    let (Some((gp, cp)), Some((go, co))) = (guarded_parts(permission), guarded_parts(other)) else {
         return false;
     };
     if !guards_witness_overlap(&gp, &go) {
         return false;
     }
-    let Formula::Atom { atom: AtomRef::Admissibility { behavior: admitted } } = cp else {
+    let Formula::Atom {
+        atom: AtomRef::Admissibility { behavior: admitted },
+    } = cp
+    else {
         return false;
     };
     let Formula::Not { inner } = co else {
         return false;
     };
-    let Formula::Atom { atom: AtomRef::Behavior { behavior: forbidden } } = *inner else {
+    let Formula::Atom {
+        atom: AtomRef::Behavior {
+            behavior: forbidden,
+        },
+    } = *inner
+    else {
         return false;
     };
     // Count subjects never conflict here (round 7 attack fix): `at least 3
@@ -602,8 +645,13 @@ pub fn envelope_compatible(c: &ContractFormula) -> Ternary {
     // Recommended and count-subject prohibitions do not bound and are
     // dropped from the set (round 7 doctrine, round 7 attack fix).
     let negated_behavior = |f: &Formula| -> Option<crate::formula::BehaviorAtom> {
-        let Formula::Not { inner } = f else { return None };
-        let Formula::Atom { atom: AtomRef::Behavior { behavior } } = &**inner else {
+        let Formula::Not { inner } = f else {
+            return None;
+        };
+        let Formula::Atom {
+            atom: AtomRef::Behavior { behavior },
+        } = &**inner
+        else {
             return None;
         };
         Some(behavior.clone())
@@ -614,7 +662,9 @@ pub fn envelope_compatible(c: &ContractFormula) -> Ternary {
     };
     let mut forbidden: Vec<Proposition> = Vec::new();
     for conjunct in &conjuncts {
-        let Some(behavior) = negated_behavior(conjunct) else { continue };
+        let Some(behavior) = negated_behavior(conjunct) else {
+            continue;
+        };
         if behavior.force == Some(Force::Recommended)
             || matches!(behavior.subject.quantifier, Quantifier::Count { .. })
         {
@@ -636,7 +686,10 @@ pub fn envelope_compatible(c: &ContractFormula) -> Ternary {
         // The ADMITTED branches: one admissibility atom, or the `either …
         // or …` disjunction of admissibility atoms (round 11 branch rule).
         let admissibility = |f: &Formula| -> Option<crate::formula::BehaviorAtom> {
-            let Formula::Atom { atom: AtomRef::Admissibility { behavior } } = f else {
+            let Formula::Atom {
+                atom: AtomRef::Admissibility { behavior },
+            } = f
+            else {
                 return None;
             };
             Some(behavior.clone())
@@ -786,8 +839,11 @@ pub fn assess(a: &Sentence, b: &Sentence) -> Outcome {
     // Round 7: envelope compatibility — the one head-to-head judgment a
     // permission takes part in.
     if speech_act(a) == SpeechAct::Permission || speech_act(b) == SpeechAct::Permission {
-        let (permission, other) =
-            if speech_act(a) == SpeechAct::Permission { (a, b) } else { (b, a) };
+        let (permission, other) = if speech_act(a) == SpeechAct::Permission {
+            (a, b)
+        } else {
+            (b, a)
+        };
         if speech_act(other) != SpeechAct::Permission && envelope_conflict(permission, other) {
             return Outcome::EnvelopeConflict;
         }
@@ -801,8 +857,7 @@ pub fn assess(a: &Sentence, b: &Sentence) -> Outcome {
     // Round 7: the guard-aware rule sees CONDITIONAL contradictions the
     // assembled-guarantee comparison cannot (the claims conflict wherever
     // the shared guard holds); the force classification is the same.
-    if contradicts(&ca.guarantee, &cb.guarantee) == Ternary::Yes
-        || conditional_contradiction(a, b)
+    if contradicts(&ca.guarantee, &cb.guarantee) == Ternary::Yes || conditional_contradiction(a, b)
     {
         return match (fa, fb) {
             (Some(Force::Binding), Some(Force::Binding)) => Outcome::HardContradiction,
@@ -815,17 +870,25 @@ pub fn assess(a: &Sentence, b: &Sentence) -> Outcome {
     let fwd = implies(&ca.guarantee, &cb.guarantee);
     let bwd = implies(&cb.guarantee, &ca.guarantee);
     if fwd == Ternary::Yes && bwd == Ternary::Yes {
-        return if fa == fb { Outcome::Equivalent } else { Outcome::Unknown };
+        return if fa == fb {
+            Outcome::Equivalent
+        } else {
+            Outcome::Unknown
+        };
     }
     // Round 12 (change 1): the force preorder gates the graph-facing
     // refinement verdict — the proof stays a proof at the [`refines`]
     // level (force-blind by design), but only a force-admissible
     // direction is REPORTED as Refinement.
     if refines(&ca, &cb) == Ternary::Yes && refinement_force_admissible(fa, fb) {
-        return Outcome::Refinement { concrete_is_a: true };
+        return Outcome::Refinement {
+            concrete_is_a: true,
+        };
     }
     if refines(&cb, &ca) == Ternary::Yes && refinement_force_admissible(fb, fa) {
-        return Outcome::Refinement { concrete_is_a: false };
+        return Outcome::Refinement {
+            concrete_is_a: false,
+        };
     }
     if fwd == Ternary::No && bwd == Ternary::No {
         return Outcome::Independent;
@@ -952,7 +1015,9 @@ fn simplify(f: &Formula) -> Formula {
             // shall not run` into set-complement and manufactured false
             // contradictions).
             Formula::Not { inner } if !count_subject_atom(&inner) => *inner,
-            other => Formula::Not { inner: Box::new(other) },
+            other => Formula::Not {
+                inner: Box::new(other),
+            },
         },
         other => other.clone(),
     }
@@ -1195,7 +1260,10 @@ fn proposition_implies(a: &Proposition, b: &Proposition) -> Ternary {
 /// Do two subject digests match on everything EXCEPT the quantifier
 /// (round 7)? The `full` string excludes the top-level determiner, so two
 /// counted subjects over one restrictor+head meet here.
-fn subject_digests_match(a: &crate::semantics::SubjectSkeleton, b: &crate::semantics::SubjectSkeleton) -> bool {
+fn subject_digests_match(
+    a: &crate::semantics::SubjectSkeleton,
+    b: &crate::semantics::SubjectSkeleton,
+) -> bool {
     a.restrictor == b.restrictor && a.head == b.head && a.full == b.full
 }
 
@@ -1209,11 +1277,25 @@ fn count_interval(q: &Quantifier) -> Option<Interval> {
         return None;
     };
     let n = *n as f64;
-    let closed = |value: f64| Some(Bound { value, closed: true });
+    let closed = |value: f64| {
+        Some(Bound {
+            value,
+            closed: true,
+        })
+    };
     Some(match op {
-        CountOp::AtLeast => Interval { lo: closed(n), hi: None },
-        CountOp::AtMost => Interval { lo: None, hi: closed(n) },
-        CountOp::Exactly => Interval { lo: closed(n), hi: closed(n) },
+        CountOp::AtLeast => Interval {
+            lo: closed(n),
+            hi: None,
+        },
+        CountOp::AtMost => Interval {
+            lo: None,
+            hi: closed(n),
+        },
+        CountOp::Exactly => Interval {
+            lo: closed(n),
+            hi: closed(n),
+        },
     })
 }
 
@@ -1354,9 +1436,10 @@ fn roles_exclude(xs: &[RoleSkeleton], ys: &[RoleSkeleton]) -> bool {
         if found || x.kind != y.kind {
             return false;
         }
-        let (Some((ix, ux)), Some((iy, uy))) =
-            (role_interval(x.kind, &x.value), role_interval(y.kind, &y.value))
-        else {
+        let (Some((ix, ux)), Some((iy, uy))) = (
+            role_interval(x.kind, &x.value),
+            role_interval(y.kind, &y.value),
+        ) else {
             return false;
         };
         if !same_unit(ux.as_deref(), uy.as_deref()) || !ix.disjoint(&iy) {
@@ -1383,15 +1466,20 @@ fn roles_imply(xs: &[RoleSkeleton], ys: &[RoleSkeleton]) -> Ternary {
             // A second difference, or a kind mismatch: out of scope.
             return Ternary::Unknown;
         }
-        let (Some((ix, ux)), Some((iy, uy))) =
-            (role_interval(x.kind, &x.value), role_interval(y.kind, &y.value))
-        else {
+        let (Some((ix, ux)), Some((iy, uy))) = (
+            role_interval(x.kind, &x.value),
+            role_interval(y.kind, &y.value),
+        ) else {
             return Ternary::Unknown;
         };
         if !same_unit(ux.as_deref(), uy.as_deref()) {
             return Ternary::Unknown;
         }
-        verdict = Some(if ix.contained_in(&iy) { Ternary::Yes } else { Ternary::Unknown });
+        verdict = Some(if ix.contained_in(&iy) {
+            Ternary::Yes
+        } else {
+            Ternary::Unknown
+        });
     }
     verdict.unwrap_or(Ternary::Unknown)
 }
@@ -1417,19 +1505,33 @@ fn role_interval(kind: RoleKind, value: &RoleValue) -> Option<(Interval, Option<
             let interval = match kind {
                 RoleKind::Deadline => Interval {
                     lo: None,
-                    hi: Some(Bound { value: n, closed: true }),
+                    hi: Some(Bound {
+                        value: n,
+                        closed: true,
+                    }),
                 },
                 RoleKind::Duration => Interval {
-                    lo: Some(Bound { value: n, closed: true }),
+                    lo: Some(Bound {
+                        value: n,
+                        closed: true,
+                    }),
                     hi: None,
                 },
                 _ => unreachable!("guarded above"),
             };
             Some((interval, unit.clone()))
         }
-        RoleValue::BoundedMeasure { op, number, unit, upper } => interval_of(&ComparisonSkeleton {
+        RoleValue::BoundedMeasure {
+            op,
+            number,
+            unit,
+            upper,
+        } => interval_of(&ComparisonSkeleton {
             op: *op,
-            value: MeasureSkeleton::Quantity { number: number.clone(), unit: unit.clone() },
+            value: MeasureSkeleton::Quantity {
+                number: number.clone(),
+                unit: unit.clone(),
+            },
             upper: upper.as_ref().map(|u| MeasureSkeleton::Quantity {
                 number: u.clone(),
                 unit: unit.clone(),
@@ -1506,24 +1608,42 @@ fn interval_of(c: &ComparisonSkeleton) -> Option<(Interval, Option<String>)> {
     let (n, unit) = quantity(&c.value)?;
     let interval = match c.op {
         ComparisonOp::GreaterThan => Interval {
-            lo: Some(Bound { value: n, closed: false }),
+            lo: Some(Bound {
+                value: n,
+                closed: false,
+            }),
             hi: None,
         },
         ComparisonOp::LessThan => Interval {
             lo: None,
-            hi: Some(Bound { value: n, closed: false }),
+            hi: Some(Bound {
+                value: n,
+                closed: false,
+            }),
         },
         ComparisonOp::AtLeast => Interval {
-            lo: Some(Bound { value: n, closed: true }),
+            lo: Some(Bound {
+                value: n,
+                closed: true,
+            }),
             hi: None,
         },
         ComparisonOp::AtMost => Interval {
             lo: None,
-            hi: Some(Bound { value: n, closed: true }),
+            hi: Some(Bound {
+                value: n,
+                closed: true,
+            }),
         },
         ComparisonOp::EqualTo => Interval {
-            lo: Some(Bound { value: n, closed: true }),
-            hi: Some(Bound { value: n, closed: true }),
+            lo: Some(Bound {
+                value: n,
+                closed: true,
+            }),
+            hi: Some(Bound {
+                value: n,
+                closed: true,
+            }),
         },
         ComparisonOp::Between => {
             let (upper, upper_unit) = quantity(c.upper.as_ref()?)?;
@@ -1541,8 +1661,14 @@ fn interval_of(c: &ComparisonSkeleton) -> Option<(Interval, Option<String>)> {
             };
             return Some((
                 Interval {
-                    lo: Some(Bound { value: n, closed: true }),
-                    hi: Some(Bound { value: upper, closed: true }),
+                    lo: Some(Bound {
+                        value: n,
+                        closed: true,
+                    }),
+                    hi: Some(Bound {
+                        value: upper,
+                        closed: true,
+                    }),
                 },
                 unit,
             ));

@@ -58,9 +58,9 @@ fn attack_multibyte_boundaries() {
         "When x, 日本 the pump shall stop.",
         "×",
         "ß shall ss.",
-        "ﬃ shall ligature.", // U+FB03, expands under case mapping
-        "İstanbul shall İ.", // dotted capital I, lowercases to two chars
-        "𝕊𝕡𝕖𝕔 shall 𝕡𝕒𝕣𝕤𝕖.", // 4-byte mathematical alphanumerics
+        "ﬃ shall ligature.",      // U+FB03, expands under case mapping
+        "İstanbul shall İ.",      // dotted capital I, lowercases to two chars
+        "𝕊𝕡𝕖𝕔 shall 𝕡𝕒𝕣𝕤𝕖.",      // 4-byte mathematical alphanumerics
         "\u{10FFFF} shall stop.", // highest scalar value
         "a\u{0000}b shall stop.", // embedded NUL
         "\u{0000}",
@@ -70,16 +70,16 @@ fn attack_multibyte_boundaries() {
 #[test]
 fn attack_lone_combining_marks() {
     total_all([
-        "\u{0301}",                        // lone combining acute accent
-        "\u{0301} shall stop.",            // combining mark as subject word
-        "e\u{0301} shall stop.",           // decomposed é
-        "The pump shall sto\u{0308}p.",    // combining diaeresis mid-word
-        "\u{0301}\u{0302}\u{0303}",        // stacked lone marks
-        "the \u{0301} shall stop.",        // mark as sole head after determiner
-        "\u{200D}",                        // lone zero-width joiner
-        "\u{200B} shall stop.",            // zero-width space is NOT ascii whitespace
-        "\u{FEFF}The pump shall stop.",    // BOM glued to the first word
-        "\u{202E}The pump shall stop.",    // RTL override prefix
+        "\u{0301}",                                              // lone combining acute accent
+        "\u{0301} shall stop.",                                  // combining mark as subject word
+        "e\u{0301} shall stop.",                                 // decomposed é
+        "The pump shall sto\u{0308}p.",                          // combining diaeresis mid-word
+        "\u{0301}\u{0302}\u{0303}",                              // stacked lone marks
+        "the \u{0301} shall stop.", // mark as sole head after determiner
+        "\u{200D}",                 // lone zero-width joiner
+        "\u{200B} shall stop.",     // zero-width space is NOT ascii whitespace
+        "\u{FEFF}The pump shall stop.", // BOM glued to the first word
+        "\u{202E}The pump shall stop.", // RTL override prefix
         "a\u{0301}\u{0302}\u{0303}\u{0304}\u{0305} shall stop.", // Zalgo-lite
     ]);
 }
@@ -94,9 +94,9 @@ fn attack_mixed_cjk_and_emoji() {
         "🏳️‍🌈 means 旗.",
         "🍣 of 🍜 of 🍙 shall be 美味しい.",
         "when 温度 exceeds 限界, ロボット🤖 shall 停止.",
-        "🏽",  // lone skin-tone modifier
+        "🏽",     // lone skin-tone modifier
         "中。文", // ideographic full stop is not ASCII '.'
-        "、",   // ideographic comma is not ASCII ','
+        "、",     // ideographic comma is not ASCII ','
         "エラー、 shall 、stop。",
     ]);
 }
@@ -206,7 +206,10 @@ fn attack_deep_of_chain_within_current_stack_budget() {
         // As an object and inside a frame clause. (`a of` has no head noun,
         // so these reject before recursing — kept to pin that behavior.)
         total(&format!("The s shall v {}x.", "a of ".repeat(3_000)));
-        total(&format!("When {}x is hot, the pump shall stop.", "a of ".repeat(3_000)));
+        total(&format!(
+            "When {}x is hot, the pump shall stop.",
+            "a of ".repeat(3_000)
+        ));
     });
 }
 
@@ -214,10 +217,16 @@ fn attack_deep_of_chain_within_current_stack_budget() {
 fn attack_deep_relative_nesting_within_current_stack_budget() {
     on_pinned_stack(|| {
         // Each level recurses np -> relative -> copular predicate -> np …
-        total(&format!("{}the end shall stop.", "the a that is in ".repeat(300)));
+        total(&format!(
+            "{}the end shall stop.",
+            "the a that is in ".repeat(300)
+        ));
         // … or np -> relative -> verbal object -> np …
         total(&format!("{}the end", "the a that contains ".repeat(300)));
-        total(&format!("a x means {}the end.", "the a that is in ".repeat(300)));
+        total(&format!(
+            "a x means {}the end.",
+            "the a that is in ".repeat(300)
+        ));
     });
 }
 
@@ -235,7 +244,10 @@ fn attack_deep_of_chain_5000_stack_overflow() {
 fn attack_deep_relative_nesting_stack_overflow() {
     // Used to crash at 821 repetitions in debug builds; now rejected by the
     // depth bound.
-    total(&format!("{}the end shall stop.", "the a that is in ".repeat(1_000)));
+    total(&format!(
+        "{}the end shall stop.",
+        "the a that is in ".repeat(1_000)
+    ));
 }
 
 #[test]
@@ -257,12 +269,24 @@ fn attack_wide_coordination() {
 
 #[test]
 fn attack_many_frames_roles_and_sentences() {
-    total(&format!("{}the pump shall stop.", "where a is b, ".repeat(2_000)));
-    total(&format!("{}the pump shall stop.", "while a is b, ".repeat(2_000)));
+    total(&format!(
+        "{}the pump shall stop.",
+        "where a is b, ".repeat(2_000)
+    ));
+    total(&format!(
+        "{}the pump shall stop.",
+        "while a is b, ".repeat(2_000)
+    ));
     total(&format!("The s shall v{}.", " to x".repeat(3_000)));
-    total(&format!("The s shall v{}.", " within 5 seconds".repeat(2_000)));
+    total(&format!(
+        "The s shall v{}.",
+        " within 5 seconds".repeat(2_000)
+    ));
     total(&"The pump shall stop. ".repeat(2_000));
-    total(&format!("The pump shall stop{}", ", so that a is b".repeat(2_000)));
+    total(&format!(
+        "The pump shall stop{}",
+        ", so that a is b".repeat(2_000)
+    ));
 }
 
 // ---- reserved words in wrong positions ------------------------------------------------
@@ -270,12 +294,12 @@ fn attack_many_frames_roles_and_sentences() {
 /// Every closed-class word the grammar owns anywhere.
 const RESERVED: &[&str] = &[
     "shall", "must", "should", "may", "is", "are", "means", "can", "will", "would", "could",
-    "might", "ought", "where", "while", "when", "if", "unless", "of", "that", "who", "and",
-    "or", "both", "either", "remains", "then", "not", "to", "via", "using", "about", "within",
-    "for", "per", "before", "after", "from", "into", "the", "a", "an", "each", "every", "all",
-    "any", "no", "at", "least", "most", "exactly", "greater", "less", "than", "equal",
-    "between", "so", "in", "order", "always", "never", "be", "zero", "one", "ten", "on",
-    "below", "above", "under", "over",
+    "might", "ought", "where", "while", "when", "if", "unless", "of", "that", "who", "and", "or",
+    "both", "either", "remains", "then", "not", "to", "via", "using", "about", "within", "for",
+    "per", "before", "after", "from", "into", "the", "a", "an", "each", "every", "all", "any",
+    "no", "at", "least", "most", "exactly", "greater", "less", "than", "equal", "between", "so",
+    "in", "order", "always", "never", "be", "zero", "one", "ten", "on", "below", "above", "under",
+    "over",
 ];
 
 #[test]
@@ -322,9 +346,9 @@ fn attack_empty_and_whitespace() {
         "\r",
         "\r\n",
         " \t \n \r ",
-        "\u{000B}\u{000C}",   // vertical tab, form feed
-        "\u{00A0}",           // NBSP: not ASCII whitespace, becomes a word
-        "\u{3000}",           // ideographic space: likewise
+        "\u{000B}\u{000C}", // vertical tab, form feed
+        "\u{00A0}",         // NBSP: not ASCII whitespace, becomes a word
+        "\u{3000}",         // ideographic space: likewise
         "\u{00A0}\u{3000}\u{2009}",
         " . ",
         " , ",
@@ -411,7 +435,11 @@ struct XorShift(u64);
 
 impl XorShift {
     fn new(seed: u64) -> Self {
-        XorShift(if seed == 0 { 0x9E37_79B9_7F4A_7C15 } else { seed })
+        XorShift(if seed == 0 {
+            0x9E37_79B9_7F4A_7C15
+        } else {
+            seed
+        })
     }
 
     fn next_u64(&mut self) -> u64 {
@@ -438,11 +466,56 @@ impl XorShift {
 /// The vocabulary the soup draws from: reserved words, open-class words,
 /// punctuation-riddled fragments, numbers, multibyte, and emoji.
 const SOUP_EXTRA: &[&str] = &[
-    "pump", "valve", "system", "x", "y", "z", "stop", "record", "total", "temperature",
-    "café", "中文", "🔥", "👨‍👩‍👧‍👦", "\u{0301}", "×", "é", "5", "5.5", "0", "42",
-    "999999999999999999999999", "http://192.168.10.4:4318", "a.b.c", ",", ".", ",,", "..",
-    ",.", ".,", "x,", "x.", ",x", "then,", "shall.", "of,", "and.", "", "-", "--", "_",
-    "()", "\"quoted\"", "'q'", ";", ":", "?!", "\u{200B}", "\u{FEFF}", "\u{3000}",
+    "pump",
+    "valve",
+    "system",
+    "x",
+    "y",
+    "z",
+    "stop",
+    "record",
+    "total",
+    "temperature",
+    "café",
+    "中文",
+    "🔥",
+    "👨‍👩‍👧‍👦",
+    "\u{0301}",
+    "×",
+    "é",
+    "5",
+    "5.5",
+    "0",
+    "42",
+    "999999999999999999999999",
+    "http://192.168.10.4:4318",
+    "a.b.c",
+    ",",
+    ".",
+    ",,",
+    "..",
+    ",.",
+    ".,",
+    "x,",
+    "x.",
+    ",x",
+    "then,",
+    "shall.",
+    "of,",
+    "and.",
+    "",
+    "-",
+    "--",
+    "_",
+    "()",
+    "\"quoted\"",
+    "'q'",
+    ";",
+    ":",
+    "?!",
+    "\u{200B}",
+    "\u{FEFF}",
+    "\u{3000}",
 ];
 
 #[test]

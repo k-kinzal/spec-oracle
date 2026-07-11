@@ -13,20 +13,24 @@
 
 use so_lang::ast::*;
 use so_lang::formula::{
-    claim_formula, contract_formula, AssumptionSource, AtomRef, ContractFormula, EdgeKind,
-    Formula, PairingError,
+    claim_formula, contract_formula, AssumptionSource, AtomRef, ContractFormula, EdgeKind, Formula,
+    PairingError,
 };
 use so_lang::parse::{parse, ParseError};
 use so_lang::relate::{contradicts, implies, refines, Ternary};
 use so_lang::semantics::{
-    denote, skeleton, speech_act, subject_keys, Claim, Denotation, Polarity, Quantifier,
-    RoleKind, RoleValue, SpeechAct,
+    denote, skeleton, speech_act, subject_keys, Claim, Denotation, Polarity, Quantifier, RoleKind,
+    RoleValue, SpeechAct,
 };
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got {e:?}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -44,7 +48,9 @@ fn contract(input: &str) -> ContractFormula {
 /// now and never forms A.
 fn explicit_source(kind: EdgeKind, source: &str, target: &str) -> AssumptionSource {
     let source = one(source);
-    let relied = AssumptionSource::from_sentence(kind, &source).unwrap().formula;
+    let relied = AssumptionSource::from_sentence(kind, &source)
+        .unwrap()
+        .formula;
     AssumptionSource::for_guarantee_with_relied(kind, &source, &one(target), relied).unwrap()
 }
 
@@ -57,7 +63,11 @@ fn render_round_trips(s: &Sentence) {
         (&r.frames, &r.core, &r.exception, &r.purpose),
         "render {rendered:?} must re-parse to the same tree"
     );
-    assert_eq!(r.render(), rendered, "render must be a fixpoint for {rendered:?}");
+    assert_eq!(
+        r.render(),
+        rendered,
+        "render must be a fixpoint for {rendered:?}"
+    );
 }
 
 // ====================================================================================
@@ -67,7 +77,11 @@ fn render_round_trips(s: &Sentence) {
 #[test]
 fn pairing_matrix_every_act_times_every_kind() {
     use EdgeKind::*;
-    let all = [OccurrenceReliance, GuaranteeDischarge, AdmissibilityEnvelope];
+    let all = [
+        OccurrenceReliance,
+        GuaranteeDischarge,
+        AdmissibilityEnvelope,
+    ];
     // Every speech-act shape round 5 distinguishes, including the negated
     // recommendation (still a recommendation), `must not` (a prohibition),
     // the never-capability, and the plural/adverbed descriptions.
@@ -198,7 +212,12 @@ fn pairing_source_formulas_take_the_guarantee_shape() {
     )
     .unwrap();
     assert!(
-        matches!(envelope.formula, Formula::Atom { atom: AtomRef::Admissibility { .. } }),
+        matches!(
+            envelope.formula,
+            Formula::Atom {
+                atom: AtomRef::Admissibility { .. }
+            }
+        ),
         "a permission source is an admissibility atom, got {:?}",
         envelope.formula
     );
@@ -207,7 +226,10 @@ fn pairing_source_formulas_take_the_guarantee_shape() {
     let conditional = one("When the order ships, the sensor shall send the signal.");
     let source =
         AssumptionSource::from_sentence(EdgeKind::OccurrenceReliance, &conditional).unwrap();
-    assert_eq!(source.formula, contract_formula(&conditional).unwrap().guarantee);
+    assert_eq!(
+        source.formula,
+        contract_formula(&conditional).unwrap().guarantee
+    );
     assert!(matches!(source.formula, Formula::Or { .. }));
     // A coordinated-subject source neither panics nor loses items.
     let coordinated = one("The pump and the valve shall stop.");
@@ -244,7 +266,9 @@ fn paired_retains_sources_and_repairing_supersedes() {
         Formula::Or {
             items: vec![
                 base.guarantee.clone(),
-                Formula::Not { inner: Box::new(a.formula.clone()) },
+                Formula::Not {
+                    inner: Box::new(a.formula.clone())
+                },
             ],
         }
     );
@@ -252,7 +276,9 @@ fn paired_retains_sources_and_repairing_supersedes() {
     let p2 = base.paired(&[a.clone(), b.clone()]);
     assert_eq!(
         p2.assumption,
-        Formula::And { items: vec![a.formula.clone(), b.formula.clone()] }
+        Formula::And {
+            items: vec![a.formula.clone(), b.formula.clone()]
+        }
     );
     assert_eq!(p2.sources.len(), 2);
     assert_eq!(p2.sources[0].kind, EdgeKind::GuaranteeDischarge);
@@ -280,7 +306,10 @@ fn pairing_serde_round_trips_and_defaults() {
     assert_eq!(v["act"], "obligation");
     assert_eq!(v["force"], "binding");
     assert!(v["formula"].is_object());
-    assert_eq!(serde_json::from_value::<AssumptionSource>(v).unwrap(), source);
+    assert_eq!(
+        serde_json::from_value::<AssumptionSource>(v).unwrap(),
+        source
+    );
     // A permission source: null force, envelope kind.
     let envelope = AssumptionSource::from_sentence(
         EdgeKind::AdmissibilityEnvelope,
@@ -295,7 +324,10 @@ fn pairing_serde_round_trips_and_defaults() {
     let paired = contract("The daemon shall respond.").paired(&[source, envelope]);
     let v = serde_json::to_value(&paired).unwrap();
     assert_eq!(v["sources"].as_array().unwrap().len(), 2);
-    assert_eq!(serde_json::from_value::<ContractFormula>(v).unwrap(), paired);
+    assert_eq!(
+        serde_json::from_value::<ContractFormula>(v).unwrap(),
+        paired
+    );
     // Pre-round-5 contracts (no `sources` field) still deserialize, empty.
     let old = serde_json::json!({
         "assumption": { "kind": "top" },
@@ -339,14 +371,26 @@ fn generic_subjects_are_universal_in_every_behavioral_act() {
         assert_eq!(quantifier(input), Quantifier::Universal, "{input:?}");
     }
     // The trio the round legislated now meets at Universal.
-    assert_eq!(quantifier("A request shall be logged."), quantifier("Each request shall be logged."));
-    assert_eq!(quantifier("Requests are logged."), quantifier("Each request shall be logged."));
+    assert_eq!(
+        quantifier("A request shall be logged."),
+        quantifier("Each request shall be logged.")
+    );
+    assert_eq!(
+        quantifier("Requests are logged."),
+        quantifier("Each request shall be logged.")
+    );
     // Non-generic subject quantifiers are untouched.
-    assert_eq!(quantifier("The request shall be logged."), Quantifier::Definite);
+    assert_eq!(
+        quantifier("The request shall be logged."),
+        Quantifier::Definite
+    );
     assert_eq!(quantifier("No request is logged."), Quantifier::Negative);
     assert_eq!(
         quantifier("At least 3 pumps shall run."),
-        Quantifier::Count { op: so_lang::semantics::CountOp::AtLeast, n: 3 }
+        Quantifier::Count {
+            op: so_lang::semantics::CountOp::AtLeast,
+            n: 3
+        }
     );
 }
 
@@ -356,7 +400,10 @@ fn generic_normalization_is_a_derived_view_only() {
     // skeleton/formula layers, never in the words.
     let s = one("A request shall be logged.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Single(np), .. } => {
+        Core::Deontic {
+            subject: NpGroup::Single(np),
+            ..
+        } => {
             assert_eq!(np.det, Some(Det::A));
         }
         other => panic!("expected deontic, got {other:?}"),
@@ -369,7 +416,9 @@ fn generic_normalization_is_a_derived_view_only() {
     assert_eq!(refs.len(), 1);
     assert_eq!(
         refs[0].resolution,
-        so_lang::semantics::Resolution::Unique { antecedent_sentence: 0 }
+        so_lang::semantics::Resolution::Unique {
+            antecedent_sentence: 0
+        }
     );
 }
 
@@ -412,7 +461,9 @@ fn generic_interacts_with_subject_no_and_coordination() {
     assert_eq!(sk.subject.quantifier, Quantifier::Negative);
     match claim("No request is logged.") {
         Formula::Not { inner } => match *inner {
-            Formula::Atom { atom: AtomRef::Behavior { behavior } } => {
+            Formula::Atom {
+                atom: AtomRef::Behavior { behavior },
+            } => {
                 assert_eq!(behavior.subject.quantifier, Quantifier::Universal);
             }
             other => panic!("expected behavior atom, got {other:?}"),
@@ -421,7 +472,9 @@ fn generic_interacts_with_subject_no_and_coordination() {
     }
     // A generic subject builds a bare (un-negated) Universal atom.
     match claim("A request is logged.") {
-        Formula::Atom { atom: AtomRef::Behavior { behavior } } => {
+        Formula::Atom {
+            atom: AtomRef::Behavior { behavior },
+        } => {
             assert_eq!(behavior.subject.quantifier, Quantifier::Universal);
         }
         other => panic!("expected bare behavior atom, got {other:?}"),
@@ -431,9 +484,9 @@ fn generic_interacts_with_subject_no_and_coordination() {
     match claim("A pump and the valve shall stop.") {
         Formula::And { items } => {
             let q = |f: &Formula| match f {
-                Formula::Atom { atom: AtomRef::Behavior { behavior } } => {
-                    behavior.subject.quantifier
-                }
+                Formula::Atom {
+                    atom: AtomRef::Behavior { behavior },
+                } => behavior.subject.quantifier,
                 other => panic!("expected behavior atom, got {other:?}"),
             };
             assert_eq!(q(&items[0]), Quantifier::Universal);
@@ -445,8 +498,14 @@ fn generic_interacts_with_subject_no_and_coordination() {
     // item; each atom is Universal, negation only on the `no` item.
     match claim("A pump and no valve shall run.") {
         Formula::And { items } => {
-            assert!(matches!(items[0], Formula::Atom { .. }), "generic item stays affirmative");
-            assert!(matches!(items[1], Formula::Not { .. }), "`no` item carries the Not");
+            assert!(
+                matches!(items[0], Formula::Atom { .. }),
+                "generic item stays affirmative"
+            );
+            assert!(
+                matches!(items[1], Formula::Not { .. }),
+                "`no` item carries the Not"
+            );
         }
         other => panic!("expected And, got {other:?}"),
     }
@@ -572,37 +631,61 @@ fn comparison_orderings_with_decimals_and_units() {
     let c = |i: &str| claim(i);
     // Upper bounds refine downward.
     assert_eq!(
-        implies(&c("The retry count is at most 2.5."), &c("The retry count is at most 3.")),
+        implies(
+            &c("The retry count is at most 2.5."),
+            &c("The retry count is at most 3.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The retry count is at most 3."), &c("The retry count is at most 2.5.")),
+        implies(
+            &c("The retry count is at most 3."),
+            &c("The retry count is at most 2.5.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
-        implies(&c("The depth is less than 3."), &c("The depth is less than 5.")),
+        implies(
+            &c("The depth is less than 3."),
+            &c("The depth is less than 5.")
+        ),
         Ternary::Yes
     );
     // Lower bounds refine upward.
     assert_eq!(
-        implies(&c("The replica count is at least 5."), &c("The replica count is at least 3.")),
+        implies(
+            &c("The replica count is at least 5."),
+            &c("The replica count is at least 3.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The depth is greater than 5."), &c("The depth is greater than 3.")),
+        implies(
+            &c("The depth is greater than 5."),
+            &c("The depth is greater than 3.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The depth is greater than 3."), &c("The depth is greater than 5.")),
+        implies(
+            &c("The depth is greater than 3."),
+            &c("The depth is greater than 5.")
+        ),
         Ternary::Unknown
     );
     // `equal to` needs numeric equality — spelled differently still meets.
     assert_eq!(
-        implies(&c("The count is equal to 5."), &c("The count is equal to 5.0.")),
+        implies(
+            &c("The count is equal to 5."),
+            &c("The count is equal to 5.0.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The count is equal to 5."), &c("The count is equal to 6.")),
+        implies(
+            &c("The count is equal to 5."),
+            &c("The count is equal to 6.")
+        ),
         Ternary::Unknown
     );
     // Round 6 (supersedes the round-5 same-operator-only pin): comparisons
@@ -610,16 +693,25 @@ fn comparison_orderings_with_decimals_and_units() {
     // containment does — `less than 3` (an open upper bound) is contained
     // in `at most 5` (a closed one).
     assert_eq!(
-        implies(&c("The count is less than 3."), &c("The count is at most 5.")),
+        implies(
+            &c("The count is less than 3."),
+            &c("The count is at most 5.")
+        ),
         Ternary::Yes
     );
     // With units: same unit orders, different unit is Unknown.
     assert_eq!(
-        implies(&c("The latency is at most 3 seconds."), &c("The latency is at most 5 seconds.")),
+        implies(
+            &c("The latency is at most 3 seconds."),
+            &c("The latency is at most 5 seconds.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The latency is at most 3 seconds."), &c("The latency is at most 5 ms.")),
+        implies(
+            &c("The latency is at most 3 seconds."),
+            &c("The latency is at most 5 ms.")
+        ),
         Ternary::Unknown
     );
     // Round 6 (supersedes the round-5 out-of-scope pin): `between` is a
@@ -668,7 +760,11 @@ fn ternary_judgments_are_conservative_never_unjustified() {
         let b = c(y);
         assert_eq!(implies(&a, &b), Ternary::Unknown, "implies({x:?}, {y:?})");
         assert_eq!(implies(&b, &a), Ternary::Unknown, "implies({y:?}, {x:?})");
-        assert_eq!(contradicts(&a, &b), Ternary::Unknown, "contradicts({x:?}, {y:?})");
+        assert_eq!(
+            contradicts(&a, &b),
+            Ternary::Unknown,
+            "contradicts({x:?}, {y:?})"
+        );
     }
     // Admissibility atoms DO compare among themselves: the numeric hook
     // works inside the envelope modality.
@@ -694,7 +790,10 @@ fn prohibition_contradicts_obligation_and_negation_composes() {
     assert_eq!(contradicts(&forbidden, &obliged), Ternary::Yes);
     // Generic subject against the explicit universal (round-5 payoff).
     assert_eq!(
-        contradicts(&c("A request shall not be logged."), &c("Each request shall be logged.")),
+        contradicts(
+            &c("A request shall not be logged."),
+            &c("Each request shall be logged.")
+        ),
         Ternary::Yes
     );
     // Description `never` against the described state.
@@ -705,7 +804,9 @@ fn prohibition_contradicts_obligation_and_negation_composes() {
     // A claim never contradicts itself: syntactic equality is a No.
     assert_eq!(contradicts(&obliged, &obliged), Ternary::No);
     // implies over mixed polarity of ONE proposition is a proven No.
-    let not_obliged = Formula::Not { inner: Box::new(obliged.clone()) };
+    let not_obliged = Formula::Not {
+        inner: Box::new(obliged.clone()),
+    };
     assert_eq!(implies(&obliged, &not_obliged), Ternary::No);
     assert_eq!(implies(&not_obliged, &obliged), Ternary::No);
 }
@@ -735,7 +836,11 @@ fn refines_direction_cannot_be_inverted() {
     let tight = contract("When the order ships, the daemon shall respond within 5 seconds.");
     let loose = contract("When the order ships, the daemon shall respond within 10 seconds.");
     assert_eq!(refines(&tight, &loose), Ternary::Yes);
-    assert_ne!(refines(&loose, &tight), Ternary::Yes, "direction must not invert");
+    assert_ne!(
+        refines(&loose, &tight),
+        Ternary::Yes,
+        "direction must not invert"
+    );
     assert_eq!(refines(&loose, &tight), Ternary::Unknown);
     // Assumption weakening, on PAIRED (saturated) forms: the contract that
     // assumes LESS (A alone) refines the one that assumes MORE (A ∧ B) —
@@ -781,9 +886,15 @@ fn subject_keys_with_modifiers_casing_ofchains_coordination_relatives() {
         subject_keys(&one("The backup daemon shall run.")),
         subject_keys(&one("The daemon shall run."))
     );
-    assert_eq!(subject_keys(&one("The backup daemon shall run.")), vec!["backup.daemon"]);
+    assert_eq!(
+        subject_keys(&one("The backup daemon shall run.")),
+        vec!["backup.daemon"]
+    );
     // Casing is normalized.
-    assert_eq!(subject_keys(&one("The BACKUP Daemon shall run.")), vec!["backup.daemon"]);
+    assert_eq!(
+        subject_keys(&one("The BACKUP Daemon shall run.")),
+        vec!["backup.daemon"]
+    );
     // Multiple modifiers keep surface order.
     assert_eq!(
         subject_keys(&one("The primary backup daemon shall run.")),
@@ -791,12 +902,16 @@ fn subject_keys_with_modifiers_casing_ofchains_coordination_relatives() {
     );
     // Of-chain links contribute modifiers + head, root first.
     assert_eq!(
-        subject_keys(&one("The senior owner of the shared backup file shall approve the change.")),
+        subject_keys(&one(
+            "The senior owner of the shared backup file shall approve the change."
+        )),
         vec!["senior.owner.shared.backup.file"]
     );
     // Deep chains flatten in chain order.
     assert_eq!(
-        subject_keys(&one("The owner of the log of the backup daemon shall rotate the log.")),
+        subject_keys(&one(
+            "The owner of the log of the backup daemon shall rotate the log."
+        )),
         vec!["owner.log.backup.daemon"]
     );
     // Coordination: one key per item, each with its own modifiers.
@@ -807,19 +922,28 @@ fn subject_keys_with_modifiers_casing_ofchains_coordination_relatives() {
     // Relatives are excluded — both attachments, copular and verbal bodies;
     // a relative's object never leaks into the key.
     assert_eq!(
-        subject_keys(&one("The user of the workspace who is active shall confirm the change.")),
+        subject_keys(&one(
+            "The user of the workspace who is active shall confirm the change."
+        )),
         vec!["user.workspace"]
     );
     assert_eq!(
-        subject_keys(&one("The user of the workspace that is active shall confirm the change.")),
+        subject_keys(&one(
+            "The user of the workspace that is active shall confirm the change."
+        )),
         vec!["user.workspace"]
     );
     assert_eq!(
-        subject_keys(&one("The user who owns the backup file shall confirm the change.")),
+        subject_keys(&one(
+            "The user who owns the backup file shall confirm the change."
+        )),
         vec!["user"]
     );
     // Descriptions and definitions.
-    assert_eq!(subject_keys(&one("The backup daemon is idle.")), vec!["backup.daemon"]);
+    assert_eq!(
+        subject_keys(&one("The backup daemon is idle.")),
+        vec!["backup.daemon"]
+    );
     assert!(subject_keys(&one("A backup daemon means a standby process.")).is_empty());
 }
 
@@ -850,19 +974,28 @@ fn for_accepts_quantities_including_decimals_and_zero() {
         duration("The pump shall run for 2.5 seconds."),
         ("2.5".to_string(), Some("seconds".to_string()))
     );
-    assert_eq!(duration("The pump shall run for zero."), ("zero".to_string(), None));
+    assert_eq!(
+        duration("The pump shall run for zero."),
+        ("zero".to_string(), None)
+    );
     assert_eq!(
         duration("The pump shall run for five seconds."),
         ("five".to_string(), Some("seconds".to_string()))
     );
-    assert_eq!(duration("The pump shall run for 5."), ("5".to_string(), None));
+    assert_eq!(
+        duration("The pump shall run for 5."),
+        ("5".to_string(), None)
+    );
     // The digest keeps the number as written.
     let sk = skeleton(&one("The pump shall run for 2.5 seconds.")).unwrap();
     assert_eq!(
         sk.atoms[0].roles[0],
         so_lang::semantics::RoleSkeleton {
             kind: RoleKind::Duration,
-            value: RoleValue::Measure { number: "2.5".into(), unit: Some("seconds".into()) },
+            value: RoleValue::Measure {
+                number: "2.5".into(),
+                unit: Some("seconds".into())
+            },
             marker: None,
         }
     );
@@ -874,7 +1007,10 @@ fn for_without_a_quantity_is_rejected_with_the_exact_kind() {
     // least 5 seconds` now HAS a legislated duration reading —
     // `Measure::Bounded` — so it is no longer in this rejection set (see
     // tests/round6.rs).
-    assert_eq!(ParseError::ForRequiresMeasure.kind(), "for_requires_measure");
+    assert_eq!(
+        ParseError::ForRequiresMeasure.kind(),
+        "for_requires_measure"
+    );
     for input in [
         "The daemon shall listen for requests.",
         "The daemon shall wait for the grace period.",
@@ -883,14 +1019,21 @@ fn for_without_a_quantity_is_rejected_with_the_exact_kind() {
         // definiens role phrases share it too
         "A backup means a copy for the archive.",
     ] {
-        assert_eq!(parse(input), Err(ParseError::ForRequiresMeasure), "{input:?}");
+        assert_eq!(
+            parse(input),
+            Err(ParseError::ForRequiresMeasure),
+            "{input:?}"
+        );
     }
     // `within` (Deadline) still admits noun-phrase measures — the
     // legislation covers `for` alone.
     let s = one("The daemon shall respond within the grace period.");
     match &s.core {
         Core::Deontic { vp, .. } => {
-            assert!(matches!(&vp.single().unwrap().roles[0], RolePp::Deadline(Measure::Np { .. })));
+            assert!(matches!(
+                &vp.single().unwrap().roles[0],
+                RolePp::Deadline(Measure::Np { .. })
+            ));
         }
         other => panic!("expected deontic, got {other:?}"),
     }
@@ -918,7 +1061,13 @@ fn with_is_rejected_at_role_positions_and_folds_in_plain_nps() {
     let s = one("The daemon shall sign the report using the key.");
     match &s.core {
         Core::Deontic { vp, .. } => {
-            assert!(matches!(&vp.single().unwrap().roles[0], RolePp::Means { marker: MeansMarker::Using, .. }));
+            assert!(matches!(
+                &vp.single().unwrap().roles[0],
+                RolePp::Means {
+                    marker: MeansMarker::Using,
+                    ..
+                }
+            ));
         }
         other => panic!("expected deontic, got {other:?}"),
     }
@@ -935,7 +1084,10 @@ fn with_is_rejected_at_role_positions_and_folds_in_plain_nps() {
     // ordinary predicate word (documented plain-context behavior).
     let s = one("The pump is compatible with the valve.");
     match &s.core {
-        Core::Description { predicate: Predicate::Words { words }, .. } => {
+        Core::Description {
+            predicate: Predicate::Words { words },
+            ..
+        } => {
             assert_eq!(words, &["compatible", "with", "the", "valve"]);
         }
         other => panic!("expected words predicate, got {other:?}"),
@@ -952,7 +1104,9 @@ fn by_agent_in_passive_vp_description_and_copular_guard() {
             assert!(
                 matches!(&vp.single().unwrap().complement, Some(Predicate::Words { words }) if words == &["logged"])
             );
-            assert!(matches!(&vp.single().unwrap().roles[0], RolePp::Agent(np) if np.heads() == vec!["daemon"]));
+            assert!(
+                matches!(&vp.single().unwrap().roles[0], RolePp::Agent(np) if np.heads() == vec!["daemon"])
+            );
         }
         other => panic!("expected deontic, got {other:?}"),
     }
@@ -960,7 +1114,9 @@ fn by_agent_in_passive_vp_description_and_copular_guard() {
     // Copular description: predicate stays, agent recorded beside it.
     let d = one("The request is logged by the daemon.");
     match &d.core {
-        Core::Description { predicate, agent, .. } => {
+        Core::Description {
+            predicate, agent, ..
+        } => {
             assert!(matches!(predicate, Predicate::Words { words } if words == &["logged"]));
             assert_eq!(agent.as_ref().unwrap().heads(), vec!["daemon"]);
         }
@@ -975,9 +1131,15 @@ fn by_agent_in_passive_vp_description_and_copular_guard() {
     assert_eq!(obliged.atoms[0].roles[0].kind, RoleKind::Agent);
     // A different agent is a different atom, and relate keeps them apart.
     let gateway = claim("The request is logged by the gateway.");
-    assert_eq!(implies(&claim("The request is logged by the daemon."), &gateway), Ternary::Unknown);
     assert_eq!(
-        implies(&claim("The request shall be logged by the daemon."), &claim("The request is logged by the daemon.")),
+        implies(&claim("The request is logged by the daemon."), &gateway),
+        Ternary::Unknown
+    );
+    assert_eq!(
+        implies(
+            &claim("The request shall be logged by the daemon."),
+            &claim("The request is logged by the daemon.")
+        ),
         Ternary::Yes
     );
     // Copular guard clauses record and digest the agent too.
@@ -1030,7 +1192,10 @@ fn by_outside_a_passive_site_is_rejected_with_the_exact_kind() {
     // `by` into modifiers, mirroring `with`.
     let s = one("The book by the author shall be archived.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Single(np), .. } => {
+        Core::Deontic {
+            subject: NpGroup::Single(np),
+            ..
+        } => {
             assert_eq!(np.head, "author");
             assert_eq!(np.modifiers, vec!["book", "by", "the"]);
         }
@@ -1062,8 +1227,16 @@ fn by_after_pp_or_comparison_predicates_must_not_be_swallowed() {
     // The Pp predicate must record its agent the same way.
     let s = one("The tank is below the limit by the sensor.");
     match &s.core {
-        Core::Description { predicate: Predicate::Pp { np, .. }, agent, .. } => {
-            assert_eq!(np.heads(), vec!["limit"], "the by-phrase must not fold into the Pp");
+        Core::Description {
+            predicate: Predicate::Pp { np, .. },
+            agent,
+            ..
+        } => {
+            assert_eq!(
+                np.heads(),
+                vec!["limit"],
+                "the by-phrase must not fold into the Pp"
+            );
             assert_eq!(
                 agent.as_ref().map(|a| a.heads()),
                 Some(vec!["sensor"]),
@@ -1075,7 +1248,11 @@ fn by_after_pp_or_comparison_predicates_must_not_be_swallowed() {
     // And the noun-phrase comparison measure likewise.
     let s = one("The total is equal to the limit by the auditor.");
     match &s.core {
-        Core::Description { predicate: Predicate::Comparison(c), agent, .. } => {
+        Core::Description {
+            predicate: Predicate::Comparison(c),
+            agent,
+            ..
+        } => {
             match &c.value {
                 Measure::Np { np } => assert_eq!(np.heads(), vec!["limit"]),
                 other => panic!("expected np measure, got {other:?}"),
@@ -1088,7 +1265,11 @@ fn by_after_pp_or_comparison_predicates_must_not_be_swallowed() {
     let s = one("When the pump is in the tank by the operator, the valve shall open.");
     let item = &s.frames.trigger.as_ref().unwrap().clause.items[0];
     match &item.body {
-        ClauseBody::Copular { predicate: Predicate::Pp { np, .. }, agent, .. } => {
+        ClauseBody::Copular {
+            predicate: Predicate::Pp { np, .. },
+            agent,
+            ..
+        } => {
             assert_eq!(np.heads(), vec!["tank"]);
             assert_eq!(agent.as_ref().map(|a| a.heads()), Some(vec!["operator"]));
         }
@@ -1115,7 +1296,9 @@ fn bare_be_admits_an_agent_without_a_complement() {
         Core::Deontic { vp, .. } => {
             assert_eq!(vp.single().unwrap().verb, "be");
             assert!(vp.single().unwrap().complement.is_some());
-            assert!(matches!(&vp.single().unwrap().roles[0], RolePp::Agent(np) if np.heads() == vec!["operator"]));
+            assert!(
+                matches!(&vp.single().unwrap().roles[0], RolePp::Agent(np) if np.heads() == vec!["operator"])
+            );
         }
         other => panic!("expected deontic, got {other:?}"),
     }
@@ -1131,7 +1314,10 @@ fn who_attaches_to_the_chain_root_and_that_to_the_nearest() {
     let subject_np = |input: &str| {
         let s = one(input);
         match &s.core {
-            Core::Deontic { subject: NpGroup::Single(np), .. } => np.clone(),
+            Core::Deontic {
+                subject: NpGroup::Single(np),
+                ..
+            } => np.clone(),
             other => panic!("expected single deontic subject, got {other:?}"),
         }
     };
@@ -1143,7 +1329,10 @@ fn who_attaches_to_the_chain_root_and_that_to_the_nearest() {
     // that → NEAREST.
     let np = subject_np("The user of the workspace that is active shall confirm the change.");
     assert!(np.relative.is_none());
-    assert_eq!(np.of.as_ref().unwrap().relative.as_ref().unwrap().marker, RelMarker::That);
+    assert_eq!(
+        np.of.as_ref().unwrap().relative.as_ref().unwrap().marker,
+        RelMarker::That
+    );
     // The rule is deterministic, not animacy-inferring: `who` climbs even
     // when the inner link is the animate one.
     let np = subject_np("The workspace of the user who is active shall be locked.");
@@ -1151,8 +1340,7 @@ fn who_attaches_to_the_chain_root_and_that_to_the_nearest() {
     assert_eq!(np.relative.as_ref().unwrap().marker, RelMarker::Who);
     assert!(np.of.as_ref().unwrap().relative.is_none());
     // Deep chains: `who` climbs to the outermost head, every link clean.
-    let np =
-        subject_np("The owner of the log of the daemon who is active shall rotate the log.");
+    let np = subject_np("The owner of the log of the daemon who is active shall rotate the log.");
     assert_eq!(np.head, "owner");
     assert_eq!(np.relative.as_ref().unwrap().marker, RelMarker::Who);
     let mid = np.of.as_ref().unwrap();
@@ -1170,7 +1358,10 @@ fn who_attaches_to_the_chain_root_and_that_to_the_nearest() {
         "The user of the workspace that is shared who is active shall confirm the change.",
     );
     assert_eq!(np.relative.as_ref().unwrap().marker, RelMarker::Who);
-    assert_eq!(np.of.as_ref().unwrap().relative.as_ref().unwrap().marker, RelMarker::That);
+    assert_eq!(
+        np.of.as_ref().unwrap().relative.as_ref().unwrap().marker,
+        RelMarker::That
+    );
 }
 
 #[test]
@@ -1202,8 +1393,10 @@ fn who_attachment_holds_in_object_and_guard_positions() {
         }
         other => panic!("expected single subject, got {other:?}"),
     }
-    assert!(matches!(&item.body, ClauseBody::Verbal { verb, particle: Some(p), .. }
-        if verb == "logs" && p == "out"));
+    assert!(
+        matches!(&item.body, ClauseBody::Verbal { verb, particle: Some(p), .. }
+        if verb == "logs" && p == "out")
+    );
     render_round_trips(&s);
 }
 
@@ -1260,14 +1453,35 @@ fn adverb_capability_shapes_polarity_and_round_trips() {
         other => panic!("expected always + AbleTo, got {other:?}"),
     }
     // Polarity composition table: adverb `never` XOR subject `no`.
-    assert_eq!(capability("The client is able to retry.").0, Polarity::Affirmative);
-    assert_eq!(capability("The client is always able to retry.").0, Polarity::Affirmative);
-    assert_eq!(capability("The client is never able to retry.").0, Polarity::Negative);
-    assert_eq!(capability("No client is able to retry.").0, Polarity::Negative);
-    assert_eq!(capability("No client is always able to retry.").0, Polarity::Negative);
-    assert_eq!(capability("No client is never able to retry.").0, Polarity::Affirmative);
+    assert_eq!(
+        capability("The client is able to retry.").0,
+        Polarity::Affirmative
+    );
+    assert_eq!(
+        capability("The client is always able to retry.").0,
+        Polarity::Affirmative
+    );
+    assert_eq!(
+        capability("The client is never able to retry.").0,
+        Polarity::Negative
+    );
+    assert_eq!(
+        capability("No client is able to retry.").0,
+        Polarity::Negative
+    );
+    assert_eq!(
+        capability("No client is always able to retry.").0,
+        Polarity::Negative
+    );
+    assert_eq!(
+        capability("No client is never able to retry.").0,
+        Polarity::Affirmative
+    );
     // Plural copula takes the adverb too.
-    assert_eq!(capability("Clients are never able to retry.").0, Polarity::Negative);
+    assert_eq!(
+        capability("Clients are never able to retry.").0,
+        Polarity::Negative
+    );
     // The vp survives with its roles.
     let (_, vp) = capability("The client is always able to retry within 5 seconds.");
     assert_eq!(vp.verb, "retry");
@@ -1354,14 +1568,83 @@ fn seeded_fuzz_over_round5_constructs_never_panics() {
     // over of-chains, able-to with adverbs, generic subjects, measures with
     // decimals, pairing-relevant modals.
     const POOL: &[&str] = &[
-        "the", "a", "an", "no", "each", "every", "at", "least", "most", "exactly", "request",
-        "requests", "daemon", "backup", "user", "workspace", "owner", "file", "of", "who",
-        "that", "is", "are", "was", "able", "to", "always", "never", "shall", "should", "may",
-        "must", "not", "be", "logged", "by", "with", "for", "within", "5", "2.5", "0.5",
-        "zero", "five", "seconds", "ms", "and", "or", "both", "either", "retry", "stop",
-        "runs", "out", "when", "while", "where", "if", "unless", "so", "in", "order", "means",
-        "between", "greater", "than", "equal", "until", "before", "after", "per", "using",
-        ",", ".", "`by`", "`for`", "`who`",
+        "the",
+        "a",
+        "an",
+        "no",
+        "each",
+        "every",
+        "at",
+        "least",
+        "most",
+        "exactly",
+        "request",
+        "requests",
+        "daemon",
+        "backup",
+        "user",
+        "workspace",
+        "owner",
+        "file",
+        "of",
+        "who",
+        "that",
+        "is",
+        "are",
+        "was",
+        "able",
+        "to",
+        "always",
+        "never",
+        "shall",
+        "should",
+        "may",
+        "must",
+        "not",
+        "be",
+        "logged",
+        "by",
+        "with",
+        "for",
+        "within",
+        "5",
+        "2.5",
+        "0.5",
+        "zero",
+        "five",
+        "seconds",
+        "ms",
+        "and",
+        "or",
+        "both",
+        "either",
+        "retry",
+        "stop",
+        "runs",
+        "out",
+        "when",
+        "while",
+        "where",
+        "if",
+        "unless",
+        "so",
+        "in",
+        "order",
+        "means",
+        "between",
+        "greater",
+        "than",
+        "equal",
+        "until",
+        "before",
+        "after",
+        "per",
+        "using",
+        ",",
+        ".",
+        "`by`",
+        "`for`",
+        "`who`",
     ];
     let mut rng = Rng(0x5EED_0005_D00D_F00D);
     for _ in 0..600 {

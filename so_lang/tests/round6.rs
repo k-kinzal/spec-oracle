@@ -20,7 +20,11 @@ use so_lang::relate::{assess, contradicts, implies, Outcome, Ternary};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -29,7 +33,9 @@ fn claim(input: &str) -> Formula {
 }
 
 fn guarantee(input: &str) -> Formula {
-    contract_formula(&one(input)).expect("contract-bearing sentence").guarantee
+    contract_formula(&one(input))
+        .expect("contract-bearing sentence")
+        .guarantee
 }
 
 // ---- change 1: lossiness-aware propositions -----------------------------------------
@@ -111,7 +117,10 @@ fn same_subject_pairing_is_recorded_not_rejected() {
     let ok = AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &other, &target)
         .expect("disjoint subjects pair");
     assert_eq!(ok.subject_relation, SubjectRelation::DisjointKeys);
-    assert!(!ok.contract_forming(), "default reliance: candidate only (round 11)");
+    assert!(
+        !ok.contract_forming(),
+        "default reliance: candidate only (round 11)"
+    );
     let explicit = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::OccurrenceReliance,
         &other,
@@ -216,7 +225,9 @@ fn envelope_sources_stay_out_of_the_assumption_formula() {
         Formula::Or {
             items: vec![
                 paired.guarantee.clone(),
-                Formula::Not { inner: Box::new(reliance.formula.clone()) },
+                Formula::Not {
+                    inner: Box::new(reliance.formula.clone())
+                },
             ],
         }
     );
@@ -298,8 +309,18 @@ fn assess_equivalent_only_for_same_force_pairs() {
 fn assess_reports_refinement_direction() {
     let tight = one("The daemon shall flush the buffer within 5 seconds.");
     let loose = one("The daemon shall flush the buffer within 10 seconds.");
-    assert_eq!(assess(&tight, &loose), Outcome::Refinement { concrete_is_a: true });
-    assert_eq!(assess(&loose, &tight), Outcome::Refinement { concrete_is_a: false });
+    assert_eq!(
+        assess(&tight, &loose),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
+    assert_eq!(
+        assess(&loose, &tight),
+        Outcome::Refinement {
+            concrete_is_a: false
+        }
+    );
 }
 
 /// Definitions and permissions have no head-to-head assessment: Unknown,
@@ -317,11 +338,19 @@ fn definitions_and_permissions_assess_unknown() {
 /// Outcome serializes with the crate's serde discipline.
 #[test]
 fn outcome_serializes() {
-    let json = serde_json::to_value(Outcome::Refinement { concrete_is_a: true }).unwrap();
+    let json = serde_json::to_value(Outcome::Refinement {
+        concrete_is_a: true,
+    })
+    .unwrap();
     assert_eq!(json["kind"], "refinement");
     assert_eq!(json["concrete_is_a"], true);
     let back: Outcome = serde_json::from_value(json).unwrap();
-    assert_eq!(back, Outcome::Refinement { concrete_is_a: true });
+    assert_eq!(
+        back,
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
 }
 
 // ---- change 5: structured comparisons + interval reasoning --------------------------
@@ -336,7 +365,10 @@ fn disjoint_intervals_contradict() {
     // Descriptions carry no force: the assessment names it a descriptive
     // conflict, not a hard contradiction.
     assert_eq!(
-        assess(&one("The retry count is at most 3."), &one("The retry count is at least 5.")),
+        assess(
+            &one("The retry count is at most 3."),
+            &one("The retry count is at least 5.")
+        ),
         Outcome::DescriptiveConflict
     );
     // The binding `be`-complement forms meet at the same intervals — and
@@ -371,34 +403,55 @@ fn interval_containment_refines_across_operators() {
     let c = |i: &str| claim(i);
     // A point is contained in its closed bound.
     assert_eq!(
-        implies(&c("The count is equal to 3."), &c("The count is at most 3.")),
+        implies(
+            &c("The count is equal to 3."),
+            &c("The count is at most 3.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The count is equal to 3."), &c("The count is at least 3.")),
+        implies(
+            &c("The count is equal to 3."),
+            &c("The count is at least 3.")
+        ),
         Ternary::Yes
     );
     // between ⊆ at least / between ⊆ between.
     assert_eq!(
-        implies(&c("The latency is between 4 and 6."), &c("The latency is at least 2.")),
+        implies(
+            &c("The latency is between 4 and 6."),
+            &c("The latency is at least 2.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The latency is between 4 and 6."), &c("The latency is between 3 and 7.")),
+        implies(
+            &c("The latency is between 4 and 6."),
+            &c("The latency is between 3 and 7.")
+        ),
         Ternary::Yes
     );
     // Overlap without containment stays Unknown.
     assert_eq!(
-        implies(&c("The latency is between 4 and 6."), &c("The latency is between 5 and 7.")),
+        implies(
+            &c("The latency is between 4 and 6."),
+            &c("The latency is between 5 and 7.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
-        contradicts(&c("The latency is between 4 and 6."), &c("The latency is between 5 and 7.")),
+        contradicts(
+            &c("The latency is between 4 and 6."),
+            &c("The latency is between 5 and 7.")
+        ),
         Ternary::Unknown
     );
     // Disjoint between intervals do contradict.
     assert_eq!(
-        contradicts(&c("The latency is between 1 and 2."), &c("The latency is between 4 and 6.")),
+        contradicts(
+            &c("The latency is between 1 and 2."),
+            &c("The latency is between 4 and 6.")
+        ),
         Ternary::Yes
     );
 }
@@ -416,7 +469,10 @@ fn interval_reasoning_requires_one_unit() {
         Ternary::Unknown
     );
     assert_eq!(
-        implies(&c("The count is equal to 3 items."), &c("The count is at most 3.")),
+        implies(
+            &c("The count is equal to 3 items."),
+            &c("The count is at most 3.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
@@ -428,7 +484,10 @@ fn interval_reasoning_requires_one_unit() {
     );
     // Number words ground exactly like numerals.
     assert_eq!(
-        contradicts(&c("The depth is at most three."), &c("The depth is at least five.")),
+        contradicts(
+            &c("The depth is at most three."),
+            &c("The depth is at least five.")
+        ),
         Ternary::Yes
     );
 }
@@ -441,7 +500,11 @@ fn interval_reasoning_requires_one_unit() {
 fn vp_alternatives_parse_render_and_derive() {
     use so_lang::ast::{Core, VpGroup};
     let s = one("The server shall either accept the request or reject the request.");
-    let Core::Deontic { vp: VpGroup::Alternatives { items }, negated: false, .. } = &s.core
+    let Core::Deontic {
+        vp: VpGroup::Alternatives { items },
+        negated: false,
+        ..
+    } = &s.core
     else {
         panic!("expected alternatives, got {:?}", s.core);
     };
@@ -468,9 +531,9 @@ fn vp_alternatives_parse_render_and_derive() {
     };
     assert_eq!(disjuncts.len(), 2);
     let anchor = |f: &Formula| match f {
-        Formula::Atom { atom: so_lang::formula::AtomRef::Behavior { behavior } } => {
-            behavior.source.clone()
-        }
+        Formula::Atom {
+            atom: so_lang::formula::AtomRef::Behavior { behavior },
+        } => behavior.source.clone(),
         other => panic!("expected behavior atom, got {other:?}"),
     };
     assert_eq!(anchor(&disjuncts[0]), "the server shall accept the request");
@@ -490,9 +553,15 @@ fn negated_alternatives_are_rejected() {
         parse("The server shall not either accept the request or reject the request."),
         Err(so_lang::parse::ParseError::NegatedAlternatives)
     );
-    assert_eq!(so_lang::parse::ParseError::NegatedAlternatives.kind(), "negated_alternatives");
+    assert_eq!(
+        so_lang::parse::ParseError::NegatedAlternatives.kind(),
+        "negated_alternatives"
+    );
     let message = so_lang::parse::ParseError::NegatedAlternatives.to_string();
-    assert!(message.contains("two prohibitions"), "message directs the rewrite: {message}");
+    assert!(
+        message.contains("two prohibitions"),
+        "message directs the rewrite: {message}"
+    );
 }
 
 /// Disambiguation, pinned both ways: after a modal, `either` + verb opens
@@ -504,11 +573,19 @@ fn either_disambiguation_is_deterministic() {
     use so_lang::ast::{Conj, Core, GroupMarker, NpGroup, VpGroup};
     // Object position: unchanged NP coordination.
     let s = one("The daemon shall notify either the admin or the owner.");
-    let Core::Deontic { vp: VpGroup::Single(vp), .. } = &s.core else {
+    let Core::Deontic {
+        vp: VpGroup::Single(vp),
+        ..
+    } = &s.core
+    else {
         panic!("expected single vp");
     };
     match vp.object.as_ref().unwrap() {
-        NpGroup::Coordinated { conj: Conj::Or, marker: Some(GroupMarker::Either), items } => {
+        NpGroup::Coordinated {
+            conj: Conj::Or,
+            marker: Some(GroupMarker::Either),
+            items,
+        } => {
             assert_eq!(items.len(), 2);
         }
         other => panic!("expected either-coordination, got {other:?}"),
@@ -517,7 +594,9 @@ fn either_disambiguation_is_deterministic() {
     // verb position — pinned error, not silent misreading.
     assert_eq!(
         parse("The server shall either the admin or the owner."),
-        Err(so_lang::parse::ParseError::UnexpectedTokens { token: "either".into() })
+        Err(so_lang::parse::ParseError::UnexpectedTokens {
+            token: "either".into()
+        })
     );
     // `either` with no `or` alternation: the marker convention error.
     assert_eq!(
@@ -529,7 +608,11 @@ fn either_disambiguation_is_deterministic() {
     let s = one(
         "The daemon shall either accept either the copy or the original or reject the request.",
     );
-    let Core::Deontic { vp: VpGroup::Alternatives { items }, .. } = &s.core else {
+    let Core::Deontic {
+        vp: VpGroup::Alternatives { items },
+        ..
+    } = &s.core
+    else {
         panic!("expected alternatives");
     };
     assert_eq!(items.len(), 2);
@@ -545,7 +628,10 @@ fn alternatives_are_deontic_only() {
     let s = one("The client may either retry or abort.");
     assert!(matches!(
         &s.core,
-        Core::Deontic { vp: VpGroup::Alternatives { .. }, .. }
+        Core::Deontic {
+            vp: VpGroup::Alternatives { .. },
+            ..
+        }
     ));
     // The permission's claim formula is an Or over ADMISSIBILITY atoms.
     let Formula::Or { items } = claim_formula(&s).unwrap() else {
@@ -553,7 +639,9 @@ fn alternatives_are_deontic_only() {
     };
     assert!(items.iter().all(|f| matches!(
         f,
-        Formula::Atom { atom: so_lang::formula::AtomRef::Admissibility { .. } }
+        Formula::Atom {
+            atom: so_lang::formula::AtomRef::Admissibility { .. }
+        }
     )));
     // Capability keeps a single verb phrase: `either` is not a verb there.
     assert!(parse("The client is able to either retry or abort.").is_err());
@@ -564,13 +652,20 @@ fn alternatives_are_deontic_only() {
 #[test]
 fn single_vp_refines_its_alternative() {
     let single = one("The server shall accept the request.");
-    let alternative =
-        one("The server shall either accept the request or reject the request.");
+    let alternative = one("The server shall either accept the request or reject the request.");
     assert_eq!(
-        implies(&claim_formula(&single).unwrap(), &claim_formula(&alternative).unwrap()),
+        implies(
+            &claim_formula(&single).unwrap(),
+            &claim_formula(&alternative).unwrap()
+        ),
         Ternary::Yes
     );
-    assert_eq!(assess(&single, &alternative), Outcome::Refinement { concrete_is_a: true });
+    assert_eq!(
+        assess(&single, &alternative),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
 }
 
 /// Alternatives serialize and round-trip (sentence, skeleton, formula).
@@ -628,8 +723,14 @@ fn with_inside_plain_nps_is_rejected() {
     let s = one("The `with` clause shall be documented.");
     assert!(matches!(&s.core, so_lang::ast::Core::Deontic { .. }));
     let message = ParseError::WithIsAmbiguous.to_string();
-    assert!(message.contains("`with`"), "message teaches the backtick escape: {message}");
-    assert!(message.contains("using"), "message keeps the instrument rewrite: {message}");
+    assert!(
+        message.contains("`with`"),
+        "message teaches the backtick escape: {message}"
+    );
+    assert!(
+        message.contains("using"),
+        "message keeps the instrument rewrite: {message}"
+    );
 }
 
 // ---- change 8: bounded durations ----------------------------------------------------
@@ -640,7 +741,9 @@ fn with_inside_plain_nps_is_rejected() {
 fn bounded_durations_parse_and_render() {
     use so_lang::ast::{ComparisonOp, Core, Measure, RolePp};
     let s = one("The daemon shall retain the log for at least 30 days.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("expected deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("expected deontic")
+    };
     let vp = vp.single().unwrap();
     assert_eq!(
         vp.roles[0],
@@ -651,11 +754,16 @@ fn bounded_durations_parse_and_render() {
             upper: None,
         })
     );
-    assert_eq!(s.render(), "the daemon shall retain the log for at least 30 days.");
+    assert_eq!(
+        s.render(),
+        "the daemon shall retain the log for at least 30 days."
+    );
     assert_eq!(one(&s.render()).core, s.core);
     // `between` shares one unit, written after either bound.
     let s = one("The pump shall run for between 5 and 10 seconds.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("expected deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("expected deontic")
+    };
     assert_eq!(
         vp.single().unwrap().roles[0],
         RolePp::Duration(Measure::Bounded {
@@ -691,7 +799,11 @@ fn bounded_durations_parse_and_render() {
         "The pump shall run for between 5 and 10 seconds.",
     ] {
         let s = one(input);
-        assert_eq!(one(&s.render()).core, s.core, "{input:?} must render-round-trip");
+        assert_eq!(
+            one(&s.render()).core,
+            s.core,
+            "{input:?} must render-round-trip"
+        );
     }
 }
 
@@ -717,7 +829,10 @@ fn bounded_duration_rejections() {
     assert!(parse("The pump shall run for between 5 seconds and 10 ms.").is_err());
     // Matching written units are fine.
     let s = one("The pump shall run for between 5 seconds and 10 seconds.");
-    assert_eq!(s.render(), "the pump shall run for between 5 and 10 seconds.");
+    assert_eq!(
+        s.render(),
+        "the pump shall run for between 5 and 10 seconds."
+    );
 }
 
 /// Interval logic covers Duration bounds, composed with the round-5 plain

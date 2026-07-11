@@ -45,12 +45,14 @@ fn open_word_predicates_serialize() {
 fn count_determiners_serialize() {
     let sentence = one("The daemon shall retain at least 3 copies.");
     let (det, expected) = match &sentence.core {
-        so_lang::ast::Core::Deontic { vp, .. } => match vp.single().unwrap().object.as_ref().unwrap() {
-            so_lang::ast::NpGroup::Single(np) => {
-                (np.det.clone().unwrap(), Det::AtLeast { n: 3 })
+        so_lang::ast::Core::Deontic { vp, .. } => {
+            match vp.single().unwrap().object.as_ref().unwrap() {
+                so_lang::ast::NpGroup::Single(np) => {
+                    (np.det.clone().unwrap(), Det::AtLeast { n: 3 })
+                }
+                other => panic!("expected single object, got {other:?}"),
             }
-            other => panic!("expected single object, got {other:?}"),
-        },
+        }
         other => panic!("expected deontic core, got {other:?}"),
     };
     assert_eq!(det, expected);

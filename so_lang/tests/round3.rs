@@ -8,15 +8,17 @@
 //! 5. `semantics::subject_keys` — tentative textual identity keys.
 
 use so_lang::ast::*;
-use so_lang::formula::{
-    applicability, claim_formula, contract_formula, AtomRef, Formula,
-};
+use so_lang::formula::{applicability, claim_formula, contract_formula, AtomRef, Formula};
 use so_lang::parse::{parse, ParseError};
 use so_lang::semantics::*;
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("expected {input:?} to parse, got {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -30,14 +32,22 @@ fn roundtrip(input: &str) {
         (&r.frames, &r.core, &r.exception, &r.purpose),
         "render {rendered:?} of {input:?} must re-parse to the same tree"
     );
-    assert_eq!(r.render(), rendered, "render must be a fixpoint for {input:?}");
+    assert_eq!(
+        r.render(),
+        rendered,
+        "render must be a fixpoint for {input:?}"
+    );
 }
 
 fn verbal(body: &ClauseBody) -> (&str, Option<&str>, &Option<NpGroup>, &[RolePp]) {
     match body {
-        ClauseBody::Verbal { verb, particle, object, roles, .. } => {
-            (verb.as_str(), particle.as_deref(), object, roles.as_slice())
-        }
+        ClauseBody::Verbal {
+            verb,
+            particle,
+            object,
+            roles,
+            ..
+        } => (verb.as_str(), particle.as_deref(), object, roles.as_slice()),
         other => panic!("expected verbal clause body, got {other:?}"),
     }
 }
@@ -51,7 +61,8 @@ fn clause_roles_sequence_pattern() {
     // THE sequencing answer: a trigger event stated relative to another
     // event. Conjunction of events stays rejected (see below); `after` is
     // how protocols order occurrences.
-    let input = "When the payment clears after the order ships, the system shall issue the receipt.";
+    let input =
+        "When the payment clears after the order ships, the system shall issue the receipt.";
     let s = one(input);
     let trigger = s.frames.trigger.as_ref().expect("trigger");
     assert_eq!(trigger.kind, TriggerKind::Event);
@@ -96,7 +107,9 @@ fn clause_roles_cover_the_vp_role_inventory() {
     assert_eq!(verb, "sends");
     assert_eq!(object.as_ref().unwrap().heads(), vec!["report"]);
     assert!(matches!(&roles[0], RolePp::Recipient(np) if np.heads() == vec!["auditor"]));
-    assert!(matches!(&roles[1], RolePp::Means { marker: MeansMarker::Via, np } if np.heads() == vec!["queue"]));
+    assert!(
+        matches!(&roles[1], RolePp::Means { marker: MeansMarker::Via, np } if np.heads() == vec!["queue"])
+    );
     assert!(matches!(&roles[2], RolePp::Source(np) if np.heads() == vec!["depot"]));
     assert!(matches!(
         &roles[3],
@@ -122,7 +135,11 @@ fn exception_clause_carries_roles() {
     // words (round 3 had pinned the swallow as documented-unsupported).
     let s = one("The pump shall stop, unless the override is engaged by the operator.");
     match &s.exception.as_ref().unwrap().body {
-        ClauseBody::Copular { predicate: Predicate::Words { words }, agent, .. } => {
+        ClauseBody::Copular {
+            predicate: Predicate::Words { words },
+            agent,
+            ..
+        } => {
             assert_eq!(words, &["engaged"]);
             assert_eq!(agent.as_ref().unwrap().heads(), vec!["operator"]);
         }
@@ -149,7 +166,10 @@ fn purpose_clause_carries_roles() {
 fn definiens_clause_carries_roles() {
     let s = one("A flush means that the buffer drains into the sink.");
     match &s.core {
-        Core::Definition { definiens: Definiens::Clause(clause), .. } => {
+        Core::Definition {
+            definiens: Definiens::Clause(clause),
+            ..
+        } => {
             let (verb, _, _, roles) = verbal(&clause.body);
             assert_eq!(verb, "drains");
             assert!(matches!(&roles[0], RolePp::Goal(np) if np.heads() == vec!["sink"]));
@@ -179,7 +199,12 @@ fn relative_bodies_carry_roles_since_round7() {
                 other => panic!("expected single object, got {other:?}"),
             };
             match &object.relative.as_ref().unwrap().body {
-                RelativeBody::Verbal { verb, object: Some(_), roles, .. } => {
+                RelativeBody::Verbal {
+                    verb,
+                    object: Some(_),
+                    roles,
+                    ..
+                } => {
                     assert_eq!(verb, "holds");
                     assert!(matches!(
                         &roles[0],
@@ -188,7 +213,10 @@ fn relative_bodies_carry_roles_since_round7() {
                 }
                 other => panic!("expected verbal relative, got {other:?}"),
             }
-            assert!(vp.single().unwrap().roles.is_empty(), "the relative claimed the role");
+            assert!(
+                vp.single().unwrap().roles.is_empty(),
+                "the relative claimed the role"
+            );
         }
         other => panic!("expected deontic core, got {other:?}"),
     }
@@ -274,7 +302,11 @@ fn bare_particle_verbs_in_the_core() {
         match &s.core {
             Core::Deontic { vp, .. } => {
                 assert_eq!(vp.single().unwrap().verb, verb, "verb of {input:?}");
-                assert_eq!(vp.single().unwrap().particle.as_deref(), Some(particle), "particle of {input:?}");
+                assert_eq!(
+                    vp.single().unwrap().particle.as_deref(),
+                    Some(particle),
+                    "particle of {input:?}"
+                );
                 assert!(vp.single().unwrap().object.is_none());
             }
             other => panic!("expected deontic core, got {other:?}"),
@@ -304,7 +336,9 @@ fn be_takes_no_particle() {
             assert_eq!(vp.single().unwrap().particle, None);
             assert_eq!(
                 vp.single().unwrap().complement,
-                Some(Predicate::Words { words: vec!["off".into()] })
+                Some(Predicate::Words {
+                    words: vec!["off".into()]
+                })
             );
         }
         other => panic!("expected deontic core, got {other:?}"),
@@ -319,7 +353,10 @@ fn backticked_particle_stays_an_object() {
         Core::Deontic { vp, .. } => {
             assert_eq!(vp.single().unwrap().verb, "log");
             assert_eq!(vp.single().unwrap().particle, None);
-            assert_eq!(vp.single().unwrap().object.as_ref().unwrap().heads(), vec!["`out`"]);
+            assert_eq!(
+                vp.single().unwrap().object.as_ref().unwrap().heads(),
+                vec!["`out`"]
+            );
         }
         other => panic!("expected deontic core, got {other:?}"),
     }
@@ -331,7 +368,9 @@ fn in_and_on_are_not_particles() {
     // `logs in`-style verbs.
     assert_eq!(
         parse("The user shall log in."),
-        Err(ParseError::UnexpectedTokens { token: "end of sentence".into() }),
+        Err(ParseError::UnexpectedTokens {
+            token: "end of sentence".into()
+        }),
         "a bare `in` opens a Location role that then lacks its noun phrase"
     );
     let s = one("The user shall log-in.");
@@ -359,15 +398,27 @@ fn object_quantifiers_reach_the_skeleton() {
     assert_eq!(no.polarity, the.polarity);
     assert_eq!(
         no.atoms[0].objects,
-        vec![ObjectSkeleton { quantifier: Quantifier::Negative, head: "request".into(), full: "request".into() }]
+        vec![ObjectSkeleton {
+            quantifier: Quantifier::Negative,
+            head: "request".into(),
+            full: "request".into()
+        }]
     );
     // Coordination: one entry per item, each with its own quantifier.
     let k = sk3("The daemon shall log each request and a response.");
     assert_eq!(
         k.atoms[0].objects,
         vec![
-            ObjectSkeleton { quantifier: Quantifier::Universal, head: "request".into(), full: "request".into() },
-            ObjectSkeleton { quantifier: Quantifier::Existential, head: "response".into(), full: "response".into() },
+            ObjectSkeleton {
+                quantifier: Quantifier::Universal,
+                head: "request".into(),
+                full: "request".into()
+            },
+            ObjectSkeleton {
+                quantifier: Quantifier::Existential,
+                head: "response".into(),
+                full: "response".into()
+            },
         ]
     );
 }
@@ -377,7 +428,10 @@ fn any_is_legislated_universal() {
     // Requirements-English convention: `any` quantifies universally, on
     // subjects and objects alike; `a`/`an` stay existential.
     let sk3 = |input: &str| skeleton(&one(input)).unwrap();
-    assert_eq!(sk3("Any request is logged.").subject.quantifier, Quantifier::Universal);
+    assert_eq!(
+        sk3("Any request is logged.").subject.quantifier,
+        Quantifier::Universal
+    );
     assert_eq!(
         sk3("Any request is logged.").subject.quantifier,
         sk3("Every request is logged.").subject.quantifier
@@ -385,7 +439,10 @@ fn any_is_legislated_universal() {
     // SUPERSEDED PIN (round 5, change 2): behavioral subject `a`/`an` and
     // bare subjects are the generic reading — Universal (round 3 had kept
     // them existential). Object `a`/`an` is unchanged (existential).
-    assert_eq!(sk3("A request is logged.").subject.quantifier, Quantifier::Universal);
+    assert_eq!(
+        sk3("A request is logged.").subject.quantifier,
+        Quantifier::Universal
+    );
     assert_eq!(
         sk3("The daemon shall log a request.").atoms[0].objects[0].quantifier,
         Quantifier::Existential
@@ -405,7 +462,8 @@ fn role_values_carry_quantifiers() {
         RoleValue::Heads {
             items: vec![ObjectSkeleton {
                 quantifier: Quantifier::Universal,
-                head: "subscriber".into(), full: "subscriber".into()
+                head: "subscriber".into(),
+                full: "subscriber".into()
             }],
             conj: None,
         }
@@ -437,7 +495,10 @@ fn guard_clause_skeletons_carry_role_digests() {
         other => panic!("expected clause digest, got {other:?}"),
     }
     // Exception digests carry them too.
-    let k = skeleton(&one("The pump shall stop, unless the pump runs at the depot.")).unwrap();
+    let k = skeleton(&one(
+        "The pump shall stop, unless the pump runs at the depot.",
+    ))
+    .unwrap();
     let exception = k.exception.as_ref().unwrap();
     assert_eq!(exception.words, vec!["runs"]);
     assert_eq!(exception.roles.len(), 1);
@@ -468,7 +529,9 @@ fn particle_atoms_include_verb_and_particle() {
 /// The guard atom's clause digest, for shape assertions.
 fn guard_head(formula: &Formula) -> &str {
     match formula {
-        Formula::Atom { atom: AtomRef::Guard { clause, .. } } => clause.subject_head.as_str(),
+        Formula::Atom {
+            atom: AtomRef::Guard { clause, .. },
+        } => clause.subject_head.as_str(),
         other => panic!("expected guard atom, got {other:?}"),
     }
 }
@@ -524,7 +587,9 @@ fn applicability_preserves_group_disjunction() {
 fn claim_formula_places_the_negation_outside_the_atom() {
     // Affirmative: the bare behavior atom.
     match claim_formula(&one("The pump shall stop.")).unwrap() {
-        Formula::Atom { atom: AtomRef::Behavior { behavior } } => {
+        Formula::Atom {
+            atom: AtomRef::Behavior { behavior },
+        } => {
             assert_eq!(behavior.subject.head, "pump");
             assert_eq!(behavior.atom.words, vec!["stop"]);
             assert_eq!(behavior.force, Some(Force::Binding));
@@ -536,7 +601,12 @@ fn claim_formula_places_the_negation_outside_the_atom() {
     // structure, not atom content.
     match claim_formula(&one("The daemon shall not store derived views.")).unwrap() {
         Formula::Not { inner } => {
-            assert!(matches!(*inner, Formula::Atom { atom: AtomRef::Behavior { .. } }));
+            assert!(matches!(
+                *inner,
+                Formula::Atom {
+                    atom: AtomRef::Behavior { .. }
+                }
+            ));
         }
         other => panic!("expected negated behavior atom, got {other:?}"),
     }
@@ -564,7 +634,12 @@ fn contract_formula_is_the_sentence_internal_conditional() {
                 Formula::Not { inner } => assert_eq!(guard_head(inner), "order"),
                 other => panic!("expected negated applicability, got {other:?}"),
             }
-            assert!(matches!(&items[1], Formula::Atom { atom: AtomRef::Behavior { .. } }));
+            assert!(matches!(
+                &items[1],
+                Formula::Atom {
+                    atom: AtomRef::Behavior { .. }
+                }
+            ));
         }
         other => panic!("expected conditional guarantee, got {other:?}"),
     }

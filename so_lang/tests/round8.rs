@@ -16,7 +16,11 @@ use so_lang::semantics::*;
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("parse failed for {input:?}: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -37,7 +41,11 @@ fn explicit_source(kind: EdgeKind, source: &Sentence, target: &Sentence) -> Assu
 fn render_round_trips(s: &Sentence) {
     let rendered = s.render();
     let re = one(&rendered);
-    assert_eq!(re.render(), rendered, "canonical render must be a fixed point");
+    assert_eq!(
+        re.render(),
+        rendered,
+        "canonical render must be a fixed point"
+    );
 }
 
 // ====================================================================================
@@ -91,8 +99,14 @@ fn before_after_until_all_carry_the_nested_skeleton() {
         assert_ne!(vn, va, "digests must differ for {neg:?} vs {aff:?}");
         match (vn, va) {
             (
-                RoleValue::Clause { skeleton: sn, full: fn_ },
-                RoleValue::Clause { skeleton: sa, full: fa },
+                RoleValue::Clause {
+                    skeleton: sn,
+                    full: fn_,
+                },
+                RoleValue::Clause {
+                    skeleton: sa,
+                    full: fa,
+                },
             ) => {
                 assert_eq!(sn.polarity, Some(Polarity::Negative), "in {neg:?}");
                 assert_eq!(sa.polarity, None, "in {aff:?}");
@@ -109,8 +123,10 @@ fn before_after_until_all_carry_the_nested_skeleton() {
 fn nested_clause_digest_keeps_manner_and_comparison() {
     // The nested skeleton is the WHOLE clause digest: manner and the
     // structured comparison survive the nesting.
-    let k = skeleton(&one("The daemon shall retry after the export completes successfully."))
-        .unwrap();
+    let k = skeleton(&one(
+        "The daemon shall retry after the export completes successfully.",
+    ))
+    .unwrap();
     match &k.atoms[0].roles[0].value {
         RoleValue::Clause { skeleton, full } => {
             assert_eq!(skeleton.manner, vec!["successfully"]);
@@ -171,8 +187,12 @@ fn relied_that_simplifies_to_bottom_is_rejected_too() {
     // Not(Top) and And{…, Bottom} both simplify to Bottom: the gate is on
     // the simplified form, not the literal constructor.
     for vacuous in [
-        Formula::Not { inner: Box::new(Formula::Top) },
-        Formula::And { items: vec![claim_formula(&source).unwrap(), Formula::Bottom] },
+        Formula::Not {
+            inner: Box::new(Formula::Top),
+        },
+        Formula::And {
+            items: vec![claim_formula(&source).unwrap(), Formula::Bottom],
+        },
     ] {
         let err = AssumptionSource::for_guarantee_with_relied(
             EdgeKind::OccurrenceReliance,
@@ -218,7 +238,10 @@ fn proven_flag_is_false_for_unproven_reliances() {
         claim_formula(&one("The gateway shall forward the packet.")).unwrap(),
     )
     .unwrap();
-    assert!(!s.proven, "Unknown at construction builds with proven = false");
+    assert!(
+        !s.proven,
+        "Unknown at construction builds with proven = false"
+    );
 }
 
 // ====================================================================================
@@ -291,7 +314,9 @@ fn envelope_sources_are_excluded_from_the_satisfiability_check() {
         claim_formula(&one("At most 3 replicas shall run.")).unwrap(),
     )
     .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(&[reliance, envelope]);
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(&[reliance, envelope]);
     assert_eq!(assumption_satisfiable(&paired), Ternary::Unknown);
 }
 
@@ -327,8 +352,10 @@ fn copular_guard_carries_a_structured_location_role() {
     assert_eq!(guard.roles[0].kind, RoleKind::Location);
     render_round_trips(&s);
     // Lossiness: differing locations now separate the guard digests.
-    let dock = skeleton(&one("While the pump is active at the dock, the daemon shall wait."))
-        .unwrap();
+    let dock = skeleton(&one(
+        "While the pump is active at the dock, the daemon shall wait.",
+    ))
+    .unwrap();
     assert_ne!(k.guards.states[0], dock.guards.states[0]);
 }
 
@@ -338,16 +365,27 @@ fn copular_relative_carries_agent_and_roles() {
     // mirrored into relatives).
     let s = one("Each request that is signed by the user shall be logged.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Single(np), .. } => {
-            match &np.relative.as_ref().unwrap().body {
-                RelativeBody::Copular { predicate, agent, roles, .. } => {
-                    assert_eq!(predicate, &Predicate::Words { words: vec!["signed".into()] });
-                    assert_eq!(agent.as_ref().unwrap().heads(), vec!["user"]);
-                    assert!(roles.is_empty());
-                }
-                other => panic!("expected copular relative with agent, got {other:?}"),
+        Core::Deontic {
+            subject: NpGroup::Single(np),
+            ..
+        } => match &np.relative.as_ref().unwrap().body {
+            RelativeBody::Copular {
+                predicate,
+                agent,
+                roles,
+                ..
+            } => {
+                assert_eq!(
+                    predicate,
+                    &Predicate::Words {
+                        words: vec!["signed".into()]
+                    }
+                );
+                assert_eq!(agent.as_ref().unwrap().heads(), vec!["user"]);
+                assert!(roles.is_empty());
             }
-        }
+            other => panic!("expected copular relative with agent, got {other:?}"),
+        },
         other => panic!("expected deontic, got {other:?}"),
     }
     render_round_trips(&s);
@@ -357,14 +395,15 @@ fn copular_relative_carries_agent_and_roles() {
     // A role tail on a copular relative: innermost attachment.
     let s = one("Each request that is valid within 5 seconds shall be logged.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Single(np), .. } => {
-            match &np.relative.as_ref().unwrap().body {
-                RelativeBody::Copular { roles, .. } => {
-                    assert!(matches!(roles.as_slice(), [RolePp::Deadline(_)]));
-                }
-                other => panic!("expected copular relative with roles, got {other:?}"),
+        Core::Deontic {
+            subject: NpGroup::Single(np),
+            ..
+        } => match &np.relative.as_ref().unwrap().body {
+            RelativeBody::Copular { roles, .. } => {
+                assert!(matches!(roles.as_slice(), [RolePp::Deadline(_)]));
             }
-        }
+            other => panic!("expected copular relative with roles, got {other:?}"),
+        },
         other => panic!("expected deontic, got {other:?}"),
     }
     render_round_trips(&s);
@@ -409,7 +448,10 @@ fn content_clause_deadline_is_structured_inside_the_content_skeleton() {
     assert_eq!(content.clause.roles[0].kind, RoleKind::Deadline);
     assert_eq!(
         content.clause.roles[0].value,
-        RoleValue::Measure { number: "5".into(), unit: Some("seconds".into()) }
+        RoleValue::Measure {
+            number: "5".into(),
+            unit: Some("seconds".into())
+        }
     );
     assert_eq!(content.full, "the token is valid within 5 seconds");
     render_round_trips(&s);
@@ -445,7 +487,10 @@ fn copular_until_and_exception_roles_round_trip() {
 fn able_to_parses_in_copular_clause_bodies() {
     let s = one("While the client is able to retry, the pump shall run.");
     match &s.frames.states[0].clause.items[0].body {
-        ClauseBody::Copular { predicate: Predicate::AbleTo { vp }, .. } => {
+        ClauseBody::Copular {
+            predicate: Predicate::AbleTo { vp },
+            ..
+        } => {
             assert_eq!(vp.verb, "retry");
         }
         other => panic!("expected AbleTo in the guard, got {other:?}"),
@@ -454,7 +499,10 @@ fn able_to_parses_in_copular_clause_bodies() {
     // With particle, manner, and a role: the vp carries them.
     let s = one("While the daemon is able to shut down gracefully within 5 seconds, the operator shall wait.");
     match &s.frames.states[0].clause.items[0].body {
-        ClauseBody::Copular { predicate: Predicate::AbleTo { vp }, .. } => {
+        ClauseBody::Copular {
+            predicate: Predicate::AbleTo { vp },
+            ..
+        } => {
             assert_eq!(vp.verb, "shut");
             assert_eq!(vp.particle.as_deref(), Some("down"));
             assert_eq!(vp.manner, vec!["gracefully"]);
@@ -470,7 +518,10 @@ fn able_to_parses_in_copular_clause_bodies() {
     assert!(
         !matches!(
             &s.frames.states[0].clause.items[0].body,
-            ClauseBody::Copular { predicate: Predicate::AbleTo { .. }, .. }
+            ClauseBody::Copular {
+                predicate: Predicate::AbleTo { .. },
+                ..
+            }
         ),
         "adverbed able-to never reads as capability in a clause"
     );
@@ -480,16 +531,20 @@ fn able_to_parses_in_copular_clause_bodies() {
 fn able_to_parses_in_copular_relatives() {
     let s = one("Each daemon that is able to shut down gracefully shall register.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Single(np), .. } => {
-            match &np.relative.as_ref().unwrap().body {
-                RelativeBody::Copular { predicate: Predicate::AbleTo { vp }, .. } => {
-                    assert_eq!(vp.verb, "shut");
-                    assert_eq!(vp.particle.as_deref(), Some("down"));
-                    assert_eq!(vp.manner, vec!["gracefully"]);
-                }
-                other => panic!("expected AbleTo in the relative, got {other:?}"),
+        Core::Deontic {
+            subject: NpGroup::Single(np),
+            ..
+        } => match &np.relative.as_ref().unwrap().body {
+            RelativeBody::Copular {
+                predicate: Predicate::AbleTo { vp },
+                ..
+            } => {
+                assert_eq!(vp.verb, "shut");
+                assert_eq!(vp.particle.as_deref(), Some("down"));
+                assert_eq!(vp.manner, vec!["gracefully"]);
             }
-        }
+            other => panic!("expected AbleTo in the relative, got {other:?}"),
+        },
         other => panic!("expected deontic, got {other:?}"),
     }
     render_round_trips(&s);
@@ -510,17 +565,24 @@ fn able_to_guard_digest_is_structural() {
         guard.roles[0],
         RoleSkeleton {
             kind: RoleKind::Deadline,
-            value: RoleValue::Measure { number: "5".into(), unit: Some("seconds".into()) },
+            value: RoleValue::Measure {
+                number: "5".into(),
+                unit: Some("seconds".into())
+            },
             marker: None,
         }
     );
     // The capability description's atom digests the same structured role.
     let d = skeleton(&one("The client is able to retry within 5 seconds.")).unwrap();
-    assert_eq!(d.atoms[0].roles, guard.roles, "description and guard meet structurally");
+    assert_eq!(
+        d.atoms[0].roles, guard.roles,
+        "description and guard meet structurally"
+    );
     // Lossiness: differing deadlines separate the guard digests.
-    let k10 =
-        skeleton(&one("While the client is able to retry within 10 seconds, the pump shall run."))
-            .unwrap();
+    let k10 = skeleton(&one(
+        "While the client is able to retry within 10 seconds, the pump shall run.",
+    ))
+    .unwrap();
     assert_ne!(k.guards.states[0], k10.guards.states[0]);
 }
 
@@ -548,9 +610,11 @@ fn envelope_violated_when_the_guarantee_forbids_the_admitted_behavior() {
     // `from_sentence`: a pairing like this arrives from the graph layer,
     // which is exactly why the judgment exists.)
     let target = one("The client shall not retry.");
-    let envelope =
-        AssumptionSource::from_sentence(EdgeKind::AdmissibilityEnvelope, &one("The client may retry."))
-            .unwrap();
+    let envelope = AssumptionSource::from_sentence(
+        EdgeKind::AdmissibilityEnvelope,
+        &one("The client may retry."),
+    )
+    .unwrap();
     let paired = contract_formula(&target).unwrap().paired(&[envelope]);
     assert_eq!(envelope_compatible(&paired), Ternary::No);
 }
@@ -579,10 +643,14 @@ fn envelope_check_respects_guards_and_count_subjects() {
     // Guarded prohibition + unguarded envelope: the envelope's Top guard
     // witnesses the prohibition's own region — still a violation.
     let target = one("While the breaker is open, the client shall not retry.");
-    let envelope =
-        AssumptionSource::from_sentence(EdgeKind::AdmissibilityEnvelope, &one("The client may retry."))
-            .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let envelope = AssumptionSource::from_sentence(
+        EdgeKind::AdmissibilityEnvelope,
+        &one("The client may retry."),
+    )
+    .unwrap();
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::No);
     // Count subjects never ground (round-7 witness-set argument): `at
     // least 3 clients shall not retry` tolerates other retriers.

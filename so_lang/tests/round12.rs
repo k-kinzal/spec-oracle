@@ -42,18 +42,35 @@ fn force_preorder_admissible_directions() {
     // Binding (tight) refines Recommended (loose).
     let shall = one("The service shall respond within 5 seconds.");
     let should = one("The service should respond within 10 seconds.");
-    assert_eq!(assess(&shall, &should), Outcome::Refinement { concrete_is_a: true });
-    assert_eq!(assess(&should, &shall), Outcome::Refinement { concrete_is_a: false });
+    assert_eq!(
+        assess(&shall, &should),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
+    assert_eq!(
+        assess(&should, &shall),
+        Outcome::Refinement {
+            concrete_is_a: false
+        }
+    );
     // Recommended refines Recommended.
     let should_tight = one("The service should respond within 5 seconds.");
     assert_eq!(
         assess(&should_tight, &should),
-        Outcome::Refinement { concrete_is_a: true }
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
     );
     // Binding refines a description.
     let described = one("The retry count is at most 5.");
     let required = one("The retry count shall be at most 3.");
-    assert_eq!(assess(&required, &described), Outcome::Refinement { concrete_is_a: true });
+    assert_eq!(
+        assess(&required, &described),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
     // A description does NOT refine a binding obligation.
     let described_tight = one("The retry count is at most 3.");
     let required_loose = one("The retry count shall be at most 5.");
@@ -66,8 +83,18 @@ fn force_preorder_admissible_directions() {
 fn description_refinement_unchanged() {
     let tight = one("The retry count is at most 3.");
     let loose = one("The retry count is at most 5.");
-    assert_eq!(assess(&tight, &loose), Outcome::Refinement { concrete_is_a: true });
-    assert_eq!(assess(&loose, &tight), Outcome::Refinement { concrete_is_a: false });
+    assert_eq!(
+        assess(&tight, &loose),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
+    assert_eq!(
+        assess(&loose, &tight),
+        Outcome::Refinement {
+            concrete_is_a: false
+        }
+    );
 }
 
 /// PIN: the low-level refines() stays force-blind by design — the
@@ -103,7 +130,10 @@ fn aggregate_verdict_truth_table() {
     assert!(!w.all_sources_contract_forming);
     assert_eq!(
         w.source_issues,
-        vec![SourceIssue { index: 0, reasons: vec![SourceIssueReason::NotExplicitRelied] }]
+        vec![SourceIssue {
+            index: 0,
+            reasons: vec![SourceIssueReason::NotExplicitRelied]
+        }]
     );
     // Row 3: explicit but unproven — NotProven.
     let unproven = AssumptionSource::for_guarantee_with_relied(
@@ -115,7 +145,10 @@ fn aggregate_verdict_truth_table() {
     .unwrap();
     let w = bare.paired(std::slice::from_ref(&unproven)).well_formed();
     assert!(!w.all_sources_contract_forming);
-    assert_eq!(w.source_issues[0].reasons, vec![SourceIssueReason::NotProven]);
+    assert_eq!(
+        w.source_issues[0].reasons,
+        vec![SourceIssueReason::NotProven]
+    );
     // Row 4 (the round-11 display hazard, now caught): explicit + proven
     // + shared responsible-subject keys — the narrow booleans stay true,
     // the aggregate reports false, the reason is itemized.
@@ -128,9 +161,15 @@ fn aggregate_verdict_truth_table() {
     )
     .unwrap();
     let w = bare.paired(std::slice::from_ref(&shared)).well_formed();
-    assert!(w.all_contract_forming_explicit && w.all_proven, "the hazard: booleans look fine");
+    assert!(
+        w.all_contract_forming_explicit && w.all_proven,
+        "the hazard: booleans look fine"
+    );
     assert!(!w.all_sources_contract_forming, "the aggregate catches it");
-    assert_eq!(w.source_issues[0].reasons, vec![SourceIssueReason::SharedSubjectKeys]);
+    assert_eq!(
+        w.source_issues[0].reasons,
+        vec![SourceIssueReason::SharedSubjectKeys]
+    );
     // Row 5: a RECOMMENDED source — RecommendedForce (with the explicit,
     // proven reliance).
     let advice = one("The scheduler should warm the cache.");
@@ -141,17 +180,27 @@ fn aggregate_verdict_truth_table() {
         claim_formula(&advice).unwrap(),
     )
     .unwrap();
-    let w = bare.paired(std::slice::from_ref(&recommended)).well_formed();
+    let w = bare
+        .paired(std::slice::from_ref(&recommended))
+        .well_formed();
     assert!(!w.all_sources_contract_forming);
-    assert_eq!(w.source_issues[0].reasons, vec![SourceIssueReason::RecommendedForce]);
+    assert_eq!(
+        w.source_issues[0].reasons,
+        vec![SourceIssueReason::RecommendedForce]
+    );
     // Row 6: reasons ACCUMULATE — a default-relied recommendation shows
     // both gates at once.
     let lazy_advice =
         AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &advice, &target).unwrap();
-    let w = bare.paired(std::slice::from_ref(&lazy_advice)).well_formed();
+    let w = bare
+        .paired(std::slice::from_ref(&lazy_advice))
+        .well_formed();
     assert_eq!(
         w.source_issues[0].reasons,
-        vec![SourceIssueReason::NotExplicitRelied, SourceIssueReason::RecommendedForce]
+        vec![
+            SourceIssueReason::NotExplicitRelied,
+            SourceIssueReason::RecommendedForce
+        ]
     );
     // Row 7: an envelope source — EnvelopeKind recorded (by design, not
     // a defect), and the aggregate stays vacuously true.
@@ -162,8 +211,14 @@ fn aggregate_verdict_truth_table() {
     )
     .unwrap();
     let w = bare.paired(std::slice::from_ref(&envelope)).well_formed();
-    assert!(w.all_sources_contract_forming, "envelopes never count against the aggregate");
-    assert_eq!(w.source_issues[0].reasons, vec![SourceIssueReason::EnvelopeKind]);
+    assert!(
+        w.all_sources_contract_forming,
+        "envelopes never count against the aggregate"
+    );
+    assert_eq!(
+        w.source_issues[0].reasons,
+        vec![SourceIssueReason::EnvelopeKind]
+    );
     // A healthy explicit pairing: forming, no issues.
     let healthy = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::OccurrenceReliance,
@@ -199,8 +254,14 @@ fn differing_fulls_make_a_bare_definite_ambiguous() {
         refs[0].resolution,
         Resolution::Ambiguous {
             candidates: vec![
-                AntecedentCandidate { sentence: 0, full: "user session".into() },
-                AntecedentCandidate { sentence: 1, full: "admin session".into() },
+                AntecedentCandidate {
+                    sentence: 0,
+                    full: "user session".into()
+                },
+                AntecedentCandidate {
+                    sentence: 1,
+                    full: "admin session".into()
+                },
             ]
         }
     );
@@ -219,7 +280,12 @@ fn modifiers_select_or_leave_ambiguous() {
     .unwrap();
     let refs = references(&spec);
     assert_eq!(refs.len(), 1);
-    assert_eq!(refs[0].resolution, Resolution::Unique { antecedent_sentence: 1 });
+    assert_eq!(
+        refs[0].resolution,
+        Resolution::Unique {
+            antecedent_sentence: 1
+        }
+    );
     let spec = parse(
         "A user session shall expire. \
          An admin session shall expire. \
@@ -246,8 +312,17 @@ fn single_antecedent_unique_unchanged() {
     .unwrap();
     let refs = references(&spec);
     assert_eq!(refs.len(), 2);
-    assert_eq!(refs[0].resolution, Resolution::Unresolved, "the system stays deixis");
-    assert_eq!(refs[1].resolution, Resolution::Unique { antecedent_sentence: 1 });
+    assert_eq!(
+        refs[0].resolution,
+        Resolution::Unresolved,
+        "the system stays deixis"
+    );
+    assert_eq!(
+        refs[1].resolution,
+        Resolution::Unique {
+            antecedent_sentence: 1
+        }
+    );
 }
 
 /// Cross-sentence ordering: repeated introductions of ONE full identity
@@ -261,7 +336,12 @@ fn same_full_reintroduction_resolves_to_most_recent() {
     )
     .unwrap();
     let refs = references(&spec);
-    assert_eq!(refs[0].resolution, Resolution::Unique { antecedent_sentence: 1 });
+    assert_eq!(
+        refs[0].resolution,
+        Resolution::Unique {
+            antecedent_sentence: 1
+        }
+    );
 }
 
 /// Coordination: coordinated indefinite items introduce per item, so a
@@ -280,8 +360,14 @@ fn coordinated_introductions_make_ambiguity() {
         node.resolution,
         Resolution::Ambiguous {
             candidates: vec![
-                AntecedentCandidate { sentence: 0, full: "primary node".into() },
-                AntecedentCandidate { sentence: 0, full: "backup node".into() },
+                AntecedentCandidate {
+                    sentence: 0,
+                    full: "primary node".into()
+                },
+                AntecedentCandidate {
+                    sentence: 0,
+                    full: "backup node".into()
+                },
             ]
         },
         "coordinated object items introduce per item, reading order kept"
@@ -293,7 +379,10 @@ fn coordinated_introductions_make_ambiguity() {
 #[test]
 fn ambiguous_resolution_serde_shape() {
     let resolution = Resolution::Ambiguous {
-        candidates: vec![AntecedentCandidate { sentence: 0, full: "user session".into() }],
+        candidates: vec![AntecedentCandidate {
+            sentence: 0,
+            full: "user session".into(),
+        }],
     };
     let json = serde_json::to_value(&resolution).unwrap();
     assert_eq!(json["kind"], "ambiguous");
@@ -337,13 +426,22 @@ fn extended_number_words_parse_as_counts() {
         let k = skeleton(&s).unwrap();
         assert_eq!(
             k.subject.quantifier,
-            Quantifier::Count { op: CountOp::AtLeast, n },
+            Quantifier::Count {
+                op: CountOp::AtLeast,
+                n
+            },
             "{word}"
         );
     }
     // Digits are unchanged.
     let k = skeleton(&one("At least 11 nodes shall run.")).unwrap();
-    assert_eq!(k.subject.quantifier, Quantifier::Count { op: CountOp::AtLeast, n: 11 });
+    assert_eq!(
+        k.subject.quantifier,
+        Quantifier::Count {
+            op: CountOp::AtLeast,
+            n: 11
+        }
+    );
 }
 
 /// An unknown number word after a quantifier opener fails CLOSED —
@@ -366,7 +464,10 @@ fn unknown_number_words_reject_in_quantifier_position() {
             "{text}: {err:?}"
         );
         assert_eq!(err.kind(), "unknown_number_word");
-        assert!(err.to_string().contains("digits"), "the rewrite hint names digits");
+        assert!(
+            err.to_string().contains("digits"),
+            "the rewrite hint names digits"
+        );
     }
     // A determiner-led phrase after the opener is NOT a number position
     // gone wrong (legislated carve-out): it keeps its existing reading.
@@ -390,7 +491,10 @@ fn unknown_number_words_reject_in_measure_positions() {
         "The daemon shall retain the log for between eleventy and 10 days.",
     ] {
         assert!(
-            matches!(parse(text).unwrap_err(), ParseError::UnknownNumberWord { .. }),
+            matches!(
+                parse(text).unwrap_err(),
+                ParseError::UnknownNumberWord { .. }
+            ),
             "{text}"
         );
     }
@@ -408,10 +512,22 @@ fn unknown_number_words_reject_in_measure_positions() {
 fn extended_measure_words_round_trip_and_ground() {
     let s = one("The daemon shall flush the buffer within eleven seconds.");
     let rendered = s.render();
-    assert!(rendered.contains("eleven"), "canonical keeps the word as written: {rendered}");
-    assert_eq!(one(&rendered).render(), rendered, "canonical render is a fixed point");
+    assert!(
+        rendered.contains("eleven"),
+        "canonical keeps the word as written: {rendered}"
+    );
+    assert_eq!(
+        one(&rendered).render(),
+        rendered,
+        "canonical render is a fixed point"
+    );
     let loose = one("The daemon shall flush the buffer within twelve seconds.");
-    assert_eq!(assess(&s, &loose), Outcome::Refinement { concrete_is_a: true });
+    assert_eq!(
+        assess(&s, &loose),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
 }
 
 // =====================================================================
@@ -439,20 +555,36 @@ fn participle_stem_ordering_round12() {
         vec!["stop", "stopp", "stoppe", "stopped"]
     );
     // Irregular map hits.
-    assert_eq!(stems("The report shall be sent by the daemon."), vec!["send", "sent"]);
-    assert_eq!(stems("The lock is held by the daemon."), vec!["hold", "hel", "held"]);
+    assert_eq!(
+        stems("The report shall be sent by the daemon."),
+        vec!["send", "sent"]
+    );
+    assert_eq!(
+        stems("The lock is held by the daemon."),
+        vec!["hold", "hel", "held"]
+    );
     // A map hit AND a doubled consonant: both candidates ride, map first.
-    assert_eq!(stems("The report is written by the daemon."), vec![
-        "write", "writ", "writt", "writte", "written"
-    ]);
+    assert_eq!(
+        stems("The report is written by the daemon."),
+        vec!["write", "writ", "writt", "writte", "written"]
+    );
     // A map hit that equals a strip dedupes (take).
-    assert_eq!(stems("The record is taken by the daemon."), vec!["take", "tak", "taken"]);
+    assert_eq!(
+        stems("The record is taken by the daemon."),
+        vec!["take", "tak", "taken"]
+    );
     // A self-mapping irregular dedupes with the participle; the crude
     // d-strip still rides (all plausible stems are emitted).
-    assert_eq!(stems("The file is read by the daemon."), vec!["read", "rea"]);
+    assert_eq!(
+        stems("The file is read by the daemon."),
+        vec!["read", "rea"]
+    );
     // No doubled consonant, no map hit: the round-11 strips then the
     // participle.
-    assert_eq!(stems("The record is used by the daemon."), vec!["us", "use", "used"]);
+    assert_eq!(
+        stems("The record is used by the daemon."),
+        vec!["us", "use", "used"]
+    );
 }
 
 // =====================================================================
@@ -466,7 +598,8 @@ fn participle_stem_ordering_round12() {
 fn capability_guard_objects_digest() {
     use so_lang::semantics::{skeleton, Quantifier};
     let a = one("While the client is able to hold the lock, the gateway shall throttle the queue.");
-    let b = one("While the client is able to hold the token, the gateway shall throttle the queue.");
+    let b =
+        one("While the client is able to hold the token, the gateway shall throttle the queue.");
     let ga = skeleton(&a).unwrap().guards.states.remove(0);
     let gb = skeleton(&b).unwrap().guards.states.remove(0);
     assert_ne!(ga, gb);
@@ -507,7 +640,10 @@ fn well_formedness_serde_round_trip_and_legacy() {
         .paired(std::slice::from_ref(&lazy))
         .well_formed();
     let json = serde_json::to_value(&w).unwrap();
-    assert_eq!(json["all_sources_contract_forming"], serde_json::json!(false));
+    assert_eq!(
+        json["all_sources_contract_forming"],
+        serde_json::json!(false)
+    );
     assert_eq!(json["source_issues"][0]["index"], serde_json::json!(0));
     assert_eq!(
         json["source_issues"][0]["reasons"],
@@ -521,9 +657,15 @@ fn well_formedness_serde_round_trip_and_legacy() {
     assert!(json_clean.get("source_issues").is_none());
     // Legacy JSON: the round-12 fields absent load conservatively.
     let mut legacy = json;
-    legacy.as_object_mut().unwrap().remove("all_sources_contract_forming");
+    legacy
+        .as_object_mut()
+        .unwrap()
+        .remove("all_sources_contract_forming");
     legacy.as_object_mut().unwrap().remove("source_issues");
     let back: WellFormedness = serde_json::from_value(legacy).unwrap();
-    assert!(!back.all_sources_contract_forming, "absent loads as false — conservative");
+    assert!(
+        !back.all_sources_contract_forming,
+        "absent loads as false — conservative"
+    );
     assert!(back.source_issues.is_empty());
 }

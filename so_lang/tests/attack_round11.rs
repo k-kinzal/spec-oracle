@@ -66,7 +66,10 @@ fn refuted_contract() -> ContractFormula {
 fn frontier_is_exactly_two_or_more_after_the_minimal_subject() {
     // Accepted: run of one after the det-led minimal subject.
     for (text, verb) in [
-        ("When a session expires, the system shall close the session.", "expires"),
+        (
+            "When a session expires, the system shall close the session.",
+            "expires",
+        ),
         ("When the pump runs, the fan shall run.", "runs"),
         // A count determiner is part of the minimal subject.
         ("When at least 3 pumps run, the fan shall run.", "run"),
@@ -103,7 +106,11 @@ fn frontier_is_exactly_two_or_more_after_the_minimal_subject() {
         "When the client sends telemetry quickly, the fan shall run.",
         "When the client sends telemetry quickly promptly, the fan shall run.",
     ] {
-        assert_eq!(parse(text), Err(ParseError::AmbiguousVerbBoundary), "{text}");
+        assert_eq!(
+            parse(text),
+            Err(ParseError::AmbiguousVerbBoundary),
+            "{text}"
+        );
     }
 }
 
@@ -125,7 +132,11 @@ fn frontier_rejects_at_every_clause_site() {
         // Definiens content clause.
         "An upload means that the client sends telemetry.",
     ] {
-        assert_eq!(parse(text), Err(ParseError::AmbiguousVerbBoundary), "{text}");
+        assert_eq!(
+            parse(text),
+            Err(ParseError::AmbiguousVerbBoundary),
+            "{text}"
+        );
     }
 }
 
@@ -137,26 +148,46 @@ fn frontier_rejects_at_every_clause_site() {
 fn boundaried_shapes_are_unaffected() {
     for (text, verb) in [
         // Determiner on the object (the first rewrite).
-        ("When the client sends the telemetry, the fan shall run.", "sends"),
+        (
+            "When the client sends the telemetry, the fan shall run.",
+            "sends",
+        ),
         // Of-chain subject (the second rewrite).
-        ("When the sensor of the temperature fails, the pump shall stop.", "fails"),
+        (
+            "When the sensor of the temperature fails, the pump shall stop.",
+            "fails",
+        ),
         // Role boundary (the third rewrite).
-        ("When the temperature sensor fails at the depot, the pump shall stop.", "fails"),
+        (
+            "When the temperature sensor fails at the depot, the pump shall stop.",
+            "fails",
+        ),
         // Np-first structured subject with a bare object.
-        ("When the owner of the file sends telemetry, the fan shall run.", "sends"),
+        (
+            "When the owner of the file sends telemetry, the fan shall run.",
+            "sends",
+        ),
         // Relative-structured subject, particle final.
-        ("When the user who is authenticated logs out, the session shall end.", "logs"),
+        (
+            "When the user who is authenticated logs out, the session shall end.",
+            "logs",
+        ),
         // Particle final at the two-word run.
         ("When the user logs out, the session shall end.", "logs"),
         // Bare-number final at the two-word run.
-        ("When the counter reaches zero, the system shall reset.", "reaches"),
+        (
+            "When the counter reaches zero, the system shall reset.",
+            "reaches",
+        ),
         // A particle word never opens an SVO run.
         ("When the power up fails, the fan shall run.", "fails"),
         // A reserved word never opens an SVO run (`of` is never a verb).
         ("When the owner of files logs, the fan shall run.", "logs"),
         // `that` is a boundary: content verb found immediately before it.
-        ("When the monitor confirms that the queue holds the message, the fan shall run.",
-         "confirms"),
+        (
+            "When the monitor confirms that the queue holds the message, the fan shall run.",
+            "confirms",
+        ),
     ] {
         let s = one(text);
         let clause = &s.frames.trigger.as_ref().unwrap().clause.items[0];
@@ -199,7 +230,10 @@ fn ambiguity_error_identity_and_rewrites() {
     assert!(message.contains("determiner on the object"), "{message}");
     assert!(message.contains("sends the telemetry"), "{message}");
     // Rewrite 2: of-chain or relative for a long subject.
-    assert!(message.contains("of-chain or a relative clause"), "{message}");
+    assert!(
+        message.contains("of-chain or a relative clause"),
+        "{message}"
+    );
     // Rewrite 3: a role boundary.
     assert!(message.contains("role boundary"), "{message}");
 }
@@ -290,8 +324,14 @@ fn number_final_must_not_reopen_the_frontier_at_three_or_more() {
 #[test]
 fn object_digests_at_every_guard_site() {
     // Trigger: `no message` vs `the message` split the skeleton.
-    let no = skeleton(&one("When the queue holds no message, the daemon shall idle.")).unwrap();
-    let the = skeleton(&one("When the queue holds the message, the daemon shall idle.")).unwrap();
+    let no = skeleton(&one(
+        "When the queue holds no message, the daemon shall idle.",
+    ))
+    .unwrap();
+    let the = skeleton(&one(
+        "When the queue holds the message, the daemon shall idle.",
+    ))
+    .unwrap();
     assert_ne!(no.guards, the.guards);
     let clause = &no.guards.trigger.as_ref().unwrap().clauses[0];
     assert_eq!(clause.words, vec!["holds"]);
@@ -299,9 +339,14 @@ fn object_digests_at_every_guard_site() {
     assert_eq!(clause.objects[0].quantifier, Quantifier::Negative);
     assert_eq!(clause.objects[0].head, "message");
     // Exception: same pair, same split.
-    let no = skeleton(&one("The daemon shall idle, unless the queue holds no message.")).unwrap();
-    let the =
-        skeleton(&one("The daemon shall idle, unless the queue holds the message.")).unwrap();
+    let no = skeleton(&one(
+        "The daemon shall idle, unless the queue holds no message.",
+    ))
+    .unwrap();
+    let the = skeleton(&one(
+        "The daemon shall idle, unless the queue holds the message.",
+    ))
+    .unwrap();
     let no_x = no.exception.as_ref().unwrap();
     let the_x = the.exception.as_ref().unwrap();
     assert_ne!(no_x, the_x);
@@ -317,8 +362,10 @@ fn object_digests_at_every_guard_site() {
     ))
     .unwrap();
     assert_ne!(no.guards, the.guards);
-    let content =
-        no.guards.trigger.as_ref().unwrap().clauses[0].content.as_ref().expect("content");
+    let content = no.guards.trigger.as_ref().unwrap().clauses[0]
+        .content
+        .as_ref()
+        .expect("content");
     assert_eq!(content.clause.objects.len(), 1);
     assert_eq!(content.clause.objects[0].quantifier, Quantifier::Negative);
     // Coordinated objects: one digest per item, in surface order …
@@ -357,8 +404,10 @@ fn copular_and_capability_guards_unchanged() {
     assert!(cmp.guards.states[0].comparison.is_some());
     // A capability clause body carries its verb phrase's object digests
     // (round 12, change 6).
-    let cap = skeleton(&one("While the daemon is able to flush the queue, the fan shall run."))
-        .unwrap();
+    let cap = skeleton(&one(
+        "While the daemon is able to flush the queue, the fan shall run.",
+    ))
+    .unwrap();
     assert_eq!(cap.guards.states[0].objects.len(), 1);
     assert_eq!(cap.guards.states[0].objects[0].head, "queue");
 }
@@ -367,7 +416,10 @@ fn copular_and_capability_guards_unchanged() {
 /// empty, and a pre-round-11 digest without the field loads as empty.
 #[test]
 fn clause_skeleton_objects_serde() {
-    let k = skeleton(&one("When the queue holds no message, the daemon shall idle.")).unwrap();
+    let k = skeleton(&one(
+        "When the queue holds no message, the daemon shall idle.",
+    ))
+    .unwrap();
     let clause = &k.guards.trigger.as_ref().unwrap().clauses[0];
     let json = serde_json::to_value(clause).unwrap();
     assert!(json.get("objects").is_some());
@@ -402,14 +454,22 @@ fn default_constructors_never_form_even_when_proven() {
         assert!(default.proven, "the default reliance is self-entailment");
         assert!(!default.explicit_relied);
         assert!(!default.contract_forming());
-        let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&default));
-        assert_eq!(paired.assumption, Formula::Top, "a candidate never relieves the guarantee");
+        let paired = contract_formula(&target)
+            .unwrap()
+            .paired(std::slice::from_ref(&default));
+        assert_eq!(
+            paired.assumption,
+            Formula::Top,
+            "a candidate never relieves the guarantee"
+        );
         assert_eq!(paired.sources.len(), 1, "but stays visible as evidence");
     }
     // The explicit path forms.
     let explicit = explicit_source(EdgeKind::OccurrenceReliance, &source, &target);
     assert!(explicit.explicit_relied && explicit.proven && explicit.contract_forming());
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&explicit));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&explicit));
     assert_eq!(paired.assumption, explicit.relied);
     // Explicit but UNPROVEN (entailment Unknown): selected, not forming.
     let unproven = AssumptionSource::for_guarantee_with_relied(
@@ -422,7 +482,9 @@ fn default_constructors_never_form_even_when_proven() {
     assert!(unproven.explicit_relied);
     assert!(!unproven.proven);
     assert!(!unproven.contract_forming());
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&unproven));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&unproven));
     assert_eq!(paired.assumption, Formula::Top);
 }
 
@@ -437,7 +499,11 @@ fn explicit_relied_serde() {
     let default =
         AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &source, &target).unwrap();
     let json = serde_json::to_value(&default).unwrap();
-    assert_eq!(json["explicit_relied"], serde_json::json!(false), "false still serializes");
+    assert_eq!(
+        json["explicit_relied"],
+        serde_json::json!(false),
+        "false still serializes"
+    );
     let explicit = explicit_source(EdgeKind::OccurrenceReliance, &source, &target);
     let json = serde_json::to_value(&explicit).unwrap();
     assert_eq!(json["explicit_relied"], serde_json::json!(true));
@@ -448,7 +514,10 @@ fn explicit_relied_serde() {
     legacy.as_object_mut().unwrap().remove("explicit_relied");
     let back: AssumptionSource = serde_json::from_value(legacy).unwrap();
     assert!(!back.explicit_relied);
-    assert!(!back.contract_forming(), "an old proven edge must not silently keep the power");
+    assert!(
+        !back.contract_forming(),
+        "an old proven edge must not silently keep the power"
+    );
 }
 
 /// The `well_formed()` truth table. (The spec offered `verification()` as
@@ -494,8 +563,15 @@ fn well_formed_truth_table() {
         .unwrap()
         .paired(std::slice::from_ref(&envelope))
         .well_formed();
-    assert!(w.all_contract_forming_explicit && w.all_proven, "envelopes are out of scope");
-    assert_eq!(w.envelope_compatibility, Ternary::No, "the violation is re-exposed");
+    assert!(
+        w.all_contract_forming_explicit && w.all_proven,
+        "envelopes are out of scope"
+    );
+    assert_eq!(
+        w.envelope_compatibility,
+        Ternary::No,
+        "the violation is re-exposed"
+    );
     assert_eq!(w.assumption_satisfiability, Ternary::Unknown);
     // Row 5: a refuted pairing reports it.
     let w = refuted_contract().well_formed();
@@ -513,15 +589,24 @@ fn well_formed_truth_table() {
         &one("The daemon is ready."),
         &target,
     );
-    assert!(!shared.contract_forming(), "shared responsible keys ride as candidates");
+    assert!(
+        !shared.contract_forming(),
+        "shared responsible keys ride as candidates"
+    );
     let paired = bare.paired(std::slice::from_ref(&shared));
     assert_eq!(paired.assumption, Formula::Top);
     let w = paired.well_formed();
     assert!(w.all_contract_forming_explicit && w.all_proven);
-    assert!(!w.all_sources_contract_forming, "the aggregate catches the shared-keys case");
+    assert!(
+        !w.all_sources_contract_forming,
+        "the aggregate catches the shared-keys case"
+    );
     assert_eq!(w.source_issues.len(), 1);
     assert_eq!(w.source_issues[0].index, 0);
-    assert_eq!(w.source_issues[0].reasons, vec![SourceIssueReason::SharedSubjectKeys]);
+    assert_eq!(
+        w.source_issues[0].reasons,
+        vec![SourceIssueReason::SharedSubjectKeys]
+    );
 }
 
 // =====================================================================
@@ -595,7 +680,9 @@ fn refines_healthy_path_unchanged() {
         &one("The scheduler is ready."),
         &target,
     );
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&ok));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&ok));
     assert_eq!(assumption_satisfiable(&paired), Ternary::Unknown);
     assert_eq!(refines(&paired, &paired), Ternary::Yes);
 }
@@ -615,7 +702,9 @@ fn matching_obligation_never_refutes_and_never_certifies() {
         &target,
     )
     .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
     // Guarded pair with witnessing guards: still Unknown.
     let target = one("When the order ships, the client shall retry.");
@@ -625,7 +714,9 @@ fn matching_obligation_never_refutes_and_never_certifies() {
         &target,
     )
     .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
 }
 
@@ -641,19 +732,24 @@ fn branch_rule_partial_vs_total_refutation() {
         &target,
     )
     .unwrap();
-    let base = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let base = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     // One of three branches prohibited: Unknown.
     assert_eq!(envelope_compatible(&base), Ternary::Unknown);
     // Two of three: still Unknown.
     let no_escalate = claim_formula(&one("The client shall not escalate the request.")).unwrap();
     let mut two = base.clone();
-    two.guarantee = Formula::And { items: vec![base.guarantee.clone(), no_escalate.clone()] };
+    two.guarantee = Formula::And {
+        items: vec![base.guarantee.clone(), no_escalate.clone()],
+    };
     assert_eq!(envelope_compatible(&two), Ternary::Unknown);
     // All three: the permission is entirely revoked — No.
     let no_idle = claim_formula(&one("The client shall not idle.")).unwrap();
     let mut all = base.clone();
-    all.guarantee =
-        Formula::And { items: vec![base.guarantee.clone(), no_escalate, no_idle] };
+    all.guarantee = Formula::And {
+        items: vec![base.guarantee.clone(), no_escalate, no_idle],
+    };
     assert_eq!(envelope_compatible(&all), Ternary::No);
 }
 
@@ -671,7 +767,9 @@ fn refutation_only_edges() {
         &target,
     )
     .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
     // A merely RECOMMENDED prohibition does not bound.
     let target = one("The client should not retry.");
@@ -681,7 +779,9 @@ fn refutation_only_edges() {
         &target,
     )
     .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
     // Obligation-of-one-branch + prohibition-of-another: the obligated
     // branch is not forbidden, so the two-branch envelope routes around.
@@ -692,9 +792,13 @@ fn refutation_only_edges() {
         &target,
     )
     .unwrap();
-    let mut paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let mut paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     let must_retry = claim_formula(&one("The client shall retry.")).unwrap();
-    paired.guarantee = Formula::And { items: vec![paired.guarantee.clone(), must_retry] };
+    paired.guarantee = Formula::And {
+        items: vec![paired.guarantee.clone(), must_retry],
+    };
     assert_eq!(envelope_compatible(&paired), Ternary::Unknown);
 }
 
@@ -709,7 +813,9 @@ fn never_description_and_single_atom_refute() {
         &never,
     )
     .unwrap();
-    let paired = contract_formula(&never).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&never)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::No);
     let prohibition = one("The client shall not retry.");
     let envelope = AssumptionSource::for_guarantee(
@@ -718,8 +824,9 @@ fn never_description_and_single_atom_refute() {
         &prohibition,
     )
     .unwrap();
-    let paired =
-        contract_formula(&prohibition).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&prohibition)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::No);
 }
 
@@ -753,15 +860,27 @@ fn passive_emits_exact_legislated_stems() {
     );
     // en-strip pair with an irregular-map hit leading (take dedupes with
     // the one-character strip).
-    assert_eq!(stems("The record is taken by the daemon."), vec!["take", "tak", "taken"]);
+    assert_eq!(
+        stems("The record is taken by the daemon."),
+        vec!["take", "tak", "taken"]
+    );
     // ed-strip at length four (no doubled consonant, no map hit).
-    assert_eq!(stems("The record is used by the daemon."), vec!["us", "use", "used"]);
+    assert_eq!(
+        stems("The record is used by the daemon."),
+        vec!["us", "use", "used"]
+    );
     // Irregular map hit, then the bare-d strip.
-    assert_eq!(stems("The record is paid by the daemon."), vec!["pay", "pai", "paid"]);
+    assert_eq!(
+        stems("The record is paid by the daemon."),
+        vec!["pay", "pai", "paid"]
+    );
     // Three-letter `ed` word falls to the d-strip branch (len > 3 fails).
     assert_eq!(stems("The record is fed by the daemon."), vec!["fe", "fed"]);
     // Irregular map hit where round 11 had no strip at all.
-    assert_eq!(stems("The report shall be sent by the daemon."), vec!["send", "sent"]);
+    assert_eq!(
+        stems("The report shall be sent by the daemon."),
+        vec!["send", "sent"]
+    );
     // Candidate shape: kind, subject, patient-as-object, no Agent role,
     // non-empty note.
     for c in normalization_candidates(&one("Each request shall be logged by the daemon.")) {
@@ -784,7 +903,9 @@ fn candidate_structure_is_preserved() {
     assert_eq!(c[0].subject.restrictor, vec!["backup".to_string()]);
     // Round 12: `sent` maps to `send` too, so each agent item carries two
     // stems — surface order per item is unchanged.
-    let c = normalization_candidates(&one("The report shall be sent by the auditor and the owner."));
+    let c = normalization_candidates(&one(
+        "The report shall be sent by the auditor and the owner.",
+    ));
     assert_eq!(c.len(), 4);
     assert_eq!(c[0].subject.head, "auditor");
     assert_eq!(c[1].subject.head, "auditor");
@@ -795,7 +916,10 @@ fn candidate_structure_is_preserved() {
     ));
     assert_eq!(c.len(), 2);
     assert_eq!(c[0].atom.roles.len(), 1);
-    assert_eq!(c[0].atom.roles[0].kind, so_lang::semantics::RoleKind::Deadline);
+    assert_eq!(
+        c[0].atom.roles[0].kind,
+        so_lang::semantics::RoleKind::Deadline
+    );
 }
 
 /// Out-of-scope shapes emit nothing: actives, agentless passives,
@@ -871,10 +995,40 @@ fn candidates_never_reach_the_relation_engine() {
 #[test]
 fn frontier_fuzz_is_total() {
     const VOCAB: &[&str] = &[
-        "the", "a", "no", "each", "at", "least", "most", "exactly", "3", "zero", "client",
-        "clients", "send", "sends", "telemetry", "quickly", "out", "up", "of", "that", "is",
-        "are", "active", "who", "daemon", "backup", "and", "or", "both", "either", "within",
-        "seconds", "5", "not",
+        "the",
+        "a",
+        "no",
+        "each",
+        "at",
+        "least",
+        "most",
+        "exactly",
+        "3",
+        "zero",
+        "client",
+        "clients",
+        "send",
+        "sends",
+        "telemetry",
+        "quickly",
+        "out",
+        "up",
+        "of",
+        "that",
+        "is",
+        "are",
+        "active",
+        "who",
+        "daemon",
+        "backup",
+        "and",
+        "or",
+        "both",
+        "either",
+        "within",
+        "seconds",
+        "5",
+        "not",
     ];
     let mut state: u64 = 0x5eed_c0de_1011;
     let mut next = move || {
@@ -887,8 +1041,9 @@ fn frontier_fuzz_is_total() {
     let mut parsed = 0usize;
     for i in 0..4000 {
         let len = 1 + (next() % 6) as usize;
-        let words: Vec<&str> =
-            (0..len).map(|_| VOCAB[(next() % VOCAB.len() as u64) as usize]).collect();
+        let words: Vec<&str> = (0..len)
+            .map(|_| VOCAB[(next() % VOCAB.len() as u64) as usize])
+            .collect();
         let clause = words.join(" ");
         let text = match i % 4 {
             0 => format!("When {clause}, the fan shall run."),

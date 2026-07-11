@@ -15,24 +15,40 @@ use so_lang::semantics::{self, Claim, Denotation, Force, Polarity, Resolution, S
 /// Parse an input expected to hold exactly one sentence.
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
 fn deontic(s: &Sentence) -> (&NpGroup, Modal, bool, &Vp) {
     match &s.core {
-        Core::Deontic { subject, modal, negated, vp } => {
-            (subject, *modal, *negated, vp.single().expect("single vp fixture"))
-        }
+        Core::Deontic {
+            subject,
+            modal,
+            negated,
+            vp,
+        } => (
+            subject,
+            *modal,
+            *negated,
+            vp.single().expect("single vp fixture"),
+        ),
         other => panic!("expected deontic core, got {other:?}"),
     }
 }
 
 fn description(s: &Sentence) -> (&NpGroup, Copula, Option<DescriptionAdverb>, &Predicate) {
     match &s.core {
-        Core::Description { subject, copula, adverb, predicate, .. } => {
-            (subject, *copula, *adverb, predicate)
-        }
+        Core::Description {
+            subject,
+            copula,
+            adverb,
+            predicate,
+            ..
+        } => (subject, *copula, *adverb, predicate),
         other => panic!("expected description core, got {other:?}"),
     }
 }
@@ -90,7 +106,10 @@ fn a03_number_word_stored_as_written() {
         *predicate,
         Predicate::Comparison(Comparison {
             op: ComparisonOp::GreaterThan,
-            value: Measure::Quantity { number: "zero".into(), unit: None },
+            value: Measure::Quantity {
+                number: "zero".into(),
+                unit: None
+            },
             upper: None,
         })
     );
@@ -104,8 +123,17 @@ fn a04_event_trigger_copular_clause() {
     assert_eq!(trigger.keyword, "When");
     assert_eq!(single(&trigger.clause.items[0].subject).head, "order");
     match &trigger.clause.items[0].body {
-        ClauseBody::Copular { copula: ClauseCopula::Is, predicate, ..  } => {
-            assert_eq!(*predicate, Predicate::Words { words: vec!["submitted".into()] });
+        ClauseBody::Copular {
+            copula: ClauseCopula::Is,
+            predicate,
+            ..
+        } => {
+            assert_eq!(
+                *predicate,
+                Predicate::Words {
+                    words: vec!["submitted".into()]
+                }
+            );
         }
         other => panic!("expected copular body, got {other:?}"),
     }
@@ -120,7 +148,12 @@ fn a05_contingency_with_then_and_be_complement() {
     assert_eq!(trigger.keyword, "If");
     let (_, _, _, vp) = deontic(&s);
     assert_eq!(vp.verb, "be");
-    assert_eq!(vp.complement, Some(Predicate::Words { words: vec!["frozen".into()] }));
+    assert_eq!(
+        vp.complement,
+        Some(Predicate::Words {
+            words: vec!["frozen".into()]
+        })
+    );
     assert!(vp.object.is_none());
 }
 
@@ -225,7 +258,11 @@ fn a12_recommendation_with_coordinated_object() {
     let (_, modal, _, vp) = deontic(&s);
     assert_eq!(modal, Modal::Should);
     match vp.object.as_ref().expect("object") {
-        NpGroup::Coordinated { conj: Conj::And, marker: None, items } => {
+        NpGroup::Coordinated {
+            conj: Conj::And,
+            marker: None,
+            items,
+        } => {
             assert_eq!(items.len(), 2);
             assert_eq!(items[0].head, "TraceContext");
             assert_eq!(items[1].modifiers, vec!["Baggage".to_string()]);
@@ -254,7 +291,10 @@ fn a14_recipient_then_means_in_surface_order() {
     let (_, _, _, vp) = deontic(&s);
     assert_eq!(single(vp.object.as_ref().expect("object")).head, "receipt");
     match vp.roles.as_slice() {
-        [RolePp::Recipient(recipient), RolePp::Means { marker: MeansMarker::Via, np }] => {
+        [RolePp::Recipient(recipient), RolePp::Means {
+            marker: MeansMarker::Via,
+            np,
+        }] => {
             assert_eq!(single(recipient).head, "customer");
             assert_eq!(single(np).head, "TLS");
         }
@@ -280,7 +320,12 @@ fn a16_each_with_passive_be() {
     assert_eq!(single(subject).det, Some(Det::Each));
     assert_eq!(single(subject).head, "request");
     assert_eq!(vp.verb, "be");
-    assert_eq!(vp.complement, Some(Predicate::Words { words: vec!["logged".into()] }));
+    assert_eq!(
+        vp.complement,
+        Some(Predicate::Words {
+            words: vec!["logged".into()]
+        })
+    );
 }
 
 #[test]
@@ -371,8 +416,17 @@ fn a22_relative_clause_in_subject() {
     let relative = np.relative.as_ref().expect("relative");
     assert_eq!(relative.marker, RelMarker::Who);
     match &relative.body {
-        RelativeBody::Copular { copula: ClauseCopula::Is, predicate, .. } => {
-            assert_eq!(*predicate, Predicate::Words { words: vec!["authenticated".into()] });
+        RelativeBody::Copular {
+            copula: ClauseCopula::Is,
+            predicate,
+            ..
+        } => {
+            assert_eq!(
+                *predicate,
+                Predicate::Words {
+                    words: vec!["authenticated".into()]
+                }
+            );
         }
         other => panic!("expected copular relative, got {other:?}"),
     }
@@ -389,7 +443,10 @@ fn a23_at_most_comparison() {
         *predicate,
         Predicate::Comparison(Comparison {
             op: ComparisonOp::AtMost,
-            value: Measure::Quantity { number: "3".into(), unit: None },
+            value: Measure::Quantity {
+                number: "3".into(),
+                unit: None
+            },
             upper: None,
         })
     );
@@ -403,8 +460,14 @@ fn a24_between_unit_attaches_to_the_measure_it_follows() {
         *predicate,
         Predicate::Comparison(Comparison {
             op: ComparisonOp::Between,
-            value: Measure::Quantity { number: "5".into(), unit: None },
-            upper: Some(Measure::Quantity { number: "30".into(), unit: Some("seconds".into()) }),
+            value: Measure::Quantity {
+                number: "5".into(),
+                unit: None
+            },
+            upper: Some(Measure::Quantity {
+                number: "30".into(),
+                unit: Some("seconds".into())
+            }),
         })
     );
 }
@@ -415,10 +478,18 @@ fn a25_bare_plural_description() {
     let (subject, copula, adverb, predicate) = description(&s);
     let np = single(subject);
     assert_eq!(np.det, None);
-    assert_eq!(np.head, "Requests", "surface casing kept on open-class words");
+    assert_eq!(
+        np.head, "Requests",
+        "surface casing kept on open-class words"
+    );
     assert_eq!(copula, Copula::Are);
     assert_eq!(adverb, None);
-    assert_eq!(*predicate, Predicate::Words { words: vec!["logged".into()] });
+    assert_eq!(
+        *predicate,
+        Predicate::Words {
+            words: vec!["logged".into()]
+        }
+    );
 }
 
 #[test]
@@ -429,13 +500,20 @@ fn a26_multi_sentence_sources_and_references() {
     )
     .expect("must parse");
     assert_eq!(spec.sentences.len(), 2);
-    assert_eq!(spec.sentences[0].source, "A session means a sequence of requests.");
+    assert_eq!(
+        spec.sentences[0].source,
+        "A session means a sequence of requests."
+    );
     assert_eq!(
         spec.sentences[1].source,
         "When a session expires, the system shall close the session."
     );
     let refs = semantics::references(&spec);
-    assert_eq!(refs.len(), 2, "exactly `the system` and `the session`: {refs:?}");
+    assert_eq!(
+        refs.len(),
+        2,
+        "exactly `the system` and `the session`: {refs:?}"
+    );
     // Reading order within sentence 1: frame first, then core.
     assert_eq!(refs[0].head, "system");
     assert_eq!(refs[0].sentence, 1);
@@ -447,7 +525,9 @@ fn a26_multi_sentence_sources_and_references() {
     assert_eq!(refs[1].head, "session");
     assert_eq!(
         refs[1].resolution,
-        Resolution::Unique { antecedent_sentence: 1 },
+        Resolution::Unique {
+            antecedent_sentence: 1
+        },
         "same-head introductions dedupe to the MOST RECENT (the frame's `a session`)"
     );
 }
@@ -479,7 +559,10 @@ fn f01_frame_keyword_casing_preserved_and_render_canonicalizes() {
     let s = one("WHILE the engine is running, WHEN the mode is manual, the pump shall stop.");
     assert_eq!(s.frames.states[0].keyword, "WHILE");
     assert_eq!(s.frames.trigger.as_ref().expect("trigger").keyword, "WHEN");
-    assert_eq!(s.frames.trigger.as_ref().expect("trigger").kind, TriggerKind::Event);
+    assert_eq!(
+        s.frames.trigger.as_ref().expect("trigger").kind,
+        TriggerKind::Event
+    );
 }
 
 #[test]
@@ -489,7 +572,10 @@ fn f02_if_then_casing() {
     assert_eq!(trigger.kind, TriggerKind::Contingency);
     assert_eq!(trigger.keyword, "IF");
     // Render always re-emits `then`.
-    assert_eq!(s.render(), "If the balance is negative, then the account shall be frozen.");
+    assert_eq!(
+        s.render(),
+        "If the balance is negative, then the account shall be frozen."
+    );
 }
 
 #[test]
@@ -508,22 +594,34 @@ fn f04_frame_order_violations() {
     // where after while
     assert_eq!(
         parse("While the engine runs, where the plan is premium, the pump shall stop."),
-        Err(ParseError::FrameOrder { keyword: "where".into(), after: "While".into() })
+        Err(ParseError::FrameOrder {
+            keyword: "where".into(),
+            after: "While".into()
+        })
     );
     // where after trigger
     assert_eq!(
         parse("When the order ships, where the plan is premium, the pump shall stop."),
-        Err(ParseError::FrameOrder { keyword: "where".into(), after: "When".into() })
+        Err(ParseError::FrameOrder {
+            keyword: "where".into(),
+            after: "When".into()
+        })
     );
     // while after trigger (spec reject item)
     assert_eq!(
         parse("When the order ships, while the engine runs, the pump shall stop."),
-        Err(ParseError::FrameOrder { keyword: "while".into(), after: "When".into() })
+        Err(ParseError::FrameOrder {
+            keyword: "while".into(),
+            after: "When".into()
+        })
     );
     // while after if-with-then
     assert_eq!(
         parse("If the balance is negative, then while the engine runs, the pump shall stop."),
-        Err(ParseError::FrameOrder { keyword: "while".into(), after: "If".into() })
+        Err(ParseError::FrameOrder {
+            keyword: "while".into(),
+            after: "If".into()
+        })
     );
 }
 
@@ -531,15 +629,24 @@ fn f04_frame_order_violations() {
 fn f05_multiple_triggers_keep_surface_keywords() {
     assert_eq!(
         parse("When x occurs, if y occurs, the pump shall stop."),
-        Err(ParseError::MultipleTriggers { first: "When".into(), second: "if".into() })
+        Err(ParseError::MultipleTriggers {
+            first: "When".into(),
+            second: "if".into()
+        })
     );
     assert_eq!(
         parse("If x occurs, then if y occurs, the pump shall stop."),
-        Err(ParseError::MultipleTriggers { first: "If".into(), second: "if".into() })
+        Err(ParseError::MultipleTriggers {
+            first: "If".into(),
+            second: "if".into()
+        })
     );
     assert_eq!(
         parse("WHEN x occurs, WHEN y occurs, the pump shall stop."),
-        Err(ParseError::MultipleTriggers { first: "WHEN".into(), second: "WHEN".into() })
+        Err(ParseError::MultipleTriggers {
+            first: "WHEN".into(),
+            second: "WHEN".into()
+        })
     );
 }
 
@@ -563,20 +670,28 @@ fn f06_then_without_if() {
 fn f07_unterminated_and_empty_frames() {
     assert_eq!(
         parse("When the order is submitted the system shall record the total."),
-        Err(ParseError::UnterminatedFrame { keyword: "When".into() })
+        Err(ParseError::UnterminatedFrame {
+            keyword: "When".into()
+        })
     );
     // `then` present but the comma missing is still an unterminated frame.
     assert_eq!(
         parse("If the balance is negative then the account shall be frozen."),
-        Err(ParseError::UnterminatedFrame { keyword: "If".into() })
+        Err(ParseError::UnterminatedFrame {
+            keyword: "If".into()
+        })
     );
     assert_eq!(
         parse("When , the pump shall stop."),
-        Err(ParseError::EmptyFrame { keyword: "When".into() })
+        Err(ParseError::EmptyFrame {
+            keyword: "When".into()
+        })
     );
     assert_eq!(
         parse("While , the pump shall stop."),
-        Err(ParseError::EmptyFrame { keyword: "While".into() })
+        Err(ParseError::EmptyFrame {
+            keyword: "While".into()
+        })
     );
 }
 
@@ -584,15 +699,21 @@ fn f07_unterminated_and_empty_frames() {
 fn f08_frame_on_definition_names_surface_keyword() {
     assert_eq!(
         parse("While the engine is running, a workspace means a shared folder."),
-        Err(ParseError::FrameOnDefinition { keyword: "While".into() })
+        Err(ParseError::FrameOnDefinition {
+            keyword: "While".into()
+        })
     );
     assert_eq!(
         parse("when the order ships, a workspace means a shared folder."),
-        Err(ParseError::FrameOnDefinition { keyword: "when".into() })
+        Err(ParseError::FrameOnDefinition {
+            keyword: "when".into()
+        })
     );
     assert_eq!(
         parse("If the balance is negative, a workspace means a shared folder."),
-        Err(ParseError::FrameOnDefinition { keyword: "If".into() })
+        Err(ParseError::FrameOnDefinition {
+            keyword: "If".into()
+        })
     );
 }
 
@@ -614,13 +735,19 @@ fn p02_empty_vp_and_predicate_and_definiens() {
     assert_eq!(parse("The pump shall."), Err(ParseError::EmptyVp));
     assert_eq!(parse("The pump shall not."), Err(ParseError::EmptyVp));
     assert_eq!(parse("The pump is."), Err(ParseError::EmptyPredicate));
-    assert_eq!(parse("The delay is greater than."), Err(ParseError::EmptyPredicate));
+    assert_eq!(
+        parse("The delay is greater than."),
+        Err(ParseError::EmptyPredicate)
+    );
     assert_eq!(parse("A session means."), Err(ParseError::EmptyDefiniens));
 }
 
 #[test]
 fn p03_modal_rejections() {
-    assert_eq!(parse("The client may not retry."), Err(ParseError::AmbiguousModal));
+    assert_eq!(
+        parse("The client may not retry."),
+        Err(ParseError::AmbiguousModal)
+    );
     assert_eq!(
         parse("The client can retry."),
         Err(ParseError::UnsupportedModal { word: "can".into() })
@@ -645,23 +772,32 @@ fn p04_negated_description() {
         parse("The sales amount is not greater than zero."),
         Err(ParseError::NegatedDescription)
     );
-    assert_eq!(parse("Requests are not logged."), Err(ParseError::NegatedDescription));
+    assert_eq!(
+        parse("Requests are not logged."),
+        Err(ParseError::NegatedDescription)
+    );
 }
 
 #[test]
 fn p05_mid_sentence_frame() {
     assert_eq!(
         parse("The tracing library should default export to X when no endpoint is configured."),
-        Err(ParseError::MidSentenceFrame { keyword: "when".into() })
+        Err(ParseError::MidSentenceFrame {
+            keyword: "when".into()
+        })
     );
     // `unless` without its leading comma is also a mid-sentence frame keyword.
     assert_eq!(
         parse("The pump shall stop unless the override is active."),
-        Err(ParseError::MidSentenceFrame { keyword: "unless".into() })
+        Err(ParseError::MidSentenceFrame {
+            keyword: "unless".into()
+        })
     );
     assert_eq!(
         parse("The pump shall stop while the engine runs."),
-        Err(ParseError::MidSentenceFrame { keyword: "while".into() })
+        Err(ParseError::MidSentenceFrame {
+            keyword: "while".into()
+        })
     );
 }
 
@@ -673,8 +809,13 @@ fn p06_error_messages_are_actionable() {
     assert!(msg(ParseError::UnsupportedModal { word: "can".into() })
         .contains("shall, must, should, or may"));
     assert!(msg(ParseError::NegatedDescription).contains("never"));
-    let mid = msg(ParseError::MidSentenceFrame { keyword: "when".into() });
-    assert!(mid.contains("lead"), "message should say conditions lead the sentence: {mid}");
+    let mid = msg(ParseError::MidSentenceFrame {
+        keyword: "when".into(),
+    });
+    assert!(
+        mid.contains("lead"),
+        "message should say conditions lead the sentence: {mid}"
+    );
     // No assume/guarantee vocabulary in any parse diagnostic.
     for e in [
         ParseError::Empty,
@@ -689,7 +830,10 @@ fn p06_error_messages_are_actionable() {
         ParseError::MixedCoordination,
     ] {
         let m = msg(e).to_lowercase();
-        assert!(!m.contains("assumption") && !m.contains("guarantee"), "A/G vocabulary in: {m}");
+        assert!(
+            !m.contains("assumption") && !m.contains("guarantee"),
+            "A/G vocabulary in: {m}"
+        );
     }
 }
 
@@ -697,18 +841,50 @@ fn p06_error_messages_are_actionable() {
 fn p07_error_kinds_cover_spec_set() {
     let cases: Vec<(ParseError, &str)> = vec![
         (ParseError::Empty, "empty"),
-        (ParseError::UnterminatedFrame { keyword: "When".into() }, "unterminated_frame"),
-        (ParseError::EmptyFrame { keyword: "When".into() }, "empty_frame"),
-        (ParseError::FrameOrder { keyword: "while".into(), after: "When".into() }, "frame_order"),
         (
-            ParseError::MultipleTriggers { first: "When".into(), second: "if".into() },
+            ParseError::UnterminatedFrame {
+                keyword: "When".into(),
+            },
+            "unterminated_frame",
+        ),
+        (
+            ParseError::EmptyFrame {
+                keyword: "When".into(),
+            },
+            "empty_frame",
+        ),
+        (
+            ParseError::FrameOrder {
+                keyword: "while".into(),
+                after: "When".into(),
+            },
+            "frame_order",
+        ),
+        (
+            ParseError::MultipleTriggers {
+                first: "When".into(),
+                second: "if".into(),
+            },
             "multiple_triggers",
         ),
         (ParseError::ThenWithoutIf, "then_without_if"),
-        (ParseError::FrameOnDefinition { keyword: "While".into() }, "frame_on_definition"),
-        (ParseError::MidSentenceFrame { keyword: "when".into() }, "mid_sentence_frame"),
+        (
+            ParseError::FrameOnDefinition {
+                keyword: "While".into(),
+            },
+            "frame_on_definition",
+        ),
+        (
+            ParseError::MidSentenceFrame {
+                keyword: "when".into(),
+            },
+            "mid_sentence_frame",
+        ),
         (ParseError::MissingPivot, "missing_pivot"),
-        (ParseError::UnsupportedModal { word: "can".into() }, "unsupported_modal"),
+        (
+            ParseError::UnsupportedModal { word: "can".into() },
+            "unsupported_modal",
+        ),
         (ParseError::AmbiguousModal, "ambiguous_modal"),
         (ParseError::NegatedDescription, "negated_description"),
         (ParseError::EmptySubject, "empty_subject"),
@@ -716,7 +892,10 @@ fn p07_error_kinds_cover_spec_set() {
         (ParseError::EmptyPredicate, "empty_predicate"),
         (ParseError::EmptyDefiniens, "empty_definiens"),
         (ParseError::MixedCoordination, "mixed_coordination"),
-        (ParseError::UnexpectedTokens { token: "x".into() }, "unexpected_tokens"),
+        (
+            ParseError::UnexpectedTokens { token: "x".into() },
+            "unexpected_tokens",
+        ),
     ];
     for (error, kind) in cases {
         assert_eq!(error.kind(), kind);
@@ -729,7 +908,15 @@ fn p07_error_kinds_cover_spec_set() {
 fn m01_both_and_either_groups() {
     let s = one("Both the pump and the valve shall stop.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Coordinated { conj, marker, items }, .. } => {
+        Core::Deontic {
+            subject:
+                NpGroup::Coordinated {
+                    conj,
+                    marker,
+                    items,
+                },
+            ..
+        } => {
             assert_eq!(*conj, Conj::And);
             assert_eq!(*marker, Some(GroupMarker::Both));
             assert_eq!(items.len(), 2);
@@ -740,7 +927,15 @@ fn m01_both_and_either_groups() {
     }
     let s = one("Either the cache or the database shall answer.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Coordinated { conj, marker, items }, .. } => {
+        Core::Deontic {
+            subject:
+                NpGroup::Coordinated {
+                    conj,
+                    marker,
+                    items,
+                },
+            ..
+        } => {
             assert_eq!(*conj, Conj::Or);
             assert_eq!(*marker, Some(GroupMarker::Either));
             assert_eq!(items.len(), 2);
@@ -768,7 +963,10 @@ fn m02_marker_mismatches_reject() {
         parse("Both the pump and the valve and the fan shall stop."),
         Err(ParseError::MixedCoordination)
     );
-    assert_eq!(parse("Both the pump shall stop."), Err(ParseError::MixedCoordination));
+    assert_eq!(
+        parse("Both the pump shall stop."),
+        Err(ParseError::MixedCoordination)
+    );
     // either must pair with `or`
     assert_eq!(
         parse("Either the pump and the valve shall stop."),
@@ -780,7 +978,15 @@ fn m02_marker_mismatches_reject() {
 fn m03_unmarked_three_item_group_is_legal() {
     let s = one("The pump and the valve and the fan shall stop.");
     match &s.core {
-        Core::Deontic { subject: NpGroup::Coordinated { conj: Conj::And, marker: None, items }, .. } => {
+        Core::Deontic {
+            subject:
+                NpGroup::Coordinated {
+                    conj: Conj::And,
+                    marker: None,
+                    items,
+                },
+            ..
+        } => {
             assert_eq!(items.len(), 3);
         }
         other => panic!("expected 3-item coordination, got {other:?}"),
@@ -791,7 +997,9 @@ fn m03_unmarked_three_item_group_is_legal() {
 fn m04_coordinated_definition_term_rejects() {
     assert_eq!(
         parse("A pump and a valve means a machine."),
-        Err(ParseError::UnexpectedTokens { token: "and".into() })
+        Err(ParseError::UnexpectedTokens {
+            token: "and".into()
+        })
     );
 }
 
@@ -826,7 +1034,11 @@ fn r02_relative_with_coordinated_object() {
         RelativeBody::Verbal { verb, object, .. } => {
             assert_eq!(verb, "holds");
             match object.as_ref().expect("object") {
-                NpGroup::Coordinated { conj: Conj::Or, marker: None, items } => {
+                NpGroup::Coordinated {
+                    conj: Conj::Or,
+                    marker: None,
+                    items,
+                } => {
                     assert_eq!(items.len(), 2);
                     assert_eq!(items[0].head, "key");
                     assert_eq!(items[1].head, "badge");
@@ -848,11 +1060,22 @@ fn r03_relative_copula_does_not_end_subject() {
     assert_eq!(np.head, "account");
     assert!(matches!(
         np.relative.as_deref(),
-        Some(Relative { body: RelativeBody::Copular { copula: ClauseCopula::Is, .. }, .. })
+        Some(Relative {
+            body: RelativeBody::Copular {
+                copula: ClauseCopula::Is,
+                ..
+            },
+            ..
+        })
     ));
     assert_eq!(copula, Copula::Is);
     assert_eq!(adverb, Some(DescriptionAdverb::Never));
-    assert_eq!(*predicate, Predicate::Words { words: vec!["active".into()] });
+    assert_eq!(
+        *predicate,
+        Predicate::Words {
+            words: vec!["active".into()]
+        }
+    );
 }
 
 // ---- definiens NP-vs-clause choice ---------------------------------------------------
@@ -884,7 +1107,10 @@ fn d02_remains_definiens_is_a_clause() {
         Definiens::Clause(clause) => {
             assert!(matches!(
                 &clause.body,
-                ClauseBody::Copular { copula: ClauseCopula::Remains, .. }
+                ClauseBody::Copular {
+                    copula: ClauseCopula::Remains,
+                    ..
+                }
             ));
         }
         other => panic!("expected clause definiens, got {other:?}"),
@@ -900,7 +1126,13 @@ fn d03_np_definiens_with_roles() {
             assert_eq!(single(np).head, "transfer");
             assert!(matches!(
                 roles.as_slice(),
-                [RolePp::Recipient(_), RolePp::Means { marker: MeansMarker::Via, .. }]
+                [
+                    RolePp::Recipient(_),
+                    RolePp::Means {
+                        marker: MeansMarker::Via,
+                        ..
+                    }
+                ]
             ));
         }
         other => panic!("expected np definiens with roles, got {other:?}"),
@@ -917,8 +1149,14 @@ fn u01_units_attach_to_their_own_measure() {
         *predicate,
         Predicate::Comparison(Comparison {
             op: ComparisonOp::Between,
-            value: Measure::Quantity { number: "5".into(), unit: Some("seconds".into()) },
-            upper: Some(Measure::Quantity { number: "30".into(), unit: Some("seconds".into()) }),
+            value: Measure::Quantity {
+                number: "5".into(),
+                unit: Some("seconds".into())
+            },
+            upper: Some(Measure::Quantity {
+                number: "30".into(),
+                unit: Some("seconds".into())
+            }),
         })
     );
 }
@@ -941,7 +1179,11 @@ fn u03_np_measures() {
     let s = one("The delay is greater than the timeout.");
     let (_, _, _, predicate) = description(&s);
     match predicate {
-        Predicate::Comparison(Comparison { op: ComparisonOp::GreaterThan, value: Measure::Np { np }, upper: None }) => {
+        Predicate::Comparison(Comparison {
+            op: ComparisonOp::GreaterThan,
+            value: Measure::Np { np },
+            upper: None,
+        }) => {
             assert_eq!(single(np).head, "timeout");
         }
         other => panic!("expected np-measure comparison, got {other:?}"),
@@ -950,8 +1192,18 @@ fn u03_np_measures() {
     let s = one("The delay is between zero and the timeout.");
     let (_, _, _, predicate) = description(&s);
     match predicate {
-        Predicate::Comparison(Comparison { op: ComparisonOp::Between, value, upper: Some(Measure::Np { np }) }) => {
-            assert_eq!(*value, Measure::Quantity { number: "zero".into(), unit: None });
+        Predicate::Comparison(Comparison {
+            op: ComparisonOp::Between,
+            value,
+            upper: Some(Measure::Np { np }),
+        }) => {
+            assert_eq!(
+                *value,
+                Measure::Quantity {
+                    number: "zero".into(),
+                    unit: None
+                }
+            );
             assert_eq!(single(np).head, "timeout");
         }
         other => panic!("expected between with np upper bound, got {other:?}"),
@@ -981,7 +1233,10 @@ fn u05_equal_to_inside_be_complement() {
         vp.complement,
         Some(Predicate::Comparison(Comparison {
             op: ComparisonOp::EqualTo,
-            value: Measure::Quantity { number: "zero".into(), unit: None },
+            value: Measure::Quantity {
+                number: "zero".into(),
+                unit: None
+            },
             upper: None,
         }))
     );
@@ -1009,12 +1264,20 @@ fn t01_duration_rate_source_goal() {
     let (_, _, _, vp) = deontic(&s);
     assert_eq!(
         vp.roles,
-        vec![RolePp::Duration(Measure::Quantity { number: "30".into(), unit: Some("days".into()) })]
+        vec![RolePp::Duration(Measure::Quantity {
+            number: "30".into(),
+            unit: Some("days".into())
+        })]
     );
 
     let s = one("The system shall poll per second.");
     let (_, _, _, vp) = deontic(&s);
-    assert_eq!(vp.roles, vec![RolePp::Rate { unit: "second".into() }]);
+    assert_eq!(
+        vp.roles,
+        vec![RolePp::Rate {
+            unit: "second".into()
+        }]
+    );
     assert!(vp.object.is_none());
 
     let s = one("The service shall copy the record from the queue into the archive.");
@@ -1035,7 +1298,9 @@ fn t02_before_and_after_take_clauses() {
     match vp.roles.as_slice() {
         [RolePp::Before(clause)] => {
             assert_eq!(single(&clause.subject).head, "connection");
-            assert!(matches!(&clause.body, ClauseBody::Verbal { verb, object: None, .. } if verb == "closes"));
+            assert!(
+                matches!(&clause.body, ClauseBody::Verbal { verb, object: None, .. } if verb == "closes")
+            );
         }
         other => panic!("expected [Before(clause)], got {other:?}"),
     }
@@ -1055,7 +1320,12 @@ fn t03_be_with_roles_and_no_complement() {
     // be + open-class complement + role
     let s = one("The alert shall be sent to the operator.");
     let (_, _, _, vp) = deontic(&s);
-    assert_eq!(vp.complement, Some(Predicate::Words { words: vec!["sent".into()] }));
+    assert_eq!(
+        vp.complement,
+        Some(Predicate::Words {
+            words: vec!["sent".into()]
+        })
+    );
     assert!(matches!(vp.roles.as_slice(), [RolePp::Recipient(_)]));
 }
 
@@ -1066,10 +1336,8 @@ fn e01_exception_before_purpose_ok_reverse_rejected() {
     // Round 11 (fail-closed verb boundary): `retains control` is a
     // boundary-less bare run — the ambiguous class — so the purpose clause
     // carries a determiner on its object now.
-    let s = one(
-        "The pump shall stop, unless the override is active, \
-         so that the operator retains the control.",
-    );
+    let s = one("The pump shall stop, unless the override is active, \
+         so that the operator retains the control.");
     assert!(s.exception.is_some());
     assert!(matches!(s.purpose, Some(Purpose::SoThat(_))));
 
@@ -1078,7 +1346,9 @@ fn e01_exception_before_purpose_ok_reverse_rejected() {
             "The pump shall stop, so that the operator retains the control, \
              unless the override is active."
         ),
-        Err(ParseError::UnexpectedTokens { token: "unless".into() })
+        Err(ParseError::UnexpectedTokens {
+            token: "unless".into()
+        })
     );
 }
 
@@ -1162,7 +1432,11 @@ fn rt02_render_round_trips_markers_and_measures() {
         let reparsed = parse(&rendered).unwrap_or_else(|e| {
             panic!("render of {input:?} must re-parse; {rendered:?} gave: {e}")
         });
-        assert_eq!(normalize(reparsed), normalize(parsed), "diverged via {rendered:?}");
+        assert_eq!(
+            normalize(reparsed),
+            normalize(parsed),
+            "diverged via {rendered:?}"
+        );
     }
 }
 
@@ -1173,24 +1447,46 @@ fn s01_speech_acts() {
     let acts = [
         ("The pump shall stop.", SpeechAct::Obligation),
         ("The pump must stop.", SpeechAct::Obligation),
-        ("The daemon shall not store derived views.", SpeechAct::Prohibition),
-        ("The daemon must not store derived views.", SpeechAct::Prohibition),
+        (
+            "The daemon shall not store derived views.",
+            SpeechAct::Prohibition,
+        ),
+        (
+            "The daemon must not store derived views.",
+            SpeechAct::Prohibition,
+        ),
         ("The daemon should retry.", SpeechAct::Recommendation),
         ("The daemon should not retry.", SpeechAct::Recommendation),
         ("The client may retry.", SpeechAct::Permission),
         ("Requests are logged.", SpeechAct::Description),
-        ("A session means a sequence of requests.", SpeechAct::Definition),
+        (
+            "A session means a sequence of requests.",
+            SpeechAct::Definition,
+        ),
     ];
     for (input, expected) in acts {
-        assert_eq!(semantics::speech_act(&one(input)), expected, "for {input:?}");
+        assert_eq!(
+            semantics::speech_act(&one(input)),
+            expected,
+            "for {input:?}"
+        );
     }
 }
 
 #[test]
 fn s02_force() {
-    assert_eq!(semantics::force(&one("The pump shall stop.")), Some(Force::Binding));
-    assert_eq!(semantics::force(&one("The pump must stop.")), Some(Force::Binding));
-    assert_eq!(semantics::force(&one("The pump should stop.")), Some(Force::Recommended));
+    assert_eq!(
+        semantics::force(&one("The pump shall stop.")),
+        Some(Force::Binding)
+    );
+    assert_eq!(
+        semantics::force(&one("The pump must stop.")),
+        Some(Force::Binding)
+    );
+    assert_eq!(
+        semantics::force(&one("The pump should stop.")),
+        Some(Force::Recommended)
+    );
     assert_eq!(semantics::force(&one("The pump may stop.")), None);
     assert_eq!(semantics::force(&one("The pump is stopped.")), None);
     assert_eq!(semantics::force(&one("A pump means a device.")), None);
@@ -1211,7 +1507,13 @@ fn s03_denote_covers_all_cores() {
     // Description with `never` -> negative State.
     match semantics::denote(&one("The temperature is never above the limit.")) {
         Denotation::Behavior(a) => {
-            assert!(matches!(a.claim, Claim::State { polarity: Polarity::Negative, .. }));
+            assert!(matches!(
+                a.claim,
+                Claim::State {
+                    polarity: Polarity::Negative,
+                    ..
+                }
+            ));
         }
         other => panic!("expected behavior, got {other:?}"),
     }
@@ -1220,7 +1522,11 @@ fn s03_denote_covers_all_cores() {
         Denotation::Behavior(a) => {
             assert!(matches!(
                 a.claim,
-                Claim::Action { polarity: Polarity::Negative, force: Force::Binding, .. }
+                Claim::Action {
+                    polarity: Polarity::Negative,
+                    force: Force::Binding,
+                    ..
+                }
             ));
         }
         other => panic!("expected behavior, got {other:?}"),
@@ -1230,7 +1536,11 @@ fn s03_denote_covers_all_cores() {
         Denotation::Behavior(a) => {
             assert!(matches!(
                 a.claim,
-                Claim::Action { polarity: Polarity::Negative, force: Force::Recommended, .. }
+                Claim::Action {
+                    polarity: Polarity::Negative,
+                    force: Force::Recommended,
+                    ..
+                }
             ));
         }
         other => panic!("expected behavior, got {other:?}"),
@@ -1269,14 +1579,24 @@ fn s04_ingest_contract_for_every_act() {
     assert_eq!(single(&c.guarantee.subject).head, "pump");
     assert!(matches!(
         c.guarantee.claim,
-        Claim::Action { polarity: Polarity::Affirmative, force: Force::Binding, .. }
+        Claim::Action {
+            polarity: Polarity::Affirmative,
+            force: Force::Binding,
+            ..
+        }
     ));
 
     let c = semantics::ingest_contract(&one("The daemon shall not store derived views."))
         .expect("prohibition");
     assert_eq!(c.act, SpeechAct::Prohibition);
     assert_eq!(c.force, Some(Force::Binding));
-    assert!(matches!(c.guarantee.claim, Claim::Action { polarity: Polarity::Negative, .. }));
+    assert!(matches!(
+        c.guarantee.claim,
+        Claim::Action {
+            polarity: Polarity::Negative,
+            ..
+        }
+    ));
 
     let c = semantics::ingest_contract(&one("The daemon should retry.")).expect("recommendation");
     assert_eq!(c.act, SpeechAct::Recommendation);
@@ -1295,7 +1615,13 @@ fn s04_ingest_contract_for_every_act() {
     let c = semantics::ingest_contract(&one("Requests are logged.")).expect("description");
     assert_eq!(c.act, SpeechAct::Description);
     assert_eq!(c.force, None);
-    assert!(matches!(c.guarantee.claim, Claim::State { polarity: Polarity::Affirmative, .. }));
+    assert!(matches!(
+        c.guarantee.claim,
+        Claim::State {
+            polarity: Polarity::Affirmative,
+            ..
+        }
+    ));
     assert_eq!(c.assumption.render(), "⊤");
 }
 
@@ -1309,23 +1635,44 @@ fn s05_references_dedupe_by_head_to_most_recent() {
     .expect("must parse");
     let refs = semantics::references(&spec);
     let session_refs: Vec<_> = refs.iter().filter(|r| r.head == "session").collect();
-    assert_eq!(session_refs.len(), 2, "frame `the session` and object `the session`: {refs:?}");
+    assert_eq!(
+        session_refs.len(),
+        2,
+        "frame `the session` and object `the session`: {refs:?}"
+    );
     for reference in &session_refs {
         assert_eq!(
             reference.resolution,
-            Resolution::Unique { antecedent_sentence: 1 },
+            Resolution::Unique {
+                antecedent_sentence: 1
+            },
             "same-head introductions must dedupe to the most recent, never Ambiguous"
         );
     }
-    let daemon = refs.iter().find(|r| r.head == "daemon").expect("the daemon");
-    assert_eq!(daemon.resolution, Resolution::Unresolved, "deixis, not an error");
+    let daemon = refs
+        .iter()
+        .find(|r| r.head == "daemon")
+        .expect("the daemon");
+    assert_eq!(
+        daemon.resolution,
+        Resolution::Unresolved,
+        "deixis, not an error"
+    );
 
     // Antecedent in an earlier sentence resolves too.
     let spec = parse("A session means a sequence of requests. The system shall close the session.")
         .expect("must parse");
     let refs = semantics::references(&spec);
-    let session = refs.iter().find(|r| r.head == "session").expect("the session");
-    assert_eq!(session.resolution, Resolution::Unique { antecedent_sentence: 0 });
+    let session = refs
+        .iter()
+        .find(|r| r.head == "session")
+        .expect("the session");
+    assert_eq!(
+        session.resolution,
+        Resolution::Unique {
+            antecedent_sentence: 0
+        }
+    );
 }
 
 // ---- totality ------------------------------------------------------------------------
@@ -1374,13 +1721,75 @@ fn z02_totality_random_soups_never_panic() {
         (state >> 32) as u32
     };
     let vocabulary = [
-        "the", "a", "an", "no", "each", "pump", "valve", "shall", "must", "should", "may",
-        "not", "is", "are", "remains", "means", "when", "while", "where", "if", "unless",
-        "then", "so", "that", "who", "in", "order", "to", "of", "and", "or", "both",
-        "either", "at", "least", "most", "exactly", "between", "greater", "less", "than",
-        "equal", "within", "for", "per", "before", "after", "from", "into", "via", "using",
-        "about", "be", "always", "never", "0", "3", "5.5", "ten", ",", ".", "..", ".,",
-        "×", "⊤", "café", "日本", "🔥", "http://192.168.10.4:4318",
+        "the",
+        "a",
+        "an",
+        "no",
+        "each",
+        "pump",
+        "valve",
+        "shall",
+        "must",
+        "should",
+        "may",
+        "not",
+        "is",
+        "are",
+        "remains",
+        "means",
+        "when",
+        "while",
+        "where",
+        "if",
+        "unless",
+        "then",
+        "so",
+        "that",
+        "who",
+        "in",
+        "order",
+        "to",
+        "of",
+        "and",
+        "or",
+        "both",
+        "either",
+        "at",
+        "least",
+        "most",
+        "exactly",
+        "between",
+        "greater",
+        "less",
+        "than",
+        "equal",
+        "within",
+        "for",
+        "per",
+        "before",
+        "after",
+        "from",
+        "into",
+        "via",
+        "using",
+        "about",
+        "be",
+        "always",
+        "never",
+        "0",
+        "3",
+        "5.5",
+        "ten",
+        ",",
+        ".",
+        "..",
+        ".,",
+        "×",
+        "⊤",
+        "café",
+        "日本",
+        "🔥",
+        "http://192.168.10.4:4318",
     ];
     for _ in 0..800 {
         let length = (next() % 14) as usize;
@@ -1430,7 +1839,10 @@ fn x02_totality_deep_of_chain() {
         input.push_str("x of ");
     }
     input.push_str("x shall stop.");
-    assert!(matches!(parse(&input), Err(ParseError::PhraseTooDeep { .. })));
+    assert!(matches!(
+        parse(&input),
+        Err(ParseError::PhraseTooDeep { .. })
+    ));
 }
 
 // FINDING REJECTED: the audit read constraint 4 ("keywords are contextual")

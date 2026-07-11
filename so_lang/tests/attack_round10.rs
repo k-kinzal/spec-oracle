@@ -15,7 +15,9 @@ use so_lang::formula::{
     PairingError, SubjectRelation,
 };
 use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{assess, assumption_satisfiable, envelope_compatible, implies, Outcome, Ternary};
+use so_lang::relate::{
+    assess, assumption_satisfiable, envelope_compatible, implies, Outcome, Ternary,
+};
 use so_lang::semantics::{responsible_subject_keys, subject_keys};
 
 fn one(input: &str) -> so_lang::ast::Sentence {
@@ -29,14 +31,20 @@ fn guard_clause(sentence: &so_lang::ast::Sentence) -> &so_lang::ast::Clause {
     if let Some(frame) = sentence.frames.states.first() {
         return &frame.clause.items[0];
     }
-    sentence.exception.as_ref().expect("a guard or exception clause")
+    sentence
+        .exception
+        .as_ref()
+        .expect("a guard or exception clause")
 }
 
 fn verbal(clause: &so_lang::ast::Clause) -> (&str, Option<&str>, Option<&so_lang::ast::NpGroup>) {
     match &clause.body {
-        so_lang::ast::ClauseBody::Verbal { verb, particle, object, .. } => {
-            (verb.as_str(), particle.as_deref(), object.as_ref())
-        }
+        so_lang::ast::ClauseBody::Verbal {
+            verb,
+            particle,
+            object,
+            ..
+        } => (verb.as_str(), particle.as_deref(), object.as_ref()),
         other => panic!("expected a verbal body, got {other:?}"),
     }
 }
@@ -127,7 +135,9 @@ fn recommended_with_explicit_relied_stays_candidate() {
     .unwrap();
     assert!(built.proven, "an unguarded source's claim is self-entailed");
     assert!(!built.contract_forming(), "recommended never forms A");
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&built));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&built));
     assert_eq!(paired.assumption, Formula::Top);
     assert_eq!(paired.sources.len(), 1, "candidate retained");
 }
@@ -186,14 +196,13 @@ fn permission_still_envelope_only() {
         AssumptionSource::for_guarantee(EdgeKind::GuaranteeDischarge, &permission, &target),
         Err(PairingError::PermissionOnlyEnvelope)
     );
-    let envelope = AssumptionSource::for_guarantee(
-        EdgeKind::AdmissibilityEnvelope,
-        &permission,
-        &target,
-    )
-    .unwrap();
+    let envelope =
+        AssumptionSource::for_guarantee(EdgeKind::AdmissibilityEnvelope, &permission, &target)
+            .unwrap();
     assert!(!envelope.contract_forming());
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(paired.assumption, Formula::Top);
 }
 
@@ -242,8 +251,15 @@ fn satisfiability_judges_exactly_the_formed_a() {
     assert_eq!(assumption_satisfiable(&both_binding), Ternary::No);
     let one_recommended = contract.paired(&[lo.clone(), hi_recommended]);
     assert_eq!(assumption_satisfiable(&one_recommended), Ternary::Unknown);
-    assert_eq!(one_recommended.assumption, lo.relied, "only the binding reliance formed A");
-    assert_eq!(one_recommended.sources.len(), 2, "the recommended candidate is retained");
+    assert_eq!(
+        one_recommended.assumption, lo.relied,
+        "only the binding reliance formed A"
+    );
+    assert_eq!(
+        one_recommended.sources.len(),
+        2,
+        "the recommended candidate is retained"
+    );
 }
 
 /// Changes 1 + 2 together: a recommended PASSIVE source's subject relation
@@ -415,9 +431,15 @@ fn guard_role_serde_variants_and_legacy_default() {
         json
     };
     let scope = shape("Where the mode is active, the pump shall run.");
-    assert_eq!(scope["atom"]["role"], serde_json::json!({ "kind": "scope" }));
+    assert_eq!(
+        scope["atom"]["role"],
+        serde_json::json!({ "kind": "scope" })
+    );
     let state = shape("While the pump runs, the fan shall run.");
-    assert_eq!(state["atom"]["role"], serde_json::json!({ "kind": "state" }));
+    assert_eq!(
+        state["atom"]["role"],
+        serde_json::json!({ "kind": "state" })
+    );
     let contingency = shape("If the order ships, then the fan shall run.");
     assert_eq!(
         contingency["atom"]["role"],
@@ -425,14 +447,19 @@ fn guard_role_serde_variants_and_legacy_default() {
     );
     // The exception atom sits under the applicability's Not.
     let exception = shape("The fan shall run, unless the pump runs.");
-    assert_eq!(exception["inner"]["atom"]["role"], serde_json::json!({ "kind": "exception" }));
+    assert_eq!(
+        exception["inner"]["atom"]["role"],
+        serde_json::json!({ "kind": "exception" })
+    );
     // Legacy: strip the role from a Scope atom — it loads as State (the
     // documented pre-round-10 reading), NOT as its round-10 family.
     let mut legacy = scope;
     legacy["atom"].as_object_mut().unwrap().remove("role");
     let back: Formula = serde_json::from_value(legacy).unwrap();
     match back {
-        Formula::Atom { atom: AtomRef::Guard { role, .. } } => assert_eq!(role, GuardRole::State),
+        Formula::Atom {
+            atom: AtomRef::Guard { role, .. },
+        } => assert_eq!(role, GuardRole::State),
         other => panic!("expected a guard atom, got {other:?}"),
     }
 }
@@ -441,8 +468,15 @@ fn guard_role_serde_variants_and_legacy_default() {
 #[test]
 fn if_guard_role_is_contingency() {
     match applicability(&one("If the order ships, then the fan shall run.")) {
-        Formula::Atom { atom: AtomRef::Guard { role, .. } } => {
-            assert_eq!(role, GuardRole::Trigger { kind: TriggerKind::Contingency });
+        Formula::Atom {
+            atom: AtomRef::Guard { role, .. },
+        } => {
+            assert_eq!(
+                role,
+                GuardRole::Trigger {
+                    kind: TriggerKind::Contingency
+                }
+            );
         }
         other => panic!("expected a guard atom, got {other:?}"),
     }
@@ -617,14 +651,22 @@ fn svo_multiword_subject() {
     // verb sits before the first determiner-led phrase.
     let s = one("When the backup daemon sends the telemetry, the fan shall run.");
     let clause = guard_clause(&s);
-    assert_eq!(clause.subject.heads(), vec!["daemon"], "the boundary keeps the full subject");
+    assert_eq!(
+        clause.subject.heads(),
+        vec!["daemon"],
+        "the boundary keeps the full subject"
+    );
     let (verb, _, object) = verbal(clause);
     assert_eq!(verb, "sends");
     assert_eq!(object.unwrap().heads(), vec!["telemetry"]);
     // A role boundary after the verb does the same.
     let s = one("When the backup daemon fails after the timer expires, the fan shall run.");
     let clause = guard_clause(&s);
-    assert_eq!(clause.subject.heads(), vec!["daemon"], "boundary restores the full subject");
+    assert_eq!(
+        clause.subject.heads(),
+        vec!["daemon"],
+        "boundary restores the full subject"
+    );
     let (verb, _, object) = verbal(clause);
     assert_eq!(verb, "fails");
     assert!(object.is_none());
@@ -647,7 +689,11 @@ fn svo_multiword_subject() {
 fn svo_with_trailing_role() {
     let s = one("When the client sends telemetry to the admin, the fan shall run.");
     let clause = guard_clause(&s);
-    assert_eq!(clause.subject.heads(), vec!["sends"], "boundary rule — legislated");
+    assert_eq!(
+        clause.subject.heads(),
+        vec!["sends"],
+        "boundary rule — legislated"
+    );
     let (verb, _, object) = verbal(clause);
     assert_eq!(verb, "telemetry");
     assert!(object.is_none());
@@ -666,16 +712,24 @@ fn svo_with_trailing_role() {
 /// same digest verb, different atoms, no false grounding).
 #[test]
 fn guard_atom_identity_reflects_bare_object() {
-    let telemetry =
-        applicability(&one("When the client sends the telemetry, the fan shall run."));
-    let heartbeats =
-        applicability(&one("When the client sends the heartbeats, the fan shall run."));
+    let telemetry = applicability(&one(
+        "When the client sends the telemetry, the fan shall run.",
+    ));
+    let heartbeats = applicability(&one(
+        "When the client sends the heartbeats, the fan shall run.",
+    ));
     assert_ne!(telemetry, heartbeats, "different objects, different atoms");
-    let Formula::Atom { atom: AtomRef::Guard { clause, source, .. } } = &telemetry else {
+    let Formula::Atom {
+        atom: AtomRef::Guard { clause, source, .. },
+    } = &telemetry
+    else {
         panic!("expected a guard atom");
     };
     assert_eq!(clause.words, vec!["sends"], "the digest's verb");
-    assert_eq!(source, "the client sends the telemetry", "the anchor keeps the object");
+    assert_eq!(
+        source, "the client sends the telemetry",
+        "the anchor keeps the object"
+    );
     // Different objects never ground a contradiction …
     assert_eq!(
         assess(
@@ -712,7 +766,11 @@ fn svo_render_round_trips() {
     ] {
         let rendered = one(text).render();
         assert!(rendered.eq_ignore_ascii_case(text), "{rendered} vs {text}");
-        assert_eq!(one(&rendered).render(), rendered, "re-parse is a fixed point: {text}");
+        assert_eq!(
+            one(&rendered).render(),
+            rendered,
+            "re-parse is a fixed point: {text}"
+        );
     }
 }
 
@@ -737,7 +795,9 @@ fn shared_keys_with_explicit_relied_constructs() {
     assert_eq!(built.subject_relation, SubjectRelation::SharedKeys);
     assert!(built.proven);
     assert!(!built.contract_forming());
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&built));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&built));
     assert_eq!(paired.assumption, Formula::Top);
 }
 
@@ -755,7 +815,10 @@ fn from_sentence_legislated_disjoint() {
     .unwrap();
     assert_eq!(source.subject_relation, SubjectRelation::DisjointKeys);
     assert!(!source.explicit_relied);
-    assert!(!source.contract_forming(), "round 11: default reliance, candidate only");
+    assert!(
+        !source.contract_forming(),
+        "round 11: default reliance, candidate only"
+    );
 }
 
 /// The envelope_compatible `No` arm is reachable through for_guarantee
@@ -770,7 +833,9 @@ fn envelope_no_arm_reachable_through_for_guarantee() {
     )
     .unwrap();
     assert_eq!(envelope.subject_relation, SubjectRelation::SharedKeys);
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&envelope));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&envelope));
     assert_eq!(envelope_compatible(&paired), Ternary::No);
 }
 
@@ -795,7 +860,9 @@ fn shared_keys_never_poison_satisfiability() {
     assert_eq!(assumption_satisfiable(&paired), Ternary::No);
     let shared_target = one("The queue shall drain.");
     let sources = build(&shared_target);
-    assert!(sources.iter().all(|s| s.subject_relation == SubjectRelation::SharedKeys));
+    assert!(sources
+        .iter()
+        .all(|s| s.subject_relation == SubjectRelation::SharedKeys));
     let paired = contract_formula(&shared_target).unwrap().paired(&sources);
     assert_eq!(paired.assumption, Formula::Top);
     assert_eq!(assumption_satisfiable(&paired), Ternary::Unknown);
@@ -840,7 +907,10 @@ struct Lcg(u64);
 
 impl Lcg {
     fn next(&mut self) -> u64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         self.0 >> 33
     }
     fn pick<'a>(&mut self, pool: &[&'a str]) -> &'a str {
@@ -855,19 +925,53 @@ impl Lcg {
 #[test]
 fn totality_fuzz_bare_tails_and_passive_agents() {
     let words: &[&str] = &[
-        "daemon", "client", "telemetry", "data", "sends", "logs", "out", "up", "off", "down",
-        "quickly", "successfully", "backup", "power", "that", "to", "by", "no", "the", "and",
-        "unless", "means", "shall", "reply", "5", "zero", "of", "owner", "file",
+        "daemon",
+        "client",
+        "telemetry",
+        "data",
+        "sends",
+        "logs",
+        "out",
+        "up",
+        "off",
+        "down",
+        "quickly",
+        "successfully",
+        "backup",
+        "power",
+        "that",
+        "to",
+        "by",
+        "no",
+        "the",
+        "and",
+        "unless",
+        "means",
+        "shall",
+        "reply",
+        "5",
+        "zero",
+        "of",
+        "owner",
+        "file",
     ];
     let dets: &[&str] = &["the", "a", "each", "no", ""];
     let mut rng = Lcg(0x5eed_1006);
     let mut accepted = 0usize;
     for i in 0..4000 {
         let d1 = rng.pick(dets);
-        let (w1, w2, w3, w4) =
-            (rng.pick(words), rng.pick(words), rng.pick(words), rng.pick(words));
+        let (w1, w2, w3, w4) = (
+            rng.pick(words),
+            rng.pick(words),
+            rng.pick(words),
+            rng.pick(words),
+        );
         let np = |det: &str, w: &str| {
-            if det.is_empty() { w.to_string() } else { format!("{det} {w}") }
+            if det.is_empty() {
+                w.to_string()
+            } else {
+                format!("{det} {w}")
+            }
         };
         let text = match i % 5 {
             0 => format!("When {} {w2} {w3}, the pump shall stop.", np(d1, w1)),
@@ -897,5 +1001,8 @@ fn totality_fuzz_bare_tails_and_passive_agents() {
             "render fixed point: {text:?}"
         );
     }
-    assert!(accepted > 100, "the fuzz corpus must exercise accepted sentences, got {accepted}");
+    assert!(
+        accepted > 100,
+        "the fuzz corpus must exercise accepted sentences, got {accepted}"
+    );
 }

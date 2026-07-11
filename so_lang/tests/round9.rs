@@ -9,16 +9,18 @@
 //! 6. A descending `between` is a parse error, not an empty interval.
 
 use so_lang::ast::*;
-use so_lang::formula::{
-    claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula,
-};
+use so_lang::formula::{claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula};
 use so_lang::parse::{parse, ParseError};
 use so_lang::relate::{assess, assumption_satisfiable, contradicts, implies, Outcome, Ternary};
 use so_lang::semantics::{skeleton, subject_keys, RoleKind};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).expect(input);
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -27,12 +29,19 @@ fn roundtrip(input: &str) {
     let s = one(input);
     let rendered = s.render();
     let back = one(&rendered);
-    assert_eq!(back.render(), rendered, "render must be a fixpoint for {input:?}");
+    assert_eq!(
+        back.render(),
+        rendered,
+        "render must be a fixpoint for {input:?}"
+    );
     let mut a = s.clone();
     a.source = String::new();
     let mut b = back.clone();
     b.source = String::new();
-    assert_eq!(a, b, "canonical form must re-parse to the same tree for {input:?}");
+    assert_eq!(
+        a, b,
+        "canonical form must re-parse to the same tree for {input:?}"
+    );
 }
 
 // ====================================================================================
@@ -55,7 +64,10 @@ fn location_marker_separates_in_from_on() {
 fn location_marker_is_lowercased_and_same_prep_still_matches() {
     let a = skeleton(&one("The system shall store the report IN the archive.")).unwrap();
     let b = skeleton(&one("The system shall store the report in the archive.")).unwrap();
-    assert_eq!(a.atoms[0], b.atoms[0], "the marker is lowercased, so casing never splits");
+    assert_eq!(
+        a.atoms[0], b.atoms[0],
+        "the marker is lowercased, so casing never splits"
+    );
 }
 
 #[test]
@@ -87,8 +99,10 @@ fn in_vs_on_claims_relate_unknown_not_yes_and_not_no() {
 
 #[test]
 fn non_locative_roles_keep_a_none_marker_and_old_json_loads() {
-    let k = skeleton(&one("The daemon shall send the report to the auditor within 5 seconds."))
-        .unwrap();
+    let k = skeleton(&one(
+        "The daemon shall send the report to the auditor within 5 seconds.",
+    ))
+    .unwrap();
     assert!(k.atoms[0].roles.iter().all(|r| r.marker.is_none()));
     // Serde: the marker serializes only when present, so pre-round-9
     // skeletons (no `marker` field) load unchanged.
@@ -99,16 +113,26 @@ fn non_locative_roles_keep_a_none_marker_and_old_json_loads() {
     let back: so_lang::semantics::RoleSkeleton = serde_json::from_value(json).unwrap();
     assert!(back.marker.is_none());
     let no_marker = serde_json::to_value(&k.atoms[0].roles[0]).unwrap();
-    assert!(no_marker.get("marker").is_none(), "absent markers are skipped");
+    assert!(
+        no_marker.get("marker").is_none(),
+        "absent markers are skipped"
+    );
 }
 
 #[test]
 fn guard_location_roles_carry_the_marker_too() {
-    let a = skeleton(&one("While the pump is active in the depot, the daemon shall wait."))
-        .unwrap();
-    let b = skeleton(&one("While the pump is active at the depot, the daemon shall wait."))
-        .unwrap();
-    assert_ne!(a.guards.states[0], b.guards.states[0], "guard digests see the preposition");
+    let a = skeleton(&one(
+        "While the pump is active in the depot, the daemon shall wait.",
+    ))
+    .unwrap();
+    let b = skeleton(&one(
+        "While the pump is active at the depot, the daemon shall wait.",
+    ))
+    .unwrap();
+    assert_ne!(
+        a.guards.states[0], b.guards.states[0],
+        "guard digests see the preposition"
+    );
     assert_eq!(a.guards.states[0].roles[0].marker.as_deref(), Some("in"));
 }
 
@@ -130,13 +154,19 @@ fn unproven_sources_stay_out_of_the_paired_assumption() {
     )
     .unwrap();
     assert!(!unproven.proven);
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&unproven));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&unproven));
     assert_eq!(
         paired.assumption,
         Formula::Top,
         "a candidate edge leaves the assumption unchanged"
     );
-    assert_eq!(paired.sources.len(), 1, "the candidate is retained in sources");
+    assert_eq!(
+        paired.sources.len(),
+        1,
+        "the candidate is retained in sources"
+    );
     // The saturated form is the guarantee itself: nothing relieves it.
     assert_eq!(paired.saturated(), paired.guarantee);
 }
@@ -150,7 +180,10 @@ fn proven_sources_form_the_assumption() {
     let default =
         AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &source, &target).unwrap();
     assert!(default.proven);
-    assert!(!default.contract_forming(), "default reliance: candidate only (round 11)");
+    assert!(
+        !default.contract_forming(),
+        "default reliance: candidate only (round 11)"
+    );
     let proven = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::OccurrenceReliance,
         &source,
@@ -159,7 +192,9 @@ fn proven_sources_form_the_assumption() {
     )
     .unwrap();
     assert!(proven.proven);
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&proven));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&proven));
     assert_eq!(paired.assumption, proven.relied);
 }
 
@@ -174,9 +209,14 @@ fn mixed_sources_conjoin_only_the_proven_reliances() {
         AssumptionSource::for_guarantee_with_relied(kind, &source, &target, default.formula)
             .unwrap()
     };
-    let proven_a = explicit(EdgeKind::OccurrenceReliance, "The gateway shall deliver the event.");
-    let proven_b =
-        explicit(EdgeKind::GuaranteeDischarge, "The scheduler shall start the worker.");
+    let proven_a = explicit(
+        EdgeKind::OccurrenceReliance,
+        "The gateway shall deliver the event.",
+    );
+    let proven_b = explicit(
+        EdgeKind::GuaranteeDischarge,
+        "The scheduler shall start the worker.",
+    );
     let unproven = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::OccurrenceReliance,
         &one("The broker shall hold the queue."),
@@ -199,10 +239,16 @@ fn mixed_sources_conjoin_only_the_proven_reliances() {
     ]);
     assert_eq!(
         paired.assumption,
-        Formula::And { items: vec![proven_a.relied.clone(), proven_b.relied.clone()] },
+        Formula::And {
+            items: vec![proven_a.relied.clone(), proven_b.relied.clone()]
+        },
         "A conjoins exactly the proven non-envelope reliances"
     );
-    assert_eq!(paired.sources.len(), 4, "candidates and envelopes stay retained");
+    assert_eq!(
+        paired.sources.len(),
+        4,
+        "candidates and envelopes stay retained"
+    );
 }
 
 #[test]
@@ -233,12 +279,22 @@ fn the_motivating_object_gap_sentence_parses() {
     // nonsense tree (relative verb `the`). The gap reading now exists, so
     // the rejection is superseded by a correct parse.
     let s = one("Each request that the gateway forwards shall be logged.");
-    let Core::Deontic { subject, .. } = &s.core else { panic!("deontic") };
-    let NpGroup::Single(np) = subject else { panic!("single subject") };
+    let Core::Deontic { subject, .. } = &s.core else {
+        panic!("deontic")
+    };
+    let NpGroup::Single(np) = subject else {
+        panic!("single subject")
+    };
     let rel = np.relative.as_ref().expect("relative");
     assert_eq!(rel.marker, RelMarker::That);
     match &rel.body {
-        RelativeBody::ObjectGap { subject, verb, particle, manner, roles } => {
+        RelativeBody::ObjectGap {
+            subject,
+            verb,
+            particle,
+            manner,
+            roles,
+        } => {
             assert_eq!(subject.heads(), vec!["gateway"]);
             assert_eq!(verb, "forwards");
             assert!(particle.is_none());
@@ -256,10 +312,20 @@ fn object_gap_with_roles_particle_and_manner() {
         "Each packet that the router sends out promptly via the tunnel within 5 seconds \
          shall be counted.",
     );
-    let Core::Deontic { subject, .. } = &s.core else { panic!("deontic") };
-    let NpGroup::Single(np) = subject else { panic!("single subject") };
+    let Core::Deontic { subject, .. } = &s.core else {
+        panic!("deontic")
+    };
+    let NpGroup::Single(np) = subject else {
+        panic!("single subject")
+    };
     match &np.relative.as_ref().unwrap().body {
-        RelativeBody::ObjectGap { subject, verb, particle, manner, roles } => {
+        RelativeBody::ObjectGap {
+            subject,
+            verb,
+            particle,
+            manner,
+            roles,
+        } => {
             assert_eq!(subject.heads(), vec!["router"]);
             assert_eq!(verb, "sends");
             assert_eq!(particle.as_deref(), Some("out"));
@@ -279,8 +345,12 @@ fn object_gap_with_roles_particle_and_manner() {
 #[test]
 fn who_form_object_gap_parses() {
     let s = one("Each user who the auditor flags shall be reviewed.");
-    let Core::Deontic { subject, .. } = &s.core else { panic!("deontic") };
-    let NpGroup::Single(np) = subject else { panic!("single subject") };
+    let Core::Deontic { subject, .. } = &s.core else {
+        panic!("deontic")
+    };
+    let NpGroup::Single(np) = subject else {
+        panic!("single subject")
+    };
     let rel = np.relative.as_ref().expect("relative");
     assert_eq!(rel.marker, RelMarker::Who);
     match &rel.body {
@@ -296,11 +366,17 @@ fn who_form_object_gap_parses() {
 #[test]
 fn object_gap_subject_may_carry_an_of_chain_and_coordination() {
     let s = one("Each file that the owner of the workspace shares shall be scanned.");
-    let Core::Deontic { subject, .. } = &s.core else { panic!("deontic") };
-    let NpGroup::Single(np) = subject else { panic!("single subject") };
+    let Core::Deontic { subject, .. } = &s.core else {
+        panic!("deontic")
+    };
+    let NpGroup::Single(np) = subject else {
+        panic!("single subject")
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::ObjectGap { subject, verb, .. } => {
-            let NpGroup::Single(inner) = subject else { panic!("single gap subject") };
+            let NpGroup::Single(inner) = subject else {
+                panic!("single gap subject")
+            };
             assert_eq!(inner.head, "owner");
             assert_eq!(inner.of.as_ref().unwrap().head, "workspace");
             assert_eq!(verb, "shares");
@@ -308,8 +384,12 @@ fn object_gap_subject_may_carry_an_of_chain_and_coordination() {
         other => panic!("expected object gap, got {other:?}"),
     }
     let s = one("Each event that the gateway and the proxy forward shall be logged.");
-    let Core::Deontic { subject, .. } = &s.core else { panic!("deontic") };
-    let NpGroup::Single(np) = subject else { panic!("single subject") };
+    let Core::Deontic { subject, .. } = &s.core else {
+        panic!("deontic")
+    };
+    let NpGroup::Single(np) = subject else {
+        panic!("single subject")
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::ObjectGap { subject, verb, .. } => {
             assert_eq!(subject.heads(), vec!["gateway", "proxy"]);
@@ -323,9 +403,13 @@ fn object_gap_subject_may_carry_an_of_chain_and_coordination() {
 fn object_gap_in_object_position_and_in_guards() {
     // Object position: `the packets that the gateway forwards`.
     let s = one("The daemon shall log the packets that the gateway forwards.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("deontic")
+    };
     let object = vp.single().unwrap().object.as_ref().unwrap();
-    let NpGroup::Single(np) = object else { panic!("single object") };
+    let NpGroup::Single(np) = object else {
+        panic!("single object")
+    };
     assert!(matches!(
         &np.relative.as_ref().unwrap().body,
         RelativeBody::ObjectGap { .. }
@@ -334,7 +418,9 @@ fn object_gap_in_object_position_and_in_guards() {
     let s = one("When each request that the gateway forwards arrives, the daemon shall wake.");
     let trigger = s.frames.trigger.as_ref().unwrap();
     let clause = &trigger.clause.items[0];
-    let NpGroup::Single(np) = &clause.subject else { panic!("single subject") };
+    let NpGroup::Single(np) = &clause.subject else {
+        panic!("single subject")
+    };
     assert!(matches!(
         &np.relative.as_ref().unwrap().body,
         RelativeBody::ObjectGap { .. }
@@ -347,8 +433,14 @@ fn object_gap_in_object_position_and_in_guards() {
 fn object_gap_enters_full_identity_but_never_subject_keys() {
     // Lossiness: the gap relative is part of the subject's full identity,
     // so differently-restricted subjects never share a proposition.
-    let a = skeleton(&one("Each request that the gateway forwards shall be logged.")).unwrap();
-    let b = skeleton(&one("Each request that the proxy forwards shall be logged.")).unwrap();
+    let a = skeleton(&one(
+        "Each request that the gateway forwards shall be logged.",
+    ))
+    .unwrap();
+    let b = skeleton(&one(
+        "Each request that the proxy forwards shall be logged.",
+    ))
+    .unwrap();
     assert_eq!(a.subject.full, "request that the gateway forwards");
     assert_ne!(a.subject.full, b.subject.full);
     assert_eq!(
@@ -360,7 +452,9 @@ fn object_gap_enters_full_identity_but_never_subject_keys() {
     );
     // PIN: relatives never enter subject keys — gap relatives included.
     assert_eq!(
-        subject_keys(&one("Each request that the gateway forwards shall be logged.")),
+        subject_keys(&one(
+            "Each request that the gateway forwards shall be logged."
+        )),
         vec!["request".to_string()]
     );
 }
@@ -381,8 +475,12 @@ fn that_plus_copular_stays_copular_never_a_gap() {
     // False-positive guard: a copular relative is claimed by the copular
     // reading before the gap trigger ever looks.
     let s = one("Each request that is signed shall be accepted.");
-    let Core::Deontic { subject, .. } = &s.core else { panic!("deontic") };
-    let NpGroup::Single(np) = subject else { panic!("single subject") };
+    let Core::Deontic { subject, .. } = &s.core else {
+        panic!("deontic")
+    };
+    let NpGroup::Single(np) = subject else {
+        panic!("single subject")
+    };
     assert!(matches!(
         &np.relative.as_ref().unwrap().body,
         RelativeBody::Copular { .. }
@@ -401,8 +499,12 @@ fn subject_gap_relatives_are_unchanged() {
     // Existing subject-gap (verbal) relatives keep their reading: an
     // open-class word after `that` is the relative's VERB.
     let s = one("Each request that arrives from the gateway shall be logged.");
-    let Core::Deontic { subject, .. } = &s.core else { panic!("deontic") };
-    let NpGroup::Single(np) = subject else { panic!("single subject") };
+    let Core::Deontic { subject, .. } = &s.core else {
+        panic!("deontic")
+    };
+    let NpGroup::Single(np) = subject else {
+        panic!("single subject")
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::Verbal { verb, roles, .. } => {
             assert_eq!(verb, "arrives");
@@ -416,8 +518,12 @@ fn subject_gap_relatives_are_unchanged() {
     // and `that holds locks` (verb + object) are indistinguishable without
     // a lexicon, and the established reading must win.
     let s = one("Each daemon that emits telemetry data shall be sampled.");
-    let Core::Deontic { subject, .. } = &s.core else { panic!("deontic") };
-    let NpGroup::Single(np) = subject else { panic!("single subject") };
+    let Core::Deontic { subject, .. } = &s.core else {
+        panic!("deontic")
+    };
+    let NpGroup::Single(np) = subject else {
+        panic!("single subject")
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::Verbal { verb, object, .. } => {
             assert_eq!(verb, "emits");
@@ -451,7 +557,12 @@ fn the_motivating_guard_content_parses() {
     let trigger = s.frames.trigger.as_ref().unwrap();
     let clause = &trigger.clause.items[0];
     match &clause.body {
-        ClauseBody::Verbal { verb, content, object, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            content,
+            object,
+            ..
+        } => {
             assert_eq!(verb, "ensures");
             assert!(object.is_none());
             let content = content.as_ref().expect("content clause");
@@ -471,7 +582,12 @@ fn clause_content_is_final_and_follows_roles() {
     );
     let trigger = s.frames.trigger.as_ref().unwrap();
     match &trigger.clause.items[0].body {
-        ClauseBody::Verbal { verb, roles, content, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            roles,
+            content,
+            ..
+        } => {
             assert_eq!(verb, "verifies");
             assert_eq!(roles.len(), 1, "the deadline role precedes the content");
             assert!(content.is_some());
@@ -502,9 +618,15 @@ fn content_in_exceptions_and_nested_until_clauses() {
          the daemon shall wait.",
     );
     let state = &s.frames.states[0].clause.items[0];
-    let ClauseBody::Verbal { roles, .. } = &state.body else { panic!("verbal") };
-    let RolePp::Until(inner) = &roles[0] else { panic!("until role") };
-    let ClauseBody::Verbal { content, .. } = &inner.body else { panic!("inner verbal") };
+    let ClauseBody::Verbal { roles, .. } = &state.body else {
+        panic!("verbal")
+    };
+    let RolePp::Until(inner) = &roles[0] else {
+        panic!("until role")
+    };
+    let ClauseBody::Verbal { content, .. } = &inner.body else {
+        panic!("inner verbal")
+    };
     assert!(content.is_some(), "content nests through clausal roles");
     roundtrip(
         "While the pump runs until the monitor confirms that the tank is full, \
@@ -540,8 +662,7 @@ fn guard_content_is_identity_for_the_relation_engine() {
     // Equal content still meets: the same guard over contradicting claims
     // grounds a conditional contradiction.
     let stop = one("When the monitor ensures that the token is valid, the pump shall stop.");
-    let no_stop =
-        one("When the monitor ensures that the token is valid, the pump shall not stop.");
+    let no_stop = one("When the monitor ensures that the token is valid, the pump shall not stop.");
     assert_eq!(assess(&stop, &no_stop), Outcome::HardContradiction);
     // The skeleton digest carries the content.
     let k = skeleton(&valid).unwrap();
@@ -614,7 +735,11 @@ fn overlapping_bounded_guards_witness_for_contradicting_claims() {
 fn disjoint_bounded_guards_still_refuse_to_witness() {
     let a = one("While the depth is at most 3, the pump shall run.");
     let b = one("While the depth is at least 5, the pump shall not run.");
-    assert_eq!(assess(&a, &b), Outcome::Unknown, "disjoint guard regions never meet");
+    assert_eq!(
+        assess(&a, &b),
+        Outcome::Unknown,
+        "disjoint guard regions never meet"
+    );
 }
 
 #[test]
@@ -660,10 +785,16 @@ fn descending_between_is_rejected_in_comparisons() {
     let err = parse("The latency is between 6 and 4.").unwrap_err();
     assert_eq!(
         err,
-        ParseError::DescendingBetween { lower: "6".into(), upper: "4".into() }
+        ParseError::DescendingBetween {
+            lower: "6".into(),
+            upper: "4".into()
+        }
     );
     assert_eq!(err.kind(), "descending_between");
-    assert!(err.to_string().contains("swap"), "the message tells the author to swap");
+    assert!(
+        err.to_string().contains("swap"),
+        "the message tells the author to swap"
+    );
     // Number words count too, and units do not change the check.
     assert!(matches!(
         parse("The delay is between five and three seconds."),

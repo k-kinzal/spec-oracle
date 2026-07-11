@@ -23,9 +23,7 @@
 //! Everything here is a permanent pin of legislated behavior.
 
 use so_lang::ast::*;
-use so_lang::formula::{
-    claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula,
-};
+use so_lang::formula::{claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula};
 use so_lang::parse::{parse, ParseError};
 use so_lang::relate::{assess, assumption_satisfiable, contradicts, implies, Outcome, Ternary};
 use so_lang::semantics::{skeleton, subject_keys, ClauseSkeleton, RoleKind, RoleSkeleton};
@@ -33,7 +31,11 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).expect(input);
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -47,12 +49,19 @@ fn roundtrip(input: &str) {
     let s = one(input);
     let rendered = s.render();
     let back = one(&rendered);
-    assert_eq!(back.render(), rendered, "render must be a fixpoint for {input:?}");
+    assert_eq!(
+        back.render(),
+        rendered,
+        "render must be a fixpoint for {input:?}"
+    );
     let mut a = s.clone();
     a.source = String::new();
     let mut b = back;
     b.source = String::new();
-    assert_eq!(a, b, "canonical form must re-parse to the same tree for {input:?}");
+    assert_eq!(
+        a, b,
+        "canonical form must re-parse to the same tree for {input:?}"
+    );
 }
 
 /// The single atom of a behavioral sentence's skeleton.
@@ -83,7 +92,11 @@ fn all_seven_locative_prepositions_are_pairwise_distinct_in_vp_roles() {
             if i == j {
                 assert_eq!(a, b);
             } else {
-                assert_ne!(a, b, "{} vs {} must not share an atom", LOCATIVES[i], LOCATIVES[j]);
+                assert_ne!(
+                    a, b,
+                    "{} vs {} must not share an atom",
+                    LOCATIVES[i], LOCATIVES[j]
+                );
                 // The marker is the ONLY difference: the value digest matches.
                 assert_eq!(a.roles[0].value, b.roles[0].value);
             }
@@ -191,7 +204,10 @@ fn locative_marker_serde_shape() {
     // Non-locative roles carry no marker field at all (pre-round-9 shape).
     let k = skeleton(&one("The daemon shall send the report to the auditor.")).unwrap();
     let json = serde_json::to_value(&k.atoms[0].roles[0]).unwrap();
-    assert!(json.get("marker").is_none(), "Recipient must serialize without a marker");
+    assert!(
+        json.get("marker").is_none(),
+        "Recipient must serialize without a marker"
+    );
     // A pre-round-9 skeleton (no marker) loads as marker: None.
     let old: RoleSkeleton = serde_json::from_value(serde_json::json!({
         "kind": "location",
@@ -240,11 +256,22 @@ fn unproven_source_is_accepted_but_never_enters_the_assumption() {
     let target = one("The daemon shall persist the record.");
     let c = contract_formula(&target).unwrap();
     let b = candidate_source(&target);
-    assert!(!b.proven, "an Unknown entailment must build visibly unproven");
+    assert!(
+        !b.proven,
+        "an Unknown entailment must build visibly unproven"
+    );
     assert!(!b.contract_forming());
     let paired = c.paired(std::slice::from_ref(&b));
-    assert_eq!(paired.assumption, Formula::Top, "a candidate edge must not relieve G");
-    assert_eq!(paired.sources.len(), 1, "the candidate is retained for the graph layer");
+    assert_eq!(
+        paired.assumption,
+        Formula::Top,
+        "a candidate edge must not relieve G"
+    );
+    assert_eq!(
+        paired.sources.len(),
+        1,
+        "the candidate is retained for the graph layer"
+    );
     assert!(!paired.sources[0].proven);
     // Saturation of a candidate-only pairing is the guarantee itself:
     // nothing was assumed, so nothing relieves.
@@ -279,7 +306,12 @@ fn proven_source_enters_the_assumption_alone_and_mixed() {
         Formula::Or { items } => {
             assert_eq!(items.len(), 2);
             assert_eq!(items[0], mixed.guarantee);
-            assert_eq!(items[1], Formula::Not { inner: Box::new(a.relied.clone()) });
+            assert_eq!(
+                items[1],
+                Formula::Not {
+                    inner: Box::new(a.relied.clone())
+                }
+            );
         }
         other => panic!("expected G ∨ ¬A, got {other:?}"),
     }
@@ -294,8 +326,14 @@ fn envelope_is_proven_yet_never_contract_forming() {
         &target,
     )
     .unwrap();
-    assert!(env.proven, "the default reliance is self-entailment even for envelopes");
-    assert!(!env.contract_forming(), "envelopes are compatibility data, not conjuncts");
+    assert!(
+        env.proven,
+        "the default reliance is self-entailment even for envelopes"
+    );
+    assert!(
+        !env.contract_forming(),
+        "envelopes are compatibility data, not conjuncts"
+    );
     let c = contract_formula(&target).unwrap();
     let paired = c.paired(std::slice::from_ref(&env));
     assert_eq!(paired.assumption, Formula::Top);
@@ -348,7 +386,10 @@ fn a_candidate_cannot_poison_assumption_satisfiability() {
     .unwrap();
     assert!(!s2.proven);
     let c = contract_formula(&target).unwrap();
-    assert_eq!(assumption_satisfiable(&c.paired(&[s1, s2])), Ternary::Unknown);
+    assert_eq!(
+        assumption_satisfiable(&c.paired(&[s1, s2])),
+        Ternary::Unknown
+    );
 }
 
 #[test]
@@ -381,13 +422,23 @@ fn pre_round8_json_sources_load_unproven_and_stay_candidates() {
 #[test]
 fn the_gateway_sentence_parses_as_an_object_gap() {
     let s = one("Each request that the gateway forwards shall be logged.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else {
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
         panic!("expected deontic single subject");
     };
     let rel = np.relative.as_ref().unwrap();
     assert_eq!(rel.marker, RelMarker::That);
     match &rel.body {
-        RelativeBody::ObjectGap { subject, verb, particle, manner, roles } => {
+        RelativeBody::ObjectGap {
+            subject,
+            verb,
+            particle,
+            manner,
+            roles,
+        } => {
             assert_eq!(subject.heads(), vec!["gateway"]);
             assert_eq!(verb, "forwards");
             assert!(particle.is_none());
@@ -402,7 +453,13 @@ fn the_gateway_sentence_parses_as_an_object_gap() {
 #[test]
 fn who_form_object_gap() {
     let s = one("Each user who the auditor flags shall be reviewed.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     let rel = np.relative.as_ref().unwrap();
     assert_eq!(rel.marker, RelMarker::Who);
     assert!(matches!(rel.body, RelativeBody::ObjectGap { .. }));
@@ -413,9 +470,20 @@ fn who_form_object_gap() {
 fn object_gap_with_particle_manner_and_roles() {
     // Particle + manner.
     let s = one("Each ticket that the operator closes out promptly shall be archived.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     match &np.relative.as_ref().unwrap().body {
-        RelativeBody::ObjectGap { verb, particle, manner, .. } => {
+        RelativeBody::ObjectGap {
+            verb,
+            particle,
+            manner,
+            ..
+        } => {
             assert_eq!(verb, "closes");
             assert_eq!(particle.as_deref(), Some("out"));
             assert_eq!(manner, &vec!["promptly".to_string()]);
@@ -427,10 +495,18 @@ fn object_gap_with_particle_manner_and_roles() {
     let s = one(
         "Each request that the gateway forwards at the depot within 5 seconds shall be logged.",
     );
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::ObjectGap { roles, .. } => {
-            assert!(matches!(&roles[0], RolePp::Location { preposition, .. } if preposition == "at"));
+            assert!(
+                matches!(&roles[0], RolePp::Location { preposition, .. } if preposition == "at")
+            );
             assert!(matches!(&roles[1], RolePp::Deadline(_)));
         }
         other => panic!("expected object gap, got {other:?}"),
@@ -438,13 +514,21 @@ fn object_gap_with_particle_manner_and_roles() {
     roundtrip(
         "Each request that the gateway forwards at the depot within 5 seconds shall be logged.",
     );
-    roundtrip("Each request that the gateway forwards to the auditor via the relay shall be logged.");
+    roundtrip(
+        "Each request that the gateway forwards to the auditor via the relay shall be logged.",
+    );
 }
 
 #[test]
 fn object_gap_subject_takes_coordination_and_of_chains() {
     let s = one("Each request that the gateway and the proxy forward shall be logged.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::ObjectGap { subject, verb, .. } => {
             assert_eq!(subject.heads(), vec!["gateway", "proxy"]);
@@ -460,8 +544,12 @@ fn object_gap_subject_takes_coordination_and_of_chains() {
 fn object_gap_composes_with_other_positions() {
     // Core object position.
     let s = one("The daemon shall log the event that the monitor records.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!() };
-    let NpGroup::Single(np) = vp.single().unwrap().object.as_ref().unwrap() else { panic!() };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!()
+    };
+    let NpGroup::Single(np) = vp.single().unwrap().object.as_ref().unwrap() else {
+        panic!()
+    };
     assert!(matches!(
         np.relative.as_ref().unwrap().body,
         RelativeBody::ObjectGap { .. }
@@ -481,14 +569,38 @@ fn object_gap_composes_with_other_positions() {
 fn object_gap_false_positive_guards() {
     // that + copular stays copular.
     let s = one("Each request that is valid shall be logged.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
-    assert!(matches!(np.relative.as_ref().unwrap().body, RelativeBody::Copular { .. }));
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
+    assert!(matches!(
+        np.relative.as_ref().unwrap().body,
+        RelativeBody::Copular { .. }
+    ));
     let s = one("Each user who is flagged shall be reviewed.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
-    assert!(matches!(np.relative.as_ref().unwrap().body, RelativeBody::Copular { .. }));
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
+    assert!(matches!(
+        np.relative.as_ref().unwrap().body,
+        RelativeBody::Copular { .. }
+    ));
     // Subject-gap verbal relatives are unchanged.
     let s = one("Each request that arrives from the gateway shall be logged.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::Verbal { verb, roles, .. } => {
             assert_eq!(verb, "arrives");
@@ -499,7 +611,13 @@ fn object_gap_false_positive_guards() {
     // LEGISLATED: a BARE noun phrase after that/who keeps the round-7
     // verb + object reading — no lexicon could tell it from a gap.
     let s = one("Each daemon that holds locks shall run.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::Verbal { verb, object, .. } => {
             assert_eq!(verb, "holds");
@@ -510,7 +628,13 @@ fn object_gap_false_positive_guards() {
     // The same legislated collision under `who`: `who auditors flag` reads
     // verb `auditors` + object `flag` (documented, surprising, pinned).
     let s = one("Each user who auditors flag shall be reviewed.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     assert!(matches!(
         &np.relative.as_ref().unwrap().body,
         RelativeBody::Verbal { verb, .. } if verb == "auditors"
@@ -537,7 +661,13 @@ fn explicit_object_after_gap_verb_keeps_determiner_as_verb_diagnosis() {
 #[test]
 fn finding_object_gap_subject_with_modifier_should_parse() {
     let s = one("Each alert that the backup daemon raises shall be recorded.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::ObjectGap { subject, verb, .. } => {
             assert_eq!(subject.render(), "the backup daemon");
@@ -560,7 +690,13 @@ fn finding_object_gap_subject_with_modifier_should_parse() {
 fn modifier_gap_subject_legislation() {
     roundtrip("Each alert that the backup daemon raises shall be recorded.");
     let s = one("Each request that the session holds locks shall be logged.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     match &np.relative.as_ref().unwrap().body {
         RelativeBody::ObjectGap { subject, verb, .. } => {
             assert_eq!(subject.render(), "the session holds");
@@ -583,7 +719,13 @@ fn modifier_gap_subject_legislation() {
 #[test]
 fn finding_object_gap_subject_quantifier_led_should_parse() {
     let s = one("Each request that at least 3 gateways forward shall be logged.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     assert!(matches!(
         &np.relative.as_ref().unwrap().body,
         RelativeBody::ObjectGap { .. }
@@ -596,14 +738,29 @@ fn finding_object_gap_subject_quantifier_led_should_parse() {
 #[test]
 fn quantifier_gap_subjects_roundtrip_with_structured_quantifier() {
     for (input, n) in [
-        ("Each request that at least 3 gateways forward shall be logged.", Det::AtLeast { n: 3 }),
-        ("Each request that exactly 3 gateways forward shall be logged.", Det::Exactly { n: 3 }),
+        (
+            "Each request that at least 3 gateways forward shall be logged.",
+            Det::AtLeast { n: 3 },
+        ),
+        (
+            "Each request that exactly 3 gateways forward shall be logged.",
+            Det::Exactly { n: 3 },
+        ),
     ] {
         roundtrip(input);
         let s = one(input);
-        let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
-        let RelativeBody::ObjectGap { subject: NpGroup::Single(gap_subject), verb, .. } =
-            &np.relative.as_ref().unwrap().body
+        let Core::Deontic {
+            subject: NpGroup::Single(np),
+            ..
+        } = &s.core
+        else {
+            panic!()
+        };
+        let RelativeBody::ObjectGap {
+            subject: NpGroup::Single(gap_subject),
+            verb,
+            ..
+        } = &np.relative.as_ref().unwrap().body
         else {
             panic!("expected object gap in {input:?}")
         };
@@ -642,13 +799,24 @@ fn object_gap_enters_np_full_but_never_subject_keys() {
 #[test]
 fn object_gap_serde_shape_and_old_json() {
     let s = one("Each request that the gateway forwards shall be logged.");
-    let Core::Deontic { subject: NpGroup::Single(np), .. } = &s.core else { panic!() };
+    let Core::Deontic {
+        subject: NpGroup::Single(np),
+        ..
+    } = &s.core
+    else {
+        panic!()
+    };
     let body = &np.relative.as_ref().unwrap().body;
     let json = serde_json::to_value(body).unwrap();
     assert_eq!(json["kind"], "object_gap");
     // Optional slots are skipped when empty, so the wire shape stays lean.
     let keys: Vec<&String> = json.as_object().unwrap().keys().collect();
-    assert!(!keys.iter().any(|k| *k == "particle" || *k == "manner" || *k == "roles"), "{keys:?}");
+    assert!(
+        !keys
+            .iter()
+            .any(|k| *k == "particle" || *k == "manner" || *k == "roles"),
+        "{keys:?}"
+    );
     let back: RelativeBody = serde_json::from_value(json).unwrap();
     assert_eq!(&back, body);
     // Pre-round-9 verbal relative JSON still loads.
@@ -707,7 +875,12 @@ fn the_motivating_guard_parses_with_structured_content() {
     let s = one("When the monitor ensures that the token is valid, the daemon shall proceed.");
     let trigger = s.frames.trigger.as_ref().unwrap();
     match &trigger.clause.items[0].body {
-        ClauseBody::Verbal { verb, object, content, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            object,
+            content,
+            ..
+        } => {
             assert_eq!(verb, "ensures");
             assert!(object.is_none());
             let content = content.as_ref().unwrap();
@@ -781,7 +954,9 @@ fn content_in_exception_and_until_positions() {
     roundtrip("The daemon shall proceed, unless the monitor reports that the token is stale.");
     // `until` role clause.
     let s = one("The pump shall run until the monitor confirms that the tank is full.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!() };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!()
+    };
     match &vp.single().unwrap().roles[0] {
         RolePp::Until(clause) => match &clause.body {
             ClauseBody::Verbal { content, .. } => assert!(content.is_some()),
@@ -801,7 +976,10 @@ fn guard_content_is_final_and_consumes_the_tail() {
     ))
     .unwrap();
     let clause = &k.guards.trigger.as_ref().unwrap().clauses[0];
-    assert!(clause.roles.is_empty(), "the outer verbal body has no roles");
+    assert!(
+        clause.roles.is_empty(),
+        "the outer verbal body has no roles"
+    );
     assert_eq!(
         clause.content.as_ref().unwrap().full,
         "the token is valid within 5 seconds"
@@ -844,10 +1022,17 @@ fn content_that_after_an_object_noun_stays_relative_territory() {
     let s = one("When the daemon logs the event that the monitor records, the alarm shall sound.");
     let trigger = s.frames.trigger.as_ref().unwrap();
     match &trigger.clause.items[0].body {
-        ClauseBody::Verbal { verb, object, content, .. } => {
+        ClauseBody::Verbal {
+            verb,
+            object,
+            content,
+            ..
+        } => {
             assert_eq!(verb, "logs");
             assert!(content.is_none());
-            let NpGroup::Single(np) = object.as_ref().unwrap() else { panic!() };
+            let NpGroup::Single(np) = object.as_ref().unwrap() else {
+                panic!()
+            };
             assert!(matches!(
                 np.relative.as_ref().unwrap().body,
                 RelativeBody::ObjectGap { .. }
@@ -870,7 +1055,9 @@ fn relative_verbal_arms_stay_content_free() {
     // carries no content slot in v0.2, so the second `that` is stray.
     assert_eq!(
         err("Each daemon that ensures that the token is valid shall run."),
-        ParseError::UnexpectedTokens { token: "that".into() }
+        ParseError::UnexpectedTokens {
+            token: "that".into()
+        }
     );
 }
 
@@ -1078,7 +1265,13 @@ fn interval_witness_extends_to_envelope_conflicts() {
 #[test]
 fn descending_between_is_rejected_with_the_exact_kind() {
     let e = err("The retry count is between 6 and 4.");
-    assert_eq!(e, ParseError::DescendingBetween { lower: "6".into(), upper: "4".into() });
+    assert_eq!(
+        e,
+        ParseError::DescendingBetween {
+            lower: "6".into(),
+            upper: "4".into()
+        }
+    );
     assert_eq!(e.kind(), "descending_between");
 }
 
@@ -1087,17 +1280,26 @@ fn descending_between_covers_every_written_position() {
     // `be`-complement.
     assert_eq!(
         err("The delay shall be between 9 and 2 seconds."),
-        ParseError::DescendingBetween { lower: "9".into(), upper: "2".into() }
+        ParseError::DescendingBetween {
+            lower: "9".into(),
+            upper: "2".into()
+        }
     );
     // Guard clause.
     assert_eq!(
         err("While the depth is between 9 and 2, the pump shall stop."),
-        ParseError::DescendingBetween { lower: "9".into(), upper: "2".into() }
+        ParseError::DescendingBetween {
+            lower: "9".into(),
+            upper: "2".into()
+        }
     );
     // Bounded `for` measure.
     assert_eq!(
         err("The daemon shall retain the log for between 10 and 5 days."),
-        ParseError::DescendingBetween { lower: "10".into(), upper: "5".into() }
+        ParseError::DescendingBetween {
+            lower: "10".into(),
+            upper: "5".into()
+        }
     );
 }
 
@@ -1106,22 +1308,34 @@ fn descending_between_reads_numbers_not_lexemes() {
     // Decimals: 5.5 > 5.25 numerically (lexicographically it is not).
     assert_eq!(
         err("The delay is between 5.5 and 5.25 seconds."),
-        ParseError::DescendingBetween { lower: "5.5".into(), upper: "5.25".into() }
+        ParseError::DescendingBetween {
+            lower: "5.5".into(),
+            upper: "5.25".into()
+        }
     );
     // Number words: ten > two (lexicographically "ten" < "two").
     assert_eq!(
         err("The delay is between ten and two seconds."),
-        ParseError::DescendingBetween { lower: "ten".into(), upper: "two".into() }
+        ParseError::DescendingBetween {
+            lower: "ten".into(),
+            upper: "two".into()
+        }
     );
     // Mixed word/numeral bounds still ground.
     assert_eq!(
         err("The delay is between six and 4 seconds."),
-        ParseError::DescendingBetween { lower: "six".into(), upper: "4".into() }
+        ParseError::DescendingBetween {
+            lower: "six".into(),
+            upper: "4".into()
+        }
     );
     // A unit on the lower bound only does not hide the check.
     assert_eq!(
         err("The delay is between 6 seconds and 4."),
-        ParseError::DescendingBetween { lower: "6".into(), upper: "4".into() }
+        ParseError::DescendingBetween {
+            lower: "6".into(),
+            upper: "4".into()
+        }
     );
 }
 
@@ -1212,7 +1426,11 @@ struct XorShift(u64);
 
 impl XorShift {
     fn new(seed: u64) -> Self {
-        XorShift(if seed == 0 { 0x9E37_79B9_7F4A_7C15 } else { seed })
+        XorShift(if seed == 0 {
+            0x9E37_79B9_7F4A_7C15
+        } else {
+            seed
+        })
     }
 
     fn next(&mut self) -> u64 {
@@ -1266,12 +1484,12 @@ fn assault(input: &str) {
 #[test]
 fn fuzz_word_soup_over_round9_vocabulary() {
     let vocab: &[&str] = &[
-        "the", "each", "no", "a", "at", "least", "most", "exactly", "between", "and", "or",
-        "that", "who", "shall", "is", "are", "not", "be", "ensures", "forwards", "gateway",
-        "request", "monitor", "token", "valid", "in", "on", "under", "above", "below", "within",
-        "for", "per", "until", "before", "after", "unless", "When", "While", "Where", "If",
-        "then", "3", "5", "6", "4.5", "ten", "two", "seconds", "days", "out", "promptly",
-        "remains", "means", "may", ",", ".",
+        "the", "each", "no", "a", "at", "least", "most", "exactly", "between", "and", "or", "that",
+        "who", "shall", "is", "are", "not", "be", "ensures", "forwards", "gateway", "request",
+        "monitor", "token", "valid", "in", "on", "under", "above", "below", "within", "for", "per",
+        "until", "before", "after", "unless", "When", "While", "Where", "If", "then", "3", "5",
+        "6", "4.5", "ten", "two", "seconds", "days", "out", "promptly", "remains", "means", "may",
+        ",", ".",
     ];
     let mut rng = XorShift::new(0x5EC0_9A7C_1E11_0009);
     for _ in 0..1500 {

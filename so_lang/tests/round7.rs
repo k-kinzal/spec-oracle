@@ -19,12 +19,18 @@ use so_lang::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("parse {input:?}: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
 fn guarantee(input: &str) -> so_lang::formula::Formula {
-    contract_formula(&one(input)).expect("contract-bearing sentence").guarantee
+    contract_formula(&one(input))
+        .expect("contract-bearing sentence")
+        .guarantee
 }
 
 // =====================================================================================
@@ -68,9 +74,8 @@ fn differing_guards_stay_unknown() {
     assert_eq!(assess(&b, &a), Outcome::Unknown);
     // A one-way guard implication (an extra `and` conjunct) is containment,
     // not an overlap witness: still Unknown, legislated.
-    let both = one(
-        "When the order ships and the store is open, the system shall issue the receipt.",
-    );
+    let both =
+        one("When the order ships and the store is open, the system shall issue the receipt.");
     let loose = one("When the order ships, the system shall not issue the receipt.");
     assert_eq!(assess(&both, &loose), Outcome::Unknown);
 }
@@ -79,8 +84,10 @@ fn differing_guards_stay_unknown() {
 /// `¬guard` disjunct), pinned at the formula layer.
 #[test]
 fn equal_guards_with_implying_claims_imply() {
-    let tight = guarantee("When the order ships, the system shall issue the receipt within 5 seconds.");
-    let loose = guarantee("When the order ships, the system shall issue the receipt within 10 seconds.");
+    let tight =
+        guarantee("When the order ships, the system shall issue the receipt within 5 seconds.");
+    let loose =
+        guarantee("When the order ships, the system shall issue the receipt within 10 seconds.");
     assert_eq!(implies(&tight, &loose), Ternary::Yes);
     assert_eq!(implies(&loose, &tight), Ternary::Unknown);
 }
@@ -98,8 +105,18 @@ fn guard_equal_refinement_via_deadline_containment() {
         ),
         Ternary::Yes
     );
-    assert_eq!(assess(&tight, &loose), Outcome::Refinement { concrete_is_a: true });
-    assert_eq!(assess(&loose, &tight), Outcome::Refinement { concrete_is_a: false });
+    assert_eq!(
+        assess(&tight, &loose),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
+    assert_eq!(
+        assess(&loose, &tight),
+        Outcome::Refinement {
+            concrete_is_a: false
+        }
+    );
 }
 
 /// The guard-aware rule respects force: a recommended side names the
@@ -147,9 +164,14 @@ fn relied_defaults_to_the_source_formula() {
     let s =
         AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &source, &target).unwrap();
     assert_eq!(s.relied, s.formula);
-    assert!(!s.explicit_relied, "default reliance is not an explicit selection");
+    assert!(
+        !s.explicit_relied,
+        "default reliance is not an explicit selection"
+    );
     assert!(!s.contract_forming(), "round 11: candidate only");
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&s));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&s));
     assert_eq!(paired.assumption, Formula::Top, "a candidate never forms A");
     assert_eq!(paired.sources.len(), 1, "retained as visible evidence");
     // The explicit selection of the SAME formula restores the round-6
@@ -161,7 +183,9 @@ fn relied_defaults_to_the_source_formula() {
         s.formula.clone(),
     )
     .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(std::slice::from_ref(&explicit));
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(std::slice::from_ref(&explicit));
     assert_eq!(paired.assumption, explicit.formula);
 }
 
@@ -171,9 +195,11 @@ fn relied_defaults_to_the_source_formula() {
 fn explicit_relied_shapes_the_paired_assumption() {
     let target = one("The daemon shall process the event.");
     let source = one("The gateway shall deliver the event within 5 seconds.");
-    let relied = contract_formula(&one("The gateway shall deliver the event within 10 seconds."))
-        .unwrap()
-        .guarantee;
+    let relied = contract_formula(&one(
+        "The gateway shall deliver the event within 10 seconds.",
+    ))
+    .unwrap()
+    .guarantee;
     let s = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::GuaranteeDischarge,
         &source,
@@ -242,24 +268,34 @@ fn paired_assumption_conjoins_relied_formulas() {
         AssumptionSource::for_guarantee_with_relied(kind, &source, &target, default.formula)
             .unwrap()
     };
-    let a = explicit(EdgeKind::OccurrenceReliance, "The gateway shall deliver the event.");
-    let b = explicit(EdgeKind::GuaranteeDischarge, "The scheduler shall start the worker.");
+    let a = explicit(
+        EdgeKind::OccurrenceReliance,
+        "The gateway shall deliver the event.",
+    );
+    let b = explicit(
+        EdgeKind::GuaranteeDischarge,
+        "The scheduler shall start the worker.",
+    );
     let envelope = AssumptionSource::for_guarantee(
         EdgeKind::AdmissibilityEnvelope,
         &one("The client may retry."),
         &target,
     )
     .unwrap();
-    let paired = contract_formula(&target).unwrap().paired(&[
-        a.clone(),
-        b.clone(),
-        envelope,
-    ]);
+    let paired = contract_formula(&target)
+        .unwrap()
+        .paired(&[a.clone(), b.clone(), envelope]);
     assert_eq!(
         paired.assumption,
-        Formula::And { items: vec![a.relied.clone(), b.relied.clone()] }
+        Formula::And {
+            items: vec![a.relied.clone(), b.relied.clone()]
+        }
     );
-    assert_eq!(paired.sources.len(), 3, "envelope retained as compatibility data");
+    assert_eq!(
+        paired.sources.len(),
+        3,
+        "envelope retained as compatibility data"
+    );
 }
 
 /// Serde: `relied` round-trips, and pre-round-7 JSON without the field
@@ -268,9 +304,11 @@ fn paired_assumption_conjoins_relied_formulas() {
 fn relied_serde_round_trip_and_back_compat() {
     let target = one("The daemon shall process the event.");
     let source = one("The gateway shall deliver the event within 5 seconds.");
-    let relied = contract_formula(&one("The gateway shall deliver the event within 10 seconds."))
-        .unwrap()
-        .guarantee;
+    let relied = contract_formula(&one(
+        "The gateway shall deliver the event within 10 seconds.",
+    ))
+    .unwrap()
+    .guarantee;
     let s = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::GuaranteeDischarge,
         &source,
@@ -303,9 +341,26 @@ fn claim(input: &str) -> so_lang::formula::Formula {
 fn at_least_five_refines_at_least_three() {
     let five = one("At least 5 replicas shall run.");
     let three = one("At least 3 replicas shall run.");
-    assert_eq!(implies(&claim("At least 5 replicas shall run."), &claim("At least 3 replicas shall run.")), Ternary::Yes);
-    assert_eq!(implies(&claim("At least 3 replicas shall run."), &claim("At least 5 replicas shall run.")), Ternary::Unknown);
-    assert_eq!(assess(&five, &three), Outcome::Refinement { concrete_is_a: true });
+    assert_eq!(
+        implies(
+            &claim("At least 5 replicas shall run."),
+            &claim("At least 3 replicas shall run.")
+        ),
+        Ternary::Yes
+    );
+    assert_eq!(
+        implies(
+            &claim("At least 3 replicas shall run."),
+            &claim("At least 5 replicas shall run.")
+        ),
+        Ternary::Unknown
+    );
+    assert_eq!(
+        assess(&five, &three),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
 }
 
 /// `exactly n` bridges both directions: it implies the containing `at
@@ -313,15 +368,24 @@ fn at_least_five_refines_at_least_three() {
 #[test]
 fn exactly_bridges_at_least_and_at_most() {
     assert_eq!(
-        implies(&claim("Exactly 4 replicas shall run."), &claim("At least 3 replicas shall run.")),
+        implies(
+            &claim("Exactly 4 replicas shall run."),
+            &claim("At least 3 replicas shall run.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&claim("Exactly 4 replicas shall run."), &claim("At most 7 replicas shall run.")),
+        implies(
+            &claim("Exactly 4 replicas shall run."),
+            &claim("At most 7 replicas shall run.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&claim("At least 3 replicas shall run."), &claim("Exactly 4 replicas shall run.")),
+        implies(
+            &claim("At least 3 replicas shall run."),
+            &claim("Exactly 4 replicas shall run.")
+        ),
         Ternary::Unknown
     );
 }
@@ -331,16 +395,25 @@ fn exactly_bridges_at_least_and_at_most() {
 #[test]
 fn disjoint_counts_contradict() {
     assert_eq!(
-        contradicts(&claim("At least 5 replicas shall run."), &claim("At most 3 replicas shall run.")),
+        contradicts(
+            &claim("At least 5 replicas shall run."),
+            &claim("At most 3 replicas shall run.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        assess(&one("At least 5 replicas shall run."), &one("At most 3 replicas shall run.")),
+        assess(
+            &one("At least 5 replicas shall run."),
+            &one("At most 3 replicas shall run.")
+        ),
         Outcome::HardContradiction
     );
     // `at most 3` and `at least 3` meet at 3: not disjoint.
     assert_eq!(
-        contradicts(&claim("At most 3 replicas shall run."), &claim("At least 3 replicas shall run.")),
+        contradicts(
+            &claim("At most 3 replicas shall run."),
+            &claim("At least 3 replicas shall run.")
+        ),
         Ternary::Unknown
     );
 }
@@ -398,7 +471,9 @@ fn content_complement_parses_and_round_trips() {
 #[test]
 fn content_shapes_and_role_order() {
     let s = one("The system shall verify within 5 seconds that the token is valid.");
-    let so_lang::ast::Core::Deontic { vp, .. } = &s.core else { panic!("deontic") };
+    let so_lang::ast::Core::Deontic { vp, .. } = &s.core else {
+        panic!("deontic")
+    };
     let vp = vp.single().unwrap();
     assert_eq!(vp.verb, "verify");
     assert_eq!(vp.roles.len(), 1, "the deadline role precedes the content");
@@ -432,7 +507,9 @@ fn relative_that_wins_after_a_noun() {
     ));
     // A well-formed relative after a head stays a relative.
     let s = one("The daemon shall record the fact that carries the flag.");
-    let so_lang::ast::Core::Deontic { vp, .. } = &s.core else { panic!("deontic") };
+    let so_lang::ast::Core::Deontic { vp, .. } = &s.core else {
+        panic!("deontic")
+    };
     let vp = vp.single().unwrap();
     assert!(vp.content.is_none(), "the noun claimed the `that`");
     let object = vp.object.as_ref().unwrap();
@@ -460,7 +537,10 @@ fn content_is_unavailable_in_frames() {
     match &trigger.clause.items[0].body {
         so_lang::ast::ClauseBody::Verbal { verb, content, .. } => {
             assert_eq!(verb, "ensures");
-            assert!(content.is_some(), "the guard's `that`-clause is content now");
+            assert!(
+                content.is_some(),
+                "the guard's `that`-clause is content now"
+            );
         }
         other => panic!("expected verbal guard body with content, got {other:?}"),
     }
@@ -503,10 +583,8 @@ fn content_identity_is_full_fidelity() {
 /// The content digest serializes and round-trips on the skeleton.
 #[test]
 fn content_serde_round_trip() {
-    let sk = so_lang::semantics::skeleton(&one(
-        "The server shall ensure that the token is valid.",
-    ))
-    .unwrap();
+    let sk = so_lang::semantics::skeleton(&one("The server shall ensure that the token is valid."))
+        .unwrap();
     let json = serde_json::to_value(&sk).unwrap();
     let back: so_lang::semantics::Skeleton = serde_json::from_value(json).unwrap();
     assert_eq!(back, sk);
@@ -526,11 +604,20 @@ fn content_serde_round_trip() {
 #[test]
 fn role_bearing_relative_parses() {
     let s = one("Each request that arrives from the gateway shall be logged.");
-    let so_lang::ast::Core::Deontic { subject, .. } = &s.core else { panic!("deontic") };
-    let so_lang::ast::NpGroup::Single(np) = subject else { panic!("single subject") };
+    let so_lang::ast::Core::Deontic { subject, .. } = &s.core else {
+        panic!("deontic")
+    };
+    let so_lang::ast::NpGroup::Single(np) = subject else {
+        panic!("single subject")
+    };
     assert_eq!(np.head, "request");
     match &np.relative.as_ref().expect("relative").body {
-        so_lang::ast::RelativeBody::Verbal { verb, roles, object, .. } => {
+        so_lang::ast::RelativeBody::Verbal {
+            verb,
+            roles,
+            object,
+            ..
+        } => {
             assert_eq!(verb, "arrives");
             assert!(object.is_none());
             assert!(matches!(&roles[0], so_lang::ast::RolePp::Source(_)));
@@ -587,7 +674,9 @@ fn relative_roles_are_subject_identity() {
 #[test]
 fn relative_depth_stays_bounded() {
     // A relative whose role nests a clause with its own relative parses.
-    let s = one("The daemon shall log each request that arrives after the user who is active logs out.");
+    let s = one(
+        "The daemon shall log each request that arrives after the user who is active logs out.",
+    );
     assert!(parse(&s.render()).is_ok());
     // An adversarially deep of-chain in a relative's role NP is an error.
     let deep = format!(
@@ -636,7 +725,10 @@ fn envelope_conflict_respects_guards() {
     );
     // Differing guards: no overlap witness.
     assert_eq!(
-        assess(&framed_may, &one("When the link fails, the client shall not retry.")),
+        assess(
+            &framed_may,
+            &one("When the link fails, the client shall not retry.")
+        ),
         Outcome::Unknown
     );
 }
@@ -649,11 +741,23 @@ fn envelope_conflict_respects_guards() {
 #[test]
 fn permission_against_obligation_and_recommendation_stay_unknown() {
     let may = one("The client may retry.");
-    assert_eq!(assess(&may, &one("The client shall retry.")), Outcome::Unknown);
-    assert_eq!(assess(&one("The client shall retry."), &may), Outcome::Unknown);
-    assert_eq!(assess(&may, &one("The client should not retry.")), Outcome::Unknown);
+    assert_eq!(
+        assess(&may, &one("The client shall retry.")),
+        Outcome::Unknown
+    );
+    assert_eq!(
+        assess(&one("The client shall retry."), &may),
+        Outcome::Unknown
+    );
+    assert_eq!(
+        assess(&may, &one("The client should not retry.")),
+        Outcome::Unknown
+    );
     // Permission × permission stays out entirely.
-    assert_eq!(assess(&may, &one("The client may retry.")), Outcome::Unknown);
+    assert_eq!(
+        assess(&may, &one("The client may retry.")),
+        Outcome::Unknown
+    );
 }
 
 /// The new outcome keeps a stable wire name.
@@ -705,9 +809,12 @@ fn disjoint_durations_contradict() {
 fn disjoint_deadlines_contradict() {
     use so_lang::ast::ComparisonOp;
     use so_lang::formula::{AtomRef, Formula};
-    use so_lang::semantics::{RoleValue};
+    use so_lang::semantics::RoleValue;
     let plain = claim("The daemon shall respond within 10 seconds.");
-    let Formula::Atom { atom: AtomRef::Behavior { behavior } } = &plain else {
+    let Formula::Atom {
+        atom: AtomRef::Behavior { behavior },
+    } = &plain
+    else {
         panic!("expected one behavior atom");
     };
     let mut bounded = behavior.clone();
@@ -717,7 +824,9 @@ fn disjoint_deadlines_contradict() {
         unit: Some("seconds".into()),
         upper: None,
     };
-    let bounded = Formula::Atom { atom: AtomRef::Behavior { behavior: bounded } };
+    let bounded = Formula::Atom {
+        atom: AtomRef::Behavior { behavior: bounded },
+    };
     assert_eq!(contradicts(&plain, &bounded), Ternary::Yes);
     // Two plain deadlines are both upper bounds: never disjoint —
     // containment (refinement), not exclusion.
@@ -771,21 +880,33 @@ fn temporal_clause_inner_attachment_is_pinned() {
     use so_lang::ast::{Core, RolePp};
     // Inner: `using email` sits on the After-clause's verb.
     let inner = one("The system shall notify the user after the backup completes using email.");
-    let Core::Deontic { vp, .. } = &inner.core else { panic!("deontic") };
+    let Core::Deontic { vp, .. } = &inner.core else {
+        panic!("deontic")
+    };
     let vp = vp.single().unwrap();
-    let RolePp::After(clause) = &vp.roles[0] else { panic!("expected After role") };
+    let RolePp::After(clause) = &vp.roles[0] else {
+        panic!("expected After role")
+    };
     match &clause.body {
         so_lang::ast::ClauseBody::Verbal { verb, roles, .. } => {
             assert_eq!(verb, "completes");
-            assert!(matches!(&roles[0], RolePp::Means { .. }), "inner reading: the backup completes using email");
+            assert!(
+                matches!(&roles[0], RolePp::Means { .. }),
+                "inner reading: the backup completes using email"
+            );
         }
         other => panic!("expected verbal clause, got {other:?}"),
     }
     // Outer: `using email` sits on `notify`, before the After clause.
     let outer = one("The system shall notify the user using email after the backup completes.");
-    let Core::Deontic { vp, .. } = &outer.core else { panic!("deontic") };
+    let Core::Deontic { vp, .. } = &outer.core else {
+        panic!("deontic")
+    };
     let vp = vp.single().unwrap();
-    assert!(matches!(&vp.roles[0], RolePp::Means { .. }), "outer reading: notify using email");
+    assert!(
+        matches!(&vp.roles[0], RolePp::Means { .. }),
+        "outer reading: notify using email"
+    );
     assert!(matches!(&vp.roles[1], RolePp::After(_)));
 }
 
@@ -809,15 +930,24 @@ fn round7_doc_examples_parse() {
 #[test]
 fn mixed_quantifier_kinds_stay_unknown() {
     assert_eq!(
-        implies(&claim("Each replica shall run."), &claim("At least 3 replicas shall run.")),
+        implies(
+            &claim("Each replica shall run."),
+            &claim("At least 3 replicas shall run.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
-        implies(&claim("At least 3 replicas shall run."), &claim("Each replica shall run.")),
+        implies(
+            &claim("At least 3 replicas shall run."),
+            &claim("Each replica shall run.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
-        contradicts(&claim("The replicas shall run."), &claim("At most 3 replicas shall run.")),
+        contradicts(
+            &claim("The replicas shall run."),
+            &claim("At most 3 replicas shall run.")
+        ),
         Ternary::Unknown
     );
 }

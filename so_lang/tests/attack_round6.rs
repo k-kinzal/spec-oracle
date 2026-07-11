@@ -9,8 +9,8 @@
 
 use so_lang::ast::*;
 use so_lang::formula::{
-    claim_formula, contract_formula, AssumptionSource, AtomRef, ContractFormula, EdgeKind,
-    Formula, PairingError, SubjectRelation,
+    claim_formula, contract_formula, AssumptionSource, AtomRef, ContractFormula, EdgeKind, Formula,
+    PairingError, SubjectRelation,
 };
 use so_lang::parse::{parse, ParseError};
 use so_lang::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
@@ -18,7 +18,11 @@ use so_lang::semantics::{skeleton, RoleValue, Skeleton};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));
-    assert_eq!(spec.sentences.len(), 1, "expected one sentence in {input:?}");
+    assert_eq!(
+        spec.sentences.len(),
+        1,
+        "expected one sentence in {input:?}"
+    );
     spec.sentences.into_iter().next().unwrap()
 }
 
@@ -113,7 +117,10 @@ fn manner_only_difference_is_unknown() {
     let manner = claim("The pump shall stop immediately.");
     let bare = claim("The pump shall not stop.");
     assert_eq!(contradicts(&manner, &bare), Ternary::Unknown);
-    assert_eq!(implies(&manner, &claim("The pump shall stop.")), Ternary::Unknown);
+    assert_eq!(
+        implies(&manner, &claim("The pump shall stop.")),
+        Ternary::Unknown
+    );
 }
 
 /// Subject identity stays case-sensitive (restrictor and head are kept as
@@ -170,7 +177,10 @@ fn of_chain_subject_keys_gate_pairing() {
     let shared =
         AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &same, &target).unwrap();
     assert_eq!(shared.subject_relation, SubjectRelation::SharedKeys);
-    assert!(!shared.contract_forming(), "shared keys ride as candidates, never in A");
+    assert!(
+        !shared.contract_forming(),
+        "shared keys ride as candidates, never in A"
+    );
     // A different chain link is a different key.
     let bucket = one("The owner of the bucket is ready.");
     AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &bucket, &target)
@@ -208,7 +218,10 @@ fn coordinated_target_overlap_is_recorded_as_shared() {
     let ok = AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &disjoint, &target)
         .expect("disjoint coordinated subjects pair");
     assert_eq!(ok.subject_relation, SubjectRelation::DisjointKeys);
-    assert!(!ok.contract_forming(), "default reliance: candidate only (round 11)");
+    assert!(
+        !ok.contract_forming(),
+        "default reliance: candidate only (round 11)"
+    );
     assert!(explicit_source(EdgeKind::OccurrenceReliance, &disjoint, &target).contract_forming());
 }
 
@@ -280,8 +293,7 @@ fn advisory_reliance_check_is_conservative() {
     let target = one("The daemon shall flush the buffer.");
     // Structural interval rule flows through: within 5 proves within 10.
     let tight = one("The scheduler shall rotate the logs within 5 seconds.");
-    let a = AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &tight, &target)
-        .unwrap();
+    let a = AssumptionSource::for_guarantee(EdgeKind::OccurrenceReliance, &tight, &target).unwrap();
     let loose = claim("The scheduler shall rotate the logs within 10 seconds.");
     assert_eq!(a.advisory_reliance_check(&loose), Ternary::Yes);
     // The other direction is Unknown, never No.
@@ -296,7 +308,10 @@ fn advisory_reliance_check_is_conservative() {
     let obliged = claim("The network shall drop packets.");
     assert_eq!(envelope.advisory_reliance_check(&obliged), Ternary::Unknown);
     // Everything proves Top.
-    assert_eq!(envelope.advisory_reliance_check(&Formula::Top), Ternary::Yes);
+    assert_eq!(
+        envelope.advisory_reliance_check(&Formula::Top),
+        Ternary::Yes
+    );
 }
 
 /// Serde of the pairing artifacts: snake_case edge kinds, the round-6 error
@@ -351,8 +366,16 @@ fn mixed_sources_saturate_without_the_envelope() {
     let target = one("The daemon shall respond.");
     let c = contract_formula(&target).unwrap();
     // Round 11 (change 3): the reliances are selected explicitly.
-    let r1 = explicit_source(EdgeKind::OccurrenceReliance, &one("The clock is monotonic."), &target);
-    let r2 = explicit_source(EdgeKind::GuaranteeDischarge, &one("The scheduler shall tick."), &target);
+    let r1 = explicit_source(
+        EdgeKind::OccurrenceReliance,
+        &one("The clock is monotonic."),
+        &target,
+    );
+    let r2 = explicit_source(
+        EdgeKind::GuaranteeDischarge,
+        &one("The scheduler shall tick."),
+        &target,
+    );
     let env = AssumptionSource::for_guarantee(
         EdgeKind::AdmissibilityEnvelope,
         &one("The network may drop packets."),
@@ -362,7 +385,9 @@ fn mixed_sources_saturate_without_the_envelope() {
     let paired = c.paired(&[r1.clone(), env.clone(), r2.clone()]);
     assert_eq!(
         paired.assumption,
-        Formula::And { items: vec![r1.formula.clone(), r2.formula.clone()] }
+        Formula::And {
+            items: vec![r1.formula.clone(), r2.formula.clone()]
+        }
     );
     assert_eq!(paired.sources, vec![r1.clone(), env.clone(), r2.clone()]);
     assert_eq!(
@@ -388,8 +413,16 @@ fn repairing_supersedes_and_empty_is_identity() {
     let target = one("The daemon shall respond.");
     let c = contract_formula(&target).unwrap();
     // Round 11 (change 3): the reliances are selected explicitly.
-    let r1 = explicit_source(EdgeKind::OccurrenceReliance, &one("The clock is monotonic."), &target);
-    let r2 = explicit_source(EdgeKind::OccurrenceReliance, &one("The link is up."), &target);
+    let r1 = explicit_source(
+        EdgeKind::OccurrenceReliance,
+        &one("The clock is monotonic."),
+        &target,
+    );
+    let r2 = explicit_source(
+        EdgeKind::OccurrenceReliance,
+        &one("The link is up."),
+        &target,
+    );
     let first = c.paired(std::slice::from_ref(&r1));
     let second = first.paired(std::slice::from_ref(&r2));
     assert_eq!(second.assumption, r2.formula);
@@ -465,11 +498,15 @@ fn unconditional_refines_conditional_with_direction() {
     let unconditional = one("The pump shall stop.");
     assert_eq!(
         assess(&conditional, &unconditional),
-        Outcome::Refinement { concrete_is_a: false }
+        Outcome::Refinement {
+            concrete_is_a: false
+        }
     );
     assert_eq!(
         assess(&unconditional, &conditional),
-        Outcome::Refinement { concrete_is_a: true }
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
     );
 }
 
@@ -478,7 +515,12 @@ fn unconditional_refines_conditional_with_direction() {
 fn comparison_containment_is_refinement() {
     let strict = one("The depth shall be greater than 3.");
     let loose = one("The depth shall be at least 3.");
-    assert_eq!(assess(&strict, &loose), Outcome::Refinement { concrete_is_a: true });
+    assert_eq!(
+        assess(&strict, &loose),
+        Outcome::Refinement {
+            concrete_is_a: true
+        }
+    );
 }
 
 /// An unrelated pair is Unknown — Independent requires PROVEN non-
@@ -499,7 +541,10 @@ fn force_blind_implies_is_unchanged() {
     let shall = claim("The pump shall stop.");
     assert_eq!(implies(&should, &shall), Ternary::Yes);
     assert_eq!(implies(&shall, &should), Ternary::Yes);
-    assert_eq!(assess(&one("The pump should stop."), &one("The pump shall stop.")), Outcome::Unknown);
+    assert_eq!(
+        assess(&one("The pump should stop."), &one("The pump shall stop.")),
+        Outcome::Unknown
+    );
 }
 
 /// Permissions and definitions stay out of the contract-vs-contract
@@ -560,44 +605,71 @@ fn containment_matrix_over_the_six_ops() {
     let c = claim;
     // Open ⊆ closed at the same bound.
     assert_eq!(
-        implies(&c("The depth is greater than 3."), &c("The depth is at least 3.")),
+        implies(
+            &c("The depth is greater than 3."),
+            &c("The depth is at least 3.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The depth is less than 3."), &c("The depth is at most 3.")),
+        implies(
+            &c("The depth is less than 3."),
+            &c("The depth is at most 3.")
+        ),
         Ternary::Yes
     );
     // Closed ⊄ open at the same bound: the endpoint escapes.
     assert_eq!(
-        implies(&c("The depth is at least 3."), &c("The depth is greater than 3.")),
+        implies(
+            &c("The depth is at least 3."),
+            &c("The depth is greater than 3.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
-        implies(&c("The depth is at most 3."), &c("The depth is less than 3.")),
+        implies(
+            &c("The depth is at most 3."),
+            &c("The depth is less than 3.")
+        ),
         Ternary::Unknown
     );
     // Point ⊆ everything containing it; between ⊆ open bound strictly
     // outside it.
     assert_eq!(
-        implies(&c("The depth is equal to 3."), &c("The depth is greater than 2.")),
+        implies(
+            &c("The depth is equal to 3."),
+            &c("The depth is greater than 2.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The depth is between 1 and 2."), &c("The depth is less than 3.")),
+        implies(
+            &c("The depth is between 1 and 2."),
+            &c("The depth is less than 3.")
+        ),
         Ternary::Yes
     );
     // between at the exact closed edge of an open bound does NOT fit.
     assert_eq!(
-        implies(&c("The depth is between 1 and 3."), &c("The depth is less than 3.")),
+        implies(
+            &c("The depth is between 1 and 3."),
+            &c("The depth is less than 3.")
+        ),
         Ternary::Unknown
     );
     // Same-op equivalences across lexeme spellings: word/number/decimal.
     assert_eq!(
-        implies(&c("The depth is at most three."), &c("The depth is at most 3.")),
+        implies(
+            &c("The depth is at most three."),
+            &c("The depth is at most 3.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        implies(&c("The depth is at most 3.0."), &c("The depth is at most 3.")),
+        implies(
+            &c("The depth is at most 3.0."),
+            &c("The depth is at most 3.")
+        ),
         Ternary::Yes
     );
 }
@@ -609,42 +681,69 @@ fn containment_matrix_over_the_six_ops() {
 fn disjointness_boundary_pins() {
     let c = claim;
     assert_eq!(
-        contradicts(&c("The depth is at most 3."), &c("The depth is at least 3.")),
+        contradicts(
+            &c("The depth is at most 3."),
+            &c("The depth is at least 3.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
-        contradicts(&c("The depth is greater than 3."), &c("The depth is at most 3.")),
+        contradicts(
+            &c("The depth is greater than 3."),
+            &c("The depth is at most 3.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        contradicts(&c("The depth is less than 3."), &c("The depth is at least 3.")),
+        contradicts(
+            &c("The depth is less than 3."),
+            &c("The depth is at least 3.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        contradicts(&c("The depth is equal to 3."), &c("The depth is greater than 3.")),
+        contradicts(
+            &c("The depth is equal to 3."),
+            &c("The depth is greater than 3.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        contradicts(&c("The depth is equal to 3."), &c("The depth is equal to 5.")),
+        contradicts(
+            &c("The depth is equal to 3."),
+            &c("The depth is equal to 5.")
+        ),
         Ternary::Yes
     );
     // Same point: the same claim, provably NOT a contradiction.
     assert_eq!(
-        contradicts(&c("The depth is equal to 3."), &c("The depth is equal to 3.")),
+        contradicts(
+            &c("The depth is equal to 3."),
+            &c("The depth is equal to 3.")
+        ),
         Ternary::No
     );
     // Overlap without containment stays Unknown.
     assert_eq!(
-        contradicts(&c("The depth is less than 4."), &c("The depth is greater than 3.")),
+        contradicts(
+            &c("The depth is less than 4."),
+            &c("The depth is greater than 3.")
+        ),
         Ternary::Unknown
     );
     // between/between: touching closed ends intersect.
     assert_eq!(
-        contradicts(&c("The depth is between 1 and 3."), &c("The depth is between 3 and 5.")),
+        contradicts(
+            &c("The depth is between 1 and 3."),
+            &c("The depth is between 3 and 5.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
-        contradicts(&c("The depth is between 1 and 2."), &c("The depth is between 3 and 5.")),
+        contradicts(
+            &c("The depth is between 1 and 2."),
+            &c("The depth is between 3 and 5.")
+        ),
         Ternary::Yes
     );
 }
@@ -666,7 +765,10 @@ fn descending_between_is_empty_and_self_contradicts() {
     ));
     // Hand-built: swap the bounds of an accepted ascending `between`.
     let mut s = one("The latency is between 4 and 6.");
-    let Core::Description { predicate: Predicate::Comparison(comparison), .. } = &mut s.core
+    let Core::Description {
+        predicate: Predicate::Comparison(comparison),
+        ..
+    } = &mut s.core
     else {
         panic!("expected comparison description");
     };
@@ -674,9 +776,15 @@ fn descending_between_is_empty_and_self_contradicts() {
     comparison.upper = Some(std::mem::replace(&mut comparison.value, upper));
     let empty = claim_formula(&s).unwrap();
     assert_eq!(contradicts(&empty, &empty), Ternary::Yes);
-    assert_eq!(contradicts(&empty, &claim("The latency is equal to 5.")), Ternary::Yes);
+    assert_eq!(
+        contradicts(&empty, &claim("The latency is equal to 5.")),
+        Ternary::Yes
+    );
     // The empty interval is contained everywhere — vacuous implication.
-    assert_eq!(implies(&empty, &claim("The latency is at most 100.")), Ternary::Yes);
+    assert_eq!(
+        implies(&empty, &claim("The latency is at most 100.")),
+        Ternary::Yes
+    );
 }
 
 /// Unit gating: mismatched units, present-vs-missing units, and
@@ -685,20 +793,32 @@ fn descending_between_is_empty_and_self_contradicts() {
 fn unit_gating_pins() {
     let c = claim;
     assert_eq!(
-        contradicts(&c("The lag is at most 3 seconds."), &c("The lag is at least 5.")),
+        contradicts(
+            &c("The lag is at most 3 seconds."),
+            &c("The lag is at least 5.")
+        ),
         Ternary::Unknown
     );
     assert_eq!(
-        contradicts(&c("The lag is at most 3 Seconds."), &c("The lag is at least 5 seconds.")),
+        contradicts(
+            &c("The lag is at most 3 Seconds."),
+            &c("The lag is at least 5 seconds.")
+        ),
         Ternary::Yes
     );
     // Decimals ground exactly.
     assert_eq!(
-        contradicts(&c("The lag is at most 2.5 seconds."), &c("The lag is at least 2.6 seconds.")),
+        contradicts(
+            &c("The lag is at most 2.5 seconds."),
+            &c("The lag is at least 2.6 seconds.")
+        ),
         Ternary::Yes
     );
     assert_eq!(
-        contradicts(&c("The lag is at most 2.5 seconds."), &c("The lag is at least 2.5 seconds.")),
+        contradicts(
+            &c("The lag is at most 2.5 seconds."),
+            &c("The lag is at least 2.5 seconds.")
+        ),
         Ternary::Unknown
     );
 }
@@ -709,7 +829,11 @@ fn unit_gating_pins() {
 #[test]
 fn negative_numbers_are_np_measures_and_never_ground() {
     let s = one("The temperature is at most -5.");
-    let Core::Description { predicate: Predicate::Comparison(comparison), .. } = &s.core else {
+    let Core::Description {
+        predicate: Predicate::Comparison(comparison),
+        ..
+    } = &s.core
+    else {
         panic!("expected comparison description, got {:?}", s.core);
     };
     assert!(
@@ -735,7 +859,11 @@ fn rich_alternatives_round_trip_and_reshape() {
     let s = one(
         "The daemon shall either shut down gracefully or flush the buffer within 5 seconds or halt.",
     );
-    let Core::Deontic { vp: VpGroup::Alternatives { items }, .. } = &s.core else {
+    let Core::Deontic {
+        vp: VpGroup::Alternatives { items },
+        ..
+    } = &s.core
+    else {
         panic!("expected alternatives, got {:?}", s.core);
     };
     assert_eq!(items.len(), 3);
@@ -747,7 +875,11 @@ fn rich_alternatives_round_trip_and_reshape() {
     assert_eq!(items[2].verb, "halt");
     // Canonical render re-parses to the same core.
     let rendered = s.render();
-    assert_eq!(one(&rendered).core, s.core, "render round-trip for {rendered:?}");
+    assert_eq!(
+        one(&rendered).core,
+        s.core,
+        "render round-trip for {rendered:?}"
+    );
     // Skeleton: one atom per alternative, in surface order.
     let sk = skeleton(&s).unwrap();
     assert_eq!(sk.atoms.len(), 3);
@@ -761,10 +893,16 @@ fn rich_alternatives_round_trip_and_reshape() {
     };
     assert_eq!(disjuncts.len(), 3);
     for (disjunct, atom) in disjuncts.iter().zip(&sk.atoms) {
-        let Formula::Atom { atom: AtomRef::Behavior { behavior } } = disjunct else {
+        let Formula::Atom {
+            atom: AtomRef::Behavior { behavior },
+        } = disjunct
+        else {
             panic!("expected behavior atom, got {disjunct:?}");
         };
-        assert_eq!(&behavior.atom, atom, "formula and skeleton must digest alike");
+        assert_eq!(
+            &behavior.atom, atom,
+            "formula and skeleton must digest alike"
+        );
     }
     // Serde round-trips the whole sentence.
     let json = serde_json::to_value(&s).unwrap();
@@ -778,11 +916,17 @@ fn rich_alternatives_round_trip_and_reshape() {
 #[test]
 fn no_subject_alternatives_negate_the_disjunction() {
     let f = claim("No daemon shall either sleep or halt.");
-    let Formula::Not { inner } = &f else { panic!("expected Not, got {f:?}") };
-    let Formula::Or { items } = &**inner else { panic!("expected Or, got {inner:?}") };
+    let Formula::Not { inner } = &f else {
+        panic!("expected Not, got {f:?}")
+    };
+    let Formula::Or { items } = &**inner else {
+        panic!("expected Or, got {inner:?}")
+    };
     assert_eq!(items.len(), 2);
     let anchor = |f: &Formula| match f {
-        Formula::Atom { atom: AtomRef::Behavior { behavior } } => behavior.source.clone(),
+        Formula::Atom {
+            atom: AtomRef::Behavior { behavior },
+        } => behavior.source.clone(),
         other => panic!("expected behavior atom, got {other:?}"),
     };
     assert_eq!(anchor(&items[0]), "no daemon shall sleep");
@@ -799,14 +943,21 @@ fn no_subject_alternatives_negate_the_disjunction() {
 #[test]
 fn coordinated_subject_distributes_over_alternatives() {
     let f = claim("The pump and the valve shall either stop or drain.");
-    let Formula::And { items } = &f else { panic!("expected And, got {f:?}") };
+    let Formula::And { items } = &f else {
+        panic!("expected And, got {f:?}")
+    };
     assert_eq!(items.len(), 2);
     for item in items {
-        let Formula::Or { items: alts } = item else { panic!("expected Or, got {item:?}") };
+        let Formula::Or { items: alts } = item else {
+            panic!("expected Or, got {item:?}")
+        };
         assert_eq!(alts.len(), 2);
     }
     // Doing one alternative discharges the disjunction for that subject.
-    assert_eq!(implies(&claim("The pump shall stop."), items.first().unwrap()), Ternary::Yes);
+    assert_eq!(
+        implies(&claim("The pump shall stop."), items.first().unwrap()),
+        Ternary::Yes
+    );
 }
 
 /// Negation rejection across modals: `shall not either` and `should not
@@ -835,7 +986,12 @@ fn negated_alternatives_rejection_precedence() {
 fn either_disambiguation_in_other_positions() {
     // Subject position: NP coordination marker, untouched by round 6.
     let s = one("Either the pump or the valve shall stop.");
-    let Core::Deontic { subject, vp: VpGroup::Single(_), .. } = &s.core else {
+    let Core::Deontic {
+        subject,
+        vp: VpGroup::Single(_),
+        ..
+    } = &s.core
+    else {
         panic!("expected single-vp deontic, got {:?}", s.core);
     };
     assert!(matches!(
@@ -844,13 +1000,29 @@ fn either_disambiguation_in_other_positions() {
     ));
     // `must` and `should` take alternatives through the same slot.
     let s = one("The daemon must either fsync the journal or halt.");
-    assert!(matches!(&s.core, Core::Deontic { vp: VpGroup::Alternatives { .. }, modal: Modal::Must, .. }));
+    assert!(matches!(
+        &s.core,
+        Core::Deontic {
+            vp: VpGroup::Alternatives { .. },
+            modal: Modal::Must,
+            ..
+        }
+    ));
     let s = one("The daemon should either fsync the journal or halt.");
-    assert!(matches!(&s.core, Core::Deontic { vp: VpGroup::Alternatives { .. }, modal: Modal::Should, .. }));
+    assert!(matches!(
+        &s.core,
+        Core::Deontic {
+            vp: VpGroup::Alternatives { .. },
+            modal: Modal::Should,
+            ..
+        }
+    ));
     // A modal-final `either` is diagnosed, not guessed.
     assert_eq!(
         parse("The pump shall either."),
-        Err(ParseError::UnexpectedTokens { token: "either".into() })
+        Err(ParseError::UnexpectedTokens {
+            token: "either".into()
+        })
     );
     // `be`-complement items are legal alternatives on both sides.
     let s = one("The daemon shall either be idle or be busy.");
@@ -863,8 +1035,13 @@ fn either_disambiguation_in_other_positions() {
 /// One concrete act discharges a three-way alternative.
 #[test]
 fn single_act_discharges_three_way_alternative() {
-    let alternative = claim("The server shall either accept the request or reject the request or queue the request.");
-    assert_eq!(implies(&claim("The server shall queue the request."), &alternative), Ternary::Yes);
+    let alternative = claim(
+        "The server shall either accept the request or reject the request or queue the request.",
+    );
+    assert_eq!(
+        implies(&claim("The server shall queue the request."), &alternative),
+        Ternary::Yes
+    );
 }
 
 /// FINDING (critical, FIXED in the round-6 follow-up): a determiner-led
@@ -940,7 +1117,9 @@ fn with_is_rejected_in_every_remaining_position() {
 #[test]
 fn backticked_with_stays_an_ordinary_word() {
     let s = one("The daemon shall document the `with` clause.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("expected deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("expected deontic")
+    };
     let object = vp.single().unwrap().object.as_ref().unwrap();
     match object {
         NpGroup::Single(np) => {
@@ -950,7 +1129,10 @@ fn backticked_with_stays_an_ordinary_word() {
         other => panic!("expected single NP, got {other:?}"),
     }
     let rendered = s.render();
-    assert!(rendered.contains("`with`"), "render keeps the backticks: {rendered:?}");
+    assert!(
+        rendered.contains("`with`"),
+        "render keeps the backticks: {rendered:?}"
+    );
     assert_eq!(one(&rendered).core, s.core);
 }
 
@@ -971,10 +1153,15 @@ fn backticked_with_stays_an_ordinary_word() {
 fn within_bound_openers_become_np_measures() {
     // The legislated plain form.
     let s = one("The daemon shall reply within 5 seconds.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("expected deontic") };
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("expected deontic")
+    };
     assert_eq!(
         vp.single().unwrap().roles[0],
-        RolePp::Deadline(Measure::Quantity { number: "5".into(), unit: Some("seconds".into()) })
+        RolePp::Deadline(Measure::Quantity {
+            number: "5".into(),
+            unit: Some("seconds".into())
+        })
     );
     // Every bound opener after `within` is rejected — with a number, with a
     // noun phrase, and as `between`.
@@ -995,8 +1182,13 @@ fn within_bound_openers_become_np_measures() {
     // A plain NP measure survives: `within the timeout` is still a value
     // name.
     let s = one("The batch shall complete within the timeout.");
-    let Core::Deontic { vp, .. } = &s.core else { panic!("expected deontic") };
-    assert!(matches!(&vp.single().unwrap().roles[0], RolePp::Deadline(Measure::Np { .. })));
+    let Core::Deontic { vp, .. } = &s.core else {
+        panic!("expected deontic")
+    };
+    assert!(matches!(
+        &vp.single().unwrap().roles[0],
+        RolePp::Deadline(Measure::Np { .. })
+    ));
 }
 
 /// Directionality of every bounded form under `for`, composed with the
@@ -1113,13 +1305,19 @@ fn bounded_measure_and_digest_serde() {
     let sk = skeleton(&one("The daemon shall persist the node.")).unwrap();
     let mut json = serde_json::to_value(&sk).unwrap();
     json["subject"].as_object_mut().unwrap().remove("full");
-    json["atoms"][0]["objects"][0].as_object_mut().unwrap().remove("full");
+    json["atoms"][0]["objects"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("full");
     let back: Skeleton = serde_json::from_value(json).unwrap();
     assert_eq!(back.subject.full, "");
     assert_eq!(back.atoms[0].objects[0].full, "");
     // An atom without a comparison omits the key entirely.
     let json = serde_json::to_value(&sk.atoms[0]).unwrap();
-    assert!(json.get("comparison").is_none(), "None comparison must not serialize");
+    assert!(
+        json.get("comparison").is_none(),
+        "None comparison must not serialize"
+    );
 }
 
 // =====================================================================================
@@ -1142,7 +1340,9 @@ fn seeded_fuzz_over_round6_vocabulary_is_total() {
     ];
     let mut state: u64 = 0x5eed_c0de_2026_0707;
     let mut next = move || {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (state >> 33) as usize
     };
     let mut accepted: Vec<Sentence> = Vec::new();
@@ -1163,9 +1363,8 @@ fn seeded_fuzz_over_round6_vocabulary_is_total() {
             // Canonical render is stable: it re-parses, and re-rendering is
             // a fixed point.
             let rendered = sentence.render();
-            let again = parse(&rendered).unwrap_or_else(|e| {
-                panic!("canonical render must re-parse: {rendered:?} → {e}")
-            });
+            let again = parse(&rendered)
+                .unwrap_or_else(|e| panic!("canonical render must re-parse: {rendered:?} → {e}"));
             let re_rendered = again.sentences[0].render();
             assert_eq!(
                 re_rendered, rendered,
