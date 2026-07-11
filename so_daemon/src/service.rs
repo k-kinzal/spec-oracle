@@ -2,10 +2,10 @@
 //! wire contract.
 //!
 //! The RPC layer is thin: it decodes the request, stamps the daemon-authoritative
-//! creation instant (sense ③), and drives the synchronous [`add`] pipeline on a
-//! blocking thread (`spawn_blocking`), since capture touches the filesystem, git,
-//! the network, and the blocking ArangoDB driver — none of which may run on the
-//! async reactor. The resulting nodes (one per sentence) are converted to their
+//! creation instant (sense ③), and sends an owned command to the Add Mailbox.
+//! The Mailbox runs capture and the blocking ArangoDB driver off the async
+//! reactor, then replies with the resulting nodes (one per sentence). They are
+//! converted to their
 //! protobuf form — deriving each sentence's response-time view — and returned;
 //! ingest errors map to gRPC status codes the client turns into exit codes
 //! (`INVALID_ARGUMENT` → bad input, `INTERNAL` → runtime failure).
@@ -15,13 +15,14 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use tracing::Instrument;
 
-use crate::domain::{Edge, Node};
+use crate::domain::Edge;
 use so_protocol::pb;
 use so_protocol::pb::specification_graph_server::SpecificationGraph;
 
-use crate::add::{self, AddError, AddRequest};
+use crate::add::AddError;
+use crate::add_mailbox::{AddInput, AddMailbox, AddMailboxError};
 use crate::convert;
-use crate::store::{BlobStore, GraphStore, NodePage, StoreError};
+use crate::store::{GraphStore, NodePage, StoreError};
 
 /// Page size used when the request leaves `page_size` at 0.
 const DEFAULT_PAGE_SIZE: u32 = 100;
@@ -38,15 +39,15 @@ const MAX_PAGE_SIZE: u32 = 1000;
 /// its write side, and `GetGraph` its read side, from one shared handle.
 pub struct SpecificationGraphService {
     nodes: Arc<dyn GraphStore + Send + Sync>,
-    blobs: Arc<dyn BlobStore + Send + Sync>,
+    adds: AddMailbox,
 }
 
 impl SpecificationGraphService {
     pub fn new(
         nodes: Arc<dyn GraphStore + Send + Sync>,
-        blobs: Arc<dyn BlobStore + Send + Sync>,
+        adds: AddMailbox,
     ) -> SpecificationGraphService {
-        SpecificationGraphService { nodes, blobs }
+        SpecificationGraphService { nodes, adds }
     }
 }
 
@@ -140,33 +141,26 @@ impl SpecificationGraphService {
         let current = tracing::Span::current();
         so_tracing::record_specification_on_span(&current, policy, &specification);
 
-        let nodes = self.nodes.clone();
-        let blobs = self.blobs.clone();
-
-        let ingest_span = tracing::info_span!(
-            "spec.daemon.ingest_blocking",
-            "spec.specification.length" = specification.len() as u64,
-            "spec.evidence.count" = evidence.len() as u64,
-        );
-        let outcome = tokio::task::spawn_blocking(move || -> Result<Vec<Node>, AddError> {
-            let _entered = ingest_span.enter();
-            let add_req = AddRequest {
-                specification: &specification,
-                evidence_values: &evidence,
-                now: &now,
-                cli: &cli,
-                cli_version: &cli_version,
-            };
-            add::run(&add_req, &*nodes, &*blobs)
-        })
-        .await
-        .map_err(|e| Status::internal(format!("ingest task failed to run: {e}")))?;
-
-        let persisted = match outcome {
+        let persisted = match self
+            .adds
+            .add(AddInput {
+                specification,
+                evidence,
+                now,
+                cli,
+                cli_version,
+            })
+            .await
+        {
             Ok(persisted) => persisted,
-            Err(e) => {
+            Err(AddMailboxError::Add(e)) => {
                 record_add_error(policy, &e);
                 return Err(add_error_to_status(e));
+            }
+            Err(error) => {
+                let message = error.to_string();
+                tracing::Span::current().record("error.message", message.as_str());
+                return Err(Status::internal(message));
             }
         };
         tracing::Span::current().record("spec.sentence.count", persisted.len() as u64);
@@ -336,8 +330,10 @@ fn snapshot_is_bad_input(e: &crate::snapshot::SnapshotError) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::add_mailbox::AddMailbox;
     use crate::domain::{Meta, Node};
-    use crate::store::{InMemoryNodeStore, NodeStore, StoreError};
+    use crate::jobs::JobMailbox;
+    use crate::store::{BlobStore, InMemoryNodeStore, NodeStore, StoreError};
 
     #[test]
     fn clamp_page_size_applies_default_floor_and_ceiling() {
@@ -367,6 +363,7 @@ mod tests {
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),
                 cli_version: "test".to_string(),
+                updates: Default::default(),
             },
         }
     }
@@ -374,11 +371,14 @@ mod tests {
     #[tokio::test]
     async fn get_graph_returns_a_bounded_page_with_cursor_and_total() {
         // The production in-memory backend — no bespoke test double needed.
-        let store = InMemoryNodeStore::new();
+        let store = Arc::new(InMemoryNodeStore::new());
         for id in ["n1", "n2", "n3"] {
             store.add_node(&node(id)).unwrap();
         }
-        let service = SpecificationGraphService::new(Arc::new(store), Arc::new(NoBlobs));
+        let blobs = Arc::new(NoBlobs);
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs.clone());
+        let (adds, adds_task) = AddMailbox::start(store.clone(), blobs, jobs.clone());
+        let service = SpecificationGraphService::new(store, adds.clone());
 
         // Page size 2 over 3 nodes: a full page plus a continuation token.
         let resp = service
@@ -406,5 +406,10 @@ mod tests {
         assert_eq!(resp2.nodes.len(), 1);
         assert_eq!(resp2.nodes[0].id, "n3");
         assert!(resp2.next_page_token.is_empty(), "walk is complete");
+
+        adds.shutdown().await.unwrap();
+        adds_task.await.unwrap();
+        jobs.shutdown().await.unwrap();
+        jobs_task.await.unwrap();
     }
 }

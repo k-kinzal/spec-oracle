@@ -23,6 +23,11 @@ use so_protocol::pb;
 pub enum ConvertError {
     #[error("missing required field on the wire: {0}")]
     MissingField(&'static str),
+    #[error("invalid JSON in wire field {field}: {message}")]
+    InvalidJson {
+        field: &'static str,
+        message: String,
+    },
 }
 
 // ---- Kind ------------------------------------------------------------------
@@ -261,6 +266,16 @@ fn meta_to_pb(m: &domain::Meta) -> pb::Meta {
         created_at: m.created_at.clone(),
         cli: m.cli.clone(),
         cli_version: m.cli_version.clone(),
+        updates: m
+            .updates
+            .iter()
+            .map(|(id, update)| pb::MetaUpdate {
+                id: id.clone(),
+                source: update.source.clone(),
+                applied_at: update.applied_at.clone(),
+                value_json: update.value.to_string(),
+            })
+            .collect(),
     }
 }
 
@@ -274,6 +289,26 @@ fn meta_from_pb(m: pb::Meta) -> Result<domain::Meta, ConvertError> {
         created_at: m.created_at,
         cli: m.cli,
         cli_version: m.cli_version,
+        updates: m
+            .updates
+            .into_iter()
+            .map(|update| {
+                let value = serde_json::from_str(&update.value_json).map_err(|error| {
+                    ConvertError::InvalidJson {
+                        field: "meta.updates.value_json",
+                        message: error.to_string(),
+                    }
+                })?;
+                Ok((
+                    update.id,
+                    domain::MetaUpdate {
+                        source: update.source,
+                        applied_at: update.applied_at,
+                        value,
+                    },
+                ))
+            })
+            .collect::<Result<_, ConvertError>>()?,
     })
 }
 
@@ -309,7 +344,9 @@ impl TryFrom<pb::Node> for domain::Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{Anchor, Evidence, Kind, Locator, Meta, Node, Origin, Snapshot};
+    use crate::domain::{
+        Anchor, Evidence, Kind, Locator, Meta, MetaUpdate, Node, Origin, Snapshot,
+    };
 
     fn sample() -> Node {
         Node {
@@ -364,6 +401,15 @@ mod tests {
                 created_at: "2026-07-05T00:00:00Z".into(),
                 cli: "spec".into(),
                 cli_version: "test".into(),
+                updates: [(
+                    "job-1".to_string(),
+                    MetaUpdate {
+                        source: "example".to_string(),
+                        applied_at: "2026-07-11T00:00:00Z".to_string(),
+                        value: serde_json::json!({"commit": "abc123"}),
+                    },
+                )]
+                .into(),
             },
         }
     }

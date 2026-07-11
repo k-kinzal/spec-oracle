@@ -12,6 +12,6 @@ pub mod snapshot;
 
 pub use edge::{Edge, EdgeKind};
 pub use locator::{Kind, Locator};
-pub use node::{Evidence, Meta, Node};
+pub use node::{Evidence, Meta, MetaUpdate, Node};
 pub use origin::Origin;
 pub use snapshot::{Anchor, Snapshot};

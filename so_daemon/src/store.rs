@@ -23,7 +23,7 @@ use std::sync::Mutex;
 
 use thiserror::Error;
 
-use crate::domain::{Edge, Node};
+use crate::domain::{Edge, MetaUpdate, Node};
 
 /// A bounded, keyset-paginated page of nodes.
 ///
@@ -44,12 +44,23 @@ pub struct NodePage {
 /// write-only backend) is not forced to know about pagination. Growing the read
 /// surface never disturbs this trait or its implementors.
 pub trait NodeStore {
-    /// Persist a node. Idempotent on the node id: re-persisting the same id
-    /// replaces it with identical content.
+    /// Persist a node. Idempotent on the Node id: re-persisting the same Add
+    /// command refreshes ingest fields while preserving asynchronous Meta
+    /// updates already applied to that Node.
     fn add_node(&self, node: &Node) -> Result<(), StoreError>;
 
     /// Fetch a node by id, or `None` if no such node exists.
     fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError>;
+
+    /// Apply one successful Job result to a Node. Idempotent on `job_id`:
+    /// re-execution replaces the same Meta entry and leaves other Job results
+    /// untouched.
+    fn apply_meta_update(
+        &self,
+        node_id: &str,
+        job_id: &str,
+        update: &MetaUpdate,
+    ) -> Result<(), StoreError>;
 
     /// Remove a node by id. Idempotent: deleting an absent id succeeds.
     /// Ingest uses this to roll back already-persisted sentences when a later
@@ -125,6 +136,8 @@ pub enum StoreError {
     /// so this trait module stays independent of any particular driver.
     #[error("graph store backend error: {0}")]
     Backend(String),
+    #[error("node '{0}' does not exist")]
+    MissingNode(String),
 }
 
 /// A content-addressed blob store backed by a local directory, one file per
@@ -211,10 +224,12 @@ impl InMemoryNodeStore {
 
 impl NodeStore for InMemoryNodeStore {
     fn add_node(&self, node: &Node) -> Result<(), StoreError> {
-        self.nodes
-            .lock()
-            .expect("node store mutex poisoned")
-            .insert(node.id.clone(), node.clone());
+        let mut nodes = self.nodes.lock().expect("node store mutex poisoned");
+        let mut stored = node.clone();
+        if let Some(existing) = nodes.get(&node.id) {
+            stored.meta.updates = existing.meta.updates.clone();
+        }
+        nodes.insert(node.id.clone(), stored);
         Ok(())
     }
 
@@ -225,6 +240,20 @@ impl NodeStore for InMemoryNodeStore {
             .expect("node store mutex poisoned")
             .get(id)
             .cloned())
+    }
+
+    fn apply_meta_update(
+        &self,
+        node_id: &str,
+        job_id: &str,
+        update: &MetaUpdate,
+    ) -> Result<(), StoreError> {
+        let mut nodes = self.nodes.lock().expect("node store mutex poisoned");
+        let node = nodes
+            .get_mut(node_id)
+            .ok_or_else(|| StoreError::MissingNode(node_id.to_string()))?;
+        node.meta.updates.insert(job_id.to_string(), update.clone());
+        Ok(())
     }
 
     fn delete_node(&self, id: &str) -> Result<(), StoreError> {
@@ -324,11 +353,41 @@ mod tests {
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),
                 cli_version: "test".to_string(),
+                updates: Default::default(),
             },
         };
         store.add_node(&node).unwrap();
         assert_eq!(store.get_node("n1").unwrap().as_ref(), Some(&node));
         assert!(store.get_node("absent").unwrap().is_none());
+    }
+
+    #[test]
+    fn meta_update_is_idempotent_on_job_id() {
+        use crate::domain::MetaUpdate;
+
+        let store = InMemoryNodeStore::new();
+        store.add_node(&node_with_id("n1")).unwrap();
+        let first = MetaUpdate {
+            source: "example".to_string(),
+            applied_at: "t1".to_string(),
+            value: serde_json::json!({"attempt": 1}),
+        };
+        let second = MetaUpdate {
+            source: "example".to_string(),
+            applied_at: "t2".to_string(),
+            value: serde_json::json!({"attempt": 2}),
+        };
+        store.apply_meta_update("n1", "job-1", &first).unwrap();
+        store.apply_meta_update("n1", "job-1", &second).unwrap();
+
+        let node = store.get_node("n1").unwrap().unwrap();
+        assert_eq!(node.meta.updates.len(), 1);
+        assert_eq!(node.meta.updates["job-1"], second);
+
+        // Re-executing the originating Add command must not erase a Job result.
+        store.add_node(&node_with_id("n1")).unwrap();
+        let node = store.get_node("n1").unwrap().unwrap();
+        assert_eq!(node.meta.updates["job-1"], second);
     }
 
     fn node_with_id(id: &str) -> crate::domain::Node {
@@ -342,6 +401,7 @@ mod tests {
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),
                 cli_version: "test".to_string(),
+                updates: Default::default(),
             },
         }
     }
@@ -412,9 +472,6 @@ mod tests {
     fn list_edges_is_empty_until_edges_exist() {
         let store = InMemoryNodeStore::new();
         store.add_node(&node_with_id("a")).unwrap();
-        assert!(store
-            .list_edges(&["a".to_string()])
-            .unwrap()
-            .is_empty());
+        assert!(store.list_edges(&["a".to_string()]).unwrap().is_empty());
     }
 }

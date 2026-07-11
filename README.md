@@ -37,17 +37,20 @@ they do not depend on each other.
 | `so-tracing` | lib                  | Shared tracing/OpenTelemetry setup and gRPC trace propagation.                           |
 | `ui`         | Next.js app          | Graph visualization (Cosmograph, GPU/WebGL). A thin BFF speaks gRPC to `specd`; not a Cargo crate. See [`ui/README.md`](ui/README.md). |
 
-**Capture happens in the daemon.** `specd` parses the
+**Capture happens in the daemon.** An Add Mailbox in `specd` parses the
 specification, snapshots what each locator points at, discovers source
-provenance, and persists one node per sentence. The client only resolves input
+provenance, and persists one node per sentence. A successful save emits an
+in-process `NodeAdded` event; registered hooks create Jobs in a second Mailbox,
+and successful Job results are merged into Node Meta. The client only resolves input
 *channels* — reading the descriptor from its own files/stdin — and forwards the
 specification plus the resolved evidence values. One consequence to keep in mind: **a file locator is
 resolved against the daemon's filesystem/git**, so the daemon must run where
 the evidence lives (or where a checkout of it is reachable).
 
 ```text
-spec (CLI) ──▶ so-client ──gRPC──▶ specd ──▶ ArangoDB + blob store
-  resolves @file/-/inline                     captures, enriches, persists
+spec (CLI) ──▶ so-client ──gRPC──▶ specd Add Mailbox ──▶ ArangoDB + blob store
+  resolves @file/-/inline              │          captures + persists Node
+                                       └─NodeAdded─▶ Job Mailbox ──▶ Meta update
 ```
 
 ## The language
@@ -86,8 +89,26 @@ Storage is split by concern (both owned by the daemon):
   `#[serde(skip)]`, so bytes never travel into the database — or across the wire
   — only the hash does.
 
-A node's identity is a random UUID: adding the *same* sentence twice yields two
-distinct nodes. Content-addressing applies to blobs only.
+A Mailbox submission receives a random `message_id`; each Node ID is a SHA-256
+derived from that identity and the sentence index. Re-executing work from the
+same Mailbox message therefore addresses the same Node, while adding the *same*
+sentence in a separate command still yields a distinct Node. Content-addressing
+applies to blobs independently.
+
+## In-memory Jobs
+
+The Add and Job Mailboxes are process-local by design. The Add RPC succeeds when
+the Node save succeeds; Job acceptance and completion are separate concerns.
+Each `NodeAdded` hook derives a stable Job ID from the Event ID and Plugin name.
+The Job manager retains ownership while a worker runs, retries failures and
+worker panics with bounded exponential backoff, and applies successful results
+idempotently under that Job ID in Node Meta.
+
+Graceful shutdown stops gRPC intake, drains the Add Mailbox and its NodeAdded
+events, then drains the Job Mailbox. A Job that continues to fail prevents
+shutdown from completing, preserving the requirement that accepted work reaches
+a consistent result. Job/Event scheduling state is never written to ArangoDB;
+the database continues to contain only graph Nodes and Edges.
 
 ## Quickstart
 
@@ -200,6 +221,7 @@ so they do not leak into shell history or the process table.
 | `ARANGODB_DB`       | `--arango-db`   | `spec_oracle`            | Database name (auto-created).                        |
 | `ARANGODB_USER`     | *(env only)*    | `root`                   | Authenticating user.                                 |
 | `ARANGODB_PASSWORD` | *(env only)*    | *(empty)*                | Password. Must match the container's root password.  |
+| `GITHUB_TOKEN`      | *(env only)*    | *(unset)*                | Optional bearer token for GitHub Evidence Jobs.       |
 
 The store backend is **selectable**: `--store arango` (default) persists to
 ArangoDB, while `--store memory` runs a first-class in-memory backend with no
@@ -288,7 +310,7 @@ so_daemon::inventory::submit! {
 }
 ```
 
-`origin::registered_enrichers()` — which the `spec add` pipeline calls — collects
+`origin::registered_enrichers()` — which `spec add` calls — collects
 the built-ins (`git`, `web`) plus every submitted registration. Order is
 deterministic: **descending `priority`, then ascending `name`**, independent of
 link order (as long as names are distinct, which they should be). Among enrichers
@@ -301,6 +323,38 @@ to keep a plugin crate's submissions, reference that crate at least once from th
 binary (e.g. an `extern crate`/`use`).
 
 [`inventory`]: https://docs.rs/inventory
+
+## Extending: Node Meta Plugins
+
+`NodeMetaPlugin` hooks run after a Node has been saved. `handles(&Node)` selects
+applicable Nodes and `run(&Node, &PluginContext)` returns a Plugin-owned JSON
+value. Register a stable name at link time:
+
+```rust
+use so_daemon::jobs::{NodeMetaPlugin, PluginContext, PluginRegistration};
+
+struct TrackerPlugin;
+impl NodeMetaPlugin for TrackerPlugin {
+    fn handles(&self, node: &so_daemon::domain::Node) -> bool { /* ... */ true }
+    fn run(
+        &self,
+        node: &so_daemon::domain::Node,
+        context: &PluginContext<'_>,
+    ) -> Result<serde_json::Value, String> { /* ... */ todo!() }
+}
+fn make() -> Box<dyn NodeMetaPlugin> { Box::new(TrackerPlugin) }
+
+so_daemon::inventory::submit! {
+    PluginRegistration::new("tracker", make)
+}
+```
+
+Plugins can execute more than once and must keep their external effects
+idempotent. The Node update itself is idempotent because retries use the same
+Mailbox-derived Job ID. The built-in `github-evidence` Plugin handles
+`https://github.com/OWNER/REPO/...` evidence: it resolves the commit through the
+GitHub REST API and, for `/blob/REF/PATH`, captures the commit-fixed raw file in
+the BlobStore before recording its hash and commit metadata on the Node.
 
 ## Operational notes
 

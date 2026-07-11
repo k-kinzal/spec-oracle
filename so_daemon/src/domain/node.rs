@@ -9,9 +9,11 @@
 //!     never stored;
 //!   * the **epistemic** layer — the `meta.evidence` grounding the claim.
 //!
-//! `meta` holds only facts that are irreducible at ingest: each piece of
-//! evidence with its snapshot (sense ②) and origin (sense ①), plus the node's
-//! own creation facts (sense ③).
+//! `meta` holds captured facts: each piece of evidence with its snapshot (sense
+//! ②) and origin (sense ①), the node's own creation facts (sense ③), and
+//! successful asynchronous updates produced by NodeAdded hooks.
+
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +36,16 @@ pub struct Evidence {
     pub origin: Origin,
 }
 
-/// Node metadata. Irreducible-at-ingest facts only — no computed views.
+/// One successful asynchronous Meta update, keyed by its Mailbox-derived Job
+/// ID in [`Meta::updates`]. Re-executing a Job replaces the same entry.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MetaUpdate {
+    pub source: String,
+    pub applied_at: String,
+    pub value: serde_json::Value,
+}
+
+/// Node metadata. Captured facts only — no deterministically computed views.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Meta {
     pub evidence: Vec<Evidence>,
@@ -43,6 +54,10 @@ pub struct Meta {
     pub created_at: String,
     pub cli: String,
     pub cli_version: String,
+    /// Successful results produced by NodeAdded hooks. This contains results,
+    /// not Job scheduling or retry state; all execution state remains in memory.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub updates: BTreeMap<String, MetaUpdate>,
 }
 
 /// A specification node: one sentence, grounded.
@@ -98,6 +113,7 @@ mod tests {
                 created_at: "2026-07-05T00:00:00Z".to_string(),
                 cli: "spec".to_string(),
                 cli_version: "0.1.0".to_string(),
+                updates: Default::default(),
             },
         }
     }

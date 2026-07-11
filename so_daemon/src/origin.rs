@@ -25,7 +25,7 @@
 //! ```
 //!
 //! [`registered_enrichers`] collects the built-ins and every submitted
-//! registration, so the ingest pipeline calls them with no code change here.
+//! registration, so the add operation calls them with no code change here.
 //! (For the linker to keep a plugin crate's submissions, that crate must be
 //! reachable from the final binary — reference it at least once, e.g. an
 //! `extern crate` or a use.)
@@ -67,7 +67,7 @@ fn backfill(mut origin: Origin, other: &OriginInput) -> Origin {
 
 /// An extension point for discovering source provenance from a locator. Built-in
 /// enrichers cover git and web; further parsers (package registries, issue
-/// trackers, …) can be added without touching the ingest pipeline.
+/// trackers, …) can be added without touching the add operation.
 pub trait OriginEnricher {
     /// Whether this enricher handles the given locator.
     fn handles(&self, locator: &Locator) -> bool;

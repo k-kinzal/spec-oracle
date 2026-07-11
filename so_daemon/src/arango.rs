@@ -29,7 +29,7 @@ use arangors::client::reqwest::ReqwestClient;
 use arangors::{ClientError, Connection, Database};
 use serde_json::Value;
 
-use crate::domain::{Edge, Node};
+use crate::domain::{Edge, MetaUpdate, Node};
 
 use crate::store::{GraphStore, NodePage, NodeStore, StoreError};
 
@@ -87,10 +87,14 @@ impl NodeStore for ArangoNodeStore {
         }
         let mut vars: HashMap<&str, Value> = HashMap::new();
         vars.insert("doc", doc);
-        // Idempotent on the id: re-persisting the same node replaces it. Distinct
-        // statements get distinct ids upstream, so this never merges two nodes.
-        let query =
-            format!("INSERT @doc INTO {COLLECTION} OPTIONS {{ overwriteMode: \"replace\" }}");
+        // Idempotent on the Mailbox-derived id. `update` recursively merges the
+        // ingest document, so an empty `meta.updates` cannot erase Job results
+        // already applied by an earlier execution of the same command.
+        let query = format!(
+            "INSERT @doc INTO {COLLECTION} OPTIONS {{ \
+               overwriteMode: \"update\", mergeObjects: true \
+             }}"
+        );
         let _: Vec<Value> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
         Ok(())
     }
@@ -113,6 +117,38 @@ impl NodeStore for ArangoNodeStore {
         vars.insert("key", Value::String(id.to_string()));
         let nodes: Vec<Node> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
         Ok(nodes.into_iter().next())
+    }
+
+    fn apply_meta_update(
+        &self,
+        node_id: &str,
+        job_id: &str,
+        update: &MetaUpdate,
+    ) -> Result<(), StoreError> {
+        let _span = tracing::debug_span!(
+            "spec.store.arango.apply_meta_update",
+            "db.system" = "arangodb",
+            "db.collection.name" = COLLECTION,
+            "node.id" = %node_id,
+            "job.id" = %job_id,
+        )
+        .entered();
+        let query = format!(
+            "FOR node IN {COLLECTION} FILTER node._key == @node_id LIMIT 1 \
+             UPDATE node WITH {{ meta: {{ updates: MERGE(\
+               NOT_NULL(node.meta.updates, {{}}), ZIP([@job_id], [@update])\
+             ) }} }} IN {COLLECTION} OPTIONS {{ mergeObjects: true }} RETURN true"
+        );
+        let mut vars = HashMap::new();
+        vars.insert("node_id", Value::String(node_id.to_string()));
+        vars.insert("job_id", Value::String(job_id.to_string()));
+        vars.insert("update", serde_json::to_value(update)?);
+        let updated: Vec<bool> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        if updated.is_empty() {
+            Err(StoreError::MissingNode(node_id.to_string()))
+        } else {
+            Ok(())
+        }
     }
 
     fn delete_node(&self, id: &str) -> Result<(), StoreError> {

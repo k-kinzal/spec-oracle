@@ -28,6 +28,8 @@ inventory.workspace = true
 arangors.workspace = true
 tonic.workspace = true
 tokio.workspace = true
+url.workspace = true
+percent-encoding.workspace = true
 clap.workspace = true
 tracing.workspace = true
 

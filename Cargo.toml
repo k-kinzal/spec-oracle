@@ -36,7 +36,7 @@ ureq = "2"
 chrono = { version = "0.4", features = ["clock"], default-features = false }
 uuid = { version = "1", features = ["v4"] }
 inventory = "0.3"
-# ArangoDB driver, blocking mode (the capture pipeline is synchronous and is run
+# ArangoDB driver, blocking mode (capture is synchronous and is run
 # off the async reactor via spawn_blocking).
 arangors = { version = "0.6", default-features = false, features = ["rocksdb", "reqwest_blocking"] }
 
@@ -44,7 +44,9 @@ arangors = { version = "0.6", default-features = false, features = ["rocksdb", "
 tonic = "0.12"
 tonic-build = "0.12"
 prost = "0.13"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "sync", "time"] }
+url = "2"
+percent-encoding = "2"
 
 # CLI parsing (daemon flags + `spec` frontend).
 clap = { version = "4", features = ["derive", "env"] }

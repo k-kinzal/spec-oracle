@@ -20,10 +20,14 @@
 //! and classification are deliberately out of scope.
 
 pub mod add;
+pub mod add_mailbox;
 pub mod arango;
 pub mod convert;
 pub mod domain;
 pub mod evidence;
+pub mod github;
+pub mod jobs;
+pub mod mailbox;
 pub mod origin;
 pub mod service;
 pub mod snapshot;

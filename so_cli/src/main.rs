@@ -338,9 +338,22 @@ fn meta_to_json(meta: Option<&pb::Meta>) -> serde_json::Value {
             "created_at": &m.created_at,
             "cli": &m.cli,
             "cli_version": &m.cli_version,
+            "updates": m.updates.iter().map(meta_update_to_json).collect::<Vec<_>>(),
         }),
         None => serde_json::Value::Null,
     }
+}
+
+fn meta_update_to_json(update: &pb::MetaUpdate) -> serde_json::Value {
+    let value = serde_json::from_str(&update.value_json)
+        .unwrap_or_else(|_| serde_json::Value::String(update.value_json.clone()));
+
+    serde_json::json!({
+        "id": &update.id,
+        "source": &update.source,
+        "applied_at": &update.applied_at,
+        "value": value,
+    })
 }
 
 fn evidence_to_json(evidence: &pb::Evidence) -> serde_json::Value {
@@ -445,5 +458,30 @@ fn origin_to_json(origin: &pb::Origin) -> Option<serde_json::Value> {
         None
     } else {
         Some(serde_json::Value::Object(map))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn meta_update_json_exposes_plugin_value_as_json() {
+        let update = pb::MetaUpdate {
+            id: "job-id".to_string(),
+            source: "github-evidence".to_string(),
+            applied_at: "2026-07-11T00:00:00Z".to_string(),
+            value_json: r#"{"commit":"abc123"}"#.to_string(),
+        };
+
+        assert_eq!(
+            meta_update_to_json(&update),
+            serde_json::json!({
+                "id": "job-id",
+                "source": "github-evidence",
+                "applied_at": "2026-07-11T00:00:00Z",
+                "value": { "commit": "abc123" },
+            })
+        );
     }
 }

@@ -2,7 +2,7 @@
 //! sentences of the constrained specification language) and its evidence.
 //!
 //! This is the ELT "extract/load" boundary — it captures irreducible facts and
-//! defers all classification. The pipeline:
+//! defers all classification. The add operation:
 //!   1. parse the whole specification (syntax); a syntax error aborts before
 //!      any capture;
 //!   2. normalize each (channel-resolved) `--evidence` value (evidence);
@@ -45,6 +45,9 @@ use crate::store::{BlobStore, NodeStore};
 /// `@file`/`-`(stdin) descriptor into concrete text before it crossed the wire,
 /// so each entry here is either a bare locator or an evidence JSON payload.
 pub struct AddRequest<'a> {
+    /// Identity assigned once when the command enters the Add Mailbox. Internal
+    /// re-execution retains it, so every derived Node ID remains stable.
+    pub message_id: &'a str,
     /// The specification: one or more sentences of the constrained
     /// specification language.
     pub specification: &'a str,
@@ -125,7 +128,7 @@ pub fn run(
     );
     let result = {
         let _run_entered = run_span.enter();
-        run_pipeline(req, nodes, blobs, policy, &run_span)
+        run_add(req, nodes, blobs, policy, &run_span)
     };
     // Attribute every failure on the run span, whatever the stage. (The
     // grammar path already recorded these via `record_parse_failure`;
@@ -137,8 +140,8 @@ pub fn run(
     result
 }
 
-/// The pipeline body of [`run`], executed inside the `spec.add.run` span.
-fn run_pipeline(
+/// The add operation body, executed inside the `spec.add.run` span.
+fn run_add(
     req: &AddRequest,
     nodes: &dyn NodeStore,
     blobs: &dyn BlobStore,
@@ -174,10 +177,7 @@ fn run_pipeline(
             }
         }
     };
-    run_span.record(
-        "spec.sentence.count",
-        specification.sentences.len() as u64,
-    );
+    run_span.record("spec.sentence.count", specification.sentences.len() as u64);
 
     // 2. Normalize every --evidence value (each may expand to several).
     let mut inputs: Vec<EvidenceInput> = Vec::new();
@@ -241,9 +241,9 @@ fn run_pipeline(
     // All-or-nothing: a failure rolls back the nodes already persisted for
     // this request (best-effort) so no partial specification is left behind.
     let mut persisted = Vec::with_capacity(specification.sentences.len());
-    for sentence in &specification.sentences {
+    for (index, sentence) in specification.sentences.iter().enumerate() {
         let node = Node {
-            id: new_id(),
+            id: node_id(req.message_id, index),
             statement: sentence.source.clone(),
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
@@ -251,6 +251,7 @@ fn run_pipeline(
                 created_at: req.now.to_string(),
                 cli: req.cli.to_string(),
                 cli_version: req.cli_version.to_string(),
+                updates: Default::default(),
             },
         };
         let stored = {
@@ -275,8 +276,8 @@ fn run_pipeline(
     Ok(persisted)
 }
 
-fn new_id() -> String {
-    uuid::Uuid::new_v4().to_string()
+fn node_id(message_id: &str, sentence_index: usize) -> String {
+    crate::mailbox::derive_id("node", &[message_id, &sentence_index.to_string()])
 }
 
 /// Record a failure's category/stage on `span`, then hand the error back —
@@ -291,11 +292,8 @@ fn record_error_on_span(span: &tracing::Span, e: AddError) -> AddError {
 /// same specification failed to persist. A node whose delete itself fails is
 /// reported by id so an operator can remove it manually.
 fn roll_back_persisted(nodes: &dyn NodeStore, persisted: &[Node]) {
-    let _span = tracing::info_span!(
-        "spec.add.rollback",
-        "node.count" = persisted.len() as u64,
-    )
-    .entered();
+    let _span =
+        tracing::info_span!("spec.add.rollback", "node.count" = persisted.len() as u64,).entered();
     for node in persisted {
         if let Err(e) = nodes.delete_node(&node.id) {
             tracing::warn!(
@@ -411,6 +409,7 @@ mod tests {
             ev_path.to_string_lossy()
         );
         let req = AddRequest {
+            message_id: "single-file",
             specification: "The sales amount shall be greater than zero.",
             evidence_values: &[ev_value],
             now: "2026-07-05T00:00:00Z",
@@ -423,7 +422,10 @@ mod tests {
         let node = &persisted[0];
 
         // The raw sentence text is the stored truth, with the language version.
-        assert_eq!(node.statement, "The sales amount shall be greater than zero.");
+        assert_eq!(
+            node.statement,
+            "The sales amount shall be greater than zero."
+        );
         assert_eq!(node.lang_version, so_lang::LANG_VERSION);
         assert_eq!(node.meta.evidence.len(), 1);
         assert_eq!(node.meta.evidence[0].kind, Kind::Constitutive);
@@ -448,6 +450,7 @@ mod tests {
         std::fs::write(&ev_path, "shared grounding").unwrap();
 
         let req = AddRequest {
+            message_id: "multi",
             specification: "A session means a sequence of requests. \
                             When a session expires, the system shall close the session.",
             evidence_values: &[ev_path.to_string_lossy().to_string()],
@@ -460,7 +463,10 @@ mod tests {
 
         assert_eq!(persisted.len(), 2);
         // One node per sentence, in input order, holding the raw slice.
-        assert_eq!(persisted[0].statement, "A session means a sequence of requests.");
+        assert_eq!(
+            persisted[0].statement,
+            "A session means a sequence of requests."
+        );
         assert_eq!(
             persisted[1].statement,
             "When a session expires, the system shall close the session."
@@ -477,6 +483,7 @@ mod tests {
     fn add_without_evidence_is_allowed() {
         let tmp = tempfile::tempdir().unwrap();
         let req = AddRequest {
+            message_id: "no-evidence",
             specification: "When the order ships, the system shall notify the customer.",
             evidence_values: &[],
             now: "t",
@@ -493,6 +500,7 @@ mod tests {
     fn add_rejects_bad_grammar_before_capture() {
         let tmp = tempfile::tempdir().unwrap();
         let req = AddRequest {
+            message_id: "bad-grammar",
             // No pivot word — a precise syntax error.
             specification: "The pump quickly.",
             evidence_values: &["/no/such/file".to_string()],
@@ -533,6 +541,15 @@ mod tests {
             self.inner.get_node(id)
         }
 
+        fn apply_meta_update(
+            &self,
+            node_id: &str,
+            job_id: &str,
+            update: &crate::domain::MetaUpdate,
+        ) -> Result<(), crate::store::StoreError> {
+            self.inner.apply_meta_update(node_id, job_id, update)
+        }
+
         fn delete_node(&self, id: &str) -> Result<(), crate::store::StoreError> {
             self.inner.delete_node(id)
         }
@@ -542,6 +559,7 @@ mod tests {
     fn store_failure_mid_specification_rolls_back_earlier_nodes() {
         let tmp = tempfile::tempdir().unwrap();
         let req = AddRequest {
+            message_id: "store-failure",
             specification: "A session means a sequence of requests. \
                             When a session expires, the system shall close the session.",
             evidence_values: &[],
@@ -556,10 +574,7 @@ mod tests {
             fail_after: 1,
             adds: std::cell::Cell::new(0),
         };
-        assert!(matches!(
-            run(&req, &nodes, &blobs),
-            Err(AddError::Store(_))
-        ));
+        assert!(matches!(run(&req, &nodes, &blobs), Err(AddError::Store(_))));
         // All-or-nothing: no partial specification is left behind.
         assert!(nodes.inner.is_empty());
     }
@@ -570,6 +585,7 @@ mod tests {
         let ev_path = tmp.path().join("note.txt");
         std::fs::write(&ev_path, "grounding note").unwrap();
         let req = AddRequest {
+            message_id: "bare-evidence",
             specification: "The pump shall stop.",
             evidence_values: &[ev_path.to_string_lossy().to_string()],
             now: "t",
@@ -579,5 +595,30 @@ mod tests {
         let (nodes, blobs) = stores(tmp.path());
         let persisted = run(&req, &nodes, &blobs).unwrap();
         assert_eq!(persisted[0].meta.evidence[0].kind, Kind::Unknown);
+    }
+
+    #[test]
+    fn node_identity_is_stable_within_one_mailbox_message() {
+        let tmp = tempfile::tempdir().unwrap();
+        let req = AddRequest {
+            message_id: "same-message",
+            specification: "The pump shall stop.",
+            evidence_values: &[],
+            now: "t",
+            cli: "spec",
+            cli_version: "test",
+        };
+        let (nodes, blobs) = stores(tmp.path());
+        let first = run(&req, &nodes, &blobs).unwrap();
+        let second = run(&req, &nodes, &blobs).unwrap();
+        assert_eq!(first[0].id, second[0].id);
+        assert_eq!(nodes.len(), 1);
+
+        let other = AddRequest {
+            message_id: "another-message",
+            ..req
+        };
+        let third = run(&other, &nodes, &blobs).unwrap();
+        assert_ne!(first[0].id, third[0].id);
     }
 }

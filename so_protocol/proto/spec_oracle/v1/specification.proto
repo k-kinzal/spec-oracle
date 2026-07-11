@@ -5,8 +5,9 @@ syntax = "proto3";
 // The wire carries specifications and their derived readings; the daemon owns
 // the domain. The client is thin: it sends a specification in the constrained
 // specification language plus the (channel-resolved) --evidence values. The
-// daemon parses, captures evidence, enriches origin, persists one node per
-// sentence, and returns the nodes. A node stores the raw sentence text (and
+// daemon's Add Mailbox parses, captures evidence, enriches origin, persists one
+// node per sentence, and returns the nodes. NodeAdded hooks may subsequently
+// merge successful Job results into Meta. A node stores the raw sentence text (and
 // the language version that accepted it); the `SentenceView` on each returned
 // node — speech act, canonical rendering, contract view — is derived at
 // response time and never persisted.
@@ -159,6 +160,19 @@ message Meta {
   string created_at = 2;
   string cli = 3;
   string cli_version = 4;
+  // Successful asynchronous Meta updates. Job scheduling and retry state are
+  // process-local and are never persisted or exposed on the wire.
+  repeated MetaUpdate updates = 5;
+}
+
+message MetaUpdate {
+  // Mailbox-derived Job identity; repeated execution replaces this result.
+  string id = 1;
+  // Stable Plugin/hook name.
+  string source = 2;
+  string applied_at = 3;
+  // Plugin-owned JSON value.
+  string value_json = 4;
 }
 
 message Evidence {

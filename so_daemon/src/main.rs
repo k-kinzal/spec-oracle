@@ -15,7 +15,9 @@ use clap::Parser;
 use tonic::transport::Server;
 use tracing::Instrument;
 
+use so_daemon::add_mailbox::AddMailbox;
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
+use so_daemon::jobs::JobMailbox;
 use so_daemon::service::SpecificationGraphService;
 use so_daemon::store::{FileBlobStore, GraphStore, InMemoryNodeStore};
 use so_protocol::pb::specification_graph_server::SpecificationGraphServer;
@@ -145,19 +147,31 @@ fn run(args: Args) -> anyhow::Result<()> {
         }
     };
 
-    let service = SpecificationGraphService::new(nodes, Arc::new(blobs));
+    let blobs: Arc<dyn so_daemon::store::BlobStore + Send + Sync> = Arc::new(blobs);
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?;
     drop(run_entered);
     runtime.block_on(
-        async {
+        async move {
+            let (jobs, jobs_task) = JobMailbox::start(nodes.clone(), blobs.clone());
+            let (adds, adds_task) = AddMailbox::start(nodes.clone(), blobs, jobs.clone());
+            let service = SpecificationGraphService::new(nodes, adds.clone());
             tracing::info!("specd listening");
-            Server::builder()
+            let serve_result = Server::builder()
                 .add_service(SpecificationGraphServer::new(service))
                 .serve_with_shutdown(args.listen, shutdown_signal())
-                .await
+                .await;
+
+            tracing::info!("draining Add Mailbox");
+            adds.shutdown().await?;
+            adds_task.await?;
+            tracing::info!("draining Job Mailbox");
+            jobs.shutdown().await?;
+            jobs_task.await?;
+            serve_result?;
+            Ok::<(), anyhow::Error>(())
         }
         .instrument(run_span),
     )?;

@@ -8,7 +8,9 @@
 //! (defaulting to `spec_oracle_test`).
 
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
-use so_daemon::domain::{Anchor, Evidence, Kind, Locator, Meta, Node, Origin, Snapshot};
+use so_daemon::domain::{
+    Anchor, Evidence, Kind, Locator, Meta, MetaUpdate, Node, Origin, Snapshot,
+};
 use so_daemon::store::{GraphStore, NodeStore};
 
 fn sample_node(id: &str) -> Node {
@@ -36,6 +38,7 @@ fn sample_node(id: &str) -> Node {
             created_at: "2026-07-05T00:00:00Z".to_string(),
             cli: "spec".to_string(),
             cli_version: "test".to_string(),
+            updates: Default::default(),
         },
     }
 }
@@ -83,6 +86,18 @@ fn arango_round_trip_when_available() {
     // the byte authority, so a fetched node's content is empty.
     assert_eq!(back.meta.evidence[0].snapshot.content, "");
 
+    // Job results merge into Node Meta and are idempotent on the Job ID.
+    let update = MetaUpdate {
+        source: "arango-test".to_string(),
+        applied_at: "2026-07-11T00:00:00Z".to_string(),
+        value: serde_json::json!({"commit": "abc123"}),
+    };
+    store
+        .apply_meta_update(&node.id, "test-job", &update)
+        .expect("apply_meta_update");
+    let updated = store.get_node(&node.id).unwrap().unwrap();
+    assert_eq!(updated.meta.updates["test-job"], update);
+
     // A missing key is a clean `None`, not an error.
     assert!(store
         .get_node("no-such-node-xyzzy")
@@ -99,7 +114,9 @@ fn arango_round_trip_when_available() {
     let mut found = false;
     let mut pages = 0;
     loop {
-        let page = store.list_nodes(cursor.as_deref(), 100).expect("list_nodes");
+        let page = store
+            .list_nodes(cursor.as_deref(), 100)
+            .expect("list_nodes");
         assert!(page.nodes.len() <= 100, "a page never exceeds the limit");
         if page.nodes.iter().any(|n| n.id == node.id) {
             found = true;
