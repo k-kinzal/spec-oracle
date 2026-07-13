@@ -93,12 +93,35 @@ pub fn init(
     service_name: &'static str,
     service_version: &'static str,
 ) -> anyhow::Result<TelemetryGuard> {
+    init_with_console_output(service_name, service_version, true)
+}
+
+/// Initialize tracing and OTLP trace export without writing tracing events to
+/// the process' stdout or stderr.
+///
+/// This is intended for commands whose standard streams are part of their
+/// user-facing interface. Spans are still filtered, propagated, and exported
+/// exactly as they are in [`init`].
+pub fn init_without_console_output(
+    service_name: &'static str,
+    service_version: &'static str,
+) -> anyhow::Result<TelemetryGuard> {
+    init_with_console_output(service_name, service_version, false)
+}
+
+fn init_with_console_output(
+    service_name: &'static str,
+    service_version: &'static str,
+    console_output: bool,
+) -> anyhow::Result<TelemetryGuard> {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         EnvFilter::new("info,h2=warn,hyper=warn,tonic=warn,opentelemetry=warn")
     });
-    let fmt_layer = tracing_subscriber::fmt::layer()
-        .with_writer(std::io::stderr)
-        .compact();
+    let fmt_layer = console_output.then(|| {
+        tracing_subscriber::fmt::layer()
+            .with_writer(std::io::stderr)
+            .compact()
+    });
 
     if otel_disabled() {
         Registry::default()

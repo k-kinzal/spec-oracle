@@ -5,18 +5,20 @@
 //! the serde model the daemon persists; the protobuf messages are the wire
 //! form. This module is the single place that maps one to the other.
 //!
-//! Domain → proto ([`node_to_pb`]) also *derives* the wire-only
+//! Graph-read Domain → proto ([`node_to_pb`]) also *derives* the wire-only
 //! [`pb::SentenceView`] — speech act, canonical rendering, contract view — by
 //! re-parsing the node's raw sentence with the language crate. The view is
-//! computed at response time and never persisted; if the re-parse impossibly
+//! computed at response time using `so-lang` parsing plus `so-reason`
+//! interpretation and never persisted; if the re-parse impossibly
 //! fails (e.g. a row accepted by an older grammar), the view is simply absent —
-//! degrade, never panic. Proto → domain is fallible ([`TryFrom`]) because a
+//! degrade, never panic. The Add response uses [`accepted_node_to_pb`] and
+//! returns stored facts only. Proto → domain is fallible ([`TryFrom`]) because a
 //! message received off the wire may omit a required field or oneof arm; the
 //! derived `sentence` view is ignored on receive.
 
 use crate::domain;
-use so_lang::semantics;
 use so_protocol::pb;
+use so_reason::semantics;
 
 /// A malformed wire message: a required field or oneof arm was absent.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
@@ -106,9 +108,22 @@ fn sentence_view(statement: &str) -> Option<pb::SentenceView> {
 
 fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
     match k {
-        domain::EdgeKind::Refines => pb::EdgeKind::Refines,
-        domain::EdgeKind::Composes => pb::EdgeKind::Composes,
-        domain::EdgeKind::Contradicts => pb::EdgeKind::Contradicts,
+        domain::EdgeKind::MentionsTerm => pb::EdgeKind::MentionsTerm,
+    }
+}
+
+fn vertex_kind_to_pb(kind: domain::VertexKind) -> pb::VertexKind {
+    match kind {
+        domain::VertexKind::Specification => pb::VertexKind::Specification,
+        domain::VertexKind::Term => pb::VertexKind::Term,
+    }
+}
+
+fn text_anchor_to_pb(anchor: &domain::TextAnchor) -> pb::TextAnchor {
+    pb::TextAnchor {
+        selector: anchor.selector.clone(),
+        text: anchor.text.clone(),
+        role: anchor.role.clone(),
     }
 }
 
@@ -121,6 +136,26 @@ pub fn edge_to_pb(e: &domain::Edge) -> pb::Edge {
         source: e.source.clone(),
         target: e.target.clone(),
         kind: edge_kind_to_pb(e.kind) as i32,
+        source_kind: vertex_kind_to_pb(e.source_kind) as i32,
+        target_kind: vertex_kind_to_pb(e.target_kind) as i32,
+        source_anchor: e.source_anchor.as_ref().map(text_anchor_to_pb),
+        target_anchor: e.target_anchor.as_ref().map(text_anchor_to_pb),
+        basis_spec_ids: e.basis_spec_ids.clone(),
+        derivation: Some(pb::Derivation {
+            method: e.derivation.method.clone(),
+            version: e.derivation.version.clone(),
+        }),
+        recorded_at: e.recorded_at.clone(),
+    }
+}
+
+pub fn term_node_to_pb(term: &domain::TermNode) -> pb::TermNode {
+    pb::TermNode {
+        id: term.id.clone(),
+        form: term.form.clone(),
+        head: term.head.clone(),
+        lang_version: term.lang_version.clone(),
+        derivation_version: term.derivation_version.clone(),
     }
 }
 
@@ -262,6 +297,7 @@ fn evidence_from_pb(e: pb::Evidence) -> Result<domain::Evidence, ConvertError> {
 
 fn meta_to_pb(m: &domain::Meta) -> pb::Meta {
     pb::Meta {
+        evidence_requests: m.evidence_requests.clone(),
         evidence: m.evidence.iter().map(evidence_to_pb).collect(),
         created_at: m.created_at.clone(),
         cli: m.cli.clone(),
@@ -281,6 +317,7 @@ fn meta_to_pb(m: &domain::Meta) -> pb::Meta {
 
 fn meta_from_pb(m: pb::Meta) -> Result<domain::Meta, ConvertError> {
     Ok(domain::Meta {
+        evidence_requests: m.evidence_requests,
         evidence: m
             .evidence
             .into_iter()
@@ -317,11 +354,21 @@ fn meta_from_pb(m: pb::Meta) -> Result<domain::Meta, ConvertError> {
 /// Convert a persisted node to its wire form, deriving the response-time
 /// [`pb::SentenceView`] from the raw sentence text.
 pub fn node_to_pb(n: &domain::Node) -> pb::Node {
+    node_to_pb_with_sentence(n, sentence_view(&n.statement))
+}
+
+/// Add-RPC conversion: the synchronous boundary returns stored facts only.
+/// Meaning interpretation is deliberately absent from the acceptance path.
+pub fn accepted_node_to_pb(n: &domain::Node) -> pb::Node {
+    node_to_pb_with_sentence(n, None)
+}
+
+fn node_to_pb_with_sentence(n: &domain::Node, sentence: Option<pb::SentenceView>) -> pb::Node {
     pb::Node {
         id: n.id.clone(),
         statement: n.statement.clone(),
         lang_version: n.lang_version.clone(),
-        sentence: sentence_view(&n.statement),
+        sentence,
         meta: Some(meta_to_pb(&n.meta)),
     }
 }
@@ -354,6 +401,7 @@ mod tests {
             statement: "When the order ships, the system shall notify the customer.".into(),
             lang_version: so_lang::LANG_VERSION.into(),
             meta: Meta {
+                evidence_requests: vec!["src/x.rs:3:7".into()],
                 evidence: vec![
                     Evidence {
                         kind: Kind::Constitutive,
@@ -443,6 +491,16 @@ mod tests {
     }
 
     #[test]
+    fn accepted_node_wire_view_contains_only_stored_facts() {
+        let wire = accepted_node_to_pb(&sample());
+        assert!(wire.sentence.is_none());
+        assert_eq!(
+            wire.meta.unwrap().evidence_requests,
+            ["src/x.rs:3:7".to_string()]
+        );
+    }
+
+    #[test]
     fn contract_guarantee_omits_the_purpose_adjunct() {
         let mut node = sample();
         // Round 11 (fail-closed verb boundary): `stays live` was a
@@ -502,17 +560,28 @@ mod tests {
 
     #[test]
     fn edge_maps_endpoints_and_kind_to_pb() {
-        use crate::domain::{Edge, EdgeKind};
+        use crate::domain::{Derivation, Edge, EdgeKind, VertexKind};
         let edge = Edge {
             id: "e1".into(),
             source: "n1".into(),
+            source_kind: VertexKind::Specification,
             target: "n2".into(),
-            kind: EdgeKind::Refines,
+            target_kind: VertexKind::Specification,
+            kind: EdgeKind::MentionsTerm,
+            source_anchor: None,
+            target_anchor: None,
+            basis_spec_ids: vec![],
+            derivation: Derivation {
+                method: "test".into(),
+                version: "1".into(),
+            },
+            recorded_at: "t".into(),
         };
         let wire = edge_to_pb(&edge);
         assert_eq!(wire.id, "e1");
         assert_eq!(wire.source, "n1");
         assert_eq!(wire.target, "n2");
-        assert_eq!(wire.kind, pb::EdgeKind::Refines as i32);
+        assert_eq!(wire.kind, pb::EdgeKind::MentionsTerm as i32);
+        assert_eq!(wire.source_kind, pb::VertexKind::Specification as i32);
     }
 }

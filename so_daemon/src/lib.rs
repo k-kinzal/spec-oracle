@@ -1,16 +1,16 @@
 //! spec-oracle daemon: evidence capture, persistence, and the gRPC service.
 //!
-//! The daemon ingests a *specification* — one or more sentences of the
-//! constrained specification language — and persists one node per sentence.
-//! A node is a grounded sentence: the raw words (plus the language version
-//! that accepted them) are the stored truth, and the `meta.evidence` captured
-//! here grounds the claim. The assume-guarantee *contract* is a derived
+//! The daemon accepts exactly one constrained-NL sentence per Add and persists
+//! exactly one Specification Node. The raw words (plus the language version
+//! that accepted them) are the immediate stored truth. Raw Evidence requests
+//! are retained on that Node and a post-acceptance Job later appends captured
+//! `meta.evidence`. The assume-guarantee *contract* is a derived
 //! reading of a sentence, not a stored fact: assumption and guarantee are
 //! roles an assertion plays relative to a responsible subject, and pairing a
 //! guarantee with a non-trivial assumption is a graph-level relationship
 //! between sentences — out of scope here. This crate owns everything that
-//! touches the daemon's environment — parsing evidence values, snapshotting
-//! the locator's content, discovering source provenance, and persisting to
+//! touches the daemon's environment — Job-side Evidence interpretation,
+//! snapshotting the locator's content, discovering source provenance, and persisting to
 //! ArangoDB + a blob store — and exposes it over the `spec_oracle.v1` wire
 //! contract via [`service`].
 //!
@@ -25,7 +25,9 @@ pub mod arango;
 pub mod convert;
 pub mod domain;
 pub mod evidence;
+pub mod evidence_capture;
 pub mod github;
+pub mod graph_generation;
 pub mod jobs;
 pub mod mailbox;
 pub mod origin;

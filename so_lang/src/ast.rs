@@ -4,7 +4,7 @@
 //! sentence is made of — speech-act cores, circumstance frames, noun and verb
 //! phrases, thematic roles — and nothing else. It deliberately contains no
 //! assume-guarantee vocabulary: contracts are one *interpretation* of these
-//! structures, defined in [`crate::semantics`], and the syntax must remain
+//! structures, defined by downstream consumers, and the syntax must remain
 //! definable without them.
 //!
 //! The unit of the language is the [`Specification`]: a sequence of sentences,

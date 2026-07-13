@@ -5,14 +5,14 @@
 //! compatibility judgment (6).
 
 use so_lang::ast::*;
-use so_lang::formula::{
+use so_lang::parse::parse;
+use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula, PairingError,
 };
-use so_lang::parse::parse;
-use so_lang::relate::{
+use so_reason::relate::{
     assess, assumption_satisfiable, contradicts, envelope_compatible, implies, Outcome, Ternary,
 };
-use so_lang::semantics::*;
+use so_reason::semantics::*;
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("parse failed for {input:?}: {e}"));

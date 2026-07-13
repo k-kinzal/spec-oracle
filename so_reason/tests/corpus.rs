@@ -3,7 +3,7 @@
 
 use so_lang::ast::*;
 use so_lang::parse::{parse, ParseError};
-use so_lang::semantics::{self, Force, SpeechAct};
+use so_reason::semantics::{self, Force, SpeechAct};
 
 /// Parse an input expected to hold exactly one sentence.
 fn one(input: &str) -> Sentence {

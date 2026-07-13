@@ -3,12 +3,12 @@
 //! as candidate data.
 
 use so_lang::ast::TriggerKind;
-use so_lang::formula::{
+use so_lang::parse::parse;
+use so_reason::formula::{
     applicability, contract_formula, AssumptionSource, AtomRef, EdgeKind, Formula, GuardRole,
 };
-use so_lang::parse::parse;
-use so_lang::relate::{assess, Outcome};
-use so_lang::semantics::{responsible_subject_keys, subject_keys};
+use so_reason::relate::{assess, Outcome};
+use so_reason::semantics::{responsible_subject_keys, subject_keys};
 
 fn one(input: &str) -> so_lang::ast::Sentence {
     parse(input).unwrap().sentences.remove(0)
@@ -352,7 +352,7 @@ fn svo_render_round_trips() {
 
 // ---- change 6: SameSubject becomes candidate data ----------------------------
 
-use so_lang::formula::SubjectRelation;
+use so_reason::formula::SubjectRelation;
 
 /// A shared-key source CONSTRUCTS (the round-6 hard rejection is removed),
 /// carries `SharedKeys`, and is excluded from A — candidate only.

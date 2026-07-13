@@ -8,9 +8,9 @@
 //! 5. `semantics::subject_keys` — tentative textual identity keys.
 
 use so_lang::ast::*;
-use so_lang::formula::{applicability, claim_formula, contract_formula, AtomRef, Formula};
 use so_lang::parse::{parse, ParseError};
-use so_lang::semantics::*;
+use so_reason::formula::{applicability, claim_formula, contract_formula, AtomRef, Formula};
+use so_reason::semantics::*;
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("expected {input:?} to parse, got {e}"));
@@ -647,7 +647,7 @@ fn contract_formula_is_the_sentence_internal_conditional() {
     assert_eq!(c.saturated(), c.guarantee);
     // Round 5: `ContractFormula` carries its typed sources (empty when
     // hand-built without pairing).
-    let paired = so_lang::formula::ContractFormula {
+    let paired = so_reason::formula::ContractFormula {
         assumption: c.guarantee.clone(),
         guarantee: Formula::Top,
         sources: Vec::new(),

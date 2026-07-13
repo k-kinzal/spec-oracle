@@ -11,12 +11,12 @@
 //! 8. Bounded durations (`for at least 30 days`).
 
 use so_lang::ast::Sentence;
-use so_lang::formula::{
+use so_lang::parse::parse;
+use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula, PairingError,
     SubjectRelation,
 };
-use so_lang::parse::parse;
-use so_lang::relate::{assess, contradicts, implies, Outcome, Ternary};
+use so_reason::relate::{assess, contradicts, implies, Outcome, Ternary};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));
@@ -520,7 +520,7 @@ fn vp_alternatives_parse_render_and_derive() {
     let again = one(&s.render());
     assert_eq!(again.core, s.core);
     // The skeleton indexes BOTH alternatives: one atom each.
-    let sk = so_lang::semantics::skeleton(&s).unwrap();
+    let sk = so_reason::semantics::skeleton(&s).unwrap();
     assert_eq!(sk.atoms.len(), 2);
     assert_eq!(sk.atoms[0].words, vec!["accept"]);
     assert_eq!(sk.atoms[1].words, vec!["reject"]);
@@ -532,7 +532,7 @@ fn vp_alternatives_parse_render_and_derive() {
     assert_eq!(disjuncts.len(), 2);
     let anchor = |f: &Formula| match f {
         Formula::Atom {
-            atom: so_lang::formula::AtomRef::Behavior { behavior },
+            atom: so_reason::formula::AtomRef::Behavior { behavior },
         } => behavior.source.clone(),
         other => panic!("expected behavior atom, got {other:?}"),
     };
@@ -540,7 +540,7 @@ fn vp_alternatives_parse_render_and_derive() {
     assert_eq!(anchor(&disjuncts[1]), "the server shall reject the request");
     // Three alternatives work; `be` is a valid item.
     let s = one("The daemon shall either be idle or run the job or stop.");
-    let sk = so_lang::semantics::skeleton(&s).unwrap();
+    let sk = so_reason::semantics::skeleton(&s).unwrap();
     assert_eq!(sk.atoms.len(), 3);
     assert_eq!(sk.atoms[0].words, vec!["idle"]);
 }
@@ -640,7 +640,7 @@ fn alternatives_are_deontic_only() {
     assert!(items.iter().all(|f| matches!(
         f,
         Formula::Atom {
-            atom: so_lang::formula::AtomRef::Admissibility { .. }
+            atom: so_reason::formula::AtomRef::Admissibility { .. }
         }
     )));
     // Capability keeps a single verb phrase: `either` is not a verb there.
@@ -677,10 +677,10 @@ fn vp_alternatives_serialize() {
     assert_eq!(json["core"]["vp"]["items"][0]["verb"], "accept");
     let back: Sentence = serde_json::from_value(json).unwrap();
     assert_eq!(back, s);
-    let sk = so_lang::semantics::skeleton(&s).unwrap();
+    let sk = so_reason::semantics::skeleton(&s).unwrap();
     let json = serde_json::to_value(&sk).unwrap();
     assert_eq!(json["atoms"][1]["words"], serde_json::json!(["reject"]));
-    let back: so_lang::semantics::Skeleton = serde_json::from_value(json).unwrap();
+    let back: so_reason::semantics::Skeleton = serde_json::from_value(json).unwrap();
     assert_eq!(back, sk);
     // A single vp serializes with its `single` tag and round-trips.
     let s = one("The pump shall stop.");
@@ -776,10 +776,10 @@ fn bounded_durations_parse_and_render() {
     assert_eq!(one(&s.render()).core, s.core);
     // Other bounds parse too; the skeleton digests the bound structurally.
     let s = one("The cache shall hold the entry for less than two hours.");
-    let sk = so_lang::semantics::skeleton(&s).unwrap();
+    let sk = so_reason::semantics::skeleton(&s).unwrap();
     assert_eq!(
         sk.atoms[0].roles[0].value,
-        so_lang::semantics::RoleValue::BoundedMeasure {
+        so_reason::semantics::RoleValue::BoundedMeasure {
             op: ComparisonOp::LessThan,
             number: "two".into(),
             unit: Some("hours".into()),

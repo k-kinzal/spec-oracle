@@ -770,8 +770,8 @@ The recognizer is total and never panics, on any `&str`:
   full taxonomy is [errors.md](./errors.md).
 
 These properties are enforced by the test suite:
-[`corpus.rs`](../../so_lang/tests/corpus.rs) pins the acceptance corpus and
-render round-trips, [`attack_conformance.rs`](../../so_lang/tests/attack_conformance.rs)
+[`corpus.rs`](../../so_reason/tests/corpus.rs) pins the acceptance corpus and
+render round-trips, [`attack_conformance.rs`](../../so_reason/tests/attack_conformance.rs)
 pins the deterministic-reading rules and every rejection, and
 [`attack_totality.rs`](../../so_lang/tests/attack_totality.rs) attacks the
 recognizer with multibyte boundaries, punctuation floods, deep nesting, wide

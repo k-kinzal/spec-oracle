@@ -8,7 +8,7 @@
 
 use so_lang::ast::*;
 use so_lang::parse::{parse, ParseError};
-use so_lang::semantics::{self, Claim, Denotation, Force, Polarity, Resolution, SpeechAct};
+use so_reason::semantics::{self, Claim, Denotation, Force, Polarity, Resolution, SpeechAct};
 
 // ---- helpers ------------------------------------------------------------------
 

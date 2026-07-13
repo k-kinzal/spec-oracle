@@ -11,15 +11,16 @@ and the **assume-guarantee contract is a derived reading** of that assertion —
 computed deterministically, with no inference and no human-in-the-loop review,
 never persisted. (Definitions establish vocabulary and permissions merely
 *admit* behavior, so neither carries a lone-sentence contract; a permission
-enters contracts only through pairing, on the environment side.) Every node is also a *grounded* claim: it carries the evidence
-it was ingested from, captured at ingest time.
+enters contracts only through pairing, on the environment side.) A Node is
+accepted before its requested Evidence is captured; grounding is appended by a
+post-acceptance Job.
 
-> **Scope.** The tool ingests (`spec add` — parse a specification, capture its
-> evidence, and persist one node per sentence) and reads the graph back a bounded
-> page at a time (`spec graph`, and the `ui/` graph view). Edges (refinement,
-> composition, conjunction, quotient), strength, the authority/trust registry, and
-> classify/review are deliberately out of scope for now — but the read is already
-> graph-shaped (it returns an `edges` list, empty until edge derivation lands).
+> **Scope.** The tool ingests (`spec add` — parse exactly one sentence and
+> persist exactly one Node), processes Evidence and graph structure through
+> Jobs, and renders the same graph through `spec graph`. NodeAdded generation
+> connects specifications through derived written-term vertices. Those
+> connectors are candidate structure, not semantic identity; refinement,
+> contradiction, and AG pairing remain open graph-side methods.
 
 ## Architecture
 
@@ -29,7 +30,8 @@ they do not depend on each other.
 
 | Crate        | Kind                 | Role                                                                                     |
 | ------------ | -------------------- | ---------------------------------------------------------------------------------------- |
-| `so-lang`    | lib                  | The constrained specification language: a *total* parser over sentences, plus derived semantic interpretations (speech acts, assertions, the assume-guarantee ingest projection). |
+| `so-lang`    | lib                  | The constrained natural-language grammar and its *total* parser. No meaning interpretation or cross-specification reasoning lives here. |
+| `so-reason`  | lib                  | Pure derived interpretations and structural reasoning over `so-lang` parse trees: speech acts, A/G projections, formulas, and conservative judgments. |
 | `so-protocol` | lib                 | Generated `spec_oracle.v1` protobuf messages and tonic gRPC stubs only.                  |
 | `so-daemon`  | lib + `specd`        | Domain model, evidence capture, persistence, domain/protobuf conversion, and gRPC service. |
 | `so-client`  | lib                  | A thin gRPC client; resolves the caller's `@file`/`-`(stdin) input channels.              |
@@ -37,26 +39,30 @@ they do not depend on each other.
 | `so-tracing` | lib                  | Shared tracing/OpenTelemetry setup and gRPC trace propagation.                           |
 | `ui`         | Next.js app          | Graph visualization (Cosmograph, GPU/WebGL). A thin BFF speaks gRPC to `specd`; not a Cargo crate. See [`ui/README.md`](ui/README.md). |
 
-**Capture happens in the daemon.** An Add Mailbox in `specd` parses the
-specification, snapshots what each locator points at, discovers source
-provenance, and persists one node per sentence. A successful save emits an
-in-process `NodeAdded` event; registered hooks create Jobs in a second Mailbox,
-and successful Job results are merged into Node Meta. The client only resolves input
+**Acceptance and processing are separate.** The Add Mailbox in `specd` parses
+exactly one sentence and persists exactly one Node, retaining Evidence
+descriptors verbatim. A successful save emits an in-process `NodeAdded` event;
+registered Jobs then capture Evidence, store snapshot blobs, enrich origin, and
+derive graph structure. Successful results are appended to Node Meta. The
+client only resolves input
 *channels* — reading the descriptor from its own files/stdin — and forwards the
 specification plus the resolved evidence values. One consequence to keep in mind: **a file locator is
 resolved against the daemon's filesystem/git**, so the daemon must run where
 the evidence lives (or where a checkout of it is reachable).
 
 ```text
-spec (CLI) ──▶ so-client ──gRPC──▶ specd Add Mailbox ──▶ ArangoDB + blob store
-  resolves @file/-/inline              │          captures + persists Node
-                                       └─NodeAdded─▶ Job Mailbox ──▶ Meta update
+spec (CLI) ──▶ so-client ──gRPC──▶ specd Add Mailbox ──▶ Specification Node
+  resolves @file/-/inline              │         Parse + persist only
+                                       └─NodeAdded─▶ Job Mailbox
+                                                      ├─ Evidence + blob
+                                                      ├─ origin enrichment
+                                                      └─ graph generation
 ```
 
 ## The language
 
-`spec add` accepts a specification of one or more sentences and rejects
-anything else with a precise syntax error (the parser is *total* —
+`spec add` accepts exactly one constrained-NL sentence and rejects anything
+else with a precise syntax or sentence-count error (the parser is *total* —
 parseability is a language requirement, not a score). Each sentence performs
 one of six speech acts — **definition, description, obligation, prohibition,
 recommendation, permission** — under optional circumstance frames
@@ -89,8 +95,8 @@ Storage is split by concern (both owned by the daemon):
   `#[serde(skip)]`, so bytes never travel into the database — or across the wire
   — only the hash does.
 
-A Mailbox submission receives a random `message_id`; each Node ID is a SHA-256
-derived from that identity and the sentence index. Re-executing work from the
+A Mailbox submission receives a random `message_id`; its one Node ID is a SHA-256
+derived from that identity. Re-executing work from the
 same Mailbox message therefore addresses the same Node, while adding the *same*
 sentence in a separate command still yields a distinct Node. Content-addressing
 applies to blobs independently.
@@ -98,7 +104,8 @@ applies to blobs independently.
 ## In-memory Jobs
 
 The Add and Job Mailboxes are process-local by design. The Add RPC succeeds when
-the Node save succeeds; Job acceptance and completion are separate concerns.
+the one Node save succeeds; Evidence availability and all other Job completion
+are separate concerns.
 Each `NodeAdded` hook derives a stable Job ID from the Event ID and Plugin name.
 The Job manager retains ownership while a worker runs, retries failures and
 worker panics with bounded exponential backoff, and applies successful results
@@ -108,7 +115,8 @@ Graceful shutdown stops gRPC intake, drains the Add Mailbox and its NodeAdded
 events, then drains the Job Mailbox. A Job that continues to fail prevents
 shutdown from completing, preserving the requirement that accepted work reaches
 a consistent result. Job/Event scheduling state is never written to ArangoDB;
-the database continues to contain only graph Nodes and Edges.
+the database contains specification nodes, derived term-form nodes, and
+versioned Edges—not transient queue state.
 
 ## Quickstart
 
@@ -127,19 +135,18 @@ docker compose ps             # wait until arangodb is "healthy"
 #    This also exports the local OpenTelemetry defaults from .env.example.
 set -a; . ./.env; set +a
 
-# 4. Start the ingest daemon. It captures evidence against its own working
+# 4. Start the daemon. Evidence Jobs resolve files against its working
 #    directory, so run it from the repo root. Listens on 127.0.0.1:50051.
 cargo run --bin specd
 
-# 5. In another shell, add your first specification (evidence must point at
-#    something the daemon can read — a file region here is captured and hashed
-#    at ingest).
+# 5. In another shell, add your first specification. The Node is accepted first;
+#    its Evidence Job then captures and hashes the file region.
 cargo run --bin spec -- add \
   "When evidence is captured, the system shall record its content hash." \
   --evidence so_daemon/src/snapshot.rs:1
 ```
 
-The `spec_oracle` database and the `nodes` collection are created
+The `spec_oracle` database and its `nodes`, `term_nodes`, and `edges` collections are created
 automatically by the daemon on first connect — there is no init step in compose.
 
 Reset everything (drops the database volume) with `docker compose down -v`. The
@@ -148,26 +155,32 @@ deleting that directory.
 
 ### Reading the graph
 
-Read the graph back one **bounded page** at a time — never wholesale, so it
-scales from thousands to billions of nodes without change:
+`spec graph` renders the one specification graph in the terminal. With no
+required selector or starting Node, it reads the whole current graph and draws
+its Node/Edge topology directly in the terminal:
 
 ```sh
-# A page of nodes + induced edges, with an opaque cursor to the next page.
-cargo run --bin spec -- graph --page-size 100          # human summary
-cargo run --bin spec -- graph --page-size 100 --json   # {nodes, edges, next_page_token, total_nodes}
-cargo run --bin spec -- graph --page-token <token>     # continue from a prior page
+# Read and draw the whole specification graph.
+cargo run --bin spec -- graph
+
+# Set the terminal drawing width without changing the selected graph.
+cargo run --bin spec -- graph --width 160
 ```
 
-The daemon (`GetGraph` RPC) hard-caps the page size and returns a keyset cursor
-and a cheap total count; the read is graph-shaped now (it carries `edges`, empty
-until edge derivation lands).
+The daemon still returns bounded keyset pages because transport must remain
+bounded. The CLI follows those pages to the end, combines their Specification
+Nodes, connector Nodes, and directed Edges, and then lays out that one graph.
+Paging is an implementation detail of the read; it does not select a finite
+subgraph. Future graph filters belong to optional flags rather than required
+seeds. `--server` selects the daemon and `--width` changes presentation only.
 
 ### Graph view (`ui/`)
 
 A Next.js app visualizes the graph as a force-directed cloud (Cosmograph,
-GPU/WebGL), coloring each node by its speech act. It pages the graph in bounded
-batches and caps what it renders, showing "loaded X of TOTAL". A thin Next.js
-backend-for-frontend speaks gRPC to `specd`, so the browser never needs gRPC.
+GPU/WebGL), coloring each node by its speech act. It is an independent graph
+view and is not launched or controlled by `spec graph`. It pages in bounded
+batches and caps what it renders. A thin Next.js backend-for-frontend speaks
+gRPC to `specd`, so the browser never needs gRPC.
 
 ```sh
 cd ui
@@ -188,13 +201,14 @@ See [`ui/README.md`](ui/README.md) for details.
 
 A locator is an `http(s)://` URL (fetched and snapshotted) or a filesystem path
 with an optional `:line[:col]` suffix (the cited region, with context, is
-captured and hashed). The referenced file or URL must resolve **in the daemon** —
-an unreadable locator fails the ingest.
+captured and hashed). The referenced file or URL is resolved **in the daemon**
+by the asynchronous Evidence Job. An unreadable locator does not roll back the
+accepted specification; the Job remains retryable.
 
 Prefix a value with `@` to read the evidence *descriptor* from a file, or use `-`
 to read it from stdin. These channels are resolved on the **client** (they name
-the client's own streams); the resulting text is then interpreted and the locator
-it names is captured by the daemon.
+the client's own streams); the resulting text is persisted verbatim on the
+Node, then interpreted and captured by the daemon's Evidence Job.
 
 `kind` records the *epistemic kind* of the grounding, one of: `constitutive`,
 `demonstrative`, `testimonial`, `assertoric`, `circumstantial`, `counter`,

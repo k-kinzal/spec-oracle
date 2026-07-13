@@ -11,15 +11,15 @@
 //! finding title.
 
 use so_lang::ast::*;
-use so_lang::formula::{
+use so_lang::parse::{parse, ParseError};
+use so_reason::formula::{
     applicability, claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula,
     PairingError,
 };
-use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{
+use so_reason::relate::{
     assess, assumption_satisfiable, contradicts, envelope_compatible, implies, Outcome, Ternary,
 };
-use so_lang::semantics::*;
+use so_reason::semantics::*;
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("parse failed for {input:?}: {e}"));
@@ -859,7 +859,7 @@ fn the_edge_kind_gates_the_envelope_check_not_the_formula_shape() {
         act: SpeechAct::Permission,
         force: None,
         proven: true,
-        subject_relation: so_lang::formula::SubjectRelation::DisjointKeys,
+        subject_relation: so_reason::formula::SubjectRelation::DisjointKeys,
         // Round 11, change 3: hand-built fixture — explicitness is not
         // what this pin tests.
         explicit_relied: true,

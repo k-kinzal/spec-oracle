@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "so_lang",
+    "so_reason",
     "so_protocol",
     "so_tracing",
     "so_daemon",
@@ -20,6 +21,7 @@ description = "A specification graph in constrained natural language, read throu
 [workspace.dependencies]
 # Internal crates, addressed by path so the workspace builds standalone.
 so-lang = { path = "so_lang" }
+so-reason = { path = "so_reason" }
 so-protocol = { path = "so_protocol" }
 so-daemon = { path = "so_daemon" }
 so-client = { path = "so_client" }
@@ -50,6 +52,7 @@ percent-encoding = "2"
 
 # CLI parsing (daemon flags + `spec` frontend).
 clap = { version = "4", features = ["derive", "env"] }
+ratatui = { version = "0.29", default-features = false }
 
 # Observability: tracing spans exported as OTLP/HTTP to the shared local OTel stack.
 so-tracing = { path = "so_tracing" }

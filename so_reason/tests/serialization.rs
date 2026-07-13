@@ -8,9 +8,11 @@
 //! `Exactly`) — are pinned here as JSON round trips.
 
 use so_lang::ast::{Det, Sentence};
-use so_lang::formula::{applicability, claim_formula, contract_formula, Formula};
 use so_lang::parse::parse;
-use so_lang::semantics::{denote, ingest_contract, skeleton, Denotation, IngestContract, Skeleton};
+use so_reason::formula::{applicability, claim_formula, contract_formula, Formula};
+use so_reason::semantics::{
+    denote, ingest_contract, skeleton, Denotation, IngestContract, Skeleton,
+};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));

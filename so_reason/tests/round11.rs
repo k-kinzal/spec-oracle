@@ -4,10 +4,10 @@
 //! candidates.
 
 use so_lang::ast::ClauseBody;
-use so_lang::formula::{contract_formula, AssumptionSource, ContractFormula, EdgeKind, Formula};
 use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{assumption_satisfiable, refines, Ternary};
-use so_lang::semantics::{skeleton, Quantifier};
+use so_reason::formula::{contract_formula, AssumptionSource, ContractFormula, EdgeKind, Formula};
+use so_reason::relate::{assumption_satisfiable, refines, Ternary};
+use so_reason::semantics::{skeleton, Quantifier};
 
 fn one(input: &str) -> so_lang::ast::Sentence {
     parse(input).unwrap().sentences.remove(0)
@@ -185,13 +185,13 @@ fn clause_skeleton_objects_serde() {
     let clause = &k.guards.trigger.as_ref().unwrap().clauses[0];
     let json = serde_json::to_value(clause).unwrap();
     assert!(json.get("objects").is_some());
-    let back: so_lang::semantics::ClauseSkeleton = serde_json::from_value(json.clone()).unwrap();
+    let back: so_reason::semantics::ClauseSkeleton = serde_json::from_value(json.clone()).unwrap();
     assert_eq!(&back, clause);
     // Legacy: no `objects` field loads as empty — the documented
     // pre-round-11 reading (the old digest dropped the object).
     let mut legacy = json;
     legacy.as_object_mut().unwrap().remove("objects");
-    let back: so_lang::semantics::ClauseSkeleton = serde_json::from_value(legacy).unwrap();
+    let back: so_reason::semantics::ClauseSkeleton = serde_json::from_value(legacy).unwrap();
     assert!(back.objects.is_empty());
     // Empty objects are skipped on the wire.
     let cop = skeleton(&one("While the pump is active, the fan shall run.")).unwrap();
@@ -337,7 +337,7 @@ fn refines_healthy_path_unchanged() {
 
 // ---- change 5: envelope calculus — more refutations ---------------------------
 
-use so_lang::relate::envelope_compatible;
+use so_reason::relate::envelope_compatible;
 
 /// (a) An OBLIGATION whose atom matches the admitted behavior is
 /// compatible evidence — obligation implies admissibility — but the
@@ -394,7 +394,7 @@ fn all_branch_refutation_is_no() {
         .paired(std::slice::from_ref(&envelope));
     // Conjoin the two prohibitions into one guarantee: ¬retry ∧ ¬escalate.
     let no_escalate =
-        so_lang::formula::claim_formula(&one("The client shall not escalate the request."))
+        so_reason::formula::claim_formula(&one("The client shall not escalate the request."))
             .unwrap();
     paired.guarantee = Formula::And {
         items: vec![paired.guarantee.clone(), no_escalate],
@@ -435,7 +435,7 @@ fn single_atom_and_never_description_refutations() {
 
 // ---- change 6: active/passive candidate alignment (proposal-only) -------------
 
-use so_lang::semantics::{normalization_candidates, NormalizationKind};
+use so_reason::semantics::{normalization_candidates, NormalizationKind};
 
 /// The motivating passive: `logged by the daemon` emits active-voice
 /// candidates with subject `daemon` and the LEGISLATED stem list —
@@ -497,7 +497,7 @@ fn passive_description_candidates_and_no_strip_participle() {
     assert_eq!(candidates[0].atom.roles.len(), 1);
     assert_eq!(
         candidates[0].atom.roles[0].kind,
-        so_lang::semantics::RoleKind::Deadline
+        so_reason::semantics::RoleKind::Deadline
     );
 }
 

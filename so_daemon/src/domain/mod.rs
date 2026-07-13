@@ -9,9 +9,11 @@ pub mod locator;
 pub mod node;
 pub mod origin;
 pub mod snapshot;
+pub mod term;
 
-pub use edge::{Edge, EdgeKind};
+pub use edge::{Derivation, Edge, EdgeKind, TextAnchor, VertexKind};
 pub use locator::{Kind, Locator};
 pub use node::{Evidence, Meta, MetaUpdate, Node};
 pub use origin::Origin;
 pub use snapshot::{Anchor, Snapshot};
+pub use term::TermNode;

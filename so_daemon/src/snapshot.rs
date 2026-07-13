@@ -1,7 +1,7 @@
 //! Snapshot capture (provenance sense ②: our own observation).
 //!
-//! When evidence is ingested, the daemon *captures* what the locator pointed at
-//! **at that moment** and hashes it, so the grounding can later be checked for
+//! After a Node is accepted, the Evidence Job *captures* what the locator points
+//! at **at Job execution time** and hashes it, so grounding can later be checked for
 //! drift independently of the live source. This is a self-observed fact: unlike
 //! the source's own provenance (sense ①), the snapshot is something we did and
 //! can stand behind.

@@ -736,20 +736,22 @@ from the input, keeping its surface casing.
 
 ## How errors surface in `spec add`
 
-The grammar is a hard gate, checked first. `specd` parses the specification at
-the start of ingest (`so_daemon/src/add.rs`), before any evidence
-normalization, snapshot, or store access — a syntax error preempts evidence
-capture entirely: no locator is read, no snapshot is taken, and nothing is
-persisted.
+The grammar is the synchronous hard gate. `specd` parses exactly one sentence
+at the start of Add (`so_daemon/src/add.rs`) and persists its Node without
+interpreting Evidence descriptors or reading locators. A syntax or
+sentence-count error prevents the Node from being accepted. After acceptance,
+the Evidence Job performs descriptor interpretation, snapshot, origin, and blob
+I/O independently.
 
 - The daemon rejects the specification with the message
   `syntax error in specification: <message>`, where `<message>` is the exact
   `Display` text from the tables above, and the `spec` CLI prints it on
   stderr.
-- The process exits with **code 2** (`EXIT_USAGE` in `so_cli/src/main.rs`):
-  bad input the caller can fix. The same exit code covers an evidence/locator
-  syntax error; a specification syntax error simply happens first. Runtime
-  failures (connection, capture, store) exit with code 1.
+- The process exits with **code 2** (`EXIT_USAGE` in `so_cli/src/main.rs`) for
+  synchronous specification input the caller can fix. Evidence descriptor or
+  locator failures are durable asynchronous Job results or retries; they do not
+  change the already completed Add exit status. Connection/store failures exit
+  with code 1.
 - On telemetry spans the daemon records the stable `kind()` name as
   `spec.parse.error.kind`, so rejection rates can be broken down by variant
   without capturing specification text.

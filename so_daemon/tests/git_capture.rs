@@ -16,6 +16,8 @@ use std::process::Command;
 
 use so_daemon::add::{self, AddRequest};
 use so_daemon::domain::Anchor;
+use so_daemon::evidence_capture::EvidenceCapturePlugin;
+use so_daemon::jobs::{NodeMetaPlugin, PluginContext};
 use so_daemon::store::{FileBlobStore, InMemoryNodeStore};
 
 fn git(dir: &std::path::Path, args: &[&str]) {
@@ -74,12 +76,25 @@ fn captures_dirty_flag_and_git_author_for_subdir_relative_path() {
         cli: "spec",
         cli_version: "test",
     };
-    let result = add::run(&req, &nodes, &blobs);
+    let node = add::run(&req, &nodes).expect("add should accept the node");
+    assert!(node.meta.evidence.is_empty());
+    let output = EvidenceCapturePlugin
+        .run(
+            &node,
+            &PluginContext {
+                blobs: &blobs,
+                graph: &nodes,
+                now: "2026-07-05T00:00:01Z",
+            },
+        )
+        .expect("Evidence Job should capture the locator");
 
     std::env::set_current_dir(original_cwd).unwrap();
 
-    let persisted = result.expect("add should succeed");
-    let ev = &persisted[0].meta.evidence[0];
+    let evidence = output
+        .evidence
+        .expect("Evidence Job emits captured evidence");
+    let ev = &evidence[0];
 
     // The commit is pinned and the dirty working tree is detected.
     match &ev.snapshot.anchor {

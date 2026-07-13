@@ -23,7 +23,7 @@ use std::sync::Mutex;
 
 use thiserror::Error;
 
-use crate::domain::{Edge, MetaUpdate, Node};
+use crate::domain::{Edge, EdgeKind, MetaUpdate, Node, TermNode};
 
 /// A bounded, keyset-paginated page of nodes.
 ///
@@ -36,6 +36,12 @@ pub struct NodePage {
     pub next_cursor: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct GraphWrite {
+    pub term_inserted: bool,
+    pub edge_inserted: bool,
+}
+
 /// Persists and retrieves individual specification nodes — the write seam the
 /// ingest use case (`spec add`) needs, and nothing more.
 ///
@@ -44,28 +50,23 @@ pub struct NodePage {
 /// write-only backend) is not forced to know about pagination. Growing the read
 /// surface never disturbs this trait or its implementors.
 pub trait NodeStore {
-    /// Persist a node. Idempotent on the Node id: re-persisting the same Add
-    /// command refreshes ingest fields while preserving asynchronous Meta
-    /// updates already applied to that Node.
+    /// Persist an immutable accepted Node. Idempotent on Node id: re-executing
+    /// the same Add command is a no-op and cannot erase later Job results.
     fn add_node(&self, node: &Node) -> Result<(), StoreError>;
 
     /// Fetch a node by id, or `None` if no such node exists.
     fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError>;
 
-    /// Apply one successful Job result to a Node. Idempotent on `job_id`:
-    /// re-execution replaces the same Meta entry and leaves other Job results
-    /// untouched.
-    fn apply_meta_update(
+    /// Atomically persist one successful Job result and, for an Evidence Job,
+    /// replace the current captured-evidence view. The versioned Job update
+    /// retains the complete capture as append-only history.
+    fn apply_job_result(
         &self,
         node_id: &str,
         job_id: &str,
         update: &MetaUpdate,
+        evidence: Option<&[crate::domain::Evidence]>,
     ) -> Result<(), StoreError>;
-
-    /// Remove a node by id. Idempotent: deleting an absent id succeeds.
-    /// Ingest uses this to roll back already-persisted sentences when a later
-    /// sentence of the same specification fails to persist.
-    fn delete_node(&self, id: &str) -> Result<(), StoreError>;
 }
 
 /// Reads the graph topology back, a bounded page at a time.
@@ -73,13 +74,23 @@ pub trait NodeStore {
 /// Separated from [`NodeStore`] (which it extends) so only the graph read path
 /// depends on it. It is deliberately paginated: the graph can hold billions of
 /// nodes, so there is no "return everything" method — only [`list_nodes`], a
-/// bounded keyset page. Edges have no producer yet (the model is all vertices),
-/// but [`list_edges`] is present so the read is graph-shaped ahead of edge
-/// derivation; it returns an empty set until an edge collection lands.
+/// bounded keyset page. Derived term vertices and mention edges are exposed
+/// alongside each specification page.
 ///
 /// [`list_nodes`]: GraphStore::list_nodes
 /// [`list_edges`]: GraphStore::list_edges
 pub trait GraphStore: NodeStore {
+    /// Idempotently persist one derived term form and the specification's
+    /// anchored mention edge to it.
+    fn put_term_mention(&self, term: &TermNode, edge: &Edge) -> Result<GraphWrite, StoreError>;
+
+    /// Idempotently append one graph-established edge. Stable derivation-derived
+    /// ids turn retries into no-ops; a changed derivation version creates new
+    /// history rather than overwriting old topology.
+    fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError>;
+
+    fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError>;
+
     /// Read one bounded page of nodes, ordered by a stable key.
     ///
     /// Keyset pagination: `after` is the cursor from a prior page's
@@ -89,17 +100,19 @@ pub trait GraphStore: NodeStore {
     /// `next_cursor` is `Some` iff at least one more node follows.
     fn list_nodes(&self, after: Option<&str>, limit: usize) -> Result<NodePage, StoreError>;
 
-    /// Best-effort total node count for the whole graph. Must be cheap at any
-    /// scale (a maintained count, never a full scan): it exists so a caller can
-    /// show progress without ever fetching every node.
+    /// Best-effort total count of authored specification nodes. Must be cheap
+    /// at any scale (a maintained count, never a full scan): derived historical
+    /// vertices do not distort specification-page progress.
     fn count_nodes(&self) -> Result<u64, StoreError>;
 
-    /// The edges induced among a set of nodes (both endpoints in `among`).
-    ///
-    /// Returns empty today — the model has no edges yet — but the seam is here
-    /// so the read is graph-shaped: when refinement/composition/contradiction
-    /// edges land, this returns the ones internal to the page the caller passes.
-    fn list_edges(&self, among: &[String]) -> Result<Vec<Edge>, StoreError>;
+    /// Current-generation edges for a specification page. Mention edges include
+    /// their adjacent term endpoint; future semantic edges require both
+    /// specification endpoints in the supplied set.
+    fn list_edges(
+        &self,
+        among: &[String],
+        derivation_version: &str,
+    ) -> Result<Vec<Edge>, StoreError>;
 }
 
 /// Stores content-addressed snapshot bytes, keyed by their SHA-256 hex hash.
@@ -202,6 +215,8 @@ impl BlobStore for FileBlobStore {
 #[derive(Default)]
 pub struct InMemoryNodeStore {
     nodes: Mutex<BTreeMap<String, Node>>,
+    terms: Mutex<BTreeMap<String, TermNode>>,
+    edges: Mutex<BTreeMap<String, Edge>>,
 }
 
 impl InMemoryNodeStore {
@@ -225,11 +240,7 @@ impl InMemoryNodeStore {
 impl NodeStore for InMemoryNodeStore {
     fn add_node(&self, node: &Node) -> Result<(), StoreError> {
         let mut nodes = self.nodes.lock().expect("node store mutex poisoned");
-        let mut stored = node.clone();
-        if let Some(existing) = nodes.get(&node.id) {
-            stored.meta.updates = existing.meta.updates.clone();
-        }
-        nodes.insert(node.id.clone(), stored);
+        nodes.entry(node.id.clone()).or_insert_with(|| node.clone());
         Ok(())
     }
 
@@ -242,30 +253,61 @@ impl NodeStore for InMemoryNodeStore {
             .cloned())
     }
 
-    fn apply_meta_update(
+    fn apply_job_result(
         &self,
         node_id: &str,
         job_id: &str,
         update: &MetaUpdate,
+        evidence: Option<&[crate::domain::Evidence]>,
     ) -> Result<(), StoreError> {
         let mut nodes = self.nodes.lock().expect("node store mutex poisoned");
         let node = nodes
             .get_mut(node_id)
             .ok_or_else(|| StoreError::MissingNode(node_id.to_string()))?;
+        if let Some(evidence) = evidence {
+            node.meta.evidence = evidence.to_vec();
+        }
         node.meta.updates.insert(job_id.to_string(), update.clone());
-        Ok(())
-    }
-
-    fn delete_node(&self, id: &str) -> Result<(), StoreError> {
-        self.nodes
-            .lock()
-            .expect("node store mutex poisoned")
-            .remove(id);
         Ok(())
     }
 }
 
 impl GraphStore for InMemoryNodeStore {
+    fn put_term_mention(&self, term: &TermNode, edge: &Edge) -> Result<GraphWrite, StoreError> {
+        let term_inserted = self
+            .terms
+            .lock()
+            .expect("term store mutex poisoned")
+            .insert(term.id.clone(), term.clone())
+            .is_none();
+        let mut edges = self.edges.lock().expect("edge store mutex poisoned");
+        let edge_inserted = if edges.contains_key(&edge.id) {
+            false
+        } else {
+            edges.insert(edge.id.clone(), edge.clone());
+            true
+        };
+        Ok(GraphWrite {
+            term_inserted,
+            edge_inserted,
+        })
+    }
+
+    fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError> {
+        let mut edges = self.edges.lock().expect("edge store mutex poisoned");
+        if edges.contains_key(&edge.id) {
+            Ok(false)
+        } else {
+            edges.insert(edge.id.clone(), edge.clone());
+            Ok(true)
+        }
+    }
+
+    fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError> {
+        let terms = self.terms.lock().expect("term store mutex poisoned");
+        Ok(ids.iter().filter_map(|id| terms.get(id).cloned()).collect())
+    }
+
     fn list_nodes(&self, after: Option<&str>, limit: usize) -> Result<NodePage, StoreError> {
         let nodes = self.nodes.lock().expect("node store mutex poisoned");
         // The BTreeMap iterates in sorted key order — the keyset order — so this
@@ -292,9 +334,24 @@ impl GraphStore for InMemoryNodeStore {
         Ok(self.nodes.lock().expect("node store mutex poisoned").len() as u64)
     }
 
-    fn list_edges(&self, _among: &[String]) -> Result<Vec<Edge>, StoreError> {
-        // No edges are produced yet; the graph is all vertices.
-        Ok(Vec::new())
+    fn list_edges(
+        &self,
+        among: &[String],
+        derivation_version: &str,
+    ) -> Result<Vec<Edge>, StoreError> {
+        let among: std::collections::BTreeSet<&str> = among.iter().map(String::as_str).collect();
+        Ok(self
+            .edges
+            .lock()
+            .expect("edge store mutex poisoned")
+            .values()
+            .filter(|edge| {
+                edge.derivation.version == derivation_version
+                    && edge.kind == EdgeKind::MentionsTerm
+                    && among.contains(edge.source.as_str())
+            })
+            .cloned()
+            .collect())
     }
 }
 
@@ -349,6 +406,7 @@ mod tests {
             statement: "The pump shall stop.".to_string(),
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
+                evidence_requests: vec![],
                 evidence: vec![],
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),
@@ -377,8 +435,10 @@ mod tests {
             applied_at: "t2".to_string(),
             value: serde_json::json!({"attempt": 2}),
         };
-        store.apply_meta_update("n1", "job-1", &first).unwrap();
-        store.apply_meta_update("n1", "job-1", &second).unwrap();
+        store.apply_job_result("n1", "job-1", &first, None).unwrap();
+        store
+            .apply_job_result("n1", "job-1", &second, None)
+            .unwrap();
 
         let node = store.get_node("n1").unwrap().unwrap();
         assert_eq!(node.meta.updates.len(), 1);
@@ -397,6 +457,7 @@ mod tests {
             statement: "The pump shall stop.".to_string(),
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
+                evidence_requests: vec![],
                 evidence: vec![],
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),
@@ -469,9 +530,43 @@ mod tests {
     }
 
     #[test]
-    fn list_edges_is_empty_until_edges_exist() {
+    fn graph_structure_is_idempotent_and_page_edges_are_queryable() {
         let store = InMemoryNodeStore::new();
         store.add_node(&node_with_id("a")).unwrap();
-        assert!(store.list_edges(&["a".to_string()]).unwrap().is_empty());
+        let term = TermNode {
+            id: "term-stop".into(),
+            form: "stop command".into(),
+            head: "command".into(),
+            lang_version: "v".into(),
+            derivation_version: "g1".into(),
+        };
+        let edge = Edge {
+            id: "mention-a-stop".into(),
+            source: "a".into(),
+            source_kind: crate::domain::VertexKind::Specification,
+            target: term.id.clone(),
+            target_kind: crate::domain::VertexKind::Term,
+            kind: EdgeKind::MentionsTerm,
+            source_anchor: None,
+            target_anchor: None,
+            basis_spec_ids: vec![],
+            derivation: crate::domain::Derivation {
+                method: "test".into(),
+                version: "g1".into(),
+            },
+            recorded_at: "t".into(),
+        };
+        assert_eq!(
+            store.put_term_mention(&term, &edge).unwrap(),
+            GraphWrite {
+                term_inserted: true,
+                edge_inserted: true
+            }
+        );
+        assert_eq!(
+            store.put_term_mention(&term, &edge).unwrap(),
+            GraphWrite::default()
+        );
+        assert_eq!(store.list_edges(&["a".into()], "g1").unwrap(), vec![edge]);
     }
 }

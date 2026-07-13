@@ -15,7 +15,7 @@
 
 use so_lang::ast::*;
 use so_lang::parse::{parse, ParseError};
-use so_lang::semantics::{
+use so_reason::semantics::{
     self, denote, ingest_contract, skeleton, CountOp, Denotation, Force, Polarity, Quantifier,
     SpeechAct,
 };

@@ -4,12 +4,12 @@
 //! (`is able to`), and `until` roles.
 
 use so_lang::ast::*;
-use so_lang::formula::{
+use so_lang::parse::{parse, ParseError};
+use so_reason::formula::{
     applicability, claim_formula, contract_formula, AssumptionSource, AtomRef, BehaviorAtom,
     ContractFormula, EdgeKind, Formula,
 };
-use so_lang::parse::{parse, ParseError};
-use so_lang::semantics::{
+use so_reason::semantics::{
     denote, force, ingest_contract, skeleton, speech_act, Claim, Denotation, Polarity, Quantifier,
     RoleKind, RoleValue, SpeechAct,
 };

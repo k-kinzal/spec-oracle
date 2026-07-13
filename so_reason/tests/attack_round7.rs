@@ -32,12 +32,12 @@
 //!   rejected in SUBJECT position, against change 5's full-tail promise.
 
 use so_lang::ast::{ClauseBody, Core, Measure, NpGroup, Predicate, RelativeBody, RolePp, Sentence};
-use so_lang::formula::{
+use so_lang::parse::{parse, ParseError};
+use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula, PairingError,
 };
-use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
-use so_lang::semantics::skeleton;
+use so_reason::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
+use so_reason::semantics::skeleton;
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("parse {input:?}: {e}"));
@@ -166,7 +166,7 @@ fn similar_guard_clauses_differing_in_object_stay_unknown() {
 
 /// SUPERSEDED (round 10, change 4 — this was the conscious change the
 /// round-7 pin awaited): the frame FAMILY and the trigger KIND are now
-/// part of guard-atom identity ([`so_lang::formula::GuardRole`]). `When
+/// part of guard-atom identity ([`so_reason::formula::GuardRole`]). `When
 /// X` / `If X, then` / `While X` / `Where X` over the same clause words
 /// are DIFFERENT conditions — a span the condition holds throughout vs
 /// the instant it becomes true vs a spatial scope — and the round-7
@@ -1362,7 +1362,7 @@ fn seeded_fuzz_over_round7_constructs_is_total() {
             let _ = skeleton(&s);
             let _ = claim_formula(&s);
             let _ = contract_formula(&s);
-            let _ = so_lang::semantics::subject_keys(&s);
+            let _ = so_reason::semantics::subject_keys(&s);
             accepted.push(s);
         }
     }

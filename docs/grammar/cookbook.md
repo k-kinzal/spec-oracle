@@ -6,7 +6,7 @@ A skimmable gallery of specifications the [total
 recognizer](./README.md#philosophy-a-total-recognizer) accepts, followed by the
 constructions it deliberately rejects and their canonical rewrites. Every
 accepted example below parses today: the core of the gallery is the acceptance
-corpus in [`so_lang/tests/corpus.rs`](../../so_lang/tests/corpus.rs), held
+corpus in [`so_lang/tests/corpus.rs`](../../so_reason/tests/corpus.rs), held
 green as the grammar evolves, and the remainder is verified directly against
 the recognizer. Every rejected example names the exact `ParseError` kind the
 code returns. For the rules behind the examples, follow the links to

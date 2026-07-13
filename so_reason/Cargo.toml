@@ -1,0 +1,17 @@
+[package]
+name = "so-reason"
+version.workspace = true
+edition.workspace = true
+description = "Derived interpretations and structural reasoning over parsed specifications."
+
+[lib]
+name = "so_reason"
+path = "src/lib.rs"
+
+[dependencies]
+so-lang.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

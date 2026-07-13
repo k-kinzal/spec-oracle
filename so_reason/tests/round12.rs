@@ -4,13 +4,13 @@
 //! capability guard objects.
 
 use so_lang::ast::Sentence;
-use so_lang::formula::{
+use so_lang::parse::parse;
+use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, SourceIssue, SourceIssueReason,
     WellFormedness,
 };
-use so_lang::parse::parse;
-use so_lang::relate::{assess, refines, Outcome, Ternary};
-use so_lang::semantics::{references, AntecedentCandidate, Resolution};
+use so_reason::relate::{assess, refines, Outcome, Ternary};
+use so_reason::semantics::{references, AntecedentCandidate, Resolution};
 
 fn one(input: &str) -> Sentence {
     parse(input).unwrap().sentences.remove(0)
@@ -401,7 +401,7 @@ fn ambiguous_resolution_serde_shape() {
 /// numeric value (quantifiers render digits, as always).
 #[test]
 fn extended_number_words_parse_as_counts() {
-    use so_lang::semantics::{skeleton, CountOp, Quantifier};
+    use so_reason::semantics::{skeleton, CountOp, Quantifier};
     for (word, n) in [
         ("eleven", 11),
         ("twelve", 12),
@@ -540,7 +540,7 @@ fn extended_measure_words_round_trip_and_ground() {
 #[test]
 fn participle_stem_ordering_round12() {
     let stems = |text: &str| -> Vec<String> {
-        so_lang::semantics::normalization_candidates(&one(text))
+        so_reason::semantics::normalization_candidates(&one(text))
             .into_iter()
             .map(|c| c.atom.words[0].clone())
             .collect()
@@ -596,7 +596,7 @@ fn participle_stem_ordering_round12() {
 /// hold-the-token guards differ in the index now.
 #[test]
 fn capability_guard_objects_digest() {
-    use so_lang::semantics::{skeleton, Quantifier};
+    use so_reason::semantics::{skeleton, Quantifier};
     let a = one("While the client is able to hold the lock, the gateway shall throttle the queue.");
     let b =
         one("While the client is able to hold the token, the gateway shall throttle the queue.");
@@ -616,7 +616,7 @@ fn capability_guard_objects_digest() {
 /// object.
 #[test]
 fn copular_guard_objects_stay_empty() {
-    use so_lang::semantics::skeleton;
+    use so_reason::semantics::skeleton;
     let s = one("While the pump is active, the gateway shall throttle the queue.");
     let g = skeleton(&s).unwrap().guards.states.remove(0);
     assert!(g.objects.is_empty());

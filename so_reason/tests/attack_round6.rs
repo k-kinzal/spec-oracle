@@ -8,13 +8,13 @@
 //! each carries its finding title.
 
 use so_lang::ast::*;
-use so_lang::formula::{
+use so_lang::parse::{parse, ParseError};
+use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, AtomRef, ContractFormula, EdgeKind, Formula,
     PairingError, SubjectRelation,
 };
-use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
-use so_lang::semantics::{skeleton, RoleValue, Skeleton};
+use so_reason::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
+use so_reason::semantics::{skeleton, RoleValue, Skeleton};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));
@@ -1372,10 +1372,10 @@ fn seeded_fuzz_over_round6_vocabulary_is_total() {
                 sentence.source
             );
             // Every derivation is total on accepted sentences.
-            let _ = so_lang::semantics::speech_act(&sentence);
-            let _ = so_lang::semantics::denote(&sentence);
+            let _ = so_reason::semantics::speech_act(&sentence);
+            let _ = so_reason::semantics::denote(&sentence);
             let _ = skeleton(&sentence);
-            let _ = so_lang::semantics::subject_keys(&sentence);
+            let _ = so_reason::semantics::subject_keys(&sentence);
             let _ = claim_formula(&sentence);
             if let Some(c) = contract_formula(&sentence) {
                 let _ = c.saturated();

@@ -2,7 +2,7 @@
 name = "so-lang"
 version.workspace = true
 edition.workspace = true
-description = "The constrained specification language: parser, AST, and derived semantic interpretations."
+description = "The constrained natural-language grammar and parser."
 
 [lib]
 name = "so_lang"
@@ -11,6 +11,3 @@ path = "src/lib.rs"
 [dependencies]
 serde.workspace = true
 thiserror.workspace = true
-
-[dev-dependencies]
-serde_json.workspace = true

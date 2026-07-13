@@ -51,7 +51,6 @@
 //! that can only turn some `Unknown`s into `Yes`/`No`; they will never be
 //! needed to trust a `Yes` produced here.
 
-use crate::ast::{ComparisonOp, Sentence};
 use crate::formula::{
     applicability, claim_formula, contract_formula, AtomRef, ContractFormula, Formula, Proposition,
 };
@@ -60,6 +59,7 @@ use crate::semantics::{
     Quantifier, RoleKind, RoleSkeleton, RoleValue, SpeechAct,
 };
 use serde::{Deserialize, Serialize};
+use so_lang::ast::{ComparisonOp, Sentence};
 
 /// A conservative three-valued judgment. `Unknown` means "the structural
 /// rules cannot decide" — it is not evidence of absence and MUST never be
@@ -103,7 +103,7 @@ pub fn implies(a: &Formula, b: &Formula) -> Ternary {
 /// `No` therefore means "these two are the same claim", not "this claim is
 /// consistent". Round 9: the grammar no longer produces the one such
 /// formula it used to — a written DESCENDING `between` (`between 6 and
-/// 4`) is now [`crate::parse::ParseError::DescendingBetween`], the
+/// 4`) is now [`so_lang::parse::ParseError::DescendingBetween`], the
 /// typo-shield at parse time — but a HAND-BUILT empty interval still
 /// self-contradicts at `Yes` (the exclusion rule fires before the
 /// syntactic-equality `No`) and vacuously implies every same-subject

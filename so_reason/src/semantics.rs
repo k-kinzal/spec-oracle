@@ -1,6 +1,6 @@
 //! Interpretations derived over the parsed sentence structure.
 //!
-//! The syntax in [`crate::ast`] says what a sentence *is*; this module says
+//! The syntax in [`so_lang::ast`] says what a sentence *is*; this module says
 //! what a sentence *does* — its speech act, its normative force, its assertion
 //! content — and finally projects it into the assume-guarantee reading.
 //!
@@ -22,8 +22,8 @@
 //! Everything here is a derived view over the words; the words remain the
 //! source of truth.
 
-use crate::ast::*;
 use serde::{Deserialize, Serialize};
+use so_lang::ast::*;
 
 /// The specification act a sentence performs.
 ///
@@ -581,7 +581,7 @@ pub enum RoleKind {
 #[serde(tag = "kind", rename_all = "snake_case")]
 // The clause variant carries a whole nested [`ClauseSkeleton`] (round 8);
 // boxing it would break destructuring sites for a size win that does not
-// matter at these volumes — see the note on [`crate::ast::VpGroup`].
+// matter at these volumes — see the note on [`so_lang::ast::VpGroup`].
 #[allow(clippy::large_enum_variant)]
 pub enum RoleValue {
     /// Noun-phrase roles: one digest per item, coordination included, each
@@ -767,7 +767,7 @@ pub fn skeleton(sentence: &Sentence) -> Option<Skeleton> {
     // (deontic `not` / description `never` / subject `no`) is XOR-composed by
     // [`combined_polarity`] in [`denote`]. An admissible claim carries no
     // claim-level site; its subject still composes (unreachable through
-    // [`crate::parse::parse`], which rejects `no` under `may`, but a
+    // [`so_lang::parse::parse`], which rejects `no` under `may`, but a
     // hand-built tree gets the same rule).
     let polarity = claim_polarity(&assertion.claim, &assertion.subject);
     let atoms = claim_atoms(&assertion.claim);
@@ -851,7 +851,7 @@ pub(crate) fn subject_skeleton_of(np: &Np) -> SubjectSkeleton {
 /// round 5 — capability claims already carry it (XOR-composed by
 /// [`combined_polarity`] in [`denote`]); an admissible claim has no
 /// claim-level site, but its subject still composes (unreachable through
-/// [`crate::parse::parse`], which rejects `no` under `may`, but a
+/// [`so_lang::parse::parse`], which rejects `no` under `may`, but a
 /// hand-built tree gets the same rule).
 pub(crate) fn claim_polarity(claim: &Claim, subject: &NpGroup) -> Polarity {
     match claim {
@@ -1950,7 +1950,7 @@ fn measure_nps<'a>(measure: &'a Measure, out: &mut Vec<&'a Np>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::parse;
+    use so_lang::parse::parse;
 
     fn sentence(input: &str) -> Sentence {
         parse(input).unwrap().sentences.remove(0)

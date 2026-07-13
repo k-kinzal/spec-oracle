@@ -28,7 +28,10 @@ export async function GET(req: NextRequest) {
   try {
     const page = await getGraph(pageSize, pageToken);
     return NextResponse.json({
-      nodes: (page.nodes ?? []).map(toNode),
+      nodes: [
+        ...(page.nodes ?? []).map(toNode),
+        ...(page.term_nodes ?? []).map(toTermNode),
+      ],
       edges: (page.edges ?? []).map(toEdge),
       nextPageToken: page.next_page_token ?? "",
       totalNodes: Number(page.total_nodes ?? 0),
@@ -53,9 +56,7 @@ const SPEECH_ACTS: Record<string, SpeechAct> = {
 };
 
 const EDGE_KINDS: Record<string, EdgeKind> = {
-  EDGE_KIND_REFINES: "refines",
-  EDGE_KIND_COMPOSES: "composes",
-  EDGE_KIND_CONTRADICTS: "contradicts",
+  EDGE_KIND_MENTIONS_TERM: "mentions_term",
 };
 
 function toNode(raw: unknown): GraphNode {
@@ -63,15 +64,29 @@ function toNode(raw: unknown): GraphNode {
     id?: string;
     statement?: string;
     sentence?: { speech_act?: string } | null;
-    meta?: { evidence?: unknown[] } | null;
+    meta?: { evidence?: unknown[]; evidence_requests?: unknown[] } | null;
   };
   return {
     id: n.id ?? "",
+    nodeKind: "specification",
     statement: n.statement ?? "",
     // A node whose text no longer parses under the current grammar has no
     // derived sentence view; it degrades to "unknown" rather than vanishing.
     speechAct: SPEECH_ACTS[n.sentence?.speech_act ?? ""] ?? "unknown",
     evidenceCount: n.meta?.evidence?.length ?? 0,
+    evidenceRequestCount: n.meta?.evidence_requests?.length ?? 0,
+  };
+}
+
+function toTermNode(raw: unknown): GraphNode {
+  const term = raw as { id?: string; form?: string };
+  return {
+    id: term.id ?? "",
+    nodeKind: "term",
+    statement: term.form ?? "",
+    speechAct: "unknown",
+    evidenceCount: 0,
+    evidenceRequestCount: 0,
   };
 }
 

@@ -5,45 +5,40 @@ syntax = "proto3";
 // The wire carries specifications and their derived readings; the daemon owns
 // the domain. The client is thin: it sends a specification in the constrained
 // specification language plus the (channel-resolved) --evidence values. The
-// daemon's Add Mailbox parses, captures evidence, enriches origin, persists one
-// node per sentence, and returns the nodes. NodeAdded hooks may subsequently
-// merge successful Job results into Meta. A node stores the raw sentence text (and
+// daemon's Add Mailbox parses exactly one sentence, persists exactly one Node,
+// and returns it. NodeAdded Jobs subsequently capture Evidence and derive all
+// other structure. A node stores the raw sentence text (and
 // the language version that accepted it); the `SentenceView` on each returned
 // node — speech act, canonical rendering, contract view — is derived at
 // response time and never persisted.
 package spec_oracle.v1;
 
 // The specification graph service. It ingests specifications and reads the
-// graph back a bounded page at a time; edge derivation (refinement/composition/
-// contradiction) attaches behind the already graph-shaped read.
+// graph back a bounded page at a time. NodeAdded graph generation connects
+// specifications through written term-form vertices.
 service SpecificationGraph {
-  // Ingest a specification (one or more sentences) with shared evidence;
-  // returns one persisted node per sentence, in input order. Persistence is
-  // all-or-nothing per request: on failure the daemon rolls back (best-effort)
-  // any nodes already persisted for the request, so a failed call leaves no
-  // partial specification behind and can simply be retried. Errors surface as
-  // gRPC statuses: INVALID_ARGUMENT for bad input (syntax, evidence values, a
-  // missing evidence file or out-of-range line — user-fixable), INTERNAL for
-  // other capture failures and store failures (environment/runtime).
+  // Parse exactly one specification sentence and persist exactly one Node.
+  // Evidence descriptors are opaque Job input on this path: no locator I/O,
+  // snapshot, origin enrichment, or graph derivation occurs before the reply.
+  // Syntax/sentence-count errors are INVALID_ARGUMENT; store failures are
+  // INTERNAL.
   rpc AddSpecification(AddSpecificationRequest) returns (AddSpecificationResponse);
 
   // Read the specification graph one bounded page at a time. The graph can hold
   // billions of nodes, so there is deliberately no "return everything" call:
   // the caller walks the graph with keyset pagination (an opaque `page_token`),
-  // and the server hard-caps the page size. The response is graph-shaped — it
-  // carries `edges` alongside `nodes` — even though edges are not yet part of
-  // the model (the list is empty today, populated the moment edge derivation
-  // lands, without a wire change). Store/runtime failures surface as INTERNAL.
+  // and the server hard-caps the page size. Each specification page includes
+  // its adjacent term-form vertices and checked edges.
   rpc GetGraph(GetGraphRequest) returns (GetGraphResponse);
+
 }
 
 message AddSpecificationRequest {
-  // The specification in the constrained specification language — one or more
-  // sentences, e.g.
+  // Exactly one sentence in the constrained specification language, e.g.
   // "When the order is submitted, the system shall record the total."
   string specification = 1;
-  // Evidence values, shared by every sentence of the specification. Each is a
-  // JSON object/array (kind + locator [+ origin]) or a bare locator string.
+  // Opaque Evidence Job inputs. Each conventionally contains a JSON
+  // object/array (kind + locator [+ origin]) or a bare locator string.
   // `@file`/`-`(stdin) channels are resolved client-side to text before
   // sending — the daemon never reads the client's stdin/files.
   repeated string evidence = 2;
@@ -54,8 +49,7 @@ message AddSpecificationRequest {
 }
 
 message AddSpecificationResponse {
-  // One node per input sentence, in input order.
-  repeated Node nodes = 1;
+  Node node = 1;
 }
 
 // ---- graph read ------------------------------------------------------------
@@ -75,40 +69,73 @@ message GetGraphRequest {
 message GetGraphResponse {
   // A bounded page of nodes, ordered by a stable key so paging is deterministic.
   repeated Node nodes = 1;
-  // The edges induced among the nodes on this page (both endpoints present).
-  // Empty today — edges are not yet part of the model — but the graph shape is
-  // stable, so a client renders edges the moment they exist.
+  // Current derived edges adjacent to the specification nodes on this page.
+  // A mention edge's TermNode endpoint is supplied in term_nodes below.
   repeated Edge edges = 2;
   // Opaque token to fetch the next page; empty when this is the last page.
   string next_page_token = 3;
-  // Best-effort total node count for the whole graph (maintained count, not a
-  // scan), so a client can show scale and progress without fetching every node.
+  // Best-effort total authored-specification count (maintained count, not a
+  // scan), so a client can show paging progress without fetching every node.
   uint64 total_nodes = 4;
+  // Term forms adjacent to the specifications in this page. A TermNode records
+  // normalized written vocabulary, never real-world referent identity.
+  repeated TermNode term_nodes = 5;
+  reserved 6;
 }
 
-// A derived relationship between two specification nodes. Not yet produced —
-// the shape exists so the read is graph-shaped ahead of edge derivation.
+message TermNode {
+  string id = 1;
+  string form = 2;
+  string head = 3;
+  string lang_version = 4;
+  string derivation_version = 5;
+}
+
+enum VertexKind {
+  VERTEX_KIND_UNSPECIFIED = 0;
+  VERTEX_KIND_SPECIFICATION = 1;
+  VERTEX_KIND_TERM = 2;
+}
+
+message TextAnchor {
+  string selector = 1;
+  string text = 2;
+  string role = 3;
+}
+
+message Derivation {
+  string method = 1;
+  string version = 2;
+}
+
+// One checked binary claim. Candidate overlap, Unknown, and NotSearched are
+// deliberately not graph topology.
 message Edge {
   string id = 1;
-  // Source and target node ids.
   string source = 2;
   string target = 3;
   EdgeKind kind = 4;
+  VertexKind source_kind = 5;
+  VertexKind target_kind = 6;
+  optional TextAnchor source_anchor = 7;
+  optional TextAnchor target_anchor = 8;
+  repeated string basis_spec_ids = 9;
+  Derivation derivation = 10;
+  string recorded_at = 11;
 }
 
 // The kind of relationship an edge asserts. Grounded in the graph vocabulary:
-// one statement refining another, two composing, two in contradiction.
+// term incidence or a proved semantic relationship.
 enum EdgeKind {
   EDGE_KIND_UNSPECIFIED = 0;
-  EDGE_KIND_REFINES = 1;
-  EDGE_KIND_COMPOSES = 2;
-  EDGE_KIND_CONTRADICTS = 3;
+  reserved 1 to 7;
+  EDGE_KIND_MENTIONS_TERM = 8;
 }
 
 // ---- domain mirror ---------------------------------------------------------
 
 // A persisted specification node. The raw sentence text (`statement`) is the
-// source of truth; `sentence` is a derived view computed at response time.
+// source of truth; `sentence` is absent from Add and derived for graph reads.
 message Node {
   string id = 1;
   // The raw sentence text, exactly as accepted.
@@ -156,6 +183,8 @@ message ContractView {
 }
 
 message Meta {
+  // Current successfully captured view, populated asynchronously by the
+  // Evidence Job. Complete historical captures also remain in Job updates.
   repeated Evidence evidence = 1;
   string created_at = 2;
   string cli = 3;
@@ -163,6 +192,10 @@ message Meta {
   // Successful asynchronous Meta updates. Job scheduling and retry state are
   // process-local and are never persisted or exposed on the wire.
   repeated MetaUpdate updates = 5;
+  // Verbatim, channel-resolved descriptors retained until and after the
+  // asynchronous Evidence Job captures them. This makes retry/reconciliation
+  // independent of the original client process.
+  repeated string evidence_requests = 6;
 }
 
 message MetaUpdate {

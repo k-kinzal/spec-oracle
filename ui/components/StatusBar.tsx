@@ -1,7 +1,8 @@
 "use client";
 
-/** The scale indicator: how many nodes are on screen out of the whole graph,
- *  plus the control to pull the next bounded batch. This is where the
+/** The scale indicator: how many authored specifications are on screen,
+ *  plus the control to pull the next bounded batch. Derived adjacent term
+ *  nodes are deliberately outside this progress count. This is where the
  *  "never load everything" contract is made visible to the user. */
 export default function StatusBar({
   loaded,
@@ -24,7 +25,7 @@ export default function StatusBar({
       {loading && <span className="spinner" aria-label="loading" />}
       <span className="count">
         <strong>{loaded.toLocaleString()}</strong>{" "}
-        <span className="muted">of {total.toLocaleString()} nodes</span>
+        <span className="muted">of {total.toLocaleString()} specifications</span>
       </span>
       <span className="bar" aria-hidden>
         <span style={{ width: `${pct}%` }} />

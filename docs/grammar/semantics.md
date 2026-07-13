@@ -5,7 +5,7 @@
 The syntax layer — the [sentence layer](./sentences.md), the
 [phrase grammar](./phrases.md), the [lexical rules](./lexical.md) — says what a
 sentence *is*. This page documents
-[`so_lang/src/semantics.rs`](../../so_lang/src/semantics.rs), which says what a
+[`so_reason/src/semantics.rs`](../../so_reason/src/semantics.rs), which says what a
 sentence *does*: its speech act, its normative force, its assertion content,
 and finally its assume-guarantee reading. Apart from one pointer in the
 [index](./README.md), this is the only page in the grammar reference where
@@ -229,7 +229,7 @@ claim made by some *other* statement about the environment.
 
 A sentence taken alone therefore ingests as a guarantee under the trivial
 assumption `⊤`. Non-trivial assumptions are pairings **between** sentences —
-graph edges, out of scope for `so-lang` today. The specification set as a whole
+graph edges, out of scope for `so-reason` today. The specification set as a whole
 is read as the **conjunction of the contracts** so formed.
 
 ### The ingest projection
@@ -355,7 +355,7 @@ two narrow booleans displayed `true` while nothing formed is retired.
 for totality but BY-DESIGN (an envelope is compatibility data, never an
 assumption conjunct, and never counts against the aggregate). The
 individual booleans stay as diagnostics. The graph layer decides;
-nothing in so-lang rejects or repairs a formed contract.
+nothing in `so-reason` rejects or repairs a formed contract.
 
 **Verification doctrine (round 11, change 4).** `refines`/`assess` over a
 paired contract whose formed assumption is REFUTED
@@ -398,7 +398,7 @@ admissibility envelope and nothing else. The full act × kind matrix is
 tabulated under [Typed pairing](#typed-pairing-paired-edgekind).
 
 Since round 4 this doctrine is **API-encoded**, not prose-only: the three
-edge types are `so_lang::formula::EdgeKind`, and
+edge types are `so_reason::formula::EdgeKind`, and
 `ContractFormula::paired(sources)` performs the supersession — it REPLACES
 the provisional `⊤` assumption with the conjunction of the
 **contract-forming** — non-envelope, proven (round 9), not merely
@@ -441,7 +441,7 @@ a textual key carries (unchanged roadmap, stated harder since round 7).
 Round 10 aligns the API with this doctrine: the key comparison no longer
 REJECTS anything — `for_guarantee` records it as
 `AssumptionSource::subject_relation` (`SubjectRelation::DisjointKeys` /
-`SharedKeys`, computed from the RESPONSIBLE keys on both sides), so-lang
+`SharedKeys`, computed from the RESPONSIBLE keys on both sides), `so-reason`
 reports and never decides. `SharedKeys` is a RED FLAG the graph must
 resolve with component identity before forming the edge (conservatively,
 only `DisjointKeys` sources are contract-forming — a shared-key source
@@ -506,7 +506,7 @@ request shall be logged.` yield the same atom (`["logged"]`, over head
 quantifier-restrictor-head normal form in v0.2 — the skeleton stays
 single-subject; the [formula layer](#the-formula-layer) digests a
 coordinated subject one item at a time, so coordinated sentences are
-formula-bearing even though they have no skeleton). **Data only**: `so-lang`
+formula-bearing even though they have no skeleton). **Data only**: `so-reason`
 provides the skeleton; it is the INDEX for future edge generation — rich
 enough that candidate pairs can be found and told apart — not the decision
 procedure. Generating conflict edges over it is graph work.
@@ -660,7 +660,7 @@ procedure. Generating conflict edges over it is graph work.
 ## The formula layer
 
 ```rust
-// so_lang::formula
+// so_reason::formula
 pub fn applicability(&Sentence) -> Formula
 pub fn claim_formula(&Sentence) -> Option<Formula>
 pub fn contract_formula(&Sentence) -> Option<ContractFormula>
@@ -974,7 +974,7 @@ for the constructors' validity checks.
 ### The relation engine
 
 ```rust
-// so_lang::relate
+// so_reason::relate
 pub enum Ternary { Yes, No, Unknown }
 pub fn implies(a: &Formula, b: &Formula) -> Ternary
 pub fn contradicts(a: &Formula, b: &Formula) -> Ternary

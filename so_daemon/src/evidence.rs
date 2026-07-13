@@ -9,10 +9,9 @@
 //!     shorthand for "here is grounding, I am not classifying it now".
 //!
 //! The `@file` / `-`(stdin) input channels are resolved to text **client-side**
-//! (they name the client's own streams), so by the time a value reaches the
-//! daemon it is already concrete text. This module performs *ingest only*: it
-//! validates shape and normalizes the locator. It does not fetch, snapshot, or
-//! enrich — those are later capture stages.
+//! (they name the client's own streams). The daemon persists that concrete text
+//! verbatim on the Node; the asynchronous Evidence Job then calls this module
+//! to validate its shape and normalize the locator before capture.
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

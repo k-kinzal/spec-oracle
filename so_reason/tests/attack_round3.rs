@@ -27,11 +27,11 @@
 //! are marked `#[ignore]` with the finding title.
 
 use so_lang::ast::*;
-use so_lang::formula::{
+use so_lang::parse::{parse, ParseError};
+use so_reason::formula::{
     applicability, claim_formula, contract_formula, AtomRef, ContractFormula, Formula,
 };
-use so_lang::parse::{parse, ParseError};
-use so_lang::semantics::*;
+use so_reason::semantics::*;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 // ---- helpers ----------------------------------------------------------------------
@@ -679,7 +679,7 @@ fn verbal_guard_digest_drops_the_object_documented_blind_spot() {
     let no = sk("When the queue holds no message, the daemon shall idle.");
     let the = sk("When the queue holds the message, the daemon shall idle.");
     assert_ne!(no.guards, the.guards);
-    let objects = |k: &so_lang::semantics::Skeleton| {
+    let objects = |k: &so_reason::semantics::Skeleton| {
         k.guards.trigger.as_ref().unwrap().clauses[0]
             .objects
             .clone()

@@ -1,11 +1,15 @@
 //! The `spec` command-line interface — a thin front end over the gRPC client.
 //!
-//! Parsing, capture, and persistence happen in the daemon (`specd`); this binary
-//! only resolves the caller's input channels, sends the request, and renders the
-//! nodes the daemon returns — one per sentence of the specification. It
+//! The daemon (`specd`) parses and persists one Specification Node, then runs
+//! Evidence capture and all other processing as Jobs. This binary only resolves
+//! the caller's descriptor input channels, sends the request, and renders the
+//! one accepted Node. It
 //! therefore carries no `--arango-*`/`--dir` flags — those configure the
 //! daemon — only a `--server` address.
 
+mod graph;
+
+use std::collections::{BTreeMap, BTreeSet};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
@@ -14,9 +18,9 @@ use so_client::Client;
 use so_protocol::pb;
 use tracing::Instrument;
 
-/// Exit code for a specification/evidence syntax error (bad input).
+/// Exit code for specification syntax/count or a client-side channel error.
 const EXIT_USAGE: u8 = 2;
-/// Exit code for a connection/capture/store failure (environment/runtime).
+/// Exit code for a connection or synchronous store failure.
 const EXIT_RUNTIME: u8 = 1;
 
 #[derive(Parser)]
@@ -32,19 +36,20 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Add a specification (one node per sentence) with its evidence.
+    /// Add exactly one specification sentence; Evidence capture is asynchronous.
     Add(AddArgs),
-    /// Read one bounded page of the specification graph (nodes + edges).
+    /// Render the specification graph directly in the terminal.
     Graph(GraphArgs),
 }
 
 #[derive(clap::Args)]
 struct AddArgs {
-    /// One or more sentences of the constrained specification language, e.g.
+    /// Exactly one sentence of the constrained specification language, e.g.
     /// "When the order is submitted, the system shall record the total."
     specification: String,
 
-    /// Evidence grounding the specification. Repeatable. Each value is a JSON object
+    /// Evidence requested for the specification. Capture is asynchronous.
+    /// Repeatable. Each value is a JSON object
     /// (or array) with `kind` and `locator` (and optional `origin`), or a bare
     /// locator string (recorded as kind "unknown"). Prefix with `@` to read a
     /// file, or use `-` to read stdin. Note: the locator is resolved by the
@@ -61,24 +66,13 @@ struct AddArgs {
     )]
     server: String,
 
-    /// Print the created nodes as a JSON array on success.
+    /// Print the created node as a JSON object on success.
     #[arg(long = "json")]
     json: bool,
 }
 
 #[derive(clap::Args)]
 struct GraphArgs {
-    /// Maximum nodes to return in this page. 0 lets the daemon choose its
-    /// default; the daemon clamps to a hard maximum, so a graph read is always
-    /// bounded — there is deliberately no "fetch everything" option.
-    #[arg(long = "page-size", default_value_t = 0, value_name = "N")]
-    page_size: u32,
-
-    /// Opaque continuation token from a previous page's `next_page_token`. Omit
-    /// to start from the beginning.
-    #[arg(long = "page-token", default_value = "", value_name = "TOKEN")]
-    page_token: String,
-
     /// Address of the spec-oracle daemon.
     #[arg(
         long = "server",
@@ -88,20 +82,20 @@ struct GraphArgs {
     )]
     server: String,
 
-    /// Print the page as a JSON graph object ({nodes, edges, next_page_token,
-    /// total_nodes}) instead of a human summary.
-    #[arg(long = "json")]
-    json: bool,
+    /// Width of the terminal graph in columns. Defaults to $COLUMNS or 120.
+    #[arg(long, value_name = "COLUMNS", value_parser = clap::value_parser!(u16).range(40..))]
+    width: Option<u16>,
 }
 
 fn main() -> ExitCode {
-    let _telemetry = match so_tracing::init("spec", env!("CARGO_PKG_VERSION")) {
-        Ok(guard) => guard,
-        Err(e) => {
-            eprintln!("error: failed to initialize telemetry: {e:#}");
-            return ExitCode::from(EXIT_RUNTIME);
-        }
-    };
+    let _telemetry =
+        match so_tracing::init_without_console_output("spec", env!("CARGO_PKG_VERSION")) {
+            Ok(guard) => guard,
+            Err(e) => {
+                eprintln!("error: failed to initialize telemetry: {e:#}");
+                return ExitCode::from(EXIT_RUNTIME);
+            }
+        };
 
     let cli = Cli::parse();
     match cli.command {
@@ -150,10 +144,9 @@ fn run_add(args: AddArgs) -> ExitCode {
     );
 
     match result {
-        Ok(nodes) => {
+        Ok(node) => {
             if args.json {
-                let rendered: Vec<serde_json::Value> = nodes.iter().map(node_to_json).collect();
-                match serde_json::to_string_pretty(&rendered) {
+                match serde_json::to_string_pretty(&node_to_json(&node)) {
                     Ok(s) => println!("{s}"),
                     Err(e) => {
                         eprintln!("error: failed to render nodes: {e}");
@@ -161,8 +154,12 @@ fn run_add(args: AddArgs) -> ExitCode {
                     }
                 }
             } else {
-                for node in &nodes {
-                    println!("Added {}", node_summary(node));
+                println!("Added {}  {}", node.id, node.statement);
+                if !args.evidence.is_empty() {
+                    println!(
+                        "Evidence capture scheduled ({} request(s))",
+                        args.evidence.len()
+                    );
                 }
             }
             ExitCode::SUCCESS
@@ -170,8 +167,8 @@ fn run_add(args: AddArgs) -> ExitCode {
         Err(e) => {
             eprintln!("error: {e}");
             // Bad input the user can fix (a channel error or a daemon
-            // `INVALID_ARGUMENT`) is a usage error; everything else (connection,
-            // capture, store, decode) is a runtime failure.
+            // `INVALID_ARGUMENT`) is a usage error; everything else
+            // (connection, synchronous store, decode) is a runtime failure.
             let code = if e.is_bad_input() {
                 EXIT_USAGE
             } else {
@@ -193,54 +190,19 @@ fn run_graph(args: GraphArgs) -> ExitCode {
             return ExitCode::from(EXIT_RUNTIME);
         }
     };
-
     let span = tracing::info_span!(
         "spec.cli.graph",
-        "spec.page.requested_size" = args.page_size as u64,
-        "spec.page.has_cursor" = !args.page_token.is_empty(),
+        "spec.graph.selection" = "whole",
         "server.address" = %args.server,
+        "spec.graph.specification_count" = tracing::field::Empty,
+        "spec.graph.term_count" = tracing::field::Empty,
+        "spec.graph.edge_count" = tracing::field::Empty,
     );
-
-    let result = runtime.block_on(
-        async {
-            let mut client = Client::connect(args.server.clone()).await?;
-            client.get_graph(args.page_size, &args.page_token).await
-        }
-        .instrument(span),
-    );
+    let result = runtime.block_on(read_whole_graph(args.server.clone()).instrument(span));
 
     match result {
-        Ok(page) => {
-            if args.json {
-                let rendered = serde_json::json!({
-                    "nodes": page.nodes.iter().map(node_to_json).collect::<Vec<_>>(),
-                    "edges": page.edges.iter().map(edge_to_json).collect::<Vec<_>>(),
-                    "next_page_token": page.next_page_token,
-                    "total_nodes": page.total_nodes,
-                });
-                match serde_json::to_string_pretty(&rendered) {
-                    Ok(s) => println!("{s}"),
-                    Err(e) => {
-                        eprintln!("error: failed to render graph: {e}");
-                        return ExitCode::from(EXIT_RUNTIME);
-                    }
-                }
-            } else {
-                println!(
-                    "{} of {} node(s), {} edge(s)",
-                    page.nodes.len(),
-                    page.total_nodes,
-                    page.edges.len()
-                );
-                for node in &page.nodes {
-                    println!("  {}", node_summary(node));
-                }
-                if page.next_page_token.is_empty() {
-                    println!("(end of graph)");
-                } else {
-                    println!("next page: --page-token {}", page.next_page_token);
-                }
-            }
+        Ok(graph) => {
+            print!("{}", graph.render(args.width));
             ExitCode::SUCCESS
         }
         Err(e) => {
@@ -255,18 +217,58 @@ fn run_graph(args: GraphArgs) -> ExitCode {
     }
 }
 
-fn node_summary(node: &pb::Node) -> String {
-    let evidence_count = node
-        .meta
-        .as_ref()
-        .map(|meta| meta.evidence.len())
-        .unwrap_or_default();
-    let speech_act = node
-        .sentence
-        .as_ref()
-        .map(|s| speech_act_to_str(s.speech_act))
-        .unwrap_or("unknown");
-    format!("{}  {}  ({} evidence)", node.id, speech_act, evidence_count)
+async fn read_whole_graph(server: String) -> Result<graph::Graph, so_client::ClientError> {
+    const PAGE_SIZE: u32 = 1000;
+
+    let mut client = Client::connect(server).await?;
+    let mut specifications = BTreeMap::new();
+    let mut terms = BTreeMap::new();
+    let mut edges = BTreeMap::new();
+    let mut page_token = String::new();
+    let mut seen_tokens = BTreeSet::new();
+
+    let reported_specification_count = loop {
+        let page = client.get_graph(PAGE_SIZE, &page_token).await?;
+        let page_total = page.total_nodes;
+        for node in page.nodes {
+            specifications.insert(node.id.clone(), node);
+        }
+        for term in page.term_nodes {
+            terms.insert(term.id.clone(), term);
+        }
+        for edge in page.edges {
+            edges.insert(edge.id.clone(), edge);
+        }
+        if page.next_page_token.is_empty() {
+            break page_total;
+        }
+        if !seen_tokens.insert(page.next_page_token.clone()) {
+            return Err(so_client::ClientError::InvalidGraphResponse(
+                "daemon repeated a graph page token".to_string(),
+            ));
+        }
+        page_token = page.next_page_token;
+    };
+
+    if specifications.len() as u64 != reported_specification_count {
+        return Err(so_client::ClientError::InvalidGraphResponse(format!(
+            "graph changed while it was being read: daemon reported {reported_specification_count} specifications but {} were received; rerun spec graph",
+            specifications.len()
+        )));
+    }
+
+    tracing::Span::current().record(
+        "spec.graph.specification_count",
+        specifications.len() as u64,
+    );
+    tracing::Span::current().record("spec.graph.term_count", terms.len() as u64);
+    tracing::Span::current().record("spec.graph.edge_count", edges.len() as u64);
+    graph::Graph::from_wire(
+        specifications.into_values(),
+        terms.into_values(),
+        edges.into_values(),
+    )
+    .map_err(so_client::ClientError::InvalidGraphResponse)
 }
 
 fn node_to_json(node: &pb::Node) -> serde_json::Value {
@@ -277,24 +279,6 @@ fn node_to_json(node: &pb::Node) -> serde_json::Value {
         "sentence": sentence_to_json(node.sentence.as_ref()),
         "meta": meta_to_json(node.meta.as_ref()),
     })
-}
-
-fn edge_to_json(edge: &pb::Edge) -> serde_json::Value {
-    serde_json::json!({
-        "id": &edge.id,
-        "source": &edge.source,
-        "target": &edge.target,
-        "kind": edge_kind_to_str(edge.kind),
-    })
-}
-
-fn edge_kind_to_str(kind: i32) -> &'static str {
-    match pb::EdgeKind::try_from(kind).unwrap_or(pb::EdgeKind::Unspecified) {
-        pb::EdgeKind::Refines => "refines",
-        pb::EdgeKind::Composes => "composes",
-        pb::EdgeKind::Contradicts => "contradicts",
-        pb::EdgeKind::Unspecified => "unspecified",
-    }
 }
 
 fn sentence_to_json(sentence: Option<&pb::SentenceView>) -> serde_json::Value {
@@ -334,6 +318,7 @@ fn speech_act_to_str(speech_act: i32) -> &'static str {
 fn meta_to_json(meta: Option<&pb::Meta>) -> serde_json::Value {
     match meta {
         Some(m) => serde_json::json!({
+            "evidence_requests": &m.evidence_requests,
             "evidence": m.evidence.iter().map(evidence_to_json).collect::<Vec<_>>(),
             "created_at": &m.created_at,
             "cli": &m.cli,
@@ -464,6 +449,57 @@ fn origin_to_json(origin: &pb::Origin) -> Option<serde_json::Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn parse_graph(args: &[&str]) -> GraphArgs {
+        let cli = Cli::try_parse_from(args).expect("graph arguments should parse");
+        match cli.command {
+            Command::Graph(args) => args,
+            Command::Add(_) => panic!("expected graph command"),
+        }
+    }
+
+    #[test]
+    fn graph_without_arguments_selects_the_whole_graph() {
+        let args = parse_graph(&["spec", "graph"]);
+
+        assert_eq!(args.server, "http://127.0.0.1:50051");
+        assert_eq!(args.width, None);
+    }
+
+    #[test]
+    fn graph_accepts_presentation_options_without_a_seed() {
+        let args = parse_graph(&[
+            "spec",
+            "graph",
+            "--width",
+            "160",
+            "--server",
+            "http://specd:50051",
+        ]);
+
+        assert_eq!(args.width, Some(160));
+        assert_eq!(args.server, "http://specd:50051");
+    }
+
+    #[test]
+    fn graph_rejects_a_positional_seed() {
+        let error = match Cli::try_parse_from(["spec", "graph", "spec-42"]) {
+            Err(error) => error,
+            Ok(_) => panic!("graph must not require or accept a positional seed"),
+        };
+
+        assert_eq!(error.kind(), clap::error::ErrorKind::UnknownArgument);
+    }
+
+    #[test]
+    fn graph_does_not_expose_a_required_seed_option() {
+        let error = match Cli::try_parse_from(["spec", "graph", "--around", "spec-42"]) {
+            Err(error) => error,
+            Ok(_) => panic!("--around must not define the graph command"),
+        };
+
+        assert_eq!(error.kind(), clap::error::ErrorKind::UnknownArgument);
+    }
 
     #[test]
     fn meta_update_json_exposes_plugin_value_as_json() {

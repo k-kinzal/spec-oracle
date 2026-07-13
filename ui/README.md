@@ -2,7 +2,8 @@
 
 A Next.js app that visualizes the spec-oracle specification graph as a
 force-directed cloud (GPU/WebGL via [Cosmograph](https://cosmograph.app)). Each
-node is one grounded sentence; color encodes its speech act.
+specification node is one grounded sentence; derived term-form nodes connect
+specifications through vocabulary they actually share.
 
 ## Architecture
 
@@ -31,8 +32,10 @@ requests "everything":
   it renders (`RENDER_CAP`), showing "loaded X of TOTAL" and a "Load more"
   control (see `app/page.tsx`).
 
-Edges are already part of the response shape (`GetGraph` returns `edges`), empty
-until edge derivation lands — the graph renders them the moment they exist.
+`GetGraph` returns a bounded specification page, adjacent term nodes, and
+checked edges. Teal term nodes mean only equal normalized written forms; they
+do not assert referent identity. Semantic spec-to-spec edges are not generated
+until their graph-side establishment rules are defined.
 
 ## Run
 

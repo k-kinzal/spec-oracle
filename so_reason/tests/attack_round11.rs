@@ -11,13 +11,13 @@
 //! comment.
 
 use so_lang::ast::ClauseBody;
-use so_lang::formula::{
+use so_lang::parse::{parse, ParseError};
+use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, ContractFormula, EdgeKind, Formula,
     SourceIssueReason,
 };
-use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{assumption_satisfiable, envelope_compatible, refines, Ternary};
-use so_lang::semantics::{
+use so_reason::relate::{assumption_satisfiable, envelope_compatible, refines, Ternary};
+use so_reason::semantics::{
     normalization_candidates, skeleton, ClauseSkeleton, NormalizationKind, Quantifier,
 };
 
@@ -918,7 +918,7 @@ fn candidate_structure_is_preserved() {
     assert_eq!(c[0].atom.roles.len(), 1);
     assert_eq!(
         c[0].atom.roles[0].kind,
-        so_lang::semantics::RoleKind::Deadline
+        so_reason::semantics::RoleKind::Deadline
     );
 }
 

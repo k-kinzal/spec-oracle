@@ -2,13 +2,14 @@
 
 > This is the index of the grammar reference.
 
-`spec add` accepts a **specification**: one or more sentences written in an
-EARS-derived constrained natural language. Each sentence performs one
+The language parser accepts a **specification** containing one or more
+sentences. The `spec add` operation deliberately accepts exactly one of those
+sentences and creates exactly one Specification Node. Each sentence performs one
 **speech-act core** — defining a term, describing the system, or obliging,
 forbidding, recommending, or permitting behavior — under zero or more
 **circumstance frames** (`Where` / `While` / `When` / `If`), with an optional
 **exception** (`unless`) and an optional **purpose** (`so that` /
-`in order to`). The daemon creates **one node per sentence**.
+`in order to`).
 
 The language constrains **ambiguity, not expressiveness**. The closed-class
 skeleton — frame keywords, modals, copulas, determiners and quantifiers,
@@ -20,8 +21,8 @@ parse tree; the raw sentence text remains the source of truth.
 
 The single source of truth is the code:
 [`so_lang/src/ast.rs`](../../so_lang/src/ast.rs),
-[`so_lang/src/parse.rs`](../../so_lang/src/parse.rs), and
-[`so_lang/src/semantics.rs`](../../so_lang/src/semantics.rs). These docs
+[`so_lang/src/parse.rs`](../../so_lang/src/parse.rs), and the downstream
+[`so_reason/src/semantics.rs`](../../so_reason/src/semantics.rs). These docs
 describe only what that code does.
 
 ## Philosophy: a total recognizer

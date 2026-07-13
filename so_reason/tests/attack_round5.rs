@@ -12,13 +12,13 @@
 //! the fixed findings keep their FINDING doc comments as history.
 
 use so_lang::ast::*;
-use so_lang::formula::{
+use so_lang::parse::{parse, ParseError};
+use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, AtomRef, ContractFormula, EdgeKind, Formula,
     PairingError,
 };
-use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{contradicts, implies, refines, Ternary};
-use so_lang::semantics::{
+use so_reason::relate::{contradicts, implies, refines, Ternary};
+use so_reason::semantics::{
     denote, skeleton, speech_act, subject_keys, Claim, Denotation, Polarity, Quantifier, RoleKind,
     RoleValue, SpeechAct,
 };
@@ -150,7 +150,7 @@ fn pairing_matrix_every_act_times_every_kind() {
                 let source = result.unwrap_or_else(|e| panic!("{input:?} × {kind:?}: {e}"));
                 assert_eq!(source.kind, kind);
                 assert_eq!(source.act, *act);
-                assert_eq!(source.force, so_lang::semantics::force(&sentence));
+                assert_eq!(source.force, so_reason::semantics::force(&sentence));
             } else {
                 assert_eq!(result.unwrap_err(), *denial, "{input:?} × {kind:?}");
             }
@@ -388,7 +388,7 @@ fn generic_subjects_are_universal_in_every_behavioral_act() {
     assert_eq!(
         quantifier("At least 3 pumps shall run."),
         Quantifier::Count {
-            op: so_lang::semantics::CountOp::AtLeast,
+            op: so_reason::semantics::CountOp::AtLeast,
             n: 3
         }
     );
@@ -412,11 +412,11 @@ fn generic_normalization_is_a_derived_view_only() {
     // Coreference still sees the indefinite introduction (`a request`), so
     // the generic reading did not eat the discourse layer.
     let spec = parse("A request shall be logged. The request is archived.").unwrap();
-    let refs = so_lang::semantics::references(&spec);
+    let refs = so_reason::semantics::references(&spec);
     assert_eq!(refs.len(), 1);
     assert_eq!(
         refs[0].resolution,
-        so_lang::semantics::Resolution::Unique {
+        so_reason::semantics::Resolution::Unique {
             antecedent_sentence: 0
         }
     );
@@ -990,7 +990,7 @@ fn for_accepts_quantities_including_decimals_and_zero() {
     let sk = skeleton(&one("The pump shall run for 2.5 seconds.")).unwrap();
     assert_eq!(
         sk.atoms[0].roles[0],
-        so_lang::semantics::RoleSkeleton {
+        so_reason::semantics::RoleSkeleton {
             kind: RoleKind::Duration,
             value: RoleValue::Measure {
                 number: "2.5".into(),

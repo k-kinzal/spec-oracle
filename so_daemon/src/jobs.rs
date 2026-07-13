@@ -12,7 +12,7 @@ use serde_json::Value;
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 
-use crate::domain::{MetaUpdate, Node};
+use crate::domain::{Evidence, MetaUpdate, Node};
 use crate::mailbox::{derive_id, NodeAdded};
 use crate::store::{BlobStore, GraphStore};
 
@@ -22,17 +22,42 @@ const RETRY_MAX_SECONDS: u64 = 60;
 /// Resources available to a Plugin execution.
 pub struct PluginContext<'a> {
     pub blobs: &'a dyn BlobStore,
+    pub graph: &'a (dyn GraphStore + Send + Sync),
     pub now: &'a str,
 }
 
-/// A NodeAdded hook that computes one namespaced Meta value.
+/// The durable effects of one successful Job execution. Most Jobs only append
+/// their namespaced JSON value. Evidence capture additionally replaces the
+/// Node's captured-evidence view in the same store operation.
+pub struct JobOutput {
+    pub value: Value,
+    pub evidence: Option<Vec<Evidence>>,
+}
+
+impl JobOutput {
+    pub fn metadata(value: Value) -> JobOutput {
+        JobOutput {
+            value,
+            evidence: None,
+        }
+    }
+
+    pub fn captured_evidence(value: Value, evidence: Vec<Evidence>) -> JobOutput {
+        JobOutput {
+            value,
+            evidence: Some(evidence),
+        }
+    }
+}
+
+/// A NodeAdded hook that computes one namespaced durable Job result.
 ///
 /// Implementations may run more than once and must keep external side effects
 /// idempotent. The daemon makes the Node update itself idempotent by deriving a
 /// stable Job ID from the Event and Plugin name.
 pub trait NodeMetaPlugin: Send + Sync {
     fn handles(&self, node: &Node) -> bool;
-    fn run(&self, node: &Node, context: &PluginContext<'_>) -> Result<Value, String>;
+    fn run(&self, node: &Node, context: &PluginContext<'_>) -> Result<JobOutput, String>;
 }
 
 /// Link-time Plugin registration.
@@ -162,26 +187,7 @@ async fn run(
     while let Some(message) = receiver.recv().await {
         match message {
             Message::NodeAdded(event) => {
-                let event = *event;
-                for registration in &plugins {
-                    let job_id = derive_id("job", &[&event.id, registration.name]);
-                    if jobs.contains_key(&job_id) {
-                        continue;
-                    }
-                    jobs.insert(
-                        job_id.clone(),
-                        Job {
-                            id: job_id.clone(),
-                            node: event.node.clone(),
-                            source: registration.name,
-                            plugin: registration.plugin.clone(),
-                            parent_span: event.parent_span.clone(),
-                            attempts: 0,
-                            in_flight: false,
-                        },
-                    );
-                    dispatch(&job_id, &mut jobs, &sender, &nodes, &blobs);
-                }
+                enqueue_plugins(*event, &plugins, &mut jobs, &sender, &nodes, &blobs);
             }
             Message::AttemptFinished { job_id, result } => match result {
                 Ok(()) => {
@@ -218,6 +224,35 @@ async fn run(
                 break;
             }
         }
+    }
+}
+
+fn enqueue_plugins(
+    event: NodeAdded,
+    plugins: &[RegisteredPlugin],
+    jobs: &mut HashMap<String, Job>,
+    sender: &mpsc::Sender<Message>,
+    nodes: &Arc<dyn GraphStore + Send + Sync>,
+    blobs: &Arc<dyn BlobStore + Send + Sync>,
+) {
+    for registration in plugins {
+        let job_id = derive_id("job", &[&event.id, registration.name]);
+        if jobs.contains_key(&job_id) {
+            continue;
+        }
+        jobs.insert(
+            job_id.clone(),
+            Job {
+                id: job_id.clone(),
+                node: event.node.clone(),
+                source: registration.name,
+                plugin: registration.plugin.clone(),
+                parent_span: event.parent_span.clone(),
+                attempts: 0,
+                in_flight: false,
+            },
+        );
+        dispatch(&job_id, jobs, sender, nodes, blobs);
     }
 }
 
@@ -259,19 +294,20 @@ fn dispatch(
             let now = now();
             let context = PluginContext {
                 blobs: &*blobs,
+                graph: &*nodes,
                 now: &now,
             };
             if !plugin.handles(&node) {
                 return Ok(());
             }
-            let value = plugin.run(&node, &context)?;
+            let output = plugin.run(&node, &context)?;
             let update = MetaUpdate {
                 source: source.to_string(),
                 applied_at: now,
-                value,
+                value: output.value,
             };
             nodes
-                .apply_meta_update(&node.id, &attempt_id, &update)
+                .apply_job_result(&node.id, &attempt_id, &update, output.evidence.as_deref())
                 .map_err(|error| error.to_string())
         })
         .await
@@ -327,11 +363,11 @@ mod tests {
             true
         }
 
-        fn run(&self, _node: &Node, _context: &PluginContext<'_>) -> Result<Value, String> {
+        fn run(&self, _node: &Node, _context: &PluginContext<'_>) -> Result<JobOutput, String> {
             if self.attempts.fetch_add(1, Ordering::SeqCst) == 0 {
                 Err("first attempt fails".to_string())
             } else {
-                Ok(serde_json::json!({"commit": "abc123"}))
+                Ok(JobOutput::metadata(serde_json::json!({"commit": "abc123"})))
             }
         }
     }
@@ -342,6 +378,7 @@ mod tests {
             statement: "The pump shall stop.".to_string(),
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
+                evidence_requests: vec![],
                 evidence: vec![],
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),
@@ -381,8 +418,15 @@ mod tests {
 
     #[test]
     fn built_in_github_plugin_is_registered() {
-        assert!(registered_plugins()
+        let plugins = registered_plugins();
+        assert!(plugins
             .iter()
             .any(|plugin| plugin.name == "github-evidence"));
+        assert!(plugins
+            .iter()
+            .any(|plugin| plugin.name == "graph-generation"));
+        assert!(plugins
+            .iter()
+            .any(|plugin| plugin.name == "evidence-capture"));
     }
 }

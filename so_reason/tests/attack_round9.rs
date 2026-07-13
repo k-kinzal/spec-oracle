@@ -23,10 +23,10 @@
 //! Everything here is a permanent pin of legislated behavior.
 
 use so_lang::ast::*;
-use so_lang::formula::{claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula};
 use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{assess, assumption_satisfiable, contradicts, implies, Outcome, Ternary};
-use so_lang::semantics::{skeleton, subject_keys, ClauseSkeleton, RoleKind, RoleSkeleton};
+use so_reason::formula::{claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula};
+use so_reason::relate::{assess, assumption_satisfiable, contradicts, implies, Outcome, Ternary};
+use so_reason::semantics::{skeleton, subject_keys, ClauseSkeleton, RoleKind, RoleSkeleton};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 fn one(input: &str) -> Sentence {
@@ -65,7 +65,7 @@ fn roundtrip(input: &str) {
 }
 
 /// The single atom of a behavioral sentence's skeleton.
-fn atom(input: &str) -> so_lang::semantics::Atom {
+fn atom(input: &str) -> so_reason::semantics::Atom {
     let k = skeleton(&one(input)).unwrap();
     assert_eq!(k.atoms.len(), 1, "{input:?}");
     k.atoms.into_iter().next().unwrap().clone()

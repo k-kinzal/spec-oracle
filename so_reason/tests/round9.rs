@@ -9,10 +9,10 @@
 //! 6. A descending `between` is a parse error, not an empty interval.
 
 use so_lang::ast::*;
-use so_lang::formula::{claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula};
 use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{assess, assumption_satisfiable, contradicts, implies, Outcome, Ternary};
-use so_lang::semantics::{skeleton, subject_keys, RoleKind};
+use so_reason::formula::{claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula};
+use so_reason::relate::{assess, assumption_satisfiable, contradicts, implies, Outcome, Ternary};
+use so_reason::semantics::{skeleton, subject_keys, RoleKind};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).expect(input);
@@ -110,7 +110,7 @@ fn non_locative_roles_keep_a_none_marker_and_old_json_loads() {
     let mut json = serde_json::to_value(&loc.atoms[0].roles[0]).unwrap();
     assert_eq!(json["marker"], "at");
     json.as_object_mut().unwrap().remove("marker");
-    let back: so_lang::semantics::RoleSkeleton = serde_json::from_value(json).unwrap();
+    let back: so_reason::semantics::RoleSkeleton = serde_json::from_value(json).unwrap();
     assert!(back.marker.is_none());
     let no_marker = serde_json::to_value(&k.atoms[0].roles[0]).unwrap();
     assert!(

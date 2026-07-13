@@ -14,7 +14,7 @@ use crate::add::{self, AddError, AddRequest};
 use crate::domain::Node;
 use crate::jobs::JobMailbox;
 use crate::mailbox::{new_message_id, NodeAdded};
-use crate::store::{BlobStore, GraphStore};
+use crate::store::GraphStore;
 
 const MAILBOX_CAPACITY: usize = 256;
 
@@ -48,7 +48,7 @@ enum Message {
         message_id: String,
         input: AddInput,
         parent_span: tracing::Span,
-        reply: oneshot::Sender<Result<Vec<Node>, AddError>>,
+        reply: oneshot::Sender<Result<Node, AddError>>,
     },
     Shutdown {
         reply: oneshot::Sender<()>,
@@ -58,16 +58,15 @@ enum Message {
 impl AddMailbox {
     pub fn start(
         nodes: Arc<dyn GraphStore + Send + Sync>,
-        blobs: Arc<dyn BlobStore + Send + Sync>,
         jobs: JobMailbox,
     ) -> (AddMailbox, tokio::task::JoinHandle<()>) {
         let (sender, receiver) = mpsc::channel(MAILBOX_CAPACITY);
         let mailbox = AddMailbox { sender };
-        let task = tokio::spawn(run(receiver, nodes, blobs, jobs));
+        let task = tokio::spawn(run(receiver, nodes, jobs));
         (mailbox, task)
     }
 
-    pub async fn add(&self, input: AddInput) -> Result<Vec<Node>, AddMailboxError> {
+    pub async fn add(&self, input: AddInput) -> Result<Node, AddMailboxError> {
         let (reply, received) = oneshot::channel();
         self.sender
             .send(Message::Add {
@@ -97,7 +96,6 @@ impl AddMailbox {
 async fn run(
     mut receiver: mpsc::Receiver<Message>,
     nodes: Arc<dyn GraphStore + Send + Sync>,
-    blobs: Arc<dyn BlobStore + Send + Sync>,
     jobs: JobMailbox,
 ) {
     while let Some(message) = receiver.recv().await {
@@ -109,7 +107,6 @@ async fn run(
                 reply,
             } => {
                 let nodes = nodes.clone();
-                let blobs = blobs.clone();
                 let operation_id = message_id.clone();
                 let event_parent = parent_span.clone();
                 let outcome = tokio::task::spawn_blocking(move || {
@@ -127,28 +124,20 @@ async fn run(
                         cli: &input.cli,
                         cli_version: &input.cli_version,
                     };
-                    add::run(&request, &*nodes, &*blobs)
+                    add::run(&request, &*nodes)
                 })
                 .await;
 
                 match outcome {
-                    Ok(Ok(persisted)) => {
-                        let events: Vec<NodeAdded> = persisted
-                            .iter()
-                            .cloned()
-                            .map(|node| {
-                                NodeAdded::with_parent(&message_id, node, event_parent.clone())
-                            })
-                            .collect();
-                        let _ = reply.send(Ok(persisted));
-                        for event in events {
-                            if let Err(error) = jobs.node_added(event).await {
-                                tracing::error!(
-                                    "message.id" = %message_id,
-                                    "error.message" = %error,
-                                    "NodeAdded event could not enter the Job Mailbox"
-                                );
-                            }
+                    Ok(Ok(node)) => {
+                        let event = NodeAdded::with_parent(&message_id, node.clone(), event_parent);
+                        let _ = reply.send(Ok(node));
+                        if let Err(error) = jobs.node_added(event).await {
+                            tracing::error!(
+                                "message.id" = %message_id,
+                                "error.message" = %error,
+                                "NodeAdded event could not enter the Job Mailbox"
+                            );
                         }
                     }
                     Ok(Err(error)) => {
@@ -175,41 +164,51 @@ async fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::store::{InMemoryNodeStore, StoreError};
-
-    struct NoBlobs;
-    impl BlobStore for NoBlobs {
-        fn put_blob(&self, _hash: &str, _bytes: &[u8]) -> Result<(), StoreError> {
-            Ok(())
-        }
-
-        fn get_blob(&self, _hash: &str) -> Result<Option<Vec<u8>>, StoreError> {
-            Ok(None)
-        }
-    }
+    use crate::store::{InMemoryNodeStore, NodeStore};
 
     #[tokio::test]
     async fn add_reply_is_returned_and_shutdown_drains() {
         let store = Arc::new(InMemoryNodeStore::new());
-        let blobs = Arc::new(NoBlobs);
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs.clone());
-        let (adds, adds_task) = AddMailbox::start(store, blobs, jobs.clone());
+        let temp = tempfile::tempdir().unwrap();
+        let evidence_path = temp.path().join("evidence.txt");
+        std::fs::write(&evidence_path, "evidence bytes").unwrap();
+        let blobs =
+            Arc::new(crate::store::FileBlobStore::open(&temp.path().join("blobs")).unwrap());
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
+        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
 
-        let nodes = adds
+        let node = adds
             .add(AddInput {
                 specification: "The pump shall stop.".to_string(),
-                evidence: vec![],
+                evidence: vec![evidence_path.to_string_lossy().into_owned()],
                 now: "2026-07-11T00:00:00Z".to_string(),
                 cli: "spec".to_string(),
                 cli_version: "test".to_string(),
             })
             .await
             .unwrap();
-        assert_eq!(nodes.len(), 1);
+        assert_eq!(node.statement, "The pump shall stop.");
+        assert!(node.meta.evidence.is_empty(), "Add reply precedes capture");
 
         adds.shutdown().await.unwrap();
         adds_task.await.unwrap();
         jobs.shutdown().await.unwrap();
         jobs_task.await.unwrap();
+
+        let captured = store.get_node(&node.id).unwrap().unwrap();
+        assert_eq!(captured.meta.evidence.len(), 1);
+        assert!(captured
+            .meta
+            .updates
+            .values()
+            .any(|update| update.source == "evidence-capture"));
+        let capture_update = captured
+            .meta
+            .updates
+            .values()
+            .find(|update| update.source == "evidence-capture")
+            .unwrap();
+        assert_eq!(capture_update.value["status"], "captured");
+        assert_eq!(capture_update.value["evidence"][0]["snapshot"]["bytes"], 14);
     }
 }

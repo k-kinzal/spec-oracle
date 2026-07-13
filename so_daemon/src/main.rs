@@ -18,6 +18,7 @@ use tracing::Instrument;
 use so_daemon::add_mailbox::AddMailbox;
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
 use so_daemon::jobs::JobMailbox;
+use so_daemon::mailbox::NodeAdded;
 use so_daemon::service::SpecificationGraphService;
 use so_daemon::store::{FileBlobStore, GraphStore, InMemoryNodeStore};
 use so_protocol::pb::specification_graph_server::SpecificationGraphServer;
@@ -156,7 +157,12 @@ fn run(args: Args) -> anyhow::Result<()> {
     runtime.block_on(
         async move {
             let (jobs, jobs_task) = JobMailbox::start(nodes.clone(), blobs.clone());
-            let (adds, adds_task) = AddMailbox::start(nodes.clone(), blobs, jobs.clone());
+            let scheduled = schedule_job_reconciliation(nodes.clone(), &jobs).await?;
+            tracing::info!(
+                "job.reconciliation.scheduled" = scheduled,
+                "post-acceptance Job reconciliation scheduled"
+            );
+            let (adds, adds_task) = AddMailbox::start(nodes.clone(), jobs.clone());
             let service = SpecificationGraphService::new(nodes, adds.clone());
             tracing::info!("specd listening");
             let serve_result = Server::builder()
@@ -176,6 +182,41 @@ fn run(args: Args) -> anyhow::Result<()> {
         .instrument(run_span),
     )?;
     Ok(())
+}
+
+async fn schedule_job_reconciliation(
+    nodes: Arc<dyn GraphStore + Send + Sync>,
+    jobs: &JobMailbox,
+) -> anyhow::Result<u64> {
+    const PAGE_SIZE: usize = 500;
+    let message_id = format!(
+        "job-reconciliation:{}:{}",
+        so_daemon::evidence_capture::CAPTURE_VERSION,
+        so_daemon::graph_generation::generation_version()
+    );
+    let mut cursor: Option<String> = None;
+    let mut scheduled = 0_u64;
+    loop {
+        let store = nodes.clone();
+        let after = cursor.clone();
+        let page =
+            tokio::task::spawn_blocking(move || store.list_nodes(after.as_deref(), PAGE_SIZE))
+                .await??;
+        for node in page.nodes {
+            if so_daemon::evidence_capture::needs_capture(&node)
+                || so_daemon::graph_generation::needs_generation(&node)
+                || so_daemon::github::needs_resolution(&node)
+            {
+                jobs.node_added(NodeAdded::new(&message_id, node)).await?;
+                scheduled = scheduled.saturating_add(1);
+            }
+        }
+        match page.next_cursor {
+            Some(next) => cursor = Some(next),
+            None => break,
+        }
+    }
+    Ok(scheduled)
 }
 
 async fn shutdown_signal() {

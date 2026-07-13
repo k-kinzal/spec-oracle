@@ -116,9 +116,15 @@ export default function Page() {
 
   const present = useMemo(() => {
     const s = new Set<SpeechAct>();
-    for (const n of nodes) s.add(n.speechAct);
+    for (const n of nodes) {
+      if (n.nodeKind === "specification") s.add(n.speechAct);
+    }
     return s;
   }, [nodes]);
+  const loadedSpecifications = useMemo(
+    () => nodes.filter((node) => node.nodeKind === "specification").length,
+    [nodes],
+  );
 
   const atHardCap = nodes.length >= RENDER_CAP && !reachedEnd;
   const canLoadMore = !reachedEnd && !atHardCap;
@@ -132,10 +138,10 @@ export default function Page() {
       <div className="topbar">
         <div className="title panel">
           <h1>spec-oracle · graph view</h1>
-          <p>Each node is one grounded sentence. Color = speech act.</p>
+          <p>Grounded specifications connected through written term forms.</p>
         </div>
         <StatusBar
-          loaded={nodes.length}
+          loaded={loadedSpecifications}
           total={total}
           loading={loading}
           canLoadMore={canLoadMore}
@@ -144,7 +150,10 @@ export default function Page() {
         />
       </div>
 
-      <Legend present={present} />
+      <Legend
+        present={present}
+        termPresent={nodes.some((node) => node.nodeKind === "term")}
+      />
 
       {selected && (
         <div className="detail panel">
@@ -166,8 +175,9 @@ export default function Page() {
                 background: SPEECH_ACT_COLORS[selected.speechAct],
               }}
             />
-            {SPEECH_ACT_LABELS[selected.speechAct]} · {selected.evidenceCount}{" "}
-            evidence
+            {selected.nodeKind === "term"
+              ? "Written term form · lexical connector"
+              : `${SPEECH_ACT_LABELS[selected.speechAct]} · ${selected.evidenceCount} evidence captured · ${selected.evidenceRequestCount} request(s)`}
           </div>
           <div className="statement">{selected.statement}</div>
           <div className="id">{selected.id}</div>

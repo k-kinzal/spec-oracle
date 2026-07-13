@@ -18,7 +18,7 @@
 
 use so_lang::ast::*;
 use so_lang::parse::{parse, ParseError};
-use so_lang::semantics::*;
+use so_reason::semantics::*;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 // ---- helpers ----------------------------------------------------------------------

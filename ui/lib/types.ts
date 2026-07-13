@@ -11,16 +11,20 @@ export type SpeechAct =
   | "permission"
   | "unknown";
 
-export type EdgeKind = "refines" | "composes" | "contradicts" | "unspecified";
+export type EdgeKind =
+  | "mentions_term"
+  | "unspecified";
 
 /** A node as the UI consumes it — the wire Node projected to what a graph view
  *  needs: identity, the sentence text (hover label), its speech act (color),
- *  and the evidence count (size). */
+ *  and asynchronous Evidence request/capture counts. */
 export type GraphNode = {
   id: string;
+  nodeKind: "specification" | "term";
   statement: string;
   speechAct: SpeechAct;
   evidenceCount: number;
+  evidenceRequestCount: number;
 };
 
 export type GraphEdge = {
@@ -29,6 +33,8 @@ export type GraphEdge = {
   target: string;
   kind: EdgeKind;
 };
+
+export const TERM_NODE_COLOR = "#35c7b4";
 
 /** One bounded page of the graph, as returned by the BFF (`/api/graph`). */
 export type GraphPage = {

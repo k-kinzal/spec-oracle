@@ -10,15 +10,15 @@
 //! (see the `FINDING RESOLVED AS LEGISLATED` comments).
 
 use so_lang::ast::TriggerKind;
-use so_lang::formula::{
+use so_lang::parse::{parse, ParseError};
+use so_reason::formula::{
     applicability, contract_formula, AssumptionSource, AtomRef, EdgeKind, Formula, GuardRole,
     PairingError, SubjectRelation,
 };
-use so_lang::parse::{parse, ParseError};
-use so_lang::relate::{
+use so_reason::relate::{
     assess, assumption_satisfiable, envelope_compatible, implies, Outcome, Ternary,
 };
-use so_lang::semantics::{responsible_subject_keys, subject_keys};
+use so_reason::semantics::{responsible_subject_keys, subject_keys};
 
 fn one(input: &str) -> so_lang::ast::Sentence {
     parse(input).unwrap().sentences.remove(0)
@@ -124,7 +124,7 @@ fn recommended_with_explicit_relied_stays_candidate() {
     let target = one("The daemon shall persist the Node.");
     let source = one("The client should send the Node.");
     let relied = contract_formula(&target)
-        .map(|_| so_lang::formula::claim_formula(&source).unwrap())
+        .map(|_| so_reason::formula::claim_formula(&source).unwrap())
         .unwrap();
     let built = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::OccurrenceReliance,
@@ -784,7 +784,7 @@ fn svo_render_round_trips() {
 fn shared_keys_with_explicit_relied_constructs() {
     let target = one("The daemon shall flush the buffer.");
     let source = one("The daemon is available.");
-    let relied = so_lang::formula::claim_formula(&source).unwrap();
+    let relied = so_reason::formula::claim_formula(&source).unwrap();
     let built = AssumptionSource::for_guarantee_with_relied(
         EdgeKind::OccurrenceReliance,
         &source,
@@ -987,8 +987,8 @@ fn totality_fuzz_bare_tails_and_passive_agents() {
         let _ = subject_keys(&sentence);
         let _ = responsible_subject_keys(&sentence);
         let _ = applicability(&sentence);
-        let _ = so_lang::formula::claim_formula(&sentence);
-        let _ = so_lang::semantics::skeleton(&sentence);
+        let _ = so_reason::formula::claim_formula(&sentence);
+        let _ = so_reason::semantics::skeleton(&sentence);
         let _ = contract_formula(&sentence);
         let _ = assess(&sentence, &sentence);
         let rendered = sentence.render();

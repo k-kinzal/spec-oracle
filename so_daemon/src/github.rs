@@ -15,7 +15,7 @@ use sha2::{Digest, Sha256};
 use url::Url;
 
 use crate::domain::{Locator, Node};
-use crate::jobs::{NodeMetaPlugin, PluginContext, PluginRegistration};
+use crate::jobs::{JobOutput, NodeMetaPlugin, PluginContext, PluginRegistration};
 
 const MAX_FETCH_BYTES: usize = 16 * 1024 * 1024;
 const FETCH_TIMEOUT: Duration = Duration::from_secs(20);
@@ -33,26 +33,47 @@ struct Target {
 
 impl NodeMetaPlugin for GithubEvidencePlugin {
     fn handles(&self, node: &Node) -> bool {
-        github_targets(node).next().is_some()
+        needs_resolution(node)
     }
 
-    fn run(&self, node: &Node, context: &PluginContext<'_>) -> Result<Value, String> {
+    fn run(&self, node: &Node, context: &PluginContext<'_>) -> Result<JobOutput, String> {
         let targets: Vec<Target> = github_targets(node).collect();
         let mut resolved = Vec::with_capacity(targets.len());
         for target in targets {
             resolved.push(resolve(target, context)?);
         }
-        Ok(json!({ "evidence": resolved }))
+        Ok(JobOutput::metadata(json!({ "evidence": resolved })))
     }
 }
 
-fn github_targets(node: &Node) -> impl Iterator<Item = Target> + '_ {
-    node.meta.evidence.iter().filter_map(|evidence| {
-        let Locator::Url { url } = &evidence.locator else {
-            return None;
-        };
-        parse_target(url)
-    })
+pub fn needs_resolution(node: &Node) -> bool {
+    !node
+        .meta
+        .updates
+        .values()
+        .any(|update| update.source == "github-evidence")
+        && github_targets(node).next().is_some()
+}
+
+fn github_targets(node: &Node) -> std::vec::IntoIter<Target> {
+    let mut targets = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    // Evidence capture runs concurrently with this independent enrichment Job,
+    // so the durable raw requests are its only input. Captured Evidence is an
+    // output/history view and must never be fed back as a new request (notably
+    // for pre-Job legacy Nodes that have no evidence_requests field).
+    for request in &node.meta.evidence_requests {
+        if let Ok(inputs) = crate::evidence::parse_value(request) {
+            for input in inputs {
+                if let Locator::Url { url } = input.locator {
+                    if seen.insert(url.clone()) {
+                        targets.extend(parse_target(&url));
+                    }
+                }
+            }
+        }
+    }
+    targets.into_iter()
 }
 
 fn parse_target(source: &str) -> Option<Target> {
@@ -218,6 +239,22 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    fn node_with_requests(requests: Vec<String>) -> Node {
+        Node {
+            id: "n".into(),
+            statement: "The client shall fetch the source.".into(),
+            lang_version: so_lang::LANG_VERSION.into(),
+            meta: crate::domain::Meta {
+                evidence_requests: requests,
+                evidence: vec![],
+                created_at: "t".into(),
+                cli: "spec".into(),
+                cli_version: "test".into(),
+                updates: Default::default(),
+            },
+        }
+    }
+
     #[test]
     fn parses_blob_url_into_repository_ref_and_path() {
         let target =
@@ -255,5 +292,28 @@ mod tests {
             raw_content_url(&target, "abc", target.path.as_ref().unwrap()).unwrap(),
             "https://raw.githubusercontent.com/o/r/abc/a%20b.txt"
         );
+    }
+
+    #[test]
+    fn only_raw_requests_drive_post_acceptance_github_work() {
+        let raw = node_with_requests(vec!["https://github.com/o/r".into()]);
+        assert!(needs_resolution(&raw));
+
+        let mut legacy = node_with_requests(vec![]);
+        legacy.meta.evidence.push(crate::domain::Evidence {
+            kind: crate::domain::Kind::Unknown,
+            locator: Locator::Url {
+                url: "https://github.com/o/r".into(),
+            },
+            snapshot: crate::domain::Snapshot {
+                content: String::new(),
+                content_hash: "h".into(),
+                bytes: 0,
+                captured_at: "t".into(),
+                anchor: crate::domain::Anchor::Worktree,
+            },
+            origin: crate::domain::Origin::default(),
+        });
+        assert!(!needs_resolution(&legacy));
     }
 }

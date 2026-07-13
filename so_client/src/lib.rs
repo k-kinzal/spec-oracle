@@ -3,13 +3,14 @@
 //! The client is deliberately minimal: it resolves the caller's input *channels*
 //! (`@file` / `-`(stdin) / inline) into concrete text — the one thing that cannot
 //! cross the wire, because it names the client's own streams — and forwards the
-//! specification plus the resolved evidence values to the daemon, which performs
-//! all parsing, capture, and persistence. The returned protobuf nodes (one per
-//! sentence) are handed back unchanged; the daemon owns the domain model.
+//! specification plus resolved Evidence descriptors to the daemon. The Add RPC
+//! parses and persists one Node; locator capture happens later in a daemon Job.
+//! The returned protobuf Node is handed back unchanged; the daemon owns the
+//! domain model.
 //!
 //! Note the division of labor: **channel** resolution (reading the client's files
 //! and stdin) happens here; **locator** capture (snapshotting whatever the
-//! evidence points at) happens in the daemon. A file evidence value therefore
+//! evidence points at) happens in a daemon Job. A file evidence value therefore
 //! refers to a path on the *daemon's* filesystem, even though an `@file` channel
 //! reads the descriptor from the *client's*.
 
@@ -47,6 +48,8 @@ pub enum ClientError {
     Status(#[from] tonic::Status),
     #[error("daemon response contained no nodes")]
     EmptyResponse,
+    #[error("daemon returned an invalid graph response: {0}")]
+    InvalidGraphResponse(String),
 }
 
 impl ClientError {
@@ -88,6 +91,7 @@ pub fn resolve_channel(arg: &str) -> Result<String, ChannelError> {
 /// daemon owns the domain model); `next_page_token` is empty on the last page.
 pub struct GraphPage {
     pub nodes: Vec<pb::Node>,
+    pub term_nodes: Vec<pb::TermNode>,
     pub edges: Vec<pb::Edge>,
     pub next_page_token: String,
     pub total_nodes: u64,
@@ -116,15 +120,15 @@ impl Client {
     }
 
     /// Add a specification: resolve each evidence channel to text, send the
-    /// request, and return the persisted nodes (one per sentence, in input
-    /// order) in their protobuf form.
+    /// request, and return the one accepted Specification Node. Evidence
+    /// descriptors remain opaque; capture happens asynchronously in `specd`.
     pub async fn add(
         &mut self,
         specification: &str,
         evidence_args: &[String],
         client: &str,
         client_version: &str,
-    ) -> Result<Vec<pb::Node>, ClientError> {
+    ) -> Result<pb::Node, ClientError> {
         let policy = so_tracing::capture_policy();
         let span = tracing::info_span!(
             "spec.client.add_specification",
@@ -157,14 +161,12 @@ impl Client {
             so_tracing::inject_context(request.metadata_mut());
 
             let response = self.inner.add_specification(request).await?.into_inner();
-            if response.nodes.is_empty() {
-                return Err(ClientError::EmptyResponse);
-            }
+            let node = response.node.ok_or(ClientError::EmptyResponse)?;
             tracing::info!(
-                "node.count" = response.nodes.len() as u64,
+                "node.id" = %node.id,
                 "specification add completed"
             );
-            Ok(response.nodes)
+            Ok(node)
         }
         .instrument(span)
         .await
@@ -215,6 +217,7 @@ impl Client {
             );
             Ok(GraphPage {
                 nodes: response.nodes,
+                term_nodes: response.term_nodes,
                 edges: response.edges,
                 next_page_token: response.next_page_token,
                 total_nodes: response.total_nodes,

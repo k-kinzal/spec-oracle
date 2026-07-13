@@ -3,11 +3,11 @@
 //! `for`/`with`/`by`, relative attachment, and adverbial capability.
 
 use so_lang::ast::*;
-use so_lang::formula::{
+use so_lang::parse::{parse, ParseError};
+use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, AtomRef, EdgeKind, Formula, PairingError,
 };
-use so_lang::parse::{parse, ParseError};
-use so_lang::semantics::{skeleton, subject_keys, Quantifier};
+use so_reason::semantics::{skeleton, subject_keys, Quantifier};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap();
@@ -88,7 +88,7 @@ fn pairing_matrix_allowed_and_denied_per_act() {
             if allowed.contains(&kind) {
                 let source = result.unwrap_or_else(|e| panic!("{input:?} × {kind:?}: {e}"));
                 assert_eq!(source.kind, kind);
-                assert_eq!(source.act, so_lang::semantics::speech_act(&sentence));
+                assert_eq!(source.act, so_reason::semantics::speech_act(&sentence));
             } else {
                 assert_eq!(result.unwrap_err(), *denial, "{input:?} × {kind:?}");
             }
@@ -141,7 +141,7 @@ fn source_formula_is_the_guarded_claim() {
         contract_formula(&conditional).unwrap().guarantee,
         "a conditional source contributes its own conditional"
     );
-    assert_eq!(source.force, Some(so_lang::semantics::Force::Binding));
+    assert_eq!(source.force, Some(so_reason::semantics::Force::Binding));
 }
 
 #[test]
@@ -212,7 +212,7 @@ fn pairing_serde_round_trips_with_provenance() {
     let v = serde_json::to_value(&paired).unwrap();
     assert_eq!(v["sources"][0]["kind"], "admissibility_envelope");
     assert_eq!(
-        serde_json::from_value::<so_lang::formula::ContractFormula>(v).unwrap(),
+        serde_json::from_value::<so_reason::formula::ContractFormula>(v).unwrap(),
         paired
     );
     // … and a pre-round-5 contract (no `sources` field) still deserializes.
@@ -220,7 +220,7 @@ fn pairing_serde_round_trips_with_provenance() {
         "assumption": { "kind": "top" },
         "guarantee": { "kind": "top" },
     });
-    let back: so_lang::formula::ContractFormula = serde_json::from_value(old).unwrap();
+    let back: so_reason::formula::ContractFormula = serde_json::from_value(old).unwrap();
     assert!(back.sources.is_empty());
 }
 
@@ -230,9 +230,9 @@ fn pairing_serde_round_trips_with_provenance() {
 
 mod relate {
     use super::*;
-    use so_lang::relate::{contradicts, implies, refines, Ternary};
+    use so_reason::relate::{contradicts, implies, refines, Ternary};
 
-    fn contract(input: &str) -> so_lang::formula::ContractFormula {
+    fn contract(input: &str) -> so_reason::formula::ContractFormula {
         contract_formula(&one(input)).unwrap()
     }
 
@@ -461,7 +461,7 @@ fn object_and_role_indefinites_stay_existential() {
     assert_eq!(sk.atoms[0].objects[0].quantifier, Quantifier::Existential);
     let sk = skeleton(&one("The daemon shall send the alert to an operator.")).unwrap();
     match &sk.atoms[0].roles[0].value {
-        so_lang::semantics::RoleValue::Heads { items, .. } => {
+        so_reason::semantics::RoleValue::Heads { items, .. } => {
             assert_eq!(items[0].quantifier, Quantifier::Existential);
         }
         other => panic!("expected heads, got {other:?}"),
@@ -639,7 +639,7 @@ fn by_is_the_passive_agent_in_be_verb_phrases() {
     assert_eq!(sk.atoms[0].roles.len(), 1);
     assert_eq!(
         sk.atoms[0].roles[0].kind,
-        so_lang::semantics::RoleKind::Agent
+        so_reason::semantics::RoleKind::Agent
     );
 }
 
@@ -677,7 +677,7 @@ fn by_is_the_passive_agent_in_descriptions_and_copular_clauses() {
     let trigger = sk.guards.trigger.as_ref().unwrap();
     assert_eq!(
         trigger.clauses[0].roles[0].kind,
-        so_lang::semantics::RoleKind::Agent
+        so_reason::semantics::RoleKind::Agent
     );
 }
 
@@ -701,7 +701,7 @@ fn by_outside_a_passive_site_is_rejected() {
 
 #[test]
 fn passive_agents_relate_across_acts() {
-    use so_lang::relate::{implies, Ternary};
+    use so_reason::relate::{implies, Ternary};
     let described = claim_formula(&one("The request is logged by the daemon.")).unwrap();
     let obliged = claim_formula(&one("The request shall be logged by the daemon.")).unwrap();
     assert_eq!(implies(&described, &obliged), Ternary::Yes);
@@ -802,7 +802,7 @@ fn subject_keys_ignore_relatives_in_both_attachments() {
 
 #[test]
 fn adverbed_able_to_is_capability_with_composed_polarity() {
-    use so_lang::semantics::{denote, Claim, Denotation, Polarity};
+    use so_reason::semantics::{denote, Claim, Denotation, Polarity};
     let capability = |input: &str| match denote(&one(input)) {
         Denotation::Behavior(assertion) => match assertion.claim {
             Claim::Capability { polarity, vp } => (polarity, vp),
@@ -847,13 +847,13 @@ fn adverbed_able_to_is_capability_with_composed_polarity() {
     );
     // The skeleton polarity mirrors the composed claim polarity.
     let sk = skeleton(&one("The client is never able to retry.")).unwrap();
-    assert_eq!(sk.polarity, so_lang::semantics::Polarity::Negative);
+    assert_eq!(sk.polarity, so_reason::semantics::Polarity::Negative);
     assert_eq!(sk.atoms[0].words, vec!["retry"]);
 }
 
 #[test]
 fn never_able_to_contradicts_the_positive_capability() {
-    use so_lang::relate::{contradicts, Ternary};
+    use so_reason::relate::{contradicts, Ternary};
     let can = claim_formula(&one("The client is able to retry.")).unwrap();
     let cannot = claim_formula(&one("The client is never able to retry.")).unwrap();
     assert_eq!(contradicts(&can, &cannot), Ternary::Yes);

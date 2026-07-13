@@ -19,27 +19,34 @@ fn sample_node(id: &str) -> Node {
         statement: "The pump shall stop.".to_string(),
         lang_version: so_lang::LANG_VERSION.to_string(),
         meta: Meta {
-            evidence: vec![Evidence {
-                kind: Kind::Constitutive,
-                locator: Locator::File {
-                    path: "src/pump.rs".to_string(),
-                    line: Some(10),
-                    col: None,
-                },
-                snapshot: Snapshot {
-                    content: "fn stop() {}".to_string(),
-                    content_hash: "deadbeef".to_string(),
-                    bytes: 12,
-                    captured_at: "2026-07-05T00:00:00Z".to_string(),
-                    anchor: Anchor::Worktree,
-                },
-                origin: Origin::default(),
-            }],
+            evidence_requests: vec![
+                r#"{"kind":"constitutive","locator":"src/pump.rs:10"}"#.to_string()
+            ],
+            evidence: vec![],
             created_at: "2026-07-05T00:00:00Z".to_string(),
             cli: "spec".to_string(),
             cli_version: "test".to_string(),
             updates: Default::default(),
         },
+    }
+}
+
+fn captured_evidence() -> Evidence {
+    Evidence {
+        kind: Kind::Constitutive,
+        locator: Locator::File {
+            path: "src/pump.rs".to_string(),
+            line: Some(10),
+            col: None,
+        },
+        snapshot: Snapshot {
+            content: "fn stop() {}".to_string(),
+            content_hash: "deadbeef".to_string(),
+            bytes: 12,
+            captured_at: "2026-07-05T00:00:00Z".to_string(),
+            anchor: Anchor::Worktree,
+        },
+        origin: Origin::default(),
     }
 }
 
@@ -64,7 +71,13 @@ fn arango_round_trip_when_available() {
     };
     let store = ArangoNodeStore::connect(&cfg).expect("connect to ArangoDB");
 
-    let node = sample_node("test-node-arango-roundtrip");
+    // Nodes are immutable and this integration database intentionally persists
+    // across runs. A fresh id prevents a prior run's asynchronous Job facts
+    // from changing the initial-state assertions below.
+    let node = sample_node(&format!(
+        "test-node-arango-roundtrip-{}",
+        uuid::Uuid::new_v4()
+    ));
     store.add_node(&node).expect("add_node");
 
     let back = store
@@ -76,15 +89,8 @@ fn arango_round_trip_when_available() {
     assert_eq!(back.id, node.id);
     assert_eq!(back.statement, node.statement);
     assert_eq!(back.lang_version, node.lang_version);
-    assert_eq!(back.meta.evidence.len(), 1);
-    assert_eq!(back.meta.evidence[0].kind, node.meta.evidence[0].kind);
-    assert_eq!(
-        back.meta.evidence[0].snapshot.content_hash,
-        node.meta.evidence[0].snapshot.content_hash
-    );
-    // … but the snapshot bytes are NOT stored in the graph: the blob store is
-    // the byte authority, so a fetched node's content is empty.
-    assert_eq!(back.meta.evidence[0].snapshot.content, "");
+    assert_eq!(back.meta.evidence_requests, node.meta.evidence_requests);
+    assert!(back.meta.evidence.is_empty());
 
     // Job results merge into Node Meta and are idempotent on the Job ID.
     let update = MetaUpdate {
@@ -92,11 +98,16 @@ fn arango_round_trip_when_available() {
         applied_at: "2026-07-11T00:00:00Z".to_string(),
         value: serde_json::json!({"commit": "abc123"}),
     };
+    let evidence = [captured_evidence()];
     store
-        .apply_meta_update(&node.id, "test-job", &update)
-        .expect("apply_meta_update");
+        .apply_job_result(&node.id, "test-job", &update, Some(&evidence))
+        .expect("apply_job_result");
     let updated = store.get_node(&node.id).unwrap().unwrap();
     assert_eq!(updated.meta.updates["test-job"], update);
+    assert_eq!(updated.meta.evidence.len(), 1);
+    assert_eq!(updated.meta.evidence[0].snapshot.content_hash, "deadbeef");
+    // Snapshot bytes stay in the blob store; only metadata is in ArangoDB.
+    assert_eq!(updated.meta.evidence[0].snapshot.content, "");
 
     // A missing key is a clean `None`, not an error.
     assert!(store
@@ -107,6 +118,26 @@ fn arango_round_trip_when_available() {
     // The maintained count includes our node, and keyset paging can page to it.
     assert!(store.count_nodes().expect("count_nodes") >= 1);
 
+    // Node-derived graph structure is persisted in native term-node and edge
+    // collections. The term is a lexical connector, not a Relation record.
+    so_daemon::graph_generation::generate_and_persist(&node, &store, "2026-07-12T00:00:01Z")
+        .expect("generate graph structure");
+    let edges = store
+        .list_edges(
+            std::slice::from_ref(&node.id),
+            so_daemon::graph_generation::generation_version(),
+        )
+        .expect("list_edges");
+    assert!(edges
+        .iter()
+        .any(|edge| edge.kind == so_daemon::domain::EdgeKind::MentionsTerm));
+    let term_ids: Vec<String> = edges
+        .iter()
+        .filter(|edge| edge.target_kind == so_daemon::domain::VertexKind::Term)
+        .map(|edge| edge.target.clone())
+        .collect();
+    let terms = store.get_term_nodes(&term_ids).expect("get_term_nodes");
+    assert!(terms.iter().any(|term| term.form == "pump"));
     // Keyset pagination is bounded and terminates: walk the whole collection in
     // small pages, following the cursor, and confirm our node is reachable and
     // no page exceeds the limit.

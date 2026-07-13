@@ -9,8 +9,8 @@
 //! verbs, adjectives, URLs, identifiers — pass through as opaque tokens.
 //!
 //! Errors speak the surface vocabulary: sentences, frames, cores, subjects,
-//! predicates. The assume-guarantee reading lives in [`crate::semantics`] and
-//! has no place in a syntax diagnostic.
+//! predicates. Any assume-guarantee reading is downstream and has no place in
+//! a syntax diagnostic.
 
 use crate::ast::*;
 use thiserror::Error;

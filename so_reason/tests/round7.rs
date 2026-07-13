@@ -11,11 +11,11 @@
 //! 7. Role-measure exclusion (disjoint durations contradict).
 
 use so_lang::ast::Sentence;
-use so_lang::formula::{
+use so_lang::parse::parse;
+use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula, PairingError,
 };
-use so_lang::parse::parse;
-use so_lang::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
+use so_reason::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("parse {input:?}: {e}"));
@@ -27,7 +27,7 @@ fn one(input: &str) -> Sentence {
     spec.sentences.into_iter().next().unwrap()
 }
 
-fn guarantee(input: &str) -> so_lang::formula::Formula {
+fn guarantee(input: &str) -> so_reason::formula::Formula {
     contract_formula(&one(input))
         .expect("contract-bearing sentence")
         .guarantee
@@ -331,7 +331,7 @@ fn relied_serde_round_trip_and_back_compat() {
 // Change 3 — count-quantifier entailment
 // =====================================================================================
 
-fn claim(input: &str) -> so_lang::formula::Formula {
+fn claim(input: &str) -> so_reason::formula::Formula {
     claim_formula(&one(input)).expect("behavioral sentence")
 }
 
@@ -480,7 +480,7 @@ fn content_shapes_and_role_order() {
     let content = vp.content.as_ref().expect("content clause");
     assert_eq!(content.subject.heads(), vec!["token"]);
     // The skeleton digests the content with its full identity.
-    let sk = so_lang::semantics::skeleton(&s).unwrap();
+    let sk = so_reason::semantics::skeleton(&s).unwrap();
     let content = sk.atoms[0].content.as_ref().expect("content digest");
     assert_eq!(content.clause.subject_head, "token");
     assert_eq!(content.full, "the token is valid");
@@ -583,15 +583,16 @@ fn content_identity_is_full_fidelity() {
 /// The content digest serializes and round-trips on the skeleton.
 #[test]
 fn content_serde_round_trip() {
-    let sk = so_lang::semantics::skeleton(&one("The server shall ensure that the token is valid."))
-        .unwrap();
+    let sk =
+        so_reason::semantics::skeleton(&one("The server shall ensure that the token is valid."))
+            .unwrap();
     let json = serde_json::to_value(&sk).unwrap();
-    let back: so_lang::semantics::Skeleton = serde_json::from_value(json).unwrap();
+    let back: so_reason::semantics::Skeleton = serde_json::from_value(json).unwrap();
     assert_eq!(back, sk);
     // Pre-round-7 atoms without `content` still deserialize.
     let mut atom = serde_json::to_value(&sk.atoms[0]).unwrap();
     atom.as_object_mut().unwrap().remove("content");
-    let back: so_lang::semantics::Atom = serde_json::from_value(atom).unwrap();
+    let back: so_reason::semantics::Atom = serde_json::from_value(atom).unwrap();
     assert_eq!(back.content, None);
 }
 
@@ -662,7 +663,7 @@ fn relative_roles_are_subject_identity() {
         Outcome::Equivalent
     );
     // The full identity string carries the whole tail.
-    let sk = so_lang::semantics::skeleton(&one(
+    let sk = so_reason::semantics::skeleton(&one(
         "Each request that arrives from the gateway shall be logged.",
     ))
     .unwrap();
@@ -808,8 +809,8 @@ fn disjoint_durations_contradict() {
 #[test]
 fn disjoint_deadlines_contradict() {
     use so_lang::ast::ComparisonOp;
-    use so_lang::formula::{AtomRef, Formula};
-    use so_lang::semantics::RoleValue;
+    use so_reason::formula::{AtomRef, Formula};
+    use so_reason::semantics::RoleValue;
     let plain = claim("The daemon shall respond within 10 seconds.");
     let Formula::Atom {
         atom: AtomRef::Behavior { behavior },

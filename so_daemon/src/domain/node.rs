@@ -1,4 +1,4 @@
-//! The persisted node: one grounded sentence of a specification.
+//! The persisted node: one constrained-NL specification sentence.
 //!
 //! A node carries two orthogonal layers:
 //!   * the **logical** layer — the sentence itself: the raw `statement` text in
@@ -7,7 +7,8 @@
 //!     from them — the parse tree, the speech act, the assume-guarantee
 //!     contract reading — is a computed *view*, produced at response time and
 //!     never stored;
-//!   * the **epistemic** layer — the `meta.evidence` grounding the claim.
+//!   * the **epistemic** layer — raw evidence requests recorded at acceptance,
+//!     followed by captured `meta.evidence` appended by an asynchronous Job.
 //!
 //! `meta` holds captured facts: each piece of evidence with its snapshot (sense
 //! ②) and origin (sense ①), the node's own creation facts (sense ③), and
@@ -48,6 +49,15 @@ pub struct MetaUpdate {
 /// Node metadata. Captured facts only — no deterministically computed views.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Meta {
+    /// Caller-supplied evidence descriptors. They are persisted verbatim so an
+    /// Evidence Job can be retried after daemon restart without repeating the
+    /// Add RPC. Interpretation and I/O never happen on the Add path.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence_requests: Vec<String>,
+    /// Successfully captured evidence. Empty while capture is pending, when no
+    /// evidence was requested, or when a durable rejected Job result explains
+    /// why the request could not be interpreted.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence: Vec<Evidence>,
     /// Node creation facts (sense ③), self-observed. No adder identity is
     /// recorded — it is unavailable and out of scope.
@@ -60,7 +70,8 @@ pub struct Meta {
     pub updates: BTreeMap<String, MetaUpdate>,
 }
 
-/// A specification node: one sentence, grounded.
+/// A specification node: exactly one accepted sentence. Grounding may arrive
+/// asynchronously after the node itself becomes visible.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Node {
     pub id: String,
@@ -94,6 +105,9 @@ mod tests {
             statement: "The pump shall stop.".to_string(),
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
+                evidence_requests: vec![
+                    r#"{"kind":"constitutive","locator":"src/pump.rs:10"}"#.into()
+                ],
                 evidence: vec![Evidence {
                     kind: Kind::Constitutive,
                     locator: Locator::File {

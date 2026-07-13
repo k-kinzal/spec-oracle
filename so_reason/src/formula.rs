@@ -63,13 +63,13 @@
 //! re-derived from the anchors (or the ASTs they re-parse to), never the
 //! digest alone and never the anchor strings alone.
 
-use crate::ast::*;
 use crate::semantics::{
     claim_atoms, claim_polarity, clause_group_skeletons, denote, force, speech_act,
     subject_skeleton_of, Atom, Claim, ClauseSkeleton, Denotation, Force, Polarity, Quantifier,
     SpeechAct, SubjectSkeleton,
 };
 use serde::{Deserialize, Serialize};
+use so_lang::ast::*;
 use thiserror::Error;
 
 /// A propositional formula over opaque atoms. Connectives are n-ary where

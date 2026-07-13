@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import { Cosmograph, CosmographProvider } from "@cosmograph/react";
 import {
   SPEECH_ACT_COLORS,
+  TERM_NODE_COLOR,
   type GraphEdge,
   type GraphNode,
 } from "@/lib/types";
@@ -23,14 +24,18 @@ export default function GraphView({
 }) {
   // Color a node by its speech act — the dimension that clusters the graph.
   const nodeColor = useCallback(
-    (n: GraphNode) => SPEECH_ACT_COLORS[n.speechAct] ?? SPEECH_ACT_COLORS.unknown,
+    (n: GraphNode) =>
+      n.nodeKind === "term"
+        ? TERM_NODE_COLOR
+        : SPEECH_ACT_COLORS[n.speechAct] ?? SPEECH_ACT_COLORS.unknown,
     [],
   );
 
   // Size by evidence: better-grounded claims read as heavier nodes. Bounded so a
   // single very-cited node cannot dominate the view.
   const nodeSize = useCallback(
-    (n: GraphNode) => 2.5 + Math.min(n.evidenceCount, 8) * 0.9,
+    (n: GraphNode) =>
+      n.nodeKind === "term" ? 2.1 : 2.5 + Math.min(n.evidenceCount, 8) * 0.9,
     [],
   );
 
