@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
       nodes: [
         ...(page.nodes ?? []).map(toNode),
         ...(page.term_nodes ?? []).map(toTermNode),
+        ...(page.derived_nodes ?? []).map(toDerivedNode),
       ],
       edges: (page.edges ?? []).map(toEdge),
       nextPageToken: page.next_page_token ?? "",
@@ -73,12 +74,16 @@ const EDGE_KINDS: Record<string, EdgeKind> = {
   EDGE_KIND_SUPPORTS: "supports",
   EDGE_KIND_DEFEATS: "defeats",
   EDGE_KIND_SUPERSEDES: "supersedes",
+  EDGE_KIND_GROUNDED_BY: "grounded_by",
+  EDGE_KIND_HAS_ASSUMPTION: "has_assumption",
+  EDGE_KIND_HAS_GUARANTEE: "has_guarantee",
 };
 
 const EDGE_FAMILIES: Record<string, EdgeFamily> = {
   EDGE_FAMILY_LEXICAL: "lexical",
   EDGE_FAMILY_SEMANTIC: "semantic",
   EDGE_FAMILY_SELECTION: "selection",
+  EDGE_FAMILY_PROJECTION: "projection",
 };
 
 const ENDPOINT_ROLES: Record<string, EndpointRole> = {
@@ -94,6 +99,11 @@ const ENDPOINT_ROLES: Record<string, EndpointRole> = {
   EDGE_ENDPOINT_ROLE_DEFEATED: "defeated",
   EDGE_ENDPOINT_ROLE_SUPERSEDER: "superseder",
   EDGE_ENDPOINT_ROLE_SUPERSEDED: "superseded",
+  EDGE_ENDPOINT_ROLE_GROUNDED_SPECIFICATION: "grounded_specification",
+  EDGE_ENDPOINT_ROLE_EVIDENCE: "evidence",
+  EDGE_ENDPOINT_ROLE_CONTRACT_SPECIFICATION: "contract_specification",
+  EDGE_ENDPOINT_ROLE_ASSUMPTION: "assumption",
+  EDGE_ENDPOINT_ROLE_GUARANTEE: "guarantee",
 };
 
 function toNode(raw: unknown): GraphNode {
@@ -121,6 +131,31 @@ function toTermNode(raw: unknown): GraphNode {
     id: term.id ?? "",
     nodeKind: "term",
     statement: term.form ?? "",
+    speechAct: "unknown",
+    evidenceCount: 0,
+    evidenceRequestCount: 0,
+  };
+}
+
+function toDerivedNode(raw: unknown): GraphNode {
+  const node = raw as {
+    id?: string;
+    value?: "evidence" | "assumption" | "guarantee";
+    evidence?: { evidence?: { snapshot?: { content_hash?: string } | null } | null };
+    assumption?: { expression?: string };
+    guarantee?: { expression?: string };
+  };
+  const nodeKind = node.value ?? "evidence";
+  const statement =
+    nodeKind === "assumption"
+      ? node.assumption?.expression ?? ""
+      : nodeKind === "guarantee"
+        ? node.guarantee?.expression ?? ""
+        : `Evidence ${node.evidence?.evidence?.snapshot?.content_hash ?? ""}`.trim();
+  return {
+    id: node.id ?? "",
+    nodeKind,
+    statement,
     speechAct: "unknown",
     evidenceCount: 0,
     evidenceRequestCount: 0,

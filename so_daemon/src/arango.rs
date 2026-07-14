@@ -10,18 +10,19 @@
 //! dispatched via `tokio::task::spawn_blocking` — the store itself is
 //! deliberately synchronous and knows nothing about the runtime.
 //!
-//! Data model (the only collection this scope touches):
+//! Data model:
 //!   * database `spec_oracle`;
 //!   * document collection `nodes`, one document per node, `_key` = node id.
 //!     (An earlier iteration used a `contracts` collection; that data was
 //!     dev-only and is deliberately left behind, not migrated.)
-//!   * evidence embedded in the document. Snapshot *bytes* are not stored here —
+//!   * the current captured-evidence view embedded in the document. Snapshot *bytes* are not stored here —
 //!     only the `content_hash` pointer into the [`BlobStore`](crate::store);
 //!     `Snapshot::content` is `#[serde(skip)]`, so a fetched node's content is
 //!     empty and the blob store remains the byte authority.
 //!
-//!   * `term_nodes` and the native `edges` collection hold append-only derived
-//!     graph topology;
+//!   * `term_nodes`, `derived_nodes`, and the native `edges` collection hold
+//!     append-only graph topology. The derived collection contains
+//!     content-addressed Evidence, Assumption, and Guarantee vertices;
 //!   * `relation_assessments` holds append-only candidate-pair audit records,
 //!     including Unknown/Independent outcomes that must not become topology.
 
@@ -32,13 +33,16 @@ use arangors::index::{Index, IndexSettings};
 use arangors::{ClientError, Connection, Database};
 use serde_json::Value;
 
-use crate::domain::{Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, TermNode, VertexKind};
+use crate::domain::{
+    DerivedNode, Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, TermNode, VertexKind,
+};
 
-use crate::store::{GraphStore, GraphWrite, NodePage, NodeStore, StoreError};
+use crate::store::{DerivedGraphWrite, GraphStore, GraphWrite, NodePage, NodeStore, StoreError};
 
 /// The document collection holding one specification node per document.
 const COLLECTION: &str = "nodes";
 const TERM_COLLECTION: &str = "term_nodes";
+const DERIVED_COLLECTION: &str = "derived_nodes";
 const EDGE_COLLECTION: &str = "edges";
 const ASSESSMENT_COLLECTION: &str = "relation_assessments";
 
@@ -72,16 +76,20 @@ impl ArangoNodeStore {
         let db = ensure_database(&conn, cfg.database)?;
         ensure_collection(&db, COLLECTION)?;
         ensure_collection(&db, TERM_COLLECTION)?;
+        ensure_collection(&db, DERIVED_COLLECTION)?;
         ensure_edge_collection(&db, EDGE_COLLECTION)?;
         ensure_collection(&db, ASSESSMENT_COLLECTION)?;
         ensure_edge_read_projection(&db)?;
+        ensure_edge_identities(&db)?;
         ensure_edge_read_index(&db)?;
+        ensure_edge_identity_index(&db)?;
+        ensure_node_identity_index(&db)?;
         Ok(ArangoNodeStore { db })
     }
 }
 
 impl NodeStore for ArangoNodeStore {
-    fn add_node(&self, node: &Node) -> Result<(), StoreError> {
+    fn add_node(&self, node: &Node) -> Result<bool, StoreError> {
         let _span = tracing::debug_span!(
             "spec.store.arango.add_node",
             "db.system" = "arangodb",
@@ -96,18 +104,47 @@ impl NodeStore for ArangoNodeStore {
         if let Value::Object(ref mut map) = doc {
             map.insert("_key".to_string(), Value::String(node.id.clone()));
         }
-        let mut vars: HashMap<&str, Value> = HashMap::new();
-        vars.insert("doc", doc);
         // A Specification Node is immutable once accepted. Retrying the same
         // Mailbox message is a no-op, so asynchronously appended Evidence and
         // Job results can never be erased by a repeated Add execution.
+        upsert_immutable(&self.db, COLLECTION, &node.id, doc)
+    }
+
+    fn find_node(&self, statement: &str, lang_version: &str) -> Result<Option<Node>, StoreError> {
         let query = format!(
-            "INSERT @doc INTO {COLLECTION} OPTIONS {{ \
-               overwriteMode: \"ignore\" \
-             }}"
+            "FOR node IN {COLLECTION} \
+               FILTER node.statement == @statement \
+               FILTER node.lang_version == @lang_version \
+               SORT node._key ASC LIMIT 1 \
+               RETURN UNSET(node, \"_key\", \"_id\", \"_rev\")"
         );
-        let _: Vec<Value> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
-        Ok(())
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("statement", Value::String(statement.to_string()));
+        vars.insert("lang_version", Value::String(lang_version.to_string()));
+        let nodes: Vec<Node> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        Ok(nodes.into_iter().next())
+    }
+
+    fn merge_evidence_requests(
+        &self,
+        node_id: &str,
+        requests: &[String],
+    ) -> Result<Node, StoreError> {
+        let query = format!(
+            "FOR node IN {COLLECTION} FILTER node._key == @node_id LIMIT 1 \
+             LET requests = SORTED_UNIQUE(APPEND(NOT_NULL(node.meta.evidence_requests, []), @requests)) \
+             UPDATE node WITH {{ meta: {{ evidence_requests: requests }} }} IN {COLLECTION} \
+             OPTIONS {{ mergeObjects: true }} \
+             RETURN UNSET(NEW, \"_key\", \"_id\", \"_rev\")"
+        );
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("node_id", Value::String(node_id.to_string()));
+        vars.insert("requests", serde_json::to_value(requests)?);
+        let nodes: Vec<Node> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        nodes
+            .into_iter()
+            .next()
+            .ok_or_else(|| StoreError::MissingNode(node_id.to_string()))
     }
 
     fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError> {
@@ -186,16 +223,50 @@ impl GraphStore for ArangoNodeStore {
         })
     }
 
+    fn put_derived_node(
+        &self,
+        node: &DerivedNode,
+        edge: &Edge,
+    ) -> Result<DerivedGraphWrite, StoreError> {
+        edge.validate().map_err(StoreError::InvalidEdge)?;
+        if edge.target != node.id() || edge.target_kind != node.vertex_kind() {
+            return Err(StoreError::InvalidEdge(format!(
+                "derived edge target '{}:{:?}' does not match node '{}:{:?}'",
+                edge.target,
+                edge.target_kind,
+                node.id(),
+                node.vertex_kind()
+            )));
+        }
+        let mut doc = serde_json::to_value(node)?;
+        doc.as_object_mut()
+            .expect("derived node serializes as object")
+            .insert("_key".into(), Value::String(node.id().to_string()));
+        let node_inserted = upsert_immutable(&self.db, DERIVED_COLLECTION, node.id(), doc)?;
+        let edge_inserted = self.append_edge(edge)?;
+        Ok(DerivedGraphWrite {
+            node_inserted,
+            edge_inserted,
+        })
+    }
+
     fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError> {
         edge.validate().map_err(StoreError::InvalidEdge)?;
         let from_collection = match edge.source_kind {
             VertexKind::Specification => COLLECTION,
             VertexKind::Term => TERM_COLLECTION,
+            VertexKind::Evidence | VertexKind::Assumption | VertexKind::Guarantee => {
+                DERIVED_COLLECTION
+            }
         };
         let to_collection = match edge.target_kind {
             VertexKind::Specification => COLLECTION,
             VertexKind::Term => TERM_COLLECTION,
+            VertexKind::Evidence | VertexKind::Assumption | VertexKind::Guarantee => {
+                DERIVED_COLLECTION
+            }
         };
+        let identity_key = edge.identity_key();
         let doc = serde_json::json!({
             "_key": edge.id,
             "_from": format!("{from_collection}/{}", edge.source),
@@ -206,9 +277,10 @@ impl GraphStore for ArangoNodeStore {
             "derivation_method": edge.derivation.method,
             "derivation_version": edge.derivation.version,
             "derivation_key": derivation_key(&edge.derivation),
+            "identity_key": identity_key,
             "edge": edge,
         });
-        upsert_immutable(&self.db, EDGE_COLLECTION, &edge.id, doc)
+        upsert_edge_immutable(&self.db, &edge.id, &edge.identity_key(), doc)
     }
 
     fn append_relation_assessment(
@@ -240,6 +312,18 @@ impl GraphStore for ArangoNodeStore {
                LET term = DOCUMENT(CONCAT(\"{TERM_COLLECTION}/\", id)) \
                FILTER term != null \
                RETURN UNSET(term, \"_key\", \"_id\", \"_rev\")"
+        );
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("ids", serde_json::to_value(ids)?);
+        self.db.aql_bind_vars(&query, vars).map_err(backend)
+    }
+
+    fn get_derived_nodes(&self, ids: &[String]) -> Result<Vec<DerivedNode>, StoreError> {
+        let query = format!(
+            "FOR id IN @ids \
+               LET node = DOCUMENT(CONCAT(\"{DERIVED_COLLECTION}/\", id)) \
+               FILTER node != null \
+               RETURN UNSET(node, \"_key\", \"_id\", \"_rev\")"
         );
         let mut vars: HashMap<&str, Value> = HashMap::new();
         vars.insert("ids", serde_json::to_value(ids)?);
@@ -418,6 +502,39 @@ fn upsert_immutable(
     Ok(inserted.into_iter().next().unwrap_or(false))
 }
 
+fn upsert_edge_immutable(
+    db: &Database<ReqwestClient>,
+    key: &str,
+    identity_key: &str,
+    doc: Value,
+) -> Result<bool, StoreError> {
+    // Check both identities: `_key` protects deterministic historical writers;
+    // `identity_key` rejects the same typed relationship even if a caller
+    // supplies a different Edge id. The unique persistent index closes races
+    // between concurrent Jobs.
+    let query = format!(
+        "LET existing = FIRST( \
+           FOR edge IN {EDGE_COLLECTION} \
+             FILTER edge._key == @key OR edge.identity_key == @identity_key \
+             LIMIT 1 RETURN edge._key \
+         ) \
+         FILTER existing == null \
+         INSERT @doc INTO {EDGE_COLLECTION} \
+         RETURN true"
+    );
+    let mut vars: HashMap<&str, Value> = HashMap::new();
+    vars.insert("key", Value::String(key.to_string()));
+    vars.insert("identity_key", Value::String(identity_key.to_string()));
+    vars.insert("doc", doc);
+    match db.aql_bind_vars::<bool>(&query, vars) {
+        Ok(inserted) => Ok(inserted.into_iter().next().unwrap_or(false)),
+        // A concurrent writer may pass the read before us. The unique index
+        // converts that race into the same idempotent "already exists" result.
+        Err(ref error) if is_status(error, 409) => Ok(false),
+        Err(error) => Err(backend(error)),
+    }
+}
+
 /// Map a driver error into the backend-agnostic [`StoreError`].
 fn backend(e: ClientError) -> StoreError {
     StoreError::Backend(e.to_string())
@@ -473,12 +590,14 @@ fn ensure_edge_read_projection(db: &Database<ReqwestClient>) -> Result<(), Store
     let query = format!(
         "FOR e IN {EDGE_COLLECTION} \
            FILTER e.page_owner == null OR e.derivation_key == null OR e.family == null \
-           LET owner = e.edge.target_kind == \"term\" \
+           LET owner = e.edge.target_kind != \"specification\" \
              ? e.edge.source \
              : MIN([e.edge.source, e.edge.target]) \
            LET key = CONCAT(e.edge.derivation.method, \"|\", e.edge.derivation.version) \
            LET family = e.edge.kind == \"mentions_term\" \
              ? \"lexical\" \
+             : POSITION([\"grounded_by\", \"has_assumption\", \"has_guarantee\"], e.edge.kind) \
+               ? \"projection\" \
              : POSITION([\"supports\", \"defeats\", \"supersedes\"], e.edge.kind) \
                ? \"selection\" \
                : \"semantic\" \
@@ -493,6 +612,95 @@ fn ensure_edge_read_projection(db: &Database<ReqwestClient>) -> Result<(), Store
     );
     let _: Vec<bool> = db.aql_str(&query).map_err(backend)?;
     Ok(())
+}
+
+fn ensure_edge_identities(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    // Compute the exact Rust domain identity for historical rows. If historical
+    // data already contains duplicates, preserve every Ledger row but give only
+    // the first one the canonical identity; future writes then reuse it.
+    let query = format!(
+        "FOR e IN {EDGE_COLLECTION} SORT e._key ASC \
+         RETURN {{ key: e._key, identity: e.identity_key, edge: e.edge }}"
+    );
+    let rows: Vec<Value> = db.aql_str(&query).map_err(backend)?;
+    let mut groups: std::collections::BTreeMap<String, Vec<(String, Option<String>)>> =
+        std::collections::BTreeMap::new();
+    for row in rows {
+        let key = row
+            .get("key")
+            .and_then(Value::as_str)
+            .ok_or_else(|| StoreError::Backend("historical Edge row has no key".into()))?;
+        let edge: Edge = serde_json::from_value(
+            row.get("edge")
+                .cloned()
+                .ok_or_else(|| StoreError::Backend("historical Edge row has no edge".into()))?,
+        )?;
+        let canonical = edge.identity_key();
+        let current = row
+            .get("identity")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        groups
+            .entry(canonical)
+            .or_default()
+            .push((key.to_string(), current));
+    }
+    for (canonical, entries) in groups {
+        // Preserve an already-canonical representative; otherwise the first
+        // lexical key becomes the selected historical representative.
+        let keeper = entries
+            .iter()
+            .position(|(_, current)| current.as_deref() == Some(canonical.as_str()))
+            .unwrap_or(0);
+        for (index, (key, current)) in entries.into_iter().enumerate() {
+            let identity = if index == keeper {
+                canonical.clone()
+            } else {
+                format!("legacy-duplicate:{canonical}:{key}")
+            };
+            if current.as_deref() == Some(identity.as_str()) {
+                continue;
+            }
+            let update = format!(
+                "UPDATE @key WITH {{ identity_key: @identity }} IN {EDGE_COLLECTION} RETURN true"
+            );
+            let mut vars: HashMap<&str, Value> = HashMap::new();
+            vars.insert("key", Value::String(key));
+            vars.insert("identity", Value::String(identity));
+            let _: Vec<bool> = db.aql_bind_vars(&update, vars).map_err(backend)?;
+        }
+    }
+    Ok(())
+}
+
+fn ensure_edge_identity_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let index = Index::builder()
+        .name("edge_unique_identity")
+        .fields(vec!["identity_key".to_string()])
+        .settings(IndexSettings::Persistent {
+            unique: true,
+            sparse: false,
+            deduplicate: false,
+        })
+        .build();
+    db.create_index(EDGE_COLLECTION, &index)
+        .map(|_| ())
+        .map_err(backend)
+}
+
+fn ensure_node_identity_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let index = Index::builder()
+        .name("node_by_authored_content")
+        .fields(vec!["statement".to_string(), "lang_version".to_string()])
+        .settings(IndexSettings::Persistent {
+            unique: false,
+            sparse: false,
+            deduplicate: false,
+        })
+        .build();
+    db.create_index(COLLECTION, &index)
+        .map(|_| ())
+        .map_err(backend)
 }
 
 fn ensure_edge_read_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {

@@ -124,14 +124,18 @@ async fn run(
                         cli: &input.cli,
                         cli_version: &input.cli_version,
                     };
-                    add::run(&request, &*nodes)
+                    add::run_with_status(&request, &*nodes)
                 })
                 .await;
 
                 match outcome {
-                    Ok(Ok(node)) => {
-                        let event = NodeAdded::with_parent(&message_id, node.clone(), event_parent);
-                        let _ = reply.send(Ok(node));
+                    Ok(Ok(outcome)) => {
+                        // Reused Nodes still emit the same Node-addressed event:
+                        // this reconciles unfinished Jobs after a daemon restart,
+                        // while the Job Mailbox coalesces concurrent duplicates.
+                        let event =
+                            NodeAdded::with_parent(&message_id, outcome.node.clone(), event_parent);
+                        let _ = reply.send(Ok(outcome.node));
                         if let Err(error) = jobs.node_added(event).await {
                             tracing::error!(
                                 "message.id" = %message_id,

@@ -25,6 +25,9 @@ const MAX_LABEL_CHARS: usize = 23;
 enum NodeKind {
     Specification,
     Term,
+    Evidence,
+    Assumption,
+    Guarantee,
 }
 
 #[derive(Debug)]
@@ -53,17 +56,24 @@ pub(crate) struct Graph {
     edges: Vec<Edge>,
     specification_count: usize,
     term_count: usize,
+    evidence_count: usize,
+    assumption_count: usize,
+    guarantee_count: usize,
 }
 
 impl Graph {
     pub(crate) fn from_wire(
         specifications: impl IntoIterator<Item = pb::Node>,
         terms: impl IntoIterator<Item = pb::TermNode>,
+        derived: impl IntoIterator<Item = pb::DerivedNode>,
         edges: impl IntoIterator<Item = pb::Edge>,
     ) -> Result<Self, String> {
         let mut nodes_by_id = BTreeMap::new();
         let mut specification_count = 0;
         let mut term_count = 0;
+        let mut evidence_count = 0;
+        let mut assumption_count = 0;
+        let mut guarantee_count = 0;
 
         for specification in specifications {
             let node = Node {
@@ -89,10 +99,47 @@ impl Graph {
             }
             term_count += 1;
         }
+        for derived in derived {
+            let (kind, label) = match derived.value {
+                Some(pb::derived_node::Value::Evidence(value)) => {
+                    evidence_count += 1;
+                    let hash = value
+                        .evidence
+                        .and_then(|evidence| evidence.snapshot)
+                        .map(|snapshot| snapshot.content_hash)
+                        .unwrap_or_default();
+                    (
+                        NodeKind::Evidence,
+                        format!("evidence {}", truncate(&hash, 12)),
+                    )
+                }
+                Some(pb::derived_node::Value::Assumption(value)) => {
+                    assumption_count += 1;
+                    (NodeKind::Assumption, value.expression)
+                }
+                Some(pb::derived_node::Value::Guarantee(value)) => {
+                    guarantee_count += 1;
+                    (NodeKind::Guarantee, value.expression)
+                }
+                None => return Err(format!("Derived Node {} has no value", derived.id)),
+            };
+            let node = Node {
+                id: derived.id.clone(),
+                display_id: String::new(),
+                label,
+                kind,
+            };
+            if nodes_by_id.insert(derived.id, node).is_some() {
+                return Err("graph Node ids must be globally unique".to_string());
+            }
+        }
 
         let mut nodes: Vec<Node> = nodes_by_id.into_values().collect();
         let mut specification_number = 0;
         let mut term_number = 0;
+        let mut evidence_number = 0;
+        let mut assumption_number = 0;
+        let mut guarantee_number = 0;
         for node in &mut nodes {
             node.display_id = match node.kind {
                 NodeKind::Specification => {
@@ -102,6 +149,18 @@ impl Graph {
                 NodeKind::Term => {
                     term_number += 1;
                     format!("T{term_number:02}")
+                }
+                NodeKind::Evidence => {
+                    evidence_number += 1;
+                    format!("E{evidence_number:02}")
+                }
+                NodeKind::Assumption => {
+                    assumption_number += 1;
+                    format!("A{assumption_number:02}")
+                }
+                NodeKind::Guarantee => {
+                    guarantee_number += 1;
+                    format!("G{guarantee_number:02}")
                 }
             };
         }
@@ -141,6 +200,9 @@ impl Graph {
             edges: graph_edges,
             specification_count,
             term_count,
+            evidence_count,
+            assumption_count,
+            guarantee_count,
         })
     }
 
@@ -150,9 +212,12 @@ impl Graph {
             .unwrap_or(DEFAULT_WIDTH)
             .max(MIN_WIDTH);
         let mut output = format!(
-            "Specification graph — {} specification(s), {} term(s), {} edge(s)\n",
+            "Specification graph — {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} edge(s)\n",
             self.specification_count,
             self.term_count,
+            self.evidence_count,
+            self.assumption_count,
+            self.guarantee_count,
             self.edges.len()
         );
         if self.nodes.is_empty() {
@@ -195,7 +260,9 @@ impl Graph {
             });
         canvas.render(area, &mut buffer);
         output.push_str(&buffer_text(&buffer));
-        output.push_str("\n◆ specification   ○ written term form\n");
+        output.push_str(
+            "\n◆ specification   ○ written term   ● evidence   △ assumption   ■ guarantee\n",
+        );
 
         let mut kinds: BTreeMap<(&str, &str, &str, &str, bool), usize> = BTreeMap::new();
         for edge in &self.edges {
@@ -310,6 +377,9 @@ fn node_label(node: &Node) -> String {
     let marker = match node.kind {
         NodeKind::Specification => '◆',
         NodeKind::Term => '○',
+        NodeKind::Evidence => '●',
+        NodeKind::Assumption => '△',
+        NodeKind::Guarantee => '■',
     };
     format!(
         "{marker} {} {}",
@@ -373,6 +443,9 @@ fn edge_kind(kind: i32) -> (&'static str, bool) {
         pb::EdgeKind::Supports => ("supports", true),
         pb::EdgeKind::Defeats => ("defeats", true),
         pb::EdgeKind::Supersedes => ("supersedes", true),
+        pb::EdgeKind::GroundedBy => ("grounded_by", true),
+        pb::EdgeKind::HasAssumption => ("has_assumption", true),
+        pb::EdgeKind::HasGuarantee => ("has_guarantee", true),
         pb::EdgeKind::Unspecified => ("unspecified", false),
     }
 }
@@ -382,6 +455,7 @@ fn edge_family(family: i32) -> &'static str {
         pb::EdgeFamily::Lexical => "lexical",
         pb::EdgeFamily::Semantic => "semantic",
         pb::EdgeFamily::Selection => "selection",
+        pb::EdgeFamily::Projection => "projection",
         pb::EdgeFamily::Unspecified => "unspecified",
     }
 }
@@ -400,6 +474,11 @@ fn endpoint_role(role: i32) -> &'static str {
         pb::EdgeEndpointRole::Defeated => "defeated",
         pb::EdgeEndpointRole::Superseder => "superseder",
         pb::EdgeEndpointRole::Superseded => "superseded",
+        pb::EdgeEndpointRole::GroundedSpecification => "grounded_specification",
+        pb::EdgeEndpointRole::Evidence => "evidence",
+        pb::EdgeEndpointRole::ContractSpecification => "contract_specification",
+        pb::EdgeEndpointRole::Assumption => "assumption",
+        pb::EdgeEndpointRole::Guarantee => "guarantee",
         pb::EdgeEndpointRole::Unspecified => "unspecified",
     }
 }
@@ -468,6 +547,21 @@ mod tests {
                 pb::EdgeEndpointRole::Superseder,
                 pb::EdgeEndpointRole::Superseded,
             ),
+            pb::EdgeKind::GroundedBy => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::GroundedSpecification,
+                pb::EdgeEndpointRole::Evidence,
+            ),
+            pb::EdgeKind::HasAssumption => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::ContractSpecification,
+                pb::EdgeEndpointRole::Assumption,
+            ),
+            pb::EdgeKind::HasGuarantee => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::ContractSpecification,
+                pb::EdgeEndpointRole::Guarantee,
+            ),
             pb::EdgeKind::Unspecified => (
                 pb::EdgeFamily::Unspecified,
                 pb::EdgeEndpointRole::Unspecified,
@@ -494,6 +588,7 @@ mod tests {
                 specification("spec-b", "The daemon shall wait."),
             ],
             [term("term-daemon", "daemon")],
+            [],
             [
                 edge("edge-a", "spec-a", "term-daemon"),
                 edge("edge-b", "spec-b", "term-daemon"),
@@ -527,6 +622,7 @@ mod tests {
                 specification("b", "The daemon shall not stop."),
             ],
             [],
+            [],
             [
                 edge_with_kind("refines", "a", "b", pb::EdgeKind::Refines),
                 edge_with_kind("conflict", "a", "b", pb::EdgeKind::HardContradiction),
@@ -545,6 +641,7 @@ mod tests {
         let error = Graph::from_wire(
             [specification("spec-a", "The daemon shall stop.")],
             [],
+            [],
             [edge("edge-a", "spec-a", "missing")],
         )
         .unwrap_err();
@@ -554,7 +651,7 @@ mod tests {
 
     #[test]
     fn empty_graph_is_still_a_valid_whole_graph() {
-        let graph = Graph::from_wire([], [], []).unwrap();
+        let graph = Graph::from_wire([], [], [], []).unwrap();
 
         assert!(graph.render(Some(80)).contains("(empty)"));
     }

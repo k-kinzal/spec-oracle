@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import { Cosmograph, CosmographProvider } from "@cosmograph/react";
 import {
   DIRECTED_EDGE_KINDS,
+  DERIVED_NODE_COLORS,
   EDGE_KIND_COLORS,
   SPEECH_ACT_COLORS,
   TERM_NODE_COLOR,
@@ -26,10 +27,11 @@ export default function GraphView({
 }) {
   // Color a node by its speech act — the dimension that clusters the graph.
   const nodeColor = useCallback(
-    (n: GraphNode) =>
-      n.nodeKind === "term"
-        ? TERM_NODE_COLOR
-        : SPEECH_ACT_COLORS[n.speechAct] ?? SPEECH_ACT_COLORS.unknown,
+    (n: GraphNode) => {
+      if (n.nodeKind === "term") return TERM_NODE_COLOR;
+      if (n.nodeKind !== "specification") return DERIVED_NODE_COLORS[n.nodeKind];
+      return SPEECH_ACT_COLORS[n.speechAct] ?? SPEECH_ACT_COLORS.unknown;
+    },
     [],
   );
 
@@ -37,7 +39,9 @@ export default function GraphView({
   // single very-cited node cannot dominate the view.
   const nodeSize = useCallback(
     (n: GraphNode) =>
-      n.nodeKind === "term" ? 2.1 : 2.5 + Math.min(n.evidenceCount, 8) * 0.9,
+      n.nodeKind === "specification"
+        ? 2.5 + Math.min(n.evidenceCount, 8) * 0.9
+        : 2.1,
     [],
   );
 

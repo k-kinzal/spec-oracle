@@ -5,8 +5,8 @@
 //!     the constrained specification language, plus the `lang_version` that
 //!     accepted it. The words are the source of truth; everything derivable
 //!     from them — the parse tree, the speech act, the assume-guarantee
-//!     contract reading — is a computed *view*, produced at response time and
-//!     never stored;
+//!     contract reading — is a computed *view*. Its Assumption/Guarantee graph
+//!     projection is stored separately as content-addressed derived Nodes;
 //!   * the **epistemic** layer — raw evidence requests recorded at acceptance,
 //!     followed by captured `meta.evidence` appended by an asynchronous Job.
 //!

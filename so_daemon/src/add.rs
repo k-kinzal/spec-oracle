@@ -22,6 +22,11 @@ pub struct AddRequest<'a> {
     pub cli_version: &'a str,
 }
 
+pub struct AddOutcome {
+    pub node: Node,
+    pub inserted: bool,
+}
+
 #[derive(Debug, Error)]
 pub enum AddError {
     #[error("syntax error in specification: {0}")]
@@ -58,6 +63,13 @@ impl AddError {
 }
 
 pub fn run(req: &AddRequest<'_>, nodes: &dyn NodeStore) -> Result<Node, AddError> {
+    Ok(run_with_status(req, nodes)?.node)
+}
+
+pub fn run_with_status(
+    req: &AddRequest<'_>,
+    nodes: &dyn NodeStore,
+) -> Result<AddOutcome, AddError> {
     let policy = so_tracing::capture_policy();
     let span = tracing::info_span!(
         "spec.add.run",
@@ -91,8 +103,29 @@ pub fn run(req: &AddRequest<'_>, nodes: &dyn NodeStore) -> Result<Node, AddError
         return Err(error);
     };
 
+    if let Some(existing) = nodes.find_node(&sentence.source, so_lang::LANG_VERSION)? {
+        let has_new_evidence = req
+            .evidence_values
+            .iter()
+            .any(|request| !existing.meta.evidence_requests.contains(request));
+        let node = if has_new_evidence {
+            nodes.merge_evidence_requests(&existing.id, req.evidence_values)?
+        } else {
+            existing
+        };
+        tracing::Span::current().record("node.id", node.id.as_str());
+        tracing::info!("node.id" = %node.id, inserted = false, "existing specification node reused");
+        return Ok(AddOutcome {
+            node,
+            inserted: false,
+        });
+    }
+
     let node = Node {
-        id: crate::mailbox::derive_id("node", &[req.message_id]),
+        // Specification identity is its accepted source sentence under the
+        // language version. Mailbox identity still scopes Events and Jobs, but
+        // submitting the same Node content again must reuse the stored Node.
+        id: crate::mailbox::derive_id("node", &[so_lang::LANG_VERSION, &sentence.source]),
         statement: sentence.source.clone(),
         lang_version: so_lang::LANG_VERSION.to_string(),
         meta: Meta {
@@ -104,14 +137,21 @@ pub fn run(req: &AddRequest<'_>, nodes: &dyn NodeStore) -> Result<Node, AddError
             updates: Default::default(),
         },
     };
-    if let Err(error) = nodes.add_node(&node) {
+    let inserted = nodes.add_node(&node).map_err(|error| {
         tracing::Span::current().record("error.category", "store");
         tracing::Span::current().record("error.stage", "persist_node");
-        return Err(error.into());
-    }
+        AddError::Store(error)
+    })?;
+    let node = if inserted {
+        node
+    } else {
+        nodes
+            .get_node(&node.id)?
+            .ok_or_else(|| crate::store::StoreError::MissingNode(node.id.clone()))?
+    };
     tracing::Span::current().record("node.id", node.id.as_str());
-    tracing::info!("node.id" = %node.id, "specification node accepted");
-    Ok(node)
+    tracing::info!("node.id" = %node.id, inserted, "specification node accepted");
+    Ok(AddOutcome { node, inserted })
 }
 
 #[cfg(test)]
@@ -168,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    fn one_mailbox_message_has_one_stable_immutable_node() {
+    fn identical_specifications_reuse_one_stable_immutable_node() {
         let store = InMemoryNodeStore::new();
         let first = run(&request("The pump shall stop.", &[]), &store).unwrap();
         let second = run(&request("The pump shall stop.", &[]), &store).unwrap();
@@ -180,7 +220,46 @@ mod tests {
             ..request("The pump shall stop.", &[])
         };
         let third = run(&other, &store).unwrap();
-        assert_ne!(first.id, third.id);
+        assert_eq!(first.id, third.id);
+        assert_eq!(first, third);
+        assert_eq!(store.count_nodes().unwrap(), 1);
+
+        let different = run(&request("The pump shall start.", &[]), &store).unwrap();
+        assert_ne!(first.id, different.id);
         assert_eq!(store.count_nodes().unwrap(), 2);
+    }
+
+    #[test]
+    fn identical_legacy_node_is_reused_even_when_its_id_is_not_content_addressed() {
+        let store = InMemoryNodeStore::new();
+        let legacy = Node {
+            id: "legacy-random-id".into(),
+            statement: "The pump shall stop.".into(),
+            lang_version: so_lang::LANG_VERSION.into(),
+            meta: Meta {
+                evidence_requests: vec![],
+                evidence: vec![],
+                created_at: "old".into(),
+                cli: "spec".into(),
+                cli_version: "old".into(),
+                updates: Default::default(),
+            },
+        };
+        store.add_node(&legacy).unwrap();
+        let reused = run(&request("The pump shall stop.", &[]), &store).unwrap();
+        assert_eq!(reused, legacy);
+        assert_eq!(store.count_nodes().unwrap(), 1);
+    }
+
+    #[test]
+    fn new_evidence_is_merged_into_the_reused_specification_node() {
+        let store = InMemoryNodeStore::new();
+        let first_values = ["first.rs:1".to_string()];
+        let first = run(&request("The pump shall stop.", &first_values), &store).unwrap();
+        let second_values = ["second.rs:2".to_string(), "first.rs:1".to_string()];
+        let reused = run(&request("The pump shall stop.", &second_values), &store).unwrap();
+        assert_eq!(first.id, reused.id);
+        assert_eq!(store.count_nodes().unwrap(), 1);
+        assert_eq!(reused.meta.evidence_requests, ["first.rs:1", "second.rs:2"]);
     }
 }

@@ -10,7 +10,8 @@ syntax = "proto3";
 // other structure. A node stores the raw sentence text (and
 // the language version that accepted it); the `SentenceView` on each returned
 // node — speech act, canonical rendering, contract view — is derived at
-// response time and never persisted.
+// response time. The same ingest contract is also exposed in graph topology as
+// content-addressed Assumption and Guarantee nodes.
 package spec_oracle.v1;
 
 // The specification graph service. It ingests specifications and reads the
@@ -86,7 +87,9 @@ message GetGraphResponse {
   // Term forms adjacent to the specifications in this page. A TermNode records
   // normalized written vocabulary, never real-world referent identity.
   repeated TermNode term_nodes = 5;
-  reserved 6;
+  // Content-addressed grounding and assume-guarantee projection vertices
+  // adjacent to this specification page.
+  repeated DerivedNode derived_nodes = 6;
 }
 
 message TermNode {
@@ -97,10 +100,37 @@ message TermNode {
   string derivation_version = 5;
 }
 
+message DerivedNode {
+  string id = 1;
+  oneof value {
+    EvidenceNode evidence = 2;
+    AssumptionNode assumption = 3;
+    GuaranteeNode guarantee = 4;
+  }
+}
+
+message EvidenceNode {
+  Evidence evidence = 1;
+}
+
+message AssumptionNode {
+  string expression = 1;
+  string derivation_version = 2;
+}
+
+message GuaranteeNode {
+  string expression = 1;
+  string force = 2;
+  string derivation_version = 3;
+}
+
 enum VertexKind {
   VERTEX_KIND_UNSPECIFIED = 0;
   VERTEX_KIND_SPECIFICATION = 1;
   VERTEX_KIND_TERM = 2;
+  VERTEX_KIND_EVIDENCE = 3;
+  VERTEX_KIND_ASSUMPTION = 4;
+  VERTEX_KIND_GUARANTEE = 5;
 }
 
 message TextAnchor {
@@ -135,13 +165,14 @@ message Edge {
   EdgeEndpointRole target_role = 14;
 }
 
-// The relationship family keeps lexical discovery, semantic truth, and
-// versioned selection judgments distinct in the one append-only Ledger.
+// The relationship family keeps lexical discovery, semantic truth, versioned
+// selection judgments, and deterministic projections distinct in the Ledger.
 enum EdgeFamily {
   EDGE_FAMILY_UNSPECIFIED = 0;
   EDGE_FAMILY_LEXICAL = 1;
   EDGE_FAMILY_SEMANTIC = 2;
   EDGE_FAMILY_SELECTION = 3;
+  EDGE_FAMILY_PROJECTION = 4;
 }
 
 // The role each ordered endpoint plays in its EdgeKind. Symmetric kinds give
@@ -160,6 +191,11 @@ enum EdgeEndpointRole {
   EDGE_ENDPOINT_ROLE_DEFEATED = 10;
   EDGE_ENDPOINT_ROLE_SUPERSEDER = 11;
   EDGE_ENDPOINT_ROLE_SUPERSEDED = 12;
+  EDGE_ENDPOINT_ROLE_GROUNDED_SPECIFICATION = 13;
+  EDGE_ENDPOINT_ROLE_EVIDENCE = 14;
+  EDGE_ENDPOINT_ROLE_CONTRACT_SPECIFICATION = 15;
+  EDGE_ENDPOINT_ROLE_ASSUMPTION = 16;
+  EDGE_ENDPOINT_ROLE_GUARANTEE = 17;
 }
 
 // The kind of relationship an Edge asserts. Its direction is its endpoint-role
@@ -181,6 +217,9 @@ enum EdgeKind {
   EDGE_KIND_SUPPORTS = 15;
   EDGE_KIND_DEFEATS = 16;
   EDGE_KIND_SUPERSEDES = 17;
+  EDGE_KIND_GROUNDED_BY = 18;
+  EDGE_KIND_HAS_ASSUMPTION = 19;
+  EDGE_KIND_HAS_GUARANTEE = 20;
 }
 
 // ---- domain mirror ---------------------------------------------------------

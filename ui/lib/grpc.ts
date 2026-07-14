@@ -29,6 +29,7 @@ const GRPC_ADDR = process.env.SPEC_ORACLE_GRPC_ADDR ?? "127.0.0.1:50051";
 export type WireGraphPage = {
   nodes: unknown[];
   term_nodes: unknown[];
+  derived_nodes: unknown[];
   edges: unknown[];
   next_page_token: string;
   total_nodes: string;

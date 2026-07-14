@@ -1,8 +1,8 @@
 //! In-process message identity shared by the Add and Job mailboxes.
 //!
-//! A new `message_id` identifies one Mailbox submission. Retries of work
-//! originating from that message retain the ID; separate submissions receive a
-//! different ID even when their payloads are identical.
+//! A new `message_id` identifies one Mailbox submission. NodeAdded identity is
+//! instead derived from the content-addressed Node so concurrent submissions
+//! of identical content coalesce into the same downstream Jobs.
 
 use sha2::{Digest, Sha256};
 
@@ -45,7 +45,13 @@ impl NodeAdded {
     }
 
     pub fn with_parent(message_id: &str, node: Node, parent_span: tracing::Span) -> NodeAdded {
-        let id = derive_id("node-added", &[message_id, &node.id]);
+        let mut evidence_requests = node.meta.evidence_requests.clone();
+        evidence_requests.sort();
+        evidence_requests.dedup();
+        let mut parts = Vec::with_capacity(evidence_requests.len() + 1);
+        parts.push(node.id.as_str());
+        parts.extend(evidence_requests.iter().map(String::as_str));
+        let id = derive_id("node-added", &parts);
         NodeAdded {
             id,
             message_id: message_id.to_string(),
@@ -69,7 +75,7 @@ mod tests {
     }
 
     #[test]
-    fn node_added_identity_comes_from_message_and_node() {
+    fn node_added_identity_comes_from_the_reused_node() {
         let node = Node {
             id: "n1".to_string(),
             statement: "The pump shall stop.".to_string(),
@@ -84,7 +90,13 @@ mod tests {
             },
         };
         let event = NodeAdded::new("m1", node);
-        assert_eq!(event.id, derive_id("node-added", &["m1", "n1"]));
+        assert_eq!(event.id, derive_id("node-added", &["n1"]));
+        let duplicate = NodeAdded::new("another-message", event.node.clone());
+        assert_eq!(event.id, duplicate.id);
+
+        let mut enriched = event.node.clone();
+        enriched.meta.evidence_requests.push("new.rs:1".into());
+        assert_ne!(event.id, NodeAdded::new("m1", enriched).id);
         assert_eq!(event.message_id, "m1");
     }
 }

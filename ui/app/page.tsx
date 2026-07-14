@@ -8,6 +8,7 @@ import StatusBar from "@/components/StatusBar";
 import ViewSwitcher from "@/components/ViewSwitcher";
 import {
   CONFLICT_EDGE_KINDS,
+  DERIVED_NODE_COLORS,
   SPEECH_ACT_COLORS,
   SPEECH_ACT_LABELS,
   TERM_NODE_COLOR,
@@ -362,12 +363,16 @@ export default function Page() {
                 background:
                   selected.nodeKind === "term"
                     ? TERM_NODE_COLOR
-                    : SPEECH_ACT_COLORS[selected.speechAct],
+                    : selected.nodeKind === "specification"
+                      ? SPEECH_ACT_COLORS[selected.speechAct]
+                      : DERIVED_NODE_COLORS[selected.nodeKind],
               }}
             />
             {selected.nodeKind === "term"
               ? "Written term form · lexical connector"
-              : `${SPEECH_ACT_LABELS[selected.speechAct]} · ${selectedSemanticRelations} semantic relation(s) · ${selectedSelectionRelations} selection relation(s) · ${selected.evidenceCount} evidence captured`}
+              : selected.nodeKind === "specification"
+                ? `${SPEECH_ACT_LABELS[selected.speechAct]} · ${selectedSemanticRelations} semantic relation(s) · ${selectedSelectionRelations} selection relation(s) · ${selected.evidenceCount} evidence captured`
+                : `${selected.nodeKind[0].toUpperCase()}${selected.nodeKind.slice(1)} node · shared content-addressed projection`}
           </div>
           <div className="statement">{selected.statement}</div>
           <div className="id">{selected.id}</div>

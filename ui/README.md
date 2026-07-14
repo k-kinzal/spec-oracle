@@ -3,13 +3,15 @@
 A Next.js app that visualizes the spec-oracle specification graph as a
 force-directed cloud (GPU/WebGL via [Cosmograph](https://cosmograph.app)). Each
 specification node is one grounded sentence; derived term-form nodes connect
-specifications through vocabulary they actually share, while proved semantic
-Edges show refinement, equivalence, and force-aware conflicts.
+specifications through vocabulary they actually share, Evidence nodes expose
+captured grounding, Assumption/Guarantee nodes expose the ingest contract, and
+proved semantic Edges show refinement, equivalence, and force-aware conflicts.
 
 The UI exposes bounded projections of the loaded Ledger rather than treating
 one all-purpose graph as every answer:
 
-- **Graph** — specifications, term nodes, and every current Edge.
+- **Graph** — specifications, term, Evidence, Assumption, and Guarantee nodes,
+  and every current Edge.
 - **Meaning** — specification-to-specification semantic Edges only.
 - **Vocabulary** — lexical `source mentions target` incidence, explicitly not
   support.
@@ -55,8 +57,8 @@ requests "everything":
   it renders (`RENDER_CAP`), showing "loaded X of TOTAL" and a "Load more"
   control (see `app/page.tsx`).
 
-`GetGraph` returns a bounded specification page, adjacent term nodes, and
-checked edges. Teal term nodes mean only equal normalized written forms; they
+`GetGraph` returns a bounded specification page, adjacent term and projection
+nodes, and checked edges. Teal term nodes mean only equal normalized written forms; they
 do not assert referent identity. Shared terms are a versioned candidate search,
 not a semantic boundary. The daemon persists only outcomes proved by its
 current `assess` rules; Unknown, Independent, and unsearched pairs are not

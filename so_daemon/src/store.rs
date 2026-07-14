@@ -4,7 +4,7 @@
 //! the (potentially large) captured bytes can live in different systems and
 //! scale independently:
 //!
-//!   * [`NodeStore`] — the specification nodes: identity, the raw sentence
+//!   * [`NodeStore`] — the authored specification nodes: identity, the raw sentence
 //!     text with its language version, and embedded evidence *metadata*. The
 //!     production implementation is [`crate::arango::ArangoNodeStore`], a graph
 //!     database chosen so the same product scales from a laptop to a cluster by
@@ -13,7 +13,9 @@
 //!     graph so the topology stays small and the bytes can sit in cheap object
 //!     storage.
 //!
-//! A node document therefore carries only a `snapshot.content_hash` pointer into
+//! Captured Evidence and ingest Assumption/Guarantee values also become shared
+//! content-addressed vertices through [`GraphStore`]. A specification node
+//! document therefore carries only a `snapshot.content_hash` pointer into
 //! the blob store; the captured bytes themselves are never written into the
 //! graph (`Snapshot::content` is `#[serde(skip)]`).
 
@@ -23,7 +25,7 @@ use std::sync::Mutex;
 
 use thiserror::Error;
 
-use crate::domain::{Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, TermNode};
+use crate::domain::{DerivedNode, Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, TermNode};
 
 /// A bounded, keyset-paginated page of nodes.
 ///
@@ -42,6 +44,12 @@ pub struct GraphWrite {
     pub edge_inserted: bool,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DerivedGraphWrite {
+    pub node_inserted: bool,
+    pub edge_inserted: bool,
+}
+
 /// Persists and retrieves individual specification nodes — the write seam the
 /// ingest use case (`spec add`) needs, and nothing more.
 ///
@@ -52,7 +60,22 @@ pub struct GraphWrite {
 pub trait NodeStore {
     /// Persist an immutable accepted Node. Idempotent on Node id: re-executing
     /// the same Add command is a no-op and cannot erase later Job results.
-    fn add_node(&self, node: &Node) -> Result<(), StoreError>;
+    fn add_node(&self, node: &Node) -> Result<bool, StoreError>;
+
+    /// Find the selected existing Node with identical authored content. This
+    /// keeps content deduplication compatible with rows created before Node ids
+    /// became content-addressed.
+    fn find_node(&self, statement: &str, lang_version: &str) -> Result<Option<Node>, StoreError>;
+
+    /// Merge retryable Evidence descriptors into an existing Specification
+    /// Node and return its current stored state. Repeated descriptors are a
+    /// no-op; new descriptors make Evidence capture reconcilable without
+    /// creating another authored Node.
+    fn merge_evidence_requests(
+        &self,
+        node_id: &str,
+        requests: &[String],
+    ) -> Result<Node, StoreError>;
 
     /// Fetch a node by id, or `None` if no such node exists.
     fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError>;
@@ -74,9 +97,9 @@ pub trait NodeStore {
 /// Separated from [`NodeStore`] (which it extends) so only the graph read path
 /// depends on it. It is deliberately paginated: the graph can hold billions of
 /// nodes, so there is no "return everything" method — only [`list_nodes`], a
-/// bounded keyset page. Derived term vertices and the selected current versions
-/// of lexical and semantic Edges are exposed alongside each specification
-/// page.
+/// bounded keyset page. Derived term, Evidence, Assumption, and Guarantee
+/// vertices and the selected current versions of their Edges are exposed
+/// alongside each specification page.
 ///
 /// [`list_nodes`]: GraphStore::list_nodes
 /// [`list_edges`]: GraphStore::list_edges
@@ -84,6 +107,15 @@ pub trait GraphStore: NodeStore {
     /// Idempotently persist one derived term form and the specification's
     /// anchored mention edge to it.
     fn put_term_mention(&self, term: &TermNode, edge: &Edge) -> Result<GraphWrite, StoreError>;
+
+    /// Idempotently persist one content-addressed Evidence, Assumption, or
+    /// Guarantee node and the projection edge that connects it to a
+    /// specification.
+    fn put_derived_node(
+        &self,
+        node: &DerivedNode,
+        edge: &Edge,
+    ) -> Result<DerivedGraphWrite, StoreError>;
 
     /// Idempotently append one graph-established edge. Stable derivation-derived
     /// ids turn retries into no-ops; a changed derivation version creates new
@@ -101,6 +133,8 @@ pub trait GraphStore: NodeStore {
     fn get_relation_assessment(&self, id: &str) -> Result<Option<RelationAssessment>, StoreError>;
 
     fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError>;
+
+    fn get_derived_nodes(&self, ids: &[String]) -> Result<Vec<DerivedNode>, StoreError>;
 
     /// Return a bounded, keyset page of specification Nodes that mention any
     /// supplied term under the selected lexical derivation. This is a
@@ -243,8 +277,15 @@ impl BlobStore for FileBlobStore {
 pub struct InMemoryNodeStore {
     nodes: Mutex<BTreeMap<String, Node>>,
     terms: Mutex<BTreeMap<String, TermNode>>,
-    edges: Mutex<BTreeMap<String, Edge>>,
+    derived_nodes: Mutex<BTreeMap<String, DerivedNode>>,
+    edges: Mutex<EdgeState>,
     assessments: Mutex<BTreeMap<String, RelationAssessment>>,
+}
+
+#[derive(Default)]
+struct EdgeState {
+    by_identity: BTreeMap<String, Edge>,
+    identity_by_id: BTreeMap<String, String>,
 }
 
 impl InMemoryNodeStore {
@@ -266,10 +307,39 @@ impl InMemoryNodeStore {
 }
 
 impl NodeStore for InMemoryNodeStore {
-    fn add_node(&self, node: &Node) -> Result<(), StoreError> {
+    fn add_node(&self, node: &Node) -> Result<bool, StoreError> {
         let mut nodes = self.nodes.lock().expect("node store mutex poisoned");
-        nodes.entry(node.id.clone()).or_insert_with(|| node.clone());
-        Ok(())
+        if nodes.contains_key(&node.id) {
+            Ok(false)
+        } else {
+            nodes.insert(node.id.clone(), node.clone());
+            Ok(true)
+        }
+    }
+
+    fn find_node(&self, statement: &str, lang_version: &str) -> Result<Option<Node>, StoreError> {
+        Ok(self
+            .nodes
+            .lock()
+            .expect("node store mutex poisoned")
+            .values()
+            .find(|node| node.statement == statement && node.lang_version == lang_version)
+            .cloned())
+    }
+
+    fn merge_evidence_requests(
+        &self,
+        node_id: &str,
+        requests: &[String],
+    ) -> Result<Node, StoreError> {
+        let mut nodes = self.nodes.lock().expect("node store mutex poisoned");
+        let node = nodes
+            .get_mut(node_id)
+            .ok_or_else(|| StoreError::MissingNode(node_id.to_string()))?;
+        node.meta.evidence_requests.extend(requests.iter().cloned());
+        node.meta.evidence_requests.sort();
+        node.meta.evidence_requests.dedup();
+        Ok(node.clone())
     }
 
     fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError> {
@@ -309,28 +379,58 @@ impl GraphStore for InMemoryNodeStore {
             .expect("term store mutex poisoned")
             .insert(term.id.clone(), term.clone())
             .is_none();
-        let mut edges = self.edges.lock().expect("edge store mutex poisoned");
-        let edge_inserted = if edges.contains_key(&edge.id) {
-            false
-        } else {
-            edges.insert(edge.id.clone(), edge.clone());
-            true
-        };
+        let edge_inserted = insert_edge(
+            &mut self.edges.lock().expect("edge store mutex poisoned"),
+            edge,
+        )?;
         Ok(GraphWrite {
             term_inserted,
             edge_inserted,
         })
     }
 
+    fn put_derived_node(
+        &self,
+        node: &DerivedNode,
+        edge: &Edge,
+    ) -> Result<DerivedGraphWrite, StoreError> {
+        edge.validate().map_err(StoreError::InvalidEdge)?;
+        if edge.target != node.id() || edge.target_kind != node.vertex_kind() {
+            return Err(StoreError::InvalidEdge(format!(
+                "derived edge target '{}:{:?}' does not match node '{}:{:?}'",
+                edge.target,
+                edge.target_kind,
+                node.id(),
+                node.vertex_kind()
+            )));
+        }
+        let mut nodes = self
+            .derived_nodes
+            .lock()
+            .expect("derived node store mutex poisoned");
+        let node_inserted = if nodes.contains_key(node.id()) {
+            false
+        } else {
+            nodes.insert(node.id().to_string(), node.clone());
+            true
+        };
+        drop(nodes);
+        let edge_inserted = insert_edge(
+            &mut self.edges.lock().expect("edge store mutex poisoned"),
+            edge,
+        )?;
+        Ok(DerivedGraphWrite {
+            node_inserted,
+            edge_inserted,
+        })
+    }
+
     fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError> {
         edge.validate().map_err(StoreError::InvalidEdge)?;
-        let mut edges = self.edges.lock().expect("edge store mutex poisoned");
-        if edges.contains_key(&edge.id) {
-            Ok(false)
-        } else {
-            edges.insert(edge.id.clone(), edge.clone());
-            Ok(true)
-        }
+        insert_edge(
+            &mut self.edges.lock().expect("edge store mutex poisoned"),
+            edge,
+        )
     }
 
     fn append_relation_assessment(
@@ -363,6 +463,14 @@ impl GraphStore for InMemoryNodeStore {
         Ok(ids.iter().filter_map(|id| terms.get(id).cloned()).collect())
     }
 
+    fn get_derived_nodes(&self, ids: &[String]) -> Result<Vec<DerivedNode>, StoreError> {
+        let nodes = self
+            .derived_nodes
+            .lock()
+            .expect("derived node store mutex poisoned");
+        Ok(ids.iter().filter_map(|id| nodes.get(id).cloned()).collect())
+    }
+
     fn list_term_candidates(
         &self,
         term_ids: &[String],
@@ -376,6 +484,7 @@ impl GraphStore for InMemoryNodeStore {
             .edges
             .lock()
             .expect("edge store mutex poisoned")
+            .by_identity
             .values()
             .filter(|edge| {
                 edge.kind == EdgeKind::MentionsTerm
@@ -444,6 +553,7 @@ impl GraphStore for InMemoryNodeStore {
             .edges
             .lock()
             .expect("edge store mutex poisoned")
+            .by_identity
             .values()
             .filter(|edge| {
                 current_derivations.contains(&edge.derivation) && owners.contains(edge.page_owner())
@@ -451,6 +561,24 @@ impl GraphStore for InMemoryNodeStore {
             .cloned()
             .collect())
     }
+}
+
+fn insert_edge(state: &mut EdgeState, edge: &Edge) -> Result<bool, StoreError> {
+    let identity = edge.identity_key();
+    if state.by_identity.contains_key(&identity) {
+        return Ok(false);
+    }
+    if let Some(existing_identity) = state.identity_by_id.get(&edge.id) {
+        return Err(StoreError::InvalidEdge(format!(
+            "Edge id '{}' is already used by a different relationship ({existing_identity})",
+            edge.id
+        )));
+    }
+    state
+        .identity_by_id
+        .insert(edge.id.clone(), identity.clone());
+    state.by_identity.insert(identity, edge.clone());
+    Ok(true)
 }
 
 /// The exclusive lower bound for a keyset scan: everything strictly after the
@@ -832,6 +960,81 @@ mod tests {
                 .list_edges(&["a".into()], std::slice::from_ref(&derivation))
                 .unwrap(),
             [edge]
+        );
+    }
+
+    #[test]
+    fn duplicate_edge_content_is_reused_even_with_a_different_id_and_time() {
+        let store = InMemoryNodeStore::new();
+        let edge = Edge::specification_relation(
+            EdgeKind::Supports,
+            "a",
+            "b",
+            vec!["basis".into()],
+            crate::domain::Derivation {
+                method: "selection-policy".into(),
+                version: "v1".into(),
+            },
+            "t1",
+        )
+        .unwrap();
+        assert!(store.append_edge(&edge).unwrap());
+
+        let mut duplicate = edge.clone();
+        duplicate.id = "caller-chose-another-id".into();
+        duplicate.recorded_at = "t2".into();
+        assert!(!store.append_edge(&duplicate).unwrap());
+        assert_eq!(
+            store
+                .list_edges(&["a".into()], std::slice::from_ref(&edge.derivation))
+                .unwrap(),
+            [edge]
+        );
+    }
+
+    #[test]
+    fn equal_derived_nodes_are_shared_while_each_projection_edge_is_kept() {
+        let store = InMemoryNodeStore::new();
+        let assumption = DerivedNode::assumption("⊤", "v1");
+        let derivation = crate::domain::Derivation {
+            method: "contract".into(),
+            version: "v1".into(),
+        };
+        let a = Edge::projection(
+            EdgeKind::HasAssumption,
+            "a",
+            assumption.id(),
+            derivation.clone(),
+            "t1",
+        )
+        .unwrap();
+        let b = Edge::projection(
+            EdgeKind::HasAssumption,
+            "b",
+            assumption.id(),
+            derivation,
+            "t2",
+        )
+        .unwrap();
+        assert_eq!(
+            store.put_derived_node(&assumption, &a).unwrap(),
+            DerivedGraphWrite {
+                node_inserted: true,
+                edge_inserted: true,
+            }
+        );
+        assert_eq!(
+            store.put_derived_node(&assumption, &b).unwrap(),
+            DerivedGraphWrite {
+                node_inserted: false,
+                edge_inserted: true,
+            }
+        );
+        assert_eq!(
+            store
+                .get_derived_nodes(&[assumption.id().to_string()])
+                .unwrap(),
+            [assumption]
         );
     }
 

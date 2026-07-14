@@ -30,7 +30,13 @@ const DEFAULT_PAGE_SIZE: u32 = 100;
 /// graph read bounded no matter how large the graph grows.
 const MAX_PAGE_SIZE: u32 = 1000;
 
-type GraphReadResult = (NodePage, Vec<crate::domain::TermNode>, Vec<Edge>, u64);
+type GraphReadResult = (
+    NodePage,
+    Vec<crate::domain::TermNode>,
+    Vec<crate::domain::DerivedNode>,
+    Vec<Edge>,
+    u64,
+);
 
 /// The service, holding the two persistence seams behind `Arc`s so each request
 /// can hand them to a blocking task. Both trait objects are `Send + Sync` so they
@@ -224,13 +230,28 @@ impl SpecificationGraphService {
                 term_ids.sort();
                 term_ids.dedup();
                 let terms = nodes.get_term_nodes(&term_ids)?;
+                let mut derived_ids: Vec<String> = edges
+                    .iter()
+                    .filter(|edge| {
+                        matches!(
+                            edge.target_kind,
+                            crate::domain::VertexKind::Evidence
+                                | crate::domain::VertexKind::Assumption
+                                | crate::domain::VertexKind::Guarantee
+                        )
+                    })
+                    .map(|edge| edge.target.clone())
+                    .collect();
+                derived_ids.sort();
+                derived_ids.dedup();
+                let derived = nodes.get_derived_nodes(&derived_ids)?;
                 let total = nodes.count_nodes()?;
-                Ok((page, terms, edges, total))
+                Ok((page, terms, derived, edges, total))
             })
             .await
             .map_err(|e| Status::internal(format!("graph read task failed to run: {e}")))?;
 
-        let (page, terms, edges, total) = match outcome {
+        let (page, terms, derived, edges, total) = match outcome {
             Ok(result) => result,
             Err(e) => {
                 let message = e.to_string();
@@ -257,6 +278,7 @@ impl SpecificationGraphService {
             next_page_token,
             total_nodes: total,
             term_nodes: terms.iter().map(convert::term_node_to_pb).collect(),
+            derived_nodes: derived.iter().map(convert::derived_node_to_pb).collect(),
         }))
     }
 }
@@ -468,6 +490,41 @@ mod tests {
             second.edges.is_empty(),
             "owner paging must not duplicate the Edge"
         );
+
+        adds.shutdown().await.unwrap();
+        adds_task.await.unwrap();
+        jobs.shutdown().await.unwrap();
+        jobs_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn graph_page_includes_adjacent_assumption_and_guarantee_nodes() {
+        let store = Arc::new(InMemoryNodeStore::new());
+        let specification = node("contract-spec");
+        store.add_node(&specification).unwrap();
+        crate::graph_generation::generate_and_persist(&specification, &*store, "t").unwrap();
+        let blobs = Arc::new(NoBlobs);
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
+        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
+        let service = SpecificationGraphService::new(store, adds.clone());
+
+        let response = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(response.derived_nodes.len(), 2);
+        assert!(response.edges.iter().any(|edge| {
+            edge.kind == pb::EdgeKind::HasAssumption as i32
+                && edge.target_kind == pb::VertexKind::Assumption as i32
+        }));
+        assert!(response.edges.iter().any(|edge| {
+            edge.kind == pb::EdgeKind::HasGuarantee as i32
+                && edge.target_kind == pb::VertexKind::Guarantee as i32
+        }));
 
         adds.shutdown().await.unwrap();
         adds_task.await.unwrap();

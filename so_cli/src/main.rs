@@ -223,6 +223,7 @@ async fn read_whole_graph(server: String) -> Result<graph::Graph, so_client::Cli
     let mut client = Client::connect(server).await?;
     let mut specifications = BTreeMap::new();
     let mut terms = BTreeMap::new();
+    let mut derived = BTreeMap::new();
     let mut edges = BTreeMap::new();
     let mut page_token = String::new();
     let mut seen_tokens = BTreeSet::new();
@@ -235,6 +236,9 @@ async fn read_whole_graph(server: String) -> Result<graph::Graph, so_client::Cli
         }
         for term in page.term_nodes {
             terms.insert(term.id.clone(), term);
+        }
+        for node in page.derived_nodes {
+            derived.insert(node.id.clone(), node);
         }
         for edge in page.edges {
             edges.insert(edge.id.clone(), edge);
@@ -266,6 +270,7 @@ async fn read_whole_graph(server: String) -> Result<graph::Graph, so_client::Cli
     graph::Graph::from_wire(
         specifications.into_values(),
         terms.into_values(),
+        derived.into_values(),
         edges.into_values(),
     )
     .map_err(so_client::ClientError::InvalidGraphResponse)

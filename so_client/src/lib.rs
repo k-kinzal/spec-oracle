@@ -92,6 +92,7 @@ pub fn resolve_channel(arg: &str) -> Result<String, ChannelError> {
 pub struct GraphPage {
     pub nodes: Vec<pb::Node>,
     pub term_nodes: Vec<pb::TermNode>,
+    pub derived_nodes: Vec<pb::DerivedNode>,
     pub edges: Vec<pb::Edge>,
     pub next_page_token: String,
     pub total_nodes: u64,
@@ -218,6 +219,7 @@ impl Client {
             Ok(GraphPage {
                 nodes: response.nodes,
                 term_nodes: response.term_nodes,
+                derived_nodes: response.derived_nodes,
                 edges: response.edges,
                 next_page_token: response.next_page_token,
                 total_nodes: response.total_nodes,

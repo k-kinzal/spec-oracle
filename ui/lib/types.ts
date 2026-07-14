@@ -22,12 +22,16 @@ export type EdgeKind =
   | "supports"
   | "defeats"
   | "supersedes"
+  | "grounded_by"
+  | "has_assumption"
+  | "has_guarantee"
   | "unspecified";
 
 export type EdgeFamily =
   | "lexical"
   | "semantic"
   | "selection"
+  | "projection"
   | "unspecified";
 
 export type EndpointRole =
@@ -43,6 +47,11 @@ export type EndpointRole =
   | "defeated"
   | "superseder"
   | "superseded"
+  | "grounded_specification"
+  | "evidence"
+  | "contract_specification"
+  | "assumption"
+  | "guarantee"
   | "unspecified";
 
 export type GraphViewMode =
@@ -60,7 +69,12 @@ export type GraphViewMode =
  *  and asynchronous Evidence request/capture counts. */
 export type GraphNode = {
   id: string;
-  nodeKind: "specification" | "term";
+  nodeKind:
+    | "specification"
+    | "term"
+    | "evidence"
+    | "assumption"
+    | "guarantee";
   statement: string;
   speechAct: SpeechAct;
   evidenceCount: number;
@@ -80,6 +94,11 @@ export type GraphEdge = {
 };
 
 export const TERM_NODE_COLOR = "#35c7b4";
+export const DERIVED_NODE_COLORS = {
+  evidence: "#f0a35e",
+  assumption: "#58c4dd",
+  guarantee: "#d783e8",
+} as const;
 
 export const EDGE_KIND_COLORS: Record<EdgeKind, string> = {
   mentions_term: "rgba(150, 150, 160, 0.22)",
@@ -92,6 +111,9 @@ export const EDGE_KIND_COLORS: Record<EdgeKind, string> = {
   supports: "rgba(126, 217, 87, 0.9)",
   defeats: "rgba(239, 76, 64, 0.92)",
   supersedes: "rgba(176, 111, 216, 0.92)",
+  grounded_by: "rgba(240, 163, 94, 0.78)",
+  has_assumption: "rgba(88, 196, 221, 0.78)",
+  has_guarantee: "rgba(215, 131, 232, 0.78)",
   unspecified: "rgba(120, 120, 125, 0.3)",
 };
 
@@ -106,6 +128,9 @@ export const EDGE_KIND_LABELS: Record<EdgeKind, string> = {
   supports: "Supports selection",
   defeats: "Defeats",
   supersedes: "Supersedes",
+  grounded_by: "Grounded by",
+  has_assumption: "Has assumption",
+  has_guarantee: "Has guarantee",
   unspecified: "Unspecified",
 };
 
@@ -130,6 +155,12 @@ export const EDGE_KIND_DESCRIPTIONS: Record<EdgeKind, string> = {
     "A versioned selection derivation records the defeater as winning an explicitly resolved competition with the defeated specification.",
   supersedes:
     "A versioned selection derivation records the superseder as the selected replacement for the superseded specification.",
+  grounded_by:
+    "The evidence vertex records captured grounding for the specification.",
+  has_assumption:
+    "The assumption vertex is the environment side of the specification's ingest contract.",
+  has_guarantee:
+    "The guarantee vertex is the behavior side of the specification's ingest contract.",
   unspecified: "The relation kind is not recognized by this UI version.",
 };
 
@@ -137,6 +168,7 @@ export const EDGE_FAMILY_LABELS: Record<EdgeFamily, string> = {
   lexical: "Lexical",
   semantic: "Semantic",
   selection: "Selection",
+  projection: "Projection",
   unspecified: "Unspecified",
 };
 
@@ -151,6 +183,9 @@ export const EDGE_KIND_FAMILIES: Record<EdgeKind, EdgeFamily> = {
   supports: "selection",
   defeats: "selection",
   supersedes: "selection",
+  grounded_by: "projection",
+  has_assumption: "projection",
+  has_guarantee: "projection",
   unspecified: "unspecified",
 };
 
@@ -167,6 +202,11 @@ export const ENDPOINT_ROLE_LABELS: Record<EndpointRole, string> = {
   defeated: "Defeated",
   superseder: "Superseder",
   superseded: "Superseded",
+  grounded_specification: "Grounded specification",
+  evidence: "Evidence",
+  contract_specification: "Contract specification",
+  assumption: "Assumption",
+  guarantee: "Guarantee",
   unspecified: "Unspecified role",
 };
 
@@ -180,6 +220,9 @@ export const EDGE_KIND_ORDER: EdgeKind[] = [
   "supports",
   "defeats",
   "supersedes",
+  "grounded_by",
+  "has_assumption",
+  "has_guarantee",
   "mentions_term",
   "unspecified",
 ];
@@ -190,6 +233,9 @@ export const DIRECTED_EDGE_KINDS = new Set<EdgeKind>([
   "supports",
   "defeats",
   "supersedes",
+  "grounded_by",
+  "has_assumption",
+  "has_guarantee",
 ]);
 
 export const SEMANTIC_EDGE_KINDS = new Set<EdgeKind>([

@@ -15,6 +15,9 @@ use sha2::{Digest, Sha256};
 pub enum VertexKind {
     Specification,
     Term,
+    Evidence,
+    Assumption,
+    Guarantee,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,6 +29,8 @@ pub enum EdgeFamily {
     Semantic,
     /// A versioned support, defeat, or replacement judgment used by selection.
     Selection,
+    /// A deterministic projection from an authored sentence or its grounding.
+    Projection,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,6 +51,11 @@ pub enum EndpointRole {
     Defeated,
     Superseder,
     Superseded,
+    GroundedSpecification,
+    Evidence,
+    ContractSpecification,
+    Assumption,
+    Guarantee,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -71,6 +81,12 @@ pub enum EdgeKind {
     Defeats,
     /// The source is a versioned selected replacement for target.
     Supersedes,
+    /// The target Evidence vertex grounds the source specification.
+    GroundedBy,
+    /// The target is the assumption side of the source specification's contract.
+    HasAssumption,
+    /// The target is the guarantee side of the source specification's contract.
+    HasGuarantee,
 }
 
 impl EdgeKind {
@@ -86,6 +102,9 @@ impl EdgeKind {
             Self::Supports => "supports",
             Self::Defeats => "defeats",
             Self::Supersedes => "supersedes",
+            Self::GroundedBy => "grounded_by",
+            Self::HasAssumption => "has_assumption",
+            Self::HasGuarantee => "has_guarantee",
         }
     }
 
@@ -99,6 +118,7 @@ impl EdgeKind {
             | Self::DescriptiveConflict
             | Self::EnvelopeConflict => EdgeFamily::Semantic,
             Self::Supports | Self::Defeats | Self::Supersedes => EdgeFamily::Selection,
+            Self::GroundedBy | Self::HasAssumption | Self::HasGuarantee => EdgeFamily::Projection,
         }
     }
 
@@ -114,6 +134,12 @@ impl EdgeKind {
             Self::Supports => (EndpointRole::Supporter, EndpointRole::Supported),
             Self::Defeats => (EndpointRole::Defeater, EndpointRole::Defeated),
             Self::Supersedes => (EndpointRole::Superseder, EndpointRole::Superseded),
+            Self::GroundedBy => (EndpointRole::GroundedSpecification, EndpointRole::Evidence),
+            Self::HasAssumption => (
+                EndpointRole::ContractSpecification,
+                EndpointRole::Assumption,
+            ),
+            Self::HasGuarantee => (EndpointRole::ContractSpecification, EndpointRole::Guarantee),
         }
     }
 
@@ -121,7 +147,14 @@ impl EdgeKind {
     pub fn directed(self) -> bool {
         matches!(
             self,
-            Self::MentionsTerm | Self::Refines | Self::Supports | Self::Defeats | Self::Supersedes
+            Self::MentionsTerm
+                | Self::Refines
+                | Self::Supports
+                | Self::Defeats
+                | Self::Supersedes
+                | Self::GroundedBy
+                | Self::HasAssumption
+                | Self::HasGuarantee
         )
     }
 }
@@ -166,6 +199,41 @@ pub struct Edge {
 }
 
 impl Edge {
+    /// Build a deterministic specification-to-derived-node projection.
+    pub fn projection(
+        kind: EdgeKind,
+        specification: &str,
+        target: &str,
+        derivation: Derivation,
+        recorded_at: &str,
+    ) -> Result<Self, String> {
+        let target_kind = match kind {
+            EdgeKind::GroundedBy => VertexKind::Evidence,
+            EdgeKind::HasAssumption => VertexKind::Assumption,
+            EdgeKind::HasGuarantee => VertexKind::Guarantee,
+            _ => return Err("projection construction requires a projection EdgeKind".into()),
+        };
+        let (source_role, target_role) = kind.endpoint_roles();
+        let mut edge = Self {
+            id: String::new(),
+            source: specification.to_string(),
+            source_kind: VertexKind::Specification,
+            source_role,
+            target: target.to_string(),
+            target_kind,
+            target_role,
+            kind,
+            source_anchor: None,
+            target_anchor: None,
+            basis_spec_ids: Vec::new(),
+            derivation,
+            recorded_at: recorded_at.to_string(),
+        };
+        edge.id = edge.identity_key();
+        edge.validate()?;
+        Ok(edge)
+    }
+
     /// Build a stable specification-to-specification relationship. Semantic
     /// and selection producers share this constructor so both families obey
     /// the same endpoint-role, symmetry, identity, and append-only rules.
@@ -187,25 +255,9 @@ impl Edge {
         };
         basis_spec_ids.sort();
         basis_spec_ids.dedup();
-        let mut hasher = Sha256::new();
-        hasher.update(b"edge");
-        for part in [
-            derivation.method.as_str(),
-            derivation.version.as_str(),
-            kind.as_str(),
-            source,
-            target,
-        ] {
-            hasher.update([0]);
-            hasher.update(part.as_bytes());
-        }
-        for basis in &basis_spec_ids {
-            hasher.update([0]);
-            hasher.update(basis.as_bytes());
-        }
         let (source_role, target_role) = kind.endpoint_roles();
-        let edge = Self {
-            id: format!("edge-{:x}", hasher.finalize()),
+        let mut edge = Self {
+            id: String::new(),
             source: source.to_string(),
             source_kind: VertexKind::Specification,
             source_role,
@@ -219,12 +271,57 @@ impl Edge {
             derivation,
             recorded_at: recorded_at.to_string(),
         };
+        edge.id = edge.identity_key();
         edge.validate()?;
         Ok(edge)
     }
 
     pub fn family(&self) -> EdgeFamily {
         self.kind.family()
+    }
+
+    /// Content identity for duplicate prevention. Recording time and a
+    /// caller-provided `id` are deliberately excluded: neither changes the
+    /// typed relationship being asserted.
+    pub fn identity_key(&self) -> String {
+        #[derive(Serialize)]
+        struct Identity<'a> {
+            source: &'a str,
+            source_kind: VertexKind,
+            source_role: EndpointRole,
+            target: &'a str,
+            target_kind: VertexKind,
+            target_role: EndpointRole,
+            kind: EdgeKind,
+            source_anchor: &'a Option<TextAnchor>,
+            target_anchor: &'a Option<TextAnchor>,
+            basis_spec_ids: Vec<&'a str>,
+            derivation: &'a Derivation,
+        }
+
+        let mut basis_spec_ids: Vec<&str> =
+            self.basis_spec_ids.iter().map(String::as_str).collect();
+        basis_spec_ids.sort_unstable();
+        basis_spec_ids.dedup();
+        let identity = Identity {
+            source: &self.source,
+            source_kind: self.source_kind,
+            source_role: self.source_role,
+            target: &self.target,
+            target_kind: self.target_kind,
+            target_role: self.target_role,
+            kind: self.kind,
+            source_anchor: &self.source_anchor,
+            target_anchor: &self.target_anchor,
+            basis_spec_ids,
+            derivation: &self.derivation,
+        };
+        let bytes = serde_json::to_vec(&identity).expect("Edge identity serializes");
+        let mut hasher = Sha256::new();
+        hasher.update(b"edge");
+        hasher.update([0]);
+        hasher.update(bytes);
+        format!("edge-{:x}", hasher.finalize())
     }
 
     /// Reject a newly written Edge whose physical endpoint order disagrees
@@ -244,6 +341,9 @@ impl Edge {
 
         let expected_vertices = match self.kind {
             EdgeKind::MentionsTerm => (VertexKind::Specification, VertexKind::Term),
+            EdgeKind::GroundedBy => (VertexKind::Specification, VertexKind::Evidence),
+            EdgeKind::HasAssumption => (VertexKind::Specification, VertexKind::Assumption),
+            EdgeKind::HasGuarantee => (VertexKind::Specification, VertexKind::Guarantee),
             _ => (VertexKind::Specification, VertexKind::Specification),
         };
         let actual_vertices = (self.source_kind, self.target_kind);
@@ -272,7 +372,7 @@ impl Edge {
     /// independently of its typed argument order, so a complete Node-page walk
     /// returns every Edge exactly once even when endpoints span pages.
     pub fn page_owner(&self) -> &str {
-        if self.kind == EdgeKind::MentionsTerm || self.source <= self.target {
+        if self.target_kind != VertexKind::Specification || self.source <= self.target {
             &self.source
         } else {
             &self.target
@@ -324,9 +424,26 @@ mod tests {
             (EdgeKind::Supports, EdgeFamily::Selection),
             (EdgeKind::Defeats, EdgeFamily::Selection),
             (EdgeKind::Supersedes, EdgeFamily::Selection),
+            (EdgeKind::GroundedBy, EdgeFamily::Projection),
+            (EdgeKind::HasAssumption, EdgeFamily::Projection),
+            (EdgeKind::HasGuarantee, EdgeFamily::Projection),
         ];
         for (kind, family) in cases {
-            let edge = edge(kind);
+            let edge = if family == EdgeFamily::Projection {
+                Edge::projection(
+                    kind,
+                    "a",
+                    "b",
+                    Derivation {
+                        method: "test".into(),
+                        version: "1".into(),
+                    },
+                    "t",
+                )
+                .unwrap()
+            } else {
+                edge(kind)
+            };
             assert_eq!(edge.family(), family);
             edge.validate().unwrap();
         }

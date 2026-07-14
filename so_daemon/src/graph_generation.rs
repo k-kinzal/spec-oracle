@@ -1,6 +1,7 @@
 //! Incremental structure derived from one newly stored specification.
 //!
-//! Written term forms become shared connector vertices. Their mention edges
+//! Written term forms become shared connector vertices and each behavioral
+//! sentence projects to shared Assumption/Guarantee vertices. Mention edges
 //! are exact lexical facts and a versioned, replaceable candidate search—not
 //! claims of referent identity. Candidate pairs are assessed by the pure
 //! force-aware relation engine, and only proved graph-facing outcomes become
@@ -15,8 +16,8 @@ use sha2::{Digest, Sha256};
 use so_reason::relate::{assess, Outcome};
 
 use crate::domain::{
-    AssessmentOutcome, Derivation, Edge, EdgeKind, EndpointRole, Node, RelationAssessment,
-    TermNode, TextAnchor, VertexKind,
+    AssessmentOutcome, Derivation, DerivedNode, Edge, EdgeKind, EndpointRole, Node,
+    RelationAssessment, TermNode, TextAnchor, VertexKind,
 };
 use crate::jobs::{JobOutput, NodeMetaPlugin, PluginContext, PluginRegistration};
 use crate::store::{GraphStore, StoreError};
@@ -29,7 +30,9 @@ pub const SEMANTIC_DERIVATION_METHOD: &str = "so-reason.relate.assess";
 pub const SEMANTIC_DERIVATION_VERSION: &str = so_reason::relate::ASSESS_VERSION;
 pub const SEMANTIC_EDGE_METHOD: &str = "so-daemon.graph.semantic-relations";
 pub const SEMANTIC_EDGE_VERSION: &str = "spec-graph/semantic-relations-v2";
-pub const RUN_VERSION: &str = "spec-graph/node-relations-v2";
+pub const CONTRACT_PROJECTION_METHOD: &str = "so-daemon.graph.ingest-contract";
+pub const CONTRACT_PROJECTION_VERSION: &str = "spec-graph/ingest-contract-v1";
+pub const RUN_VERSION: &str = "spec-graph/node-relations-v3";
 const PLUGIN_NAME: &str = "graph-generation";
 const CANDIDATE_PAGE_SIZE: usize = 500;
 
@@ -38,6 +41,8 @@ pub struct GenerationReport {
     pub terms_seen: usize,
     pub terms_inserted: usize,
     pub mention_edges_inserted: usize,
+    pub contract_nodes_inserted: usize,
+    pub contract_edges_inserted: usize,
     pub candidates_discovered: usize,
     pub candidates_examined: usize,
     pub candidates_unassessable: usize,
@@ -98,9 +103,21 @@ pub fn candidate_derivation() -> Derivation {
     }
 }
 
+pub fn contract_projection_derivation() -> Derivation {
+    Derivation {
+        method: CONTRACT_PROJECTION_METHOD.to_string(),
+        version: CONTRACT_PROJECTION_VERSION.to_string(),
+    }
+}
+
 /// One selected version per Edge-producing method in the current graph view.
 pub fn current_derivations() -> Vec<Derivation> {
-    vec![term_derivation(), semantic_edge_derivation()]
+    vec![
+        term_derivation(),
+        semantic_edge_derivation(),
+        contract_projection_derivation(),
+        crate::evidence_capture::evidence_derivation(),
+    ]
 }
 
 pub fn needs_generation(node: &Node) -> bool {
@@ -108,6 +125,16 @@ pub fn needs_generation(node: &Node) -> bool {
     !node.meta.updates.values().any(|update| {
         update.source == PLUGIN_NAME
             && update.value.get("run_version").and_then(Value::as_str) == Some(RUN_VERSION)
+            && update
+                .value
+                .pointer("/contract_projection/method")
+                .and_then(Value::as_str)
+                == Some(CONTRACT_PROJECTION_METHOD)
+            && update
+                .value
+                .pointer("/contract_projection/version")
+                .and_then(Value::as_str)
+                == Some(CONTRACT_PROJECTION_VERSION)
             && update
                 .value
                 .pointer("/term_generation/method")
@@ -170,6 +197,7 @@ pub fn generate_and_persist(
         terms_seen: occurrences.len(),
         ..GenerationReport::default()
     };
+    persist_contract_projection(added, &sentence, store, recorded_at, &mut report)?;
     for occurrence in &occurrences {
         let edge = mention_edge(added, occurrence, recorded_at);
         let write = store.put_term_mention(&occurrence.term, &edge)?;
@@ -215,6 +243,55 @@ pub fn generate_and_persist(
     }
 
     Ok(report)
+}
+
+fn persist_contract_projection(
+    node: &Node,
+    sentence: &so_lang::ast::Sentence,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+    report: &mut GenerationReport,
+) -> Result<(), StoreError> {
+    let Some(contract) = so_reason::semantics::ingest_contract(sentence) else {
+        return Ok(());
+    };
+    let derivation = contract_projection_derivation();
+    let assumption =
+        DerivedNode::assumption(contract.assumption.render(), CONTRACT_PROJECTION_VERSION);
+    let assumption_edge = Edge::projection(
+        EdgeKind::HasAssumption,
+        &node.id,
+        assumption.id(),
+        derivation.clone(),
+        recorded_at,
+    )
+    .expect("ingest assumptions always form a valid projection");
+    let write = store.put_derived_node(&assumption, &assumption_edge)?;
+    report.contract_nodes_inserted += usize::from(write.node_inserted);
+    report.contract_edges_inserted += usize::from(write.edge_inserted);
+
+    // Purpose states intent rather than guaranteed behavior, matching the
+    // existing ContractView projection on the wire.
+    let mut assertion = sentence.clone();
+    assertion.purpose = None;
+    let force = match contract.force {
+        Some(so_reason::semantics::Force::Binding) => "binding",
+        Some(so_reason::semantics::Force::Recommended) => "recommended",
+        None => "",
+    };
+    let guarantee = DerivedNode::guarantee(&assertion.render(), force, CONTRACT_PROJECTION_VERSION);
+    let guarantee_edge = Edge::projection(
+        EdgeKind::HasGuarantee,
+        &node.id,
+        guarantee.id(),
+        derivation,
+        recorded_at,
+    )
+    .expect("ingest guarantees always form a valid projection");
+    let write = store.put_derived_node(&guarantee, &guarantee_edge)?;
+    report.contract_nodes_inserted += usize::from(write.node_inserted);
+    report.contract_edges_inserted += usize::from(write.edge_inserted);
+    Ok(())
 }
 
 fn relation_assessment(
@@ -421,18 +498,8 @@ fn grammatical_role(path: &str) -> &'static str {
 }
 
 fn mention_edge(node: &Node, occurrence: &TermOccurrence, recorded_at: &str) -> Edge {
-    let id = stable_id(
-        "edge",
-        &[
-            GENERATION_VERSION,
-            "mentions_term",
-            &node.id,
-            &occurrence.term.id,
-            &occurrence.anchor.selector,
-        ],
-    );
-    Edge {
-        id,
+    let mut edge = Edge {
+        id: String::new(),
         source: node.id.clone(),
         source_kind: VertexKind::Specification,
         source_role: EndpointRole::Mentioner,
@@ -448,7 +515,9 @@ fn mention_edge(node: &Node, occurrence: &TermOccurrence, recorded_at: &str) -> 
             version: GENERATION_VERSION.to_string(),
         },
         recorded_at: recorded_at.to_string(),
-    }
+    };
+    edge.id = edge.identity_key();
+    edge
 }
 
 fn stable_id(kind: &str, parts: &[&str]) -> String {
@@ -479,6 +548,12 @@ impl NodeMetaPlugin for GraphGenerationPlugin {
                 "terms_seen": report.terms_seen,
                 "terms_inserted": report.terms_inserted,
                 "mention_edges_inserted": report.mention_edges_inserted,
+            },
+            "contract_projection": {
+                "method": CONTRACT_PROJECTION_METHOD,
+                "version": CONTRACT_PROJECTION_VERSION,
+                "nodes_inserted": report.contract_nodes_inserted,
+                "edges_inserted": report.contract_edges_inserted,
             },
             "candidate_search": {
                 "method": CANDIDATE_METHOD,
@@ -547,6 +622,10 @@ mod tests {
                     "candidate_search": {
                         "method": CANDIDATE_METHOD,
                         "version": CANDIDATE_VERSION,
+                    },
+                    "contract_projection": {
+                        "method": CONTRACT_PROJECTION_METHOD,
+                        "version": CONTRACT_PROJECTION_VERSION,
                     },
                     "semantic_relations": {
                         "method": SEMANTIC_EDGE_METHOD,
@@ -619,6 +698,45 @@ mod tests {
     }
 
     #[test]
+    fn contract_projection_creates_and_reuses_assumption_and_guarantee_nodes() {
+        let store = InMemoryNodeStore::new();
+        let a = node("a", "The pump shall stop.");
+        let b = node("b", "The pump shall stop.");
+        store.add_node(&a).unwrap();
+        store.add_node(&b).unwrap();
+
+        let first = generate_and_persist(&a, &store, "t1").unwrap();
+        let second = generate_and_persist(&b, &store, "t2").unwrap();
+        assert_eq!(first.contract_nodes_inserted, 2);
+        assert_eq!(first.contract_edges_inserted, 2);
+        assert_eq!(second.contract_nodes_inserted, 0);
+        assert_eq!(second.contract_edges_inserted, 2);
+
+        let projection_edges: Vec<Edge> = store
+            .list_edges(
+                &["a".into(), "b".into()],
+                &[contract_projection_derivation()],
+            )
+            .unwrap();
+        assert_eq!(projection_edges.len(), 4);
+        let mut ids: Vec<String> = projection_edges
+            .iter()
+            .map(|edge| edge.target.clone())
+            .collect();
+        ids.sort();
+        ids.dedup();
+        assert_eq!(ids.len(), 2, "both specifications share the same A/G nodes");
+        let nodes = store.get_derived_nodes(&ids).unwrap();
+        assert!(nodes.iter().any(
+            |node| matches!(node, DerivedNode::Assumption { expression, .. } if expression == "⊤")
+        ));
+        assert!(nodes.iter().any(|node| {
+            matches!(node, DerivedNode::Guarantee { expression, force, .. }
+                if expression == "the pump shall stop." && force == "binding")
+        }));
+    }
+
+    #[test]
     fn proved_refinement_is_persisted_in_its_semantic_direction() {
         let store = InMemoryNodeStore::new();
         let abstract_ = node(
@@ -641,7 +759,7 @@ mod tests {
             )
             .unwrap()
             .into_iter()
-            .filter(|edge| edge.kind != EdgeKind::MentionsTerm)
+            .filter(|edge| edge.family() == crate::domain::EdgeFamily::Semantic)
             .collect();
         assert_eq!(semantic.len(), 1);
         assert_eq!(semantic[0].kind, EdgeKind::Refines);

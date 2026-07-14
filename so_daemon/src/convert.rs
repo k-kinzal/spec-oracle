@@ -118,6 +118,9 @@ fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
         domain::EdgeKind::Supports => pb::EdgeKind::Supports,
         domain::EdgeKind::Defeats => pb::EdgeKind::Defeats,
         domain::EdgeKind::Supersedes => pb::EdgeKind::Supersedes,
+        domain::EdgeKind::GroundedBy => pb::EdgeKind::GroundedBy,
+        domain::EdgeKind::HasAssumption => pb::EdgeKind::HasAssumption,
+        domain::EdgeKind::HasGuarantee => pb::EdgeKind::HasGuarantee,
     }
 }
 
@@ -126,6 +129,7 @@ fn edge_family_to_pb(family: domain::EdgeFamily) -> pb::EdgeFamily {
         domain::EdgeFamily::Lexical => pb::EdgeFamily::Lexical,
         domain::EdgeFamily::Semantic => pb::EdgeFamily::Semantic,
         domain::EdgeFamily::Selection => pb::EdgeFamily::Selection,
+        domain::EdgeFamily::Projection => pb::EdgeFamily::Projection,
     }
 }
 
@@ -144,6 +148,11 @@ fn endpoint_role_to_pb(role: domain::EndpointRole) -> pb::EdgeEndpointRole {
         domain::EndpointRole::Defeated => pb::EdgeEndpointRole::Defeated,
         domain::EndpointRole::Superseder => pb::EdgeEndpointRole::Superseder,
         domain::EndpointRole::Superseded => pb::EdgeEndpointRole::Superseded,
+        domain::EndpointRole::GroundedSpecification => pb::EdgeEndpointRole::GroundedSpecification,
+        domain::EndpointRole::Evidence => pb::EdgeEndpointRole::Evidence,
+        domain::EndpointRole::ContractSpecification => pb::EdgeEndpointRole::ContractSpecification,
+        domain::EndpointRole::Assumption => pb::EdgeEndpointRole::Assumption,
+        domain::EndpointRole::Guarantee => pb::EdgeEndpointRole::Guarantee,
     }
 }
 
@@ -151,6 +160,9 @@ fn vertex_kind_to_pb(kind: domain::VertexKind) -> pb::VertexKind {
     match kind {
         domain::VertexKind::Specification => pb::VertexKind::Specification,
         domain::VertexKind::Term => pb::VertexKind::Term,
+        domain::VertexKind::Evidence => pb::VertexKind::Evidence,
+        domain::VertexKind::Assumption => pb::VertexKind::Assumption,
+        domain::VertexKind::Guarantee => pb::VertexKind::Guarantee,
     }
 }
 
@@ -194,6 +206,45 @@ pub fn term_node_to_pb(term: &domain::TermNode) -> pb::TermNode {
         head: term.head.clone(),
         lang_version: term.lang_version.clone(),
         derivation_version: term.derivation_version.clone(),
+    }
+}
+
+pub fn derived_node_to_pb(node: &domain::DerivedNode) -> pb::DerivedNode {
+    let (id, value) = match node {
+        domain::DerivedNode::Evidence { id, evidence } => (
+            id.clone(),
+            pb::derived_node::Value::Evidence(pb::EvidenceNode {
+                evidence: Some(evidence_to_pb(evidence)),
+            }),
+        ),
+        domain::DerivedNode::Assumption {
+            id,
+            expression,
+            derivation_version,
+        } => (
+            id.clone(),
+            pb::derived_node::Value::Assumption(pb::AssumptionNode {
+                expression: expression.clone(),
+                derivation_version: derivation_version.clone(),
+            }),
+        ),
+        domain::DerivedNode::Guarantee {
+            id,
+            expression,
+            force,
+            derivation_version,
+        } => (
+            id.clone(),
+            pb::derived_node::Value::Guarantee(pb::GuaranteeNode {
+                expression: expression.clone(),
+                force: force.clone(),
+                derivation_version: derivation_version.clone(),
+            }),
+        ),
+    };
+    pb::DerivedNode {
+        id,
+        value: Some(value),
     }
 }
 

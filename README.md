@@ -8,12 +8,13 @@ sentences, each performing one specification act (defining a term, describing
 the system, or obliging/forbidding/recommending/permitting behavior). The raw
 words are the stored truth; each behavioral sentence *denotes an assertion*,
 and the **assume-guarantee contract is a derived reading** of that assertion —
-computed deterministically, with no inference and no human-in-the-loop review,
-never persisted. (Definitions establish vocabulary and permissions merely
+computed deterministically, with no inference and no human-in-the-loop review.
+Its assumption and guarantee are materialized as content-addressed derived
+Nodes while the authored words remain the authority. (Definitions establish vocabulary and permissions merely
 *admit* behavior, so neither carries a lone-sentence contract; a permission
-enters contracts only through pairing, on the environment side.) A Node is
-accepted before its requested Evidence is captured; grounding is appended by a
-post-acceptance Job.
+enters contracts only through pairing, on the environment side.) A Specification
+Node is accepted before its requested Evidence is captured; the post-acceptance
+Job appends the captured view and materializes shared Evidence Nodes.
 
 > **Scope.** The tool ingests (`spec add` — parse exactly one sentence and
 > persist exactly one Node), processes Evidence and graph structure through
@@ -23,8 +24,10 @@ post-acceptance Job.
 > pairs that `so-reason::relate::assess` can prove become the first persisted
 > semantic Edge family: refinement, equivalence, and force-aware conflicts.
 > Unknown/Independent outcomes are audit records rather than topology, and Edge
-> absence has no negative meaning. A/G pairing and composition remain open
-> graph-side methods. Every Edge belongs to a lexical, semantic, or selection
+> absence has no negative meaning. The trivial ingest contract is projected to
+> Assumption and Guarantee Nodes; non-trivial A/G pairing and composition remain
+> open graph-side methods. Every Edge belongs to a lexical, semantic, selection,
+> or projection
 > family and carries explicit endpoint roles. Its `source` and `target` are the
 > ordered arguments of that typed relation, not a universal support-flow
 > direction. Supports, Defeats, and Supersedes are reserved as independently
@@ -62,9 +65,9 @@ the evidence lives (or where a checkout of it is reachable).
 spec (CLI) ──▶ so-client ──gRPC──▶ specd Add Mailbox ──▶ Specification Node
   resolves @file/-/inline              │         Parse + persist only
                                        └─NodeAdded─▶ Job Mailbox
-                                                      ├─ Evidence + blob
+                                                      ├─ Evidence Node + blob
                                                       ├─ origin enrichment
-                                                      └─ term + semantic graph generation
+                                                      └─ term + A/G + semantic graph generation
 ```
 
 ## The language
@@ -103,18 +106,24 @@ Storage is split by concern (both owned by the daemon):
   `#[serde(skip)]`, so bytes never travel into the database — or across the wire
   — only the hash does.
 
-A Mailbox submission receives a random `message_id`; its one Node ID is a SHA-256
-derived from that identity. Re-executing work from the
-same Mailbox message therefore addresses the same Node, while adding the *same*
-sentence in a separate command still yields a distinct Node. Content-addressing
-applies to blobs independently.
+A Mailbox submission still receives a random `message_id` for request tracing,
+but a Specification Node ID is a SHA-256 of its accepted sentence and
+language version. Adding the same sentence again therefore returns the existing
+Node; any new Evidence descriptors are merged into that Node's retryable input
+set. Term, Evidence, Assumption, and Guarantee Nodes are likewise
+content-addressed. Edge identity is derived from the complete typed relationship
+except its recording time, so an identical Edge is reused even if a producer is
+retried or supplies another incidental ID. Content-addressing applies to blobs
+independently.
 
 ## In-memory Jobs
 
 The Add and Job Mailboxes are process-local by design. The Add RPC succeeds when
 the one Node save succeeds; Evidence availability and all other Job completion
 are separate concerns.
-Each `NodeAdded` hook derives a stable Job ID from the Event ID and Plugin name.
+Each `NodeAdded` Event is Node-addressed, and each hook derives a stable Job ID
+from that Event ID and Plugin name. Concurrent duplicate submissions therefore
+coalesce while an incomplete existing Node can be reconciled after restart.
 The Job manager retains ownership while a worker runs, retries failures and
 worker panics with bounded exponential backoff, and applies successful results
 idempotently under that Job ID in Node Meta.
@@ -123,8 +132,9 @@ Graceful shutdown stops gRPC intake, drains the Add Mailbox and its NodeAdded
 events, then drains the Job Mailbox. A Job that continues to fail prevents
 shutdown from completing, preserving the requirement that accepted work reaches
 a consistent result. Job/Event scheduling state is never written to ArangoDB;
-the database contains specification nodes, derived term-form nodes, versioned
-Edges, and non-topological relation-assessment audit records—not transient
+the database contains specification nodes, derived term-form, Evidence,
+Assumption, and Guarantee nodes, versioned Edges, and non-topological
+relation-assessment audit records—not transient
 queue state.
 
 ## Quickstart
@@ -155,8 +165,8 @@ cargo run --bin spec -- add \
   --evidence so_daemon/src/snapshot.rs:1
 ```
 
-The `spec_oracle` database and its `nodes`, `term_nodes`, `edges`, and
-`relation_assessments` collections are created automatically by the daemon on
+The `spec_oracle` database and its `nodes`, `term_nodes`, `derived_nodes`,
+`edges`, and `relation_assessments` collections are created automatically by the daemon on
 first connect — there is no init step in compose.
 
 Reset everything (drops the database volume) with `docker compose down -v`. The
@@ -179,7 +189,7 @@ cargo run --bin spec -- graph --width 160
 
 The daemon still returns bounded keyset pages because transport must remain
 bounded. The CLI follows those pages to the end, combines their Specification
-Nodes, connector Nodes, and Edges, and then lays out that one graph. Refinement
+Nodes, connector and projection Nodes, and Edges, and then lays out that one graph. Refinement
 and term mentions are directed by their explicit endpoint roles; equivalence
 and conflicts are symmetric. Selection-family relationships, when produced by
 a future versioned selection method, retain their own supporter/defeater/
@@ -193,7 +203,7 @@ seeds. `--server` selects the daemon and `--width` changes presentation only.
 ### Graph view (`ui/`)
 
 A Next.js app visualizes the graph as a force-directed cloud (Cosmograph,
-GPU/WebGL), coloring each node by its speech act and semantic Edges by kind. It is an independent graph
+GPU/WebGL), coloring authored nodes by speech act and derived nodes by kind. It is an independent graph
 view and is not launched or controlled by `spec graph`. It pages in bounded
 batches and caps what it renders. A thin Next.js backend-for-frontend speaks
 gRPC to `specd`, so the browser never needs gRPC.
@@ -224,7 +234,9 @@ accepted specification; the Job remains retryable.
 Prefix a value with `@` to read the evidence *descriptor* from a file, or use `-`
 to read it from stdin. These channels are resolved on the **client** (they name
 the client's own streams); the resulting text is persisted verbatim on the
-Node, then interpreted and captured by the daemon's Evidence Job.
+Node, then interpreted and captured by the daemon's Evidence Job. A successful
+capture also creates or reuses a content-addressed Evidence Node and connects it
+with a `grounded_by` projection Edge.
 
 `kind` records the *epistemic kind* of the grounding, one of: `constitutive`,
 `demonstrative`, `testimonial`, `assertoric`, `circumstantial`, `counter`,

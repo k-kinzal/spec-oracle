@@ -30,6 +30,9 @@ function endpointRoles(edge: GraphEdge): {
     supports: "supporter supports supported",
     defeats: "defeater defeats defeated",
     supersedes: "superseder supersedes superseded",
+    grounded_by: "grounded specification is grounded by evidence",
+    has_assumption: "contract specification has assumption",
+    has_guarantee: "contract specification has guarantee",
     unspecified: "unspecified relationship",
   };
   return {
