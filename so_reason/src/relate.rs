@@ -61,6 +61,13 @@ use crate::semantics::{
 use serde::{Deserialize, Serialize};
 use so_lang::ast::{ComparisonOp, Sentence};
 
+/// Version of the graph-facing [`assess`] rules.
+///
+/// Persisted callers must record this value with every derived relationship
+/// and bump it whenever a rule change can alter an [`Outcome`]. Old results can
+/// then remain as history while a current graph view selects this version.
+pub const ASSESS_VERSION: &str = "so-reason/assess-v1";
+
 /// A conservative three-valued judgment. `Unknown` means "the structural
 /// rules cannot decide" — it is not evidence of absence and MUST never be
 /// collapsed into `No`.

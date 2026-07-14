@@ -23,7 +23,7 @@ use std::sync::Mutex;
 
 use thiserror::Error;
 
-use crate::domain::{Edge, EdgeKind, MetaUpdate, Node, TermNode};
+use crate::domain::{Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, TermNode};
 
 /// A bounded, keyset-paginated page of nodes.
 ///
@@ -74,8 +74,9 @@ pub trait NodeStore {
 /// Separated from [`NodeStore`] (which it extends) so only the graph read path
 /// depends on it. It is deliberately paginated: the graph can hold billions of
 /// nodes, so there is no "return everything" method — only [`list_nodes`], a
-/// bounded keyset page. Derived term vertices and mention edges are exposed
-/// alongside each specification page.
+/// bounded keyset page. Derived term vertices and the selected current versions
+/// of lexical and semantic Edges are exposed alongside each specification
+/// page.
 ///
 /// [`list_nodes`]: GraphStore::list_nodes
 /// [`list_edges`]: GraphStore::list_edges
@@ -89,7 +90,30 @@ pub trait GraphStore: NodeStore {
     /// history rather than overwriting old topology.
     fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError>;
 
+    /// Idempotently append an audit record for an assessed candidate pair.
+    /// These records include `Unknown` and `Independent` but are never exposed
+    /// as graph topology.
+    fn append_relation_assessment(
+        &self,
+        assessment: &RelationAssessment,
+    ) -> Result<bool, StoreError>;
+
+    fn get_relation_assessment(&self, id: &str) -> Result<Option<RelationAssessment>, StoreError>;
+
     fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError>;
+
+    /// Return a bounded, keyset page of specification Nodes that mention any
+    /// supplied term under the selected lexical derivation. This is a
+    /// versioned candidate search, not a semantic judgment: omitted Nodes are
+    /// unsearched, and a returned Node may still assess to `Unknown`.
+    fn list_term_candidates(
+        &self,
+        term_ids: &[String],
+        term_derivation: &crate::domain::Derivation,
+        exclude_node_id: &str,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<NodePage, StoreError>;
 
     /// Read one bounded page of nodes, ordered by a stable key.
     ///
@@ -105,13 +129,14 @@ pub trait GraphStore: NodeStore {
     /// vertices do not distort specification-page progress.
     fn count_nodes(&self) -> Result<u64, StoreError>;
 
-    /// Current-generation edges for a specification page. Mention edges include
-    /// their adjacent term endpoint; future semantic edges require both
-    /// specification endpoints in the supplied set.
+    /// Current derived Edges owned by a specification page. The current set is
+    /// selected independently for each derivation method. Mention Edges are
+    /// owned by their mentioner; semantic and selection Edges by the lexically
+    /// smaller endpoint, so a complete Node-page walk returns each Edge once.
     fn list_edges(
         &self,
-        among: &[String],
-        derivation_version: &str,
+        owners: &[String],
+        current_derivations: &[crate::domain::Derivation],
     ) -> Result<Vec<Edge>, StoreError>;
 }
 
@@ -151,6 +176,8 @@ pub enum StoreError {
     Backend(String),
     #[error("node '{0}' does not exist")]
     MissingNode(String),
+    #[error("invalid graph Edge: {0}")]
+    InvalidEdge(String),
 }
 
 /// A content-addressed blob store backed by a local directory, one file per
@@ -217,6 +244,7 @@ pub struct InMemoryNodeStore {
     nodes: Mutex<BTreeMap<String, Node>>,
     terms: Mutex<BTreeMap<String, TermNode>>,
     edges: Mutex<BTreeMap<String, Edge>>,
+    assessments: Mutex<BTreeMap<String, RelationAssessment>>,
 }
 
 impl InMemoryNodeStore {
@@ -274,6 +302,7 @@ impl NodeStore for InMemoryNodeStore {
 
 impl GraphStore for InMemoryNodeStore {
     fn put_term_mention(&self, term: &TermNode, edge: &Edge) -> Result<GraphWrite, StoreError> {
+        edge.validate().map_err(StoreError::InvalidEdge)?;
         let term_inserted = self
             .terms
             .lock()
@@ -294,6 +323,7 @@ impl GraphStore for InMemoryNodeStore {
     }
 
     fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError> {
+        edge.validate().map_err(StoreError::InvalidEdge)?;
         let mut edges = self.edges.lock().expect("edge store mutex poisoned");
         if edges.contains_key(&edge.id) {
             Ok(false)
@@ -303,9 +333,79 @@ impl GraphStore for InMemoryNodeStore {
         }
     }
 
+    fn append_relation_assessment(
+        &self,
+        assessment: &RelationAssessment,
+    ) -> Result<bool, StoreError> {
+        let mut assessments = self
+            .assessments
+            .lock()
+            .expect("assessment store mutex poisoned");
+        if assessments.contains_key(&assessment.id) {
+            Ok(false)
+        } else {
+            assessments.insert(assessment.id.clone(), assessment.clone());
+            Ok(true)
+        }
+    }
+
+    fn get_relation_assessment(&self, id: &str) -> Result<Option<RelationAssessment>, StoreError> {
+        Ok(self
+            .assessments
+            .lock()
+            .expect("assessment store mutex poisoned")
+            .get(id)
+            .cloned())
+    }
+
     fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError> {
         let terms = self.terms.lock().expect("term store mutex poisoned");
         Ok(ids.iter().filter_map(|id| terms.get(id).cloned()).collect())
+    }
+
+    fn list_term_candidates(
+        &self,
+        term_ids: &[String],
+        term_derivation: &crate::domain::Derivation,
+        exclude_node_id: &str,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<NodePage, StoreError> {
+        let terms: std::collections::BTreeSet<&str> = term_ids.iter().map(String::as_str).collect();
+        let candidate_ids: std::collections::BTreeSet<String> = self
+            .edges
+            .lock()
+            .expect("edge store mutex poisoned")
+            .values()
+            .filter(|edge| {
+                edge.kind == EdgeKind::MentionsTerm
+                    && edge.source_role == crate::domain::EndpointRole::Mentioner
+                    && edge.target_role == crate::domain::EndpointRole::MentionedTerm
+                    && edge.derivation == *term_derivation
+                    && edge.source != exclude_node_id
+                    && terms.contains(edge.target.as_str())
+            })
+            .map(|edge| edge.source.clone())
+            .collect();
+        let mut ids: Vec<String> = candidate_ids
+            .into_iter()
+            .filter(|id| after.is_none_or(|cursor| id.as_str() > cursor))
+            .take(limit.saturating_add(1))
+            .collect();
+        let next_cursor = if ids.len() > limit {
+            ids.truncate(limit);
+            ids.last().cloned()
+        } else {
+            None
+        };
+        let nodes = self.nodes.lock().expect("node store mutex poisoned");
+        Ok(NodePage {
+            nodes: ids
+                .into_iter()
+                .filter_map(|id| nodes.get(&id).cloned())
+                .collect(),
+            next_cursor,
+        })
     }
 
     fn list_nodes(&self, after: Option<&str>, limit: usize) -> Result<NodePage, StoreError> {
@@ -336,19 +436,17 @@ impl GraphStore for InMemoryNodeStore {
 
     fn list_edges(
         &self,
-        among: &[String],
-        derivation_version: &str,
+        owners: &[String],
+        current_derivations: &[crate::domain::Derivation],
     ) -> Result<Vec<Edge>, StoreError> {
-        let among: std::collections::BTreeSet<&str> = among.iter().map(String::as_str).collect();
+        let owners: std::collections::BTreeSet<&str> = owners.iter().map(String::as_str).collect();
         Ok(self
             .edges
             .lock()
             .expect("edge store mutex poisoned")
             .values()
             .filter(|edge| {
-                edge.derivation.version == derivation_version
-                    && edge.kind == EdgeKind::MentionsTerm
-                    && among.contains(edge.source.as_str())
+                current_derivations.contains(&edge.derivation) && owners.contains(edge.page_owner())
             })
             .cloned()
             .collect())
@@ -544,8 +642,10 @@ mod tests {
             id: "mention-a-stop".into(),
             source: "a".into(),
             source_kind: crate::domain::VertexKind::Specification,
+            source_role: crate::domain::EndpointRole::Mentioner,
             target: term.id.clone(),
             target_kind: crate::domain::VertexKind::Term,
+            target_role: crate::domain::EndpointRole::MentionedTerm,
             kind: EdgeKind::MentionsTerm,
             source_anchor: None,
             target_anchor: None,
@@ -567,6 +667,201 @@ mod tests {
             store.put_term_mention(&term, &edge).unwrap(),
             GraphWrite::default()
         );
-        assert_eq!(store.list_edges(&["a".into()], "g1").unwrap(), vec![edge]);
+        assert_eq!(
+            store
+                .list_edges(&["a".into()], std::slice::from_ref(&edge.derivation))
+                .unwrap(),
+            vec![edge]
+        );
+    }
+
+    #[test]
+    fn term_candidate_search_is_versioned_deduplicated_and_paginated() {
+        let store = InMemoryNodeStore::new();
+        for id in ["a", "b", "c"] {
+            store.add_node(&node_with_id(id)).unwrap();
+        }
+        let derivation = crate::domain::Derivation {
+            method: "term-search".into(),
+            version: "v1".into(),
+        };
+        for (id, target) in [("ma1", "t1"), ("ma2", "t2"), ("mb", "t1"), ("mc", "t1")] {
+            let source = if id.starts_with("ma") {
+                "a"
+            } else if id == "mb" {
+                "b"
+            } else {
+                "c"
+            };
+            let term = TermNode {
+                id: target.into(),
+                form: target.into(),
+                head: target.into(),
+                lang_version: "v".into(),
+                derivation_version: "v1".into(),
+            };
+            let mention = Edge {
+                id: id.into(),
+                source: source.into(),
+                source_kind: crate::domain::VertexKind::Specification,
+                source_role: crate::domain::EndpointRole::Mentioner,
+                target: target.into(),
+                target_kind: crate::domain::VertexKind::Term,
+                target_role: crate::domain::EndpointRole::MentionedTerm,
+                kind: EdgeKind::MentionsTerm,
+                source_anchor: None,
+                target_anchor: None,
+                basis_spec_ids: vec![],
+                derivation: derivation.clone(),
+                recorded_at: "t".into(),
+            };
+            store.put_term_mention(&term, &mention).unwrap();
+        }
+
+        let first = store
+            .list_term_candidates(&["t1".into(), "t2".into()], &derivation, "c", None, 1)
+            .unwrap();
+        assert_eq!(
+            first
+                .nodes
+                .iter()
+                .map(|n| n.id.as_str())
+                .collect::<Vec<_>>(),
+            ["a"]
+        );
+        let second = store
+            .list_term_candidates(
+                &["t1".into(), "t2".into()],
+                &derivation,
+                "c",
+                first.next_cursor.as_deref(),
+                1,
+            )
+            .unwrap();
+        assert_eq!(
+            second
+                .nodes
+                .iter()
+                .map(|n| n.id.as_str())
+                .collect::<Vec<_>>(),
+            ["b"]
+        );
+        assert!(second.next_cursor.is_none());
+
+        let wrong_version = crate::domain::Derivation {
+            version: "v2".into(),
+            ..derivation
+        };
+        assert!(store
+            .list_term_candidates(&["t1".into()], &wrong_version, "c", None, 10)
+            .unwrap()
+            .nodes
+            .is_empty());
+    }
+
+    #[test]
+    fn semantic_edge_is_returned_once_on_lexical_owner_page() {
+        let store = InMemoryNodeStore::new();
+        store.add_node(&node_with_id("a")).unwrap();
+        store.add_node(&node_with_id("z")).unwrap();
+        let derivation = crate::domain::Derivation {
+            method: "semantic".into(),
+            version: "v1".into(),
+        };
+        let edge = Edge {
+            id: "refines-z-a".into(),
+            source: "z".into(),
+            source_kind: crate::domain::VertexKind::Specification,
+            source_role: crate::domain::EndpointRole::Refiner,
+            target: "a".into(),
+            target_kind: crate::domain::VertexKind::Specification,
+            target_role: crate::domain::EndpointRole::Refined,
+            kind: EdgeKind::Refines,
+            source_anchor: None,
+            target_anchor: None,
+            basis_spec_ids: vec![],
+            derivation: derivation.clone(),
+            recorded_at: "t".into(),
+        };
+        store.append_edge(&edge).unwrap();
+        assert_eq!(
+            store
+                .list_edges(&["a".into()], std::slice::from_ref(&derivation))
+                .unwrap(),
+            [edge]
+        );
+        let old = crate::domain::Derivation {
+            method: "semantic".into(),
+            version: "old".into(),
+        };
+        assert!(store.list_edges(&["a".into()], &[old]).unwrap().is_empty());
+        assert!(store
+            .list_edges(&["z".into()], &[derivation])
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn selection_edges_are_a_distinct_validated_family() {
+        let store = InMemoryNodeStore::new();
+        store.add_node(&node_with_id("a")).unwrap();
+        store.add_node(&node_with_id("b")).unwrap();
+        let derivation = crate::domain::Derivation {
+            method: "selection-policy".into(),
+            version: "v1".into(),
+        };
+        let edge = Edge {
+            id: "supports-a-b".into(),
+            source: "a".into(),
+            source_kind: crate::domain::VertexKind::Specification,
+            source_role: crate::domain::EndpointRole::Supporter,
+            target: "b".into(),
+            target_kind: crate::domain::VertexKind::Specification,
+            target_role: crate::domain::EndpointRole::Supported,
+            kind: EdgeKind::Supports,
+            source_anchor: None,
+            target_anchor: None,
+            basis_spec_ids: vec![],
+            derivation: derivation.clone(),
+            recorded_at: "t".into(),
+        };
+        assert!(store.append_edge(&edge).unwrap());
+        assert_eq!(edge.family(), crate::domain::EdgeFamily::Selection);
+        assert_eq!(
+            store
+                .list_edges(&["a".into()], std::slice::from_ref(&derivation))
+                .unwrap(),
+            [edge]
+        );
+    }
+
+    #[test]
+    fn append_rejects_roles_that_reinterpret_the_edge_direction() {
+        let store = InMemoryNodeStore::new();
+        let mut edge = Edge {
+            id: "invalid-refines".into(),
+            source: "a".into(),
+            source_kind: crate::domain::VertexKind::Specification,
+            source_role: crate::domain::EndpointRole::Refined,
+            target: "b".into(),
+            target_kind: crate::domain::VertexKind::Specification,
+            target_role: crate::domain::EndpointRole::Refiner,
+            kind: EdgeKind::Refines,
+            source_anchor: None,
+            target_anchor: None,
+            basis_spec_ids: vec![],
+            derivation: crate::domain::Derivation {
+                method: "test".into(),
+                version: "v1".into(),
+            },
+            recorded_at: "t".into(),
+        };
+        assert!(matches!(
+            store.append_edge(&edge),
+            Err(StoreError::InvalidEdge(_))
+        ));
+        edge.source_role = crate::domain::EndpointRole::Refiner;
+        edge.target_role = crate::domain::EndpointRole::Refined;
+        assert!(store.append_edge(&edge).unwrap());
     }
 }

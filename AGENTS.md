@@ -58,14 +58,14 @@ Maximum Satisfiability Modulo Theories (MaxSMT) extends SMT by distinguishing ha
 
 This foundation follows Roberto Sebastiani and Patrick Trentin, [*On Optimization Modulo Theories, MaxSMT and Sorting Networks*](https://arxiv.org/abs/1702.02385), 2017, and [*OptiMathSAT: A Tool for Optimization Modulo Theories*](https://doi.org/10.1007/s10817-018-09508-6), 2020.
 
-# Crates
+## Crates
 
 - `so-cli`: The `spec` command-line frontend. It owns argument parsing, exit behavior, JSON output, and terminal graph rendering, and delegates service access to `so-client`. It contains no domain, persistence, or evidence-capture logic.
 - `so-client`: The reusable thin gRPC client. It resolves client-local input channels such as `@file` and stdin, propagates trace context, and forwards protobuf requests and responses. It does not own the domain model or resolve evidence locators.
-- `so-daemon`: The `specd` runtime and owner of the domain model. It owns the gRPC service, ingestion, protobuf conversion, persistence, evidence capture and provenance, asynchronous Jobs and Plugins, and persisted graph generation. Its current graph derivation creates written term-form vertices and exact mention Edges, not semantic specification-to-specification Edges.
+- `so-daemon`: The `specd` runtime and owner of the domain model. It owns the gRPC service, ingestion, protobuf conversion, persistence, evidence capture and provenance, asynchronous Jobs and Plugins, and persisted graph generation. It materializes and persists relationships derived by `so-reason` as semantic specification-to-specification Edges, but does not own their semantic derivation.
 - `so-lang`: The pure, I/O-free constrained natural-language surface layer. It owns the grammar, lossless AST, language version, and total parser. It recognizes sentence structure but performs no semantic interpretation or cross-specification reasoning.
 - `so-protocol`: The versioned protobuf schema and generated tonic message, client, and server types. It is the wire contract only and contains no domain model, persistence model, business logic, or manual conversion logic.
-- `so-reason`: The pure, I/O-free semantic and reasoning layer over `so-lang` parse trees. It owns derived speech acts, semantic structures, assume-guarantee and formula projections, and conservative judgments such as implication, contradiction, and refinement. It performs no persistence or environmental I/O.
+- `so-reason`: The pure, I/O-free semantic and reasoning layer over `so-lang` parse trees. It owns derived speech acts, semantic structures, assume-guarantee and formula projections, and the derivation of semantic specification-to-specification relationships such as implication, contradiction, and refinement. It performs no persistence or environmental I/O.
 - `so-tracing`: Shared observability infrastructure. It owns tracing and OpenTelemetry initialization, telemetry capture policy, specification hashing and recording, and gRPC trace-context propagation. It contains no specification-domain behavior.
 
 ## Development Rules

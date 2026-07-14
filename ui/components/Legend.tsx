@@ -1,10 +1,17 @@
 "use client";
 
 import {
+  DIRECTED_EDGE_KINDS,
+  EDGE_FAMILY_LABELS,
+  EDGE_KIND_COLORS,
+  EDGE_KIND_FAMILIES,
+  EDGE_KIND_LABELS,
+  EDGE_KIND_ORDER,
   SPEECH_ACT_COLORS,
   SPEECH_ACT_LABELS,
   SPEECH_ACT_ORDER,
   TERM_NODE_COLOR,
+  type EdgeKind,
   type SpeechAct,
 } from "@/lib/types";
 
@@ -13,12 +20,15 @@ import {
 export default function Legend({
   present,
   termPresent,
+  edgePresent,
 }: {
   present: Set<SpeechAct>;
   termPresent: boolean;
+  edgePresent: Set<EdgeKind>;
 }) {
   const rows = SPEECH_ACT_ORDER.filter((a) => present.has(a));
-  if (rows.length === 0 && !termPresent) return null;
+  const edgeRows = EDGE_KIND_ORDER.filter((kind) => edgePresent.has(kind));
+  if (rows.length === 0 && !termPresent && edgeRows.length === 0) return null;
   return (
     <div className="legend panel">
       <h2>Speech act</h2>
@@ -34,6 +44,17 @@ export default function Legend({
           <span>Written term form</span>
         </div>
       )}
+      {edgeRows.length > 0 && <h2>Edge</h2>}
+      {edgeRows.map((kind) => (
+        <div className="row" key={kind}>
+          <span className="dot" style={{ background: EDGE_KIND_COLORS[kind] }} />
+          <span>
+            {DIRECTED_EDGE_KINDS.has(kind) ? "→ " : "— "}
+            {EDGE_FAMILY_LABELS[EDGE_KIND_FAMILIES[kind]]} ·{" "}
+            {EDGE_KIND_LABELS[kind]}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

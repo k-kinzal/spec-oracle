@@ -200,10 +200,11 @@ impl SpecificationGraphService {
         let nodes = self.nodes.clone();
 
         // The ArangoDB driver is blocking, so the read runs off the async
-        // reactor, mirroring the ingest path. The page's edges are the ones
-        // induced among exactly the nodes returned, so the client can draw the
-        // subgraph it holds without a second call; the total is a cheap
-        // maintained count, not a scan.
+        // reactor, mirroring the ingest path. Each current Edge is assigned to
+        // one deterministic specification-page owner. A semantic Edge may
+        // therefore precede its other endpoint; full-graph consumers collect
+        // all pages, while bounded consumers defer it until both endpoints are
+        // loaded. The total is a cheap maintained count, not a scan.
         let read_span = tracing::info_span!("spec.daemon.read_blocking");
         let outcome =
             tokio::task::spawn_blocking(move || -> Result<GraphReadResult, StoreError> {
@@ -211,10 +212,13 @@ impl SpecificationGraphService {
                 let page = nodes.list_nodes(after.as_deref(), limit)?;
                 let ids: Vec<String> = page.nodes.iter().map(|n| n.id.clone()).collect();
                 let edges =
-                    nodes.list_edges(&ids, crate::graph_generation::generation_version())?;
+                    nodes.list_edges(&ids, &crate::graph_generation::current_derivations())?;
                 let mut term_ids: Vec<String> = edges
                     .iter()
-                    .filter(|edge| edge.target_kind == crate::domain::VertexKind::Term)
+                    .filter(|edge| {
+                        edge.target_kind == crate::domain::VertexKind::Term
+                            && edge.target_role == crate::domain::EndpointRole::MentionedTerm
+                    })
                     .map(|edge| edge.target.clone())
                     .collect();
                 term_ids.sort();
@@ -321,7 +325,7 @@ fn add_error_to_status(e: AddError) -> Status {
 mod tests {
     use super::*;
     use crate::add_mailbox::AddMailbox;
-    use crate::domain::{Meta, Node};
+    use crate::domain::{Edge, EdgeKind, Meta, Node, VertexKind};
     use crate::jobs::JobMailbox;
     use crate::store::{BlobStore, InMemoryNodeStore, NodeStore, StoreError};
 
@@ -397,6 +401,73 @@ mod tests {
         assert_eq!(resp2.nodes.len(), 1);
         assert_eq!(resp2.nodes[0].id, "n3");
         assert!(resp2.next_page_token.is_empty(), "walk is complete");
+
+        adds.shutdown().await.unwrap();
+        adds_task.await.unwrap();
+        jobs.shutdown().await.unwrap();
+        jobs_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn semantic_edge_crossing_pages_is_returned_once_by_its_owner() {
+        let store = Arc::new(InMemoryNodeStore::new());
+        for id in ["a", "z"] {
+            store.add_node(&node(id)).unwrap();
+        }
+        store
+            .append_edge(&Edge {
+                id: "semantic-z-a".into(),
+                source: "z".into(),
+                source_kind: VertexKind::Specification,
+                source_role: crate::domain::EndpointRole::Refiner,
+                target: "a".into(),
+                target_kind: VertexKind::Specification,
+                target_role: crate::domain::EndpointRole::Refined,
+                kind: EdgeKind::Refines,
+                source_anchor: None,
+                target_anchor: None,
+                basis_spec_ids: vec![],
+                derivation: crate::graph_generation::semantic_edge_derivation(),
+                recorded_at: "t".into(),
+            })
+            .unwrap();
+        let blobs = Arc::new(NoBlobs);
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
+        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
+        let service = SpecificationGraphService::new(store, adds.clone());
+
+        let first = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 1,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(first.nodes[0].id, "a");
+        assert_eq!(first.edges.len(), 1);
+        assert_eq!(first.edges[0].source, "z");
+        assert_eq!(first.edges[0].target, "a");
+        assert_eq!(first.edges[0].kind, pb::EdgeKind::Refines as i32);
+        assert_eq!(first.edges[0].family, pb::EdgeFamily::Semantic as i32);
+        assert_eq!(
+            first.edges[0].source_role,
+            pb::EdgeEndpointRole::Refiner as i32
+        );
+
+        let second = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 1,
+                page_token: first.next_page_token,
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(second.nodes[0].id, "z");
+        assert!(
+            second.edges.is_empty(),
+            "owner paging must not duplicate the Edge"
+        );
 
         adds.shutdown().await.unwrap();
         adds_task.await.unwrap();

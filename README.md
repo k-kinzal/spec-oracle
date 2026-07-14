@@ -18,9 +18,17 @@ post-acceptance Job.
 > **Scope.** The tool ingests (`spec add` — parse exactly one sentence and
 > persist exactly one Node), processes Evidence and graph structure through
 > Jobs, and renders the same graph through `spec graph`. NodeAdded generation
-> connects specifications through derived written-term vertices. Those
-> connectors are candidate structure, not semantic identity; refinement,
-> contradiction, and AG pairing remain open graph-side methods.
+> connects specifications through derived written-term vertices. Those lexical
+> connectors are a versioned candidate search, not semantic identity. Candidate
+> pairs that `so-reason::relate::assess` can prove become the first persisted
+> semantic Edge family: refinement, equivalence, and force-aware conflicts.
+> Unknown/Independent outcomes are audit records rather than topology, and Edge
+> absence has no negative meaning. A/G pairing and composition remain open
+> graph-side methods. Every Edge belongs to a lexical, semantic, or selection
+> family and carries explicit endpoint roles. Its `source` and `target` are the
+> ordered arguments of that typed relation, not a universal support-flow
+> direction. Supports, Defeats, and Supersedes are reserved as independently
+> versioned selection relations; no current policy produces them yet.
 
 ## Architecture
 
@@ -56,7 +64,7 @@ spec (CLI) ──▶ so-client ──gRPC──▶ specd Add Mailbox ──▶ S
                                        └─NodeAdded─▶ Job Mailbox
                                                       ├─ Evidence + blob
                                                       ├─ origin enrichment
-                                                      └─ graph generation
+                                                      └─ term + semantic graph generation
 ```
 
 ## The language
@@ -115,8 +123,9 @@ Graceful shutdown stops gRPC intake, drains the Add Mailbox and its NodeAdded
 events, then drains the Job Mailbox. A Job that continues to fail prevents
 shutdown from completing, preserving the requirement that accepted work reaches
 a consistent result. Job/Event scheduling state is never written to ArangoDB;
-the database contains specification nodes, derived term-form nodes, and
-versioned Edges—not transient queue state.
+the database contains specification nodes, derived term-form nodes, versioned
+Edges, and non-topological relation-assessment audit records—not transient
+queue state.
 
 ## Quickstart
 
@@ -146,8 +155,9 @@ cargo run --bin spec -- add \
   --evidence so_daemon/src/snapshot.rs:1
 ```
 
-The `spec_oracle` database and its `nodes`, `term_nodes`, and `edges` collections are created
-automatically by the daemon on first connect — there is no init step in compose.
+The `spec_oracle` database and its `nodes`, `term_nodes`, `edges`, and
+`relation_assessments` collections are created automatically by the daemon on
+first connect — there is no init step in compose.
 
 Reset everything (drops the database volume) with `docker compose down -v`. The
 daemon-side blob store under `./.spec-oracle/` is separate and is removed by
@@ -169,7 +179,13 @@ cargo run --bin spec -- graph --width 160
 
 The daemon still returns bounded keyset pages because transport must remain
 bounded. The CLI follows those pages to the end, combines their Specification
-Nodes, connector Nodes, and directed Edges, and then lays out that one graph.
+Nodes, connector Nodes, and Edges, and then lays out that one graph. Refinement
+and term mentions are directed by their explicit endpoint roles; equivalence
+and conflicts are symmetric. Selection-family relationships, when produced by
+a future versioned selection method, retain their own supporter/defeater/
+superseder roles rather than reversing semantic Edges. A
+semantic Edge is owned by its lexically smaller endpoint for pagination, so it
+may arrive before its other endpoint and is rendered after the complete walk.
 Paging is an implementation detail of the read; it does not select a finite
 subgraph. Future graph filters belong to optional flags rather than required
 seeds. `--server` selects the daemon and `--width` changes presentation only.
@@ -177,7 +193,7 @@ seeds. `--server` selects the daemon and `--width` changes presentation only.
 ### Graph view (`ui/`)
 
 A Next.js app visualizes the graph as a force-directed cloud (Cosmograph,
-GPU/WebGL), coloring each node by its speech act. It is an independent graph
+GPU/WebGL), coloring each node by its speech act and semantic Edges by kind. It is an independent graph
 view and is not launched or controlled by `spec graph`. It pages in bounded
 batches and caps what it renders. A thin Next.js backend-for-frontend speaks
 gRPC to `specd`, so the browser never needs gRPC.

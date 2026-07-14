@@ -4,6 +4,7 @@
 //! sentence (parse tree, speech act, contract view) come from the language
 //! crate at response time and are never part of this model.
 
+pub mod assessment;
 pub mod edge;
 pub mod locator;
 pub mod node;
@@ -11,7 +12,8 @@ pub mod origin;
 pub mod snapshot;
 pub mod term;
 
-pub use edge::{Derivation, Edge, EdgeKind, TextAnchor, VertexKind};
+pub use assessment::{AssessmentOutcome, RelationAssessment};
+pub use edge::{Derivation, Edge, EdgeFamily, EdgeKind, EndpointRole, TextAnchor, VertexKind};
 pub use locator::{Kind, Locator};
 pub use node::{Evidence, Meta, MetaUpdate, Node};
 pub use origin::Origin;

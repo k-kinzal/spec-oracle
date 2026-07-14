@@ -20,16 +20,19 @@
 //!     `Snapshot::content` is `#[serde(skip)]`, so a fetched node's content is
 //!     empty and the blob store remains the byte authority.
 //!
-//! Edge collections (refinement/composition/…) are deliberately absent — edges
-//! are out of scope — but they attach behind this same store later.
+//!   * `term_nodes` and the native `edges` collection hold append-only derived
+//!     graph topology;
+//!   * `relation_assessments` holds append-only candidate-pair audit records,
+//!     including Unknown/Independent outcomes that must not become topology.
 
 use std::collections::HashMap;
 
 use arangors::client::reqwest::ReqwestClient;
+use arangors::index::{Index, IndexSettings};
 use arangors::{ClientError, Connection, Database};
 use serde_json::Value;
 
-use crate::domain::{Edge, EdgeKind, MetaUpdate, Node, TermNode, VertexKind};
+use crate::domain::{Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, TermNode, VertexKind};
 
 use crate::store::{GraphStore, GraphWrite, NodePage, NodeStore, StoreError};
 
@@ -37,6 +40,7 @@ use crate::store::{GraphStore, GraphWrite, NodePage, NodeStore, StoreError};
 const COLLECTION: &str = "nodes";
 const TERM_COLLECTION: &str = "term_nodes";
 const EDGE_COLLECTION: &str = "edges";
+const ASSESSMENT_COLLECTION: &str = "relation_assessments";
 
 /// Connection parameters for an ArangoDB deployment. Borrowed so the caller owns
 /// the strings (typically CLI flags and environment variables).
@@ -69,6 +73,9 @@ impl ArangoNodeStore {
         ensure_collection(&db, COLLECTION)?;
         ensure_collection(&db, TERM_COLLECTION)?;
         ensure_edge_collection(&db, EDGE_COLLECTION)?;
+        ensure_collection(&db, ASSESSMENT_COLLECTION)?;
+        ensure_edge_read_projection(&db)?;
+        ensure_edge_read_index(&db)?;
         Ok(ArangoNodeStore { db })
     }
 }
@@ -180,6 +187,7 @@ impl GraphStore for ArangoNodeStore {
     }
 
     fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError> {
+        edge.validate().map_err(StoreError::InvalidEdge)?;
         let from_collection = match edge.source_kind {
             VertexKind::Specification => COLLECTION,
             VertexKind::Term => TERM_COLLECTION,
@@ -193,10 +201,37 @@ impl GraphStore for ArangoNodeStore {
             "_from": format!("{from_collection}/{}", edge.source),
             "_to": format!("{to_collection}/{}", edge.target),
             "kind": edge_kind_name(edge.kind),
+            "family": edge.family(),
+            "page_owner": edge.page_owner(),
+            "derivation_method": edge.derivation.method,
             "derivation_version": edge.derivation.version,
+            "derivation_key": derivation_key(&edge.derivation),
             "edge": edge,
         });
         upsert_immutable(&self.db, EDGE_COLLECTION, &edge.id, doc)
+    }
+
+    fn append_relation_assessment(
+        &self,
+        assessment: &RelationAssessment,
+    ) -> Result<bool, StoreError> {
+        let mut doc = serde_json::to_value(assessment)?;
+        if let Value::Object(ref mut map) = doc {
+            map.insert("_key".to_string(), Value::String(assessment.id.clone()));
+        }
+        upsert_immutable(&self.db, ASSESSMENT_COLLECTION, &assessment.id, doc)
+    }
+
+    fn get_relation_assessment(&self, id: &str) -> Result<Option<RelationAssessment>, StoreError> {
+        let query = format!(
+            "FOR assessment IN {ASSESSMENT_COLLECTION} \
+               FILTER assessment._key == @key LIMIT 1 \
+               RETURN UNSET(assessment, \"_key\", \"_id\", \"_rev\")"
+        );
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("key", Value::String(id.to_string()));
+        let rows: Vec<RelationAssessment> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        Ok(rows.into_iter().next())
     }
 
     fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError> {
@@ -209,6 +244,67 @@ impl GraphStore for ArangoNodeStore {
         let mut vars: HashMap<&str, Value> = HashMap::new();
         vars.insert("ids", serde_json::to_value(ids)?);
         self.db.aql_bind_vars(&query, vars).map_err(backend)
+    }
+
+    fn list_term_candidates(
+        &self,
+        term_ids: &[String],
+        term_derivation: &crate::domain::Derivation,
+        exclude_node_id: &str,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<NodePage, StoreError> {
+        if term_ids.is_empty() {
+            return Ok(NodePage {
+                nodes: Vec::new(),
+                next_cursor: None,
+            });
+        }
+        let fetch = limit.saturating_add(1);
+        let after_filter = if after.is_some() {
+            "FILTER node_id > @after"
+        } else {
+            ""
+        };
+        // The native edge index serves each INBOUND hop from a term vertex.
+        // COLLECT deduplicates a specification that shares several terms with
+        // the added Node; the candidate id remains the keyset cursor.
+        let query = format!(
+            "FOR term_id IN @term_ids \
+               FOR vertex, mention IN 1..1 INBOUND \
+                   CONCAT(\"{TERM_COLLECTION}/\", term_id) {EDGE_COLLECTION} \
+                 FILTER mention.edge.kind == \"mentions_term\" \
+                 FILTER mention.edge.source_role == \"mentioner\" \
+                 FILTER mention.edge.target_role == \"mentioned_term\" \
+                 FILTER mention.edge.derivation == @derivation \
+                 FILTER vertex._key != @exclude \
+                 COLLECT node_id = vertex._key \
+                 {after_filter} \
+                 SORT node_id ASC \
+                 LIMIT @fetch \
+                 LET node = DOCUMENT(CONCAT(\"{COLLECTION}/\", node_id)) \
+                 FILTER node != null \
+                 RETURN UNSET(node, \"_key\", \"_id\", \"_rev\")"
+        );
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("term_ids", serde_json::to_value(term_ids)?);
+        vars.insert("derivation", serde_json::to_value(term_derivation)?);
+        vars.insert("exclude", Value::String(exclude_node_id.to_string()));
+        vars.insert("fetch", Value::from(fetch as u64));
+        if let Some(after) = after {
+            vars.insert("after", Value::String(after.to_string()));
+        }
+        let mut rows: Vec<Node> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        let next_cursor = if rows.len() > limit {
+            rows.truncate(limit);
+            rows.last().map(|node| node.id.clone())
+        } else {
+            None
+        };
+        Ok(NodePage {
+            nodes: rows,
+            next_cursor,
+        })
     }
 
     fn list_nodes(&self, after: Option<&str>, limit: usize) -> Result<NodePage, StoreError> {
@@ -276,27 +372,33 @@ impl GraphStore for ArangoNodeStore {
 
     fn list_edges(
         &self,
-        among: &[String],
-        derivation_version: &str,
+        owners: &[String],
+        current_derivations: &[crate::domain::Derivation],
     ) -> Result<Vec<Edge>, StoreError> {
         let query = format!(
             "FOR e IN {EDGE_COLLECTION} \
-               FILTER e.derivation_version == @version \
-               FILTER e.kind == \"mentions_term\" AND e.edge.source IN @among \
+               FILTER e.page_owner IN @owners \
+               FILTER e.derivation_key IN @current \
                SORT e._key ASC \
                RETURN e.edge"
         );
         let mut vars: HashMap<&str, Value> = HashMap::new();
-        vars.insert("among", serde_json::to_value(among)?);
-        vars.insert("version", Value::String(derivation_version.to_string()));
+        vars.insert("owners", serde_json::to_value(owners)?);
+        let current: Vec<String> = current_derivations.iter().map(derivation_key).collect();
+        vars.insert("current", serde_json::to_value(current)?);
         self.db.aql_bind_vars(&query, vars).map_err(backend)
     }
 }
 
+fn derivation_key(derivation: &crate::domain::Derivation) -> String {
+    // Both components are daemon-controlled identifiers and `|` is excluded
+    // from their version vocabulary. Keeping one materialized scalar lets the
+    // persistent page-owner index serve a method+version current-view query.
+    format!("{}|{}", derivation.method, derivation.version)
+}
+
 fn edge_kind_name(kind: EdgeKind) -> &'static str {
-    match kind {
-        EdgeKind::MentionsTerm => "mentions_term",
-    }
+    kind.as_str()
 }
 
 fn upsert_immutable(
@@ -362,4 +464,48 @@ fn ensure_edge_collection(db: &Database<ReqwestClient>, name: &str) -> Result<()
         },
         Err(e) => Err(backend(e)),
     }
+}
+
+/// Backfill query-only scalar projections on historical Edge documents. The
+/// immutable nested `edge` fact is never changed; these fields only make the
+/// append-only history indexable by page owner and derivation.
+fn ensure_edge_read_projection(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let query = format!(
+        "FOR e IN {EDGE_COLLECTION} \
+           FILTER e.page_owner == null OR e.derivation_key == null OR e.family == null \
+           LET owner = e.edge.target_kind == \"term\" \
+             ? e.edge.source \
+             : MIN([e.edge.source, e.edge.target]) \
+           LET key = CONCAT(e.edge.derivation.method, \"|\", e.edge.derivation.version) \
+           LET family = e.edge.kind == \"mentions_term\" \
+             ? \"lexical\" \
+             : POSITION([\"supports\", \"defeats\", \"supersedes\"], e.edge.kind) \
+               ? \"selection\" \
+               : \"semantic\" \
+           UPDATE e WITH {{ \
+             page_owner: owner, \
+             family: family, \
+             derivation_method: e.edge.derivation.method, \
+             derivation_version: e.edge.derivation.version, \
+             derivation_key: key \
+           }} IN {EDGE_COLLECTION} \
+           RETURN true"
+    );
+    let _: Vec<bool> = db.aql_str(&query).map_err(backend)?;
+    Ok(())
+}
+
+fn ensure_edge_read_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let index = Index::builder()
+        .name("edge_current_by_owner")
+        .fields(vec!["page_owner".to_string(), "derivation_key".to_string()])
+        .settings(IndexSettings::Persistent {
+            unique: false,
+            sparse: false,
+            deduplicate: false,
+        })
+        .build();
+    db.create_index(EDGE_COLLECTION, &index)
+        .map(|_| ())
+        .map_err(backend)
 }

@@ -15,7 +15,8 @@ package spec_oracle.v1;
 
 // The specification graph service. It ingests specifications and reads the
 // graph back a bounded page at a time. NodeAdded graph generation connects
-// specifications through written term-form vertices.
+// specifications through written term-form vertices and proved semantic
+// relationships.
 service SpecificationGraph {
   // Parse exactly one specification sentence and persist exactly one Node.
   // Evidence descriptors are opaque Job input on this path: no locator I/O,
@@ -69,8 +70,13 @@ message GetGraphRequest {
 message GetGraphResponse {
   // A bounded page of nodes, ordered by a stable key so paging is deterministic.
   repeated Node nodes = 1;
-  // Current derived edges adjacent to the specification nodes on this page.
-  // A mention edge's TermNode endpoint is supplied in term_nodes below.
+  // Current derived edges owned by the specification nodes on this page. A
+  // mention is owned by its specification source. A specification-to-
+  // specification Edge is owned by its lexically smaller endpoint, so a full
+  // page walk returns every current Edge once even when its other endpoint is
+  // on a later page. Consumers of partial walks must defer an Edge until both
+  // specification endpoints have arrived. A mention's TermNode endpoint is
+  // supplied in term_nodes below.
   repeated Edge edges = 2;
   // Opaque token to fetch the next page; empty when this is the last page.
   string next_page_token = 3;
@@ -112,7 +118,9 @@ message Derivation {
 // deliberately not graph topology.
 message Edge {
   string id = 1;
+  // Ordered argument 1 of `kind`; this is not a graph-wide support direction.
   string source = 2;
+  // Ordered argument 2 of `kind`; inspect endpoint roles before interpreting it.
   string target = 3;
   EdgeKind kind = 4;
   VertexKind source_kind = 5;
@@ -122,14 +130,57 @@ message Edge {
   repeated string basis_spec_ids = 9;
   Derivation derivation = 10;
   string recorded_at = 11;
+  EdgeFamily family = 12;
+  EdgeEndpointRole source_role = 13;
+  EdgeEndpointRole target_role = 14;
 }
 
-// The kind of relationship an edge asserts. Grounded in the graph vocabulary:
-// term incidence or a proved semantic relationship.
+// The relationship family keeps lexical discovery, semantic truth, and
+// versioned selection judgments distinct in the one append-only Ledger.
+enum EdgeFamily {
+  EDGE_FAMILY_UNSPECIFIED = 0;
+  EDGE_FAMILY_LEXICAL = 1;
+  EDGE_FAMILY_SEMANTIC = 2;
+  EDGE_FAMILY_SELECTION = 3;
+}
+
+// The role each ordered endpoint plays in its EdgeKind. Symmetric kinds give
+// both endpoints the same role and canonicalize ids separately.
+enum EdgeEndpointRole {
+  EDGE_ENDPOINT_ROLE_UNSPECIFIED = 0;
+  EDGE_ENDPOINT_ROLE_MENTIONER = 1;
+  EDGE_ENDPOINT_ROLE_MENTIONED_TERM = 2;
+  EDGE_ENDPOINT_ROLE_REFINER = 3;
+  EDGE_ENDPOINT_ROLE_REFINED = 4;
+  EDGE_ENDPOINT_ROLE_EQUIVALENT_PEER = 5;
+  EDGE_ENDPOINT_ROLE_CONFLICT_PEER = 6;
+  EDGE_ENDPOINT_ROLE_SUPPORTER = 7;
+  EDGE_ENDPOINT_ROLE_SUPPORTED = 8;
+  EDGE_ENDPOINT_ROLE_DEFEATER = 9;
+  EDGE_ENDPOINT_ROLE_DEFEATED = 10;
+  EDGE_ENDPOINT_ROLE_SUPERSEDER = 11;
+  EDGE_ENDPOINT_ROLE_SUPERSEDED = 12;
+}
+
+// The kind of relationship an Edge asserts. Its direction is its endpoint-role
+// order, not one universal flow shared by all kinds.
 enum EdgeKind {
   EDGE_KIND_UNSPECIFIED = 0;
   reserved 1 to 7;
   EDGE_KIND_MENTIONS_TERM = 8;
+  // Directed: source is the concrete specification, target the abstract one.
+  EDGE_KIND_REFINES = 9;
+  // Symmetric kinds use lexically ordered endpoints for stable identity.
+  EDGE_KIND_EQUIVALENT = 10;
+  EDGE_KIND_HARD_CONTRADICTION = 11;
+  EDGE_KIND_ADVISORY_TENSION = 12;
+  EDGE_KIND_DESCRIPTIVE_CONFLICT = 13;
+  EDGE_KIND_ENVELOPE_CONFLICT = 14;
+  // Selection-family relations are versioned judgments, not reinterpretations
+  // or reversals of semantic Edges.
+  EDGE_KIND_SUPPORTS = 15;
+  EDGE_KIND_DEFEATS = 16;
+  EDGE_KIND_SUPERSEDES = 17;
 }
 
 // ---- domain mirror ---------------------------------------------------------

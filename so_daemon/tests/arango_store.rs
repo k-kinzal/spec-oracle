@@ -9,7 +9,8 @@
 
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
 use so_daemon::domain::{
-    Anchor, Evidence, Kind, Locator, Meta, MetaUpdate, Node, Origin, Snapshot,
+    Anchor, AssessmentOutcome, EdgeKind, Evidence, Kind, Locator, Meta, MetaUpdate, Node, Origin,
+    RelationAssessment, Snapshot,
 };
 use so_daemon::store::{GraphStore, NodeStore};
 
@@ -71,6 +72,29 @@ fn arango_round_trip_when_available() {
     };
     let store = ArangoNodeStore::connect(&cfg).expect("connect to ArangoDB");
 
+    // Assessment coverage is append-only audit data, separate from topology.
+    let assessment = RelationAssessment {
+        id: format!("test-assessment-{}", uuid::Uuid::new_v4()),
+        left: "candidate-a".into(),
+        right: "candidate-b".into(),
+        candidate_derivation: so_daemon::graph_generation::candidate_derivation(),
+        semantic_derivation: so_daemon::graph_generation::semantic_derivation(),
+        outcome: AssessmentOutcome::Unknown,
+        recorded_at: "2026-07-12T00:00:00Z".into(),
+    };
+    assert!(store
+        .append_relation_assessment(&assessment)
+        .expect("append assessment"));
+    assert!(!store
+        .append_relation_assessment(&assessment)
+        .expect("assessment append is idempotent"));
+    assert_eq!(
+        store
+            .get_relation_assessment(&assessment.id)
+            .expect("get assessment"),
+        Some(assessment)
+    );
+
     // Nodes are immutable and this integration database intentionally persists
     // across runs. A fresh id prevents a prior run's asynchronous Job facts
     // from changing the initial-state assertions below.
@@ -122,15 +146,35 @@ fn arango_round_trip_when_available() {
     // collections. The term is a lexical connector, not a Relation record.
     so_daemon::graph_generation::generate_and_persist(&node, &store, "2026-07-12T00:00:01Z")
         .expect("generate graph structure");
+    let mut conflicting = sample_node(&format!(
+        "test-node-arango-conflict-{}",
+        uuid::Uuid::new_v4()
+    ));
+    conflicting.statement = "The pump shall not stop.".to_string();
+    store.add_node(&conflicting).expect("add conflicting node");
+    let conflict_report = so_daemon::graph_generation::generate_and_persist(
+        &conflicting,
+        &store,
+        "2026-07-12T00:00:02Z",
+    )
+    .expect("generate semantic graph structure");
     let edges = store
         .list_edges(
-            std::slice::from_ref(&node.id),
-            so_daemon::graph_generation::generation_version(),
+            &[node.id.clone(), conflicting.id.clone()],
+            &so_daemon::graph_generation::current_derivations(),
         )
         .expect("list_edges");
     assert!(edges
         .iter()
         .any(|edge| edge.kind == so_daemon::domain::EdgeKind::MentionsTerm));
+    assert!(edges
+        .iter()
+        .any(|edge| edge.kind == EdgeKind::HardContradiction));
+    assert!(conflict_report
+        .outcomes
+        .get("hard_contradiction")
+        .is_some_and(|count| *count >= 1));
+    assert!(conflict_report.assessments_inserted >= 1);
     let term_ids: Vec<String> = edges
         .iter()
         .filter(|edge| edge.target_kind == so_daemon::domain::VertexKind::Term)

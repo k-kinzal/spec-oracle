@@ -7,6 +7,8 @@
 import { useCallback } from "react";
 import { Cosmograph, CosmographProvider } from "@cosmograph/react";
 import {
+  DIRECTED_EDGE_KINDS,
+  EDGE_KIND_COLORS,
   SPEECH_ACT_COLORS,
   TERM_NODE_COLOR,
   type GraphEdge,
@@ -55,9 +57,10 @@ export default function GraphView({
           nodeColor={nodeColor}
           nodeSize={nodeSize}
           nodeLabelAccessor={nodeLabel}
-          linkColor={() => "rgba(150, 150, 160, 0.22)"}
-          linkWidth={0.4}
-          linkArrows={false}
+          linkColor={(edge) => EDGE_KIND_COLORS[edge.kind]}
+          linkWidth={(edge) => (edge.kind === "mentions_term" ? 0.4 : 1.1)}
+          linkArrows={(edge) => DIRECTED_EDGE_KINDS.has(edge.kind)}
+          linkArrowsSizeScale={0.85}
           backgroundColor="#0f0f10"
           nodeGreyoutOpacity={0.08}
           hoveredNodeRingColor="#ffffff"

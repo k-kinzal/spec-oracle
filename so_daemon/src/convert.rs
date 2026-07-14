@@ -109,6 +109,41 @@ fn sentence_view(statement: &str) -> Option<pb::SentenceView> {
 fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
     match k {
         domain::EdgeKind::MentionsTerm => pb::EdgeKind::MentionsTerm,
+        domain::EdgeKind::Refines => pb::EdgeKind::Refines,
+        domain::EdgeKind::Equivalent => pb::EdgeKind::Equivalent,
+        domain::EdgeKind::HardContradiction => pb::EdgeKind::HardContradiction,
+        domain::EdgeKind::AdvisoryTension => pb::EdgeKind::AdvisoryTension,
+        domain::EdgeKind::DescriptiveConflict => pb::EdgeKind::DescriptiveConflict,
+        domain::EdgeKind::EnvelopeConflict => pb::EdgeKind::EnvelopeConflict,
+        domain::EdgeKind::Supports => pb::EdgeKind::Supports,
+        domain::EdgeKind::Defeats => pb::EdgeKind::Defeats,
+        domain::EdgeKind::Supersedes => pb::EdgeKind::Supersedes,
+    }
+}
+
+fn edge_family_to_pb(family: domain::EdgeFamily) -> pb::EdgeFamily {
+    match family {
+        domain::EdgeFamily::Lexical => pb::EdgeFamily::Lexical,
+        domain::EdgeFamily::Semantic => pb::EdgeFamily::Semantic,
+        domain::EdgeFamily::Selection => pb::EdgeFamily::Selection,
+    }
+}
+
+fn endpoint_role_to_pb(role: domain::EndpointRole) -> pb::EdgeEndpointRole {
+    match role {
+        domain::EndpointRole::Unspecified => pb::EdgeEndpointRole::Unspecified,
+        domain::EndpointRole::Mentioner => pb::EdgeEndpointRole::Mentioner,
+        domain::EndpointRole::MentionedTerm => pb::EdgeEndpointRole::MentionedTerm,
+        domain::EndpointRole::Refiner => pb::EdgeEndpointRole::Refiner,
+        domain::EndpointRole::Refined => pb::EdgeEndpointRole::Refined,
+        domain::EndpointRole::EquivalentPeer => pb::EdgeEndpointRole::EquivalentPeer,
+        domain::EndpointRole::ConflictPeer => pb::EdgeEndpointRole::ConflictPeer,
+        domain::EndpointRole::Supporter => pb::EdgeEndpointRole::Supporter,
+        domain::EndpointRole::Supported => pb::EdgeEndpointRole::Supported,
+        domain::EndpointRole::Defeater => pb::EdgeEndpointRole::Defeater,
+        domain::EndpointRole::Defeated => pb::EdgeEndpointRole::Defeated,
+        domain::EndpointRole::Superseder => pb::EdgeEndpointRole::Superseder,
+        domain::EndpointRole::Superseded => pb::EdgeEndpointRole::Superseded,
     }
 }
 
@@ -146,6 +181,9 @@ pub fn edge_to_pb(e: &domain::Edge) -> pb::Edge {
             version: e.derivation.version.clone(),
         }),
         recorded_at: e.recorded_at.clone(),
+        family: edge_family_to_pb(e.family()) as i32,
+        source_role: endpoint_role_to_pb(e.source_role) as i32,
+        target_role: endpoint_role_to_pb(e.target_role) as i32,
     }
 }
 
@@ -560,13 +598,15 @@ mod tests {
 
     #[test]
     fn edge_maps_endpoints_and_kind_to_pb() {
-        use crate::domain::{Derivation, Edge, EdgeKind, VertexKind};
+        use crate::domain::{Derivation, Edge, EdgeKind, EndpointRole, VertexKind};
         let edge = Edge {
             id: "e1".into(),
             source: "n1".into(),
             source_kind: VertexKind::Specification,
+            source_role: EndpointRole::Mentioner,
             target: "n2".into(),
-            target_kind: VertexKind::Specification,
+            target_kind: VertexKind::Term,
+            target_role: EndpointRole::MentionedTerm,
             kind: EdgeKind::MentionsTerm,
             source_anchor: None,
             target_anchor: None,
@@ -583,5 +623,85 @@ mod tests {
         assert_eq!(wire.target, "n2");
         assert_eq!(wire.kind, pb::EdgeKind::MentionsTerm as i32);
         assert_eq!(wire.source_kind, pb::VertexKind::Specification as i32);
+        assert_eq!(wire.family, pb::EdgeFamily::Lexical as i32);
+        assert_eq!(wire.source_role, pb::EdgeEndpointRole::Mentioner as i32);
+        assert_eq!(wire.target_role, pb::EdgeEndpointRole::MentionedTerm as i32);
+    }
+
+    #[test]
+    fn every_nonlexical_edge_kind_has_a_wire_kind_family_and_roles() {
+        use crate::domain::{Derivation, Edge, EdgeKind, VertexKind};
+        for (kind, wire_kind, wire_family) in [
+            (
+                EdgeKind::Refines,
+                pb::EdgeKind::Refines,
+                pb::EdgeFamily::Semantic,
+            ),
+            (
+                EdgeKind::Equivalent,
+                pb::EdgeKind::Equivalent,
+                pb::EdgeFamily::Semantic,
+            ),
+            (
+                EdgeKind::HardContradiction,
+                pb::EdgeKind::HardContradiction,
+                pb::EdgeFamily::Semantic,
+            ),
+            (
+                EdgeKind::AdvisoryTension,
+                pb::EdgeKind::AdvisoryTension,
+                pb::EdgeFamily::Semantic,
+            ),
+            (
+                EdgeKind::DescriptiveConflict,
+                pb::EdgeKind::DescriptiveConflict,
+                pb::EdgeFamily::Semantic,
+            ),
+            (
+                EdgeKind::EnvelopeConflict,
+                pb::EdgeKind::EnvelopeConflict,
+                pb::EdgeFamily::Semantic,
+            ),
+            (
+                EdgeKind::Supports,
+                pb::EdgeKind::Supports,
+                pb::EdgeFamily::Selection,
+            ),
+            (
+                EdgeKind::Defeats,
+                pb::EdgeKind::Defeats,
+                pb::EdgeFamily::Selection,
+            ),
+            (
+                EdgeKind::Supersedes,
+                pb::EdgeKind::Supersedes,
+                pb::EdgeFamily::Selection,
+            ),
+        ] {
+            let (source_role, target_role) = kind.endpoint_roles();
+            let edge = Edge {
+                id: format!("edge-{}", kind.as_str()),
+                source: "a".into(),
+                source_kind: VertexKind::Specification,
+                source_role,
+                target: "b".into(),
+                target_kind: VertexKind::Specification,
+                target_role,
+                kind,
+                source_anchor: None,
+                target_anchor: None,
+                basis_spec_ids: vec![],
+                derivation: Derivation {
+                    method: "test".into(),
+                    version: "v1".into(),
+                },
+                recorded_at: "t".into(),
+            };
+            let wire = edge_to_pb(&edge);
+            assert_eq!(wire.kind, wire_kind as i32);
+            assert_eq!(wire.family, wire_family as i32);
+            assert_ne!(wire.source_role, pb::EdgeEndpointRole::Unspecified as i32);
+            assert_ne!(wire.target_role, pb::EdgeEndpointRole::Unspecified as i32);
+        }
     }
 }

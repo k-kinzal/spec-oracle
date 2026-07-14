@@ -39,7 +39,11 @@ struct Node {
 struct Edge {
     source: usize,
     target: usize,
+    family: String,
     kind: String,
+    source_role: String,
+    target_role: String,
+    directed: bool,
 }
 
 /// The complete topology collected by one `spec graph` invocation.
@@ -120,10 +124,15 @@ impl Graph {
                     edge.id, edge.target
                 )
             })?;
+            let (kind, directed) = edge_kind(edge.kind);
             graph_edges.push(Edge {
                 source,
                 target,
-                kind: edge_kind(edge.kind).to_string(),
+                family: edge_family(edge.family).to_string(),
+                kind: kind.to_string(),
+                source_role: endpoint_role(edge.source_role).to_string(),
+                target_role: endpoint_role(edge.target_role).to_string(),
+                directed,
             });
         }
 
@@ -163,20 +172,22 @@ impl Graph {
                     let (x1, y1) = positions[edge.source];
                     let (x2, y2) = positions[edge.target];
                     context.draw(&Line::new(x1, y1, x2, y2, Color::Reset));
-                    let dx = x2 - x1;
-                    let dy = y2 - y1;
-                    let arrow_position = if dy.abs() < 0.5 {
-                        if dx >= 0.0 {
-                            0.96
+                    if edge.directed {
+                        let dx = x2 - x1;
+                        let dy = y2 - y1;
+                        let arrow_position = if dy.abs() < 0.5 {
+                            if dx >= 0.0 {
+                                0.96
+                            } else {
+                                0.04
+                            }
                         } else {
-                            0.04
-                        }
-                    } else {
-                        0.60
-                    };
-                    let arrow_x = x1 + dx * arrow_position;
-                    let arrow_y = y1 + dy * arrow_position;
-                    context.print(arrow_x, arrow_y, direction_arrow(x2 - x1, y2 - y1));
+                            0.60
+                        };
+                        let arrow_x = x1 + dx * arrow_position;
+                        let arrow_y = y1 + dy * arrow_position;
+                        context.print(arrow_x, arrow_y, direction_arrow(dx, dy));
+                    }
                 }
                 for (node, &(x, y)) in self.nodes.iter().zip(&positions) {
                     context.print(x, y, node_label(node));
@@ -186,14 +197,25 @@ impl Graph {
         output.push_str(&buffer_text(&buffer));
         output.push_str("\n◆ specification   ○ written term form\n");
 
-        let mut kinds: BTreeMap<&str, usize> = BTreeMap::new();
+        let mut kinds: BTreeMap<(&str, &str, &str, &str, bool), usize> = BTreeMap::new();
         for edge in &self.edges {
-            *kinds.entry(edge.kind.as_str()).or_default() += 1;
+            *kinds
+                .entry((
+                    edge.family.as_str(),
+                    edge.kind.as_str(),
+                    edge.source_role.as_str(),
+                    edge.target_role.as_str(),
+                    edge.directed,
+                ))
+                .or_default() += 1;
         }
         if !kinds.is_empty() {
-            output.push_str("Directed Edge kinds:");
-            for (kind, count) in kinds {
-                output.push_str(&format!("  → {kind} ({count})"));
+            output.push_str("Edge kinds:");
+            for ((family, kind, source_role, target_role, directed), count) in kinds {
+                let glyph = if directed { "→" } else { "—" };
+                output.push_str(&format!(
+                    "  {glyph} {family}/{kind} [{source_role}{glyph}{target_role}] ({count})"
+                ));
             }
             output.push('\n');
         }
@@ -339,10 +361,46 @@ fn buffer_text(buffer: &Buffer) -> String {
     lines.join("\n")
 }
 
-fn edge_kind(kind: i32) -> &'static str {
+fn edge_kind(kind: i32) -> (&'static str, bool) {
     match pb::EdgeKind::try_from(kind).unwrap_or(pb::EdgeKind::Unspecified) {
-        pb::EdgeKind::MentionsTerm => "mentions_term",
-        pb::EdgeKind::Unspecified => "unspecified",
+        pb::EdgeKind::MentionsTerm => ("mentions_term", true),
+        pb::EdgeKind::Refines => ("refines", true),
+        pb::EdgeKind::Equivalent => ("equivalent", false),
+        pb::EdgeKind::HardContradiction => ("hard_contradiction", false),
+        pb::EdgeKind::AdvisoryTension => ("advisory_tension", false),
+        pb::EdgeKind::DescriptiveConflict => ("descriptive_conflict", false),
+        pb::EdgeKind::EnvelopeConflict => ("envelope_conflict", false),
+        pb::EdgeKind::Supports => ("supports", true),
+        pb::EdgeKind::Defeats => ("defeats", true),
+        pb::EdgeKind::Supersedes => ("supersedes", true),
+        pb::EdgeKind::Unspecified => ("unspecified", false),
+    }
+}
+
+fn edge_family(family: i32) -> &'static str {
+    match pb::EdgeFamily::try_from(family).unwrap_or(pb::EdgeFamily::Unspecified) {
+        pb::EdgeFamily::Lexical => "lexical",
+        pb::EdgeFamily::Semantic => "semantic",
+        pb::EdgeFamily::Selection => "selection",
+        pb::EdgeFamily::Unspecified => "unspecified",
+    }
+}
+
+fn endpoint_role(role: i32) -> &'static str {
+    match pb::EdgeEndpointRole::try_from(role).unwrap_or(pb::EdgeEndpointRole::Unspecified) {
+        pb::EdgeEndpointRole::Mentioner => "mentioner",
+        pb::EdgeEndpointRole::MentionedTerm => "mentioned_term",
+        pb::EdgeEndpointRole::Refiner => "refiner",
+        pb::EdgeEndpointRole::Refined => "refined",
+        pb::EdgeEndpointRole::EquivalentPeer => "equivalent_peer",
+        pb::EdgeEndpointRole::ConflictPeer => "conflict_peer",
+        pb::EdgeEndpointRole::Supporter => "supporter",
+        pb::EdgeEndpointRole::Supported => "supported",
+        pb::EdgeEndpointRole::Defeater => "defeater",
+        pb::EdgeEndpointRole::Defeated => "defeated",
+        pb::EdgeEndpointRole::Superseder => "superseder",
+        pb::EdgeEndpointRole::Superseded => "superseded",
+        pb::EdgeEndpointRole::Unspecified => "unspecified",
     }
 }
 
@@ -367,11 +425,63 @@ mod tests {
     }
 
     fn edge(id: &str, source: &str, target: &str) -> pb::Edge {
+        edge_with_kind(id, source, target, pb::EdgeKind::MentionsTerm)
+    }
+
+    fn edge_with_kind(id: &str, source: &str, target: &str, kind: pb::EdgeKind) -> pb::Edge {
+        let (family, source_role, target_role) = match kind {
+            pb::EdgeKind::MentionsTerm => (
+                pb::EdgeFamily::Lexical,
+                pb::EdgeEndpointRole::Mentioner,
+                pb::EdgeEndpointRole::MentionedTerm,
+            ),
+            pb::EdgeKind::Refines => (
+                pb::EdgeFamily::Semantic,
+                pb::EdgeEndpointRole::Refiner,
+                pb::EdgeEndpointRole::Refined,
+            ),
+            pb::EdgeKind::Equivalent => (
+                pb::EdgeFamily::Semantic,
+                pb::EdgeEndpointRole::EquivalentPeer,
+                pb::EdgeEndpointRole::EquivalentPeer,
+            ),
+            pb::EdgeKind::HardContradiction
+            | pb::EdgeKind::AdvisoryTension
+            | pb::EdgeKind::DescriptiveConflict
+            | pb::EdgeKind::EnvelopeConflict => (
+                pb::EdgeFamily::Semantic,
+                pb::EdgeEndpointRole::ConflictPeer,
+                pb::EdgeEndpointRole::ConflictPeer,
+            ),
+            pb::EdgeKind::Supports => (
+                pb::EdgeFamily::Selection,
+                pb::EdgeEndpointRole::Supporter,
+                pb::EdgeEndpointRole::Supported,
+            ),
+            pb::EdgeKind::Defeats => (
+                pb::EdgeFamily::Selection,
+                pb::EdgeEndpointRole::Defeater,
+                pb::EdgeEndpointRole::Defeated,
+            ),
+            pb::EdgeKind::Supersedes => (
+                pb::EdgeFamily::Selection,
+                pb::EdgeEndpointRole::Superseder,
+                pb::EdgeEndpointRole::Superseded,
+            ),
+            pb::EdgeKind::Unspecified => (
+                pb::EdgeFamily::Unspecified,
+                pb::EdgeEndpointRole::Unspecified,
+                pb::EdgeEndpointRole::Unspecified,
+            ),
+        };
         pb::Edge {
             id: id.to_string(),
             source: source.to_string(),
             target: target.to_string(),
-            kind: pb::EdgeKind::MentionsTerm as i32,
+            kind: kind as i32,
+            family: family as i32,
+            source_role: source_role as i32,
+            target_role: target_role as i32,
             ..Default::default()
         }
     }
@@ -398,7 +508,7 @@ mod tests {
         assert!(rendered.contains("daemon"));
         assert!(rendered.contains("◆ S"));
         assert!(rendered.contains("○ T"));
-        assert!(rendered.contains("→ mentions_term (2)"));
+        assert!(rendered.contains("→ lexical/mentions_term [mentioner→mentioned_term] (2)"));
         assert!(
             rendered.contains('▶')
                 || rendered.contains('◀')
@@ -407,6 +517,27 @@ mod tests {
         );
         assert!(!rendered.contains("Specification Nodes"));
         assert!(!rendered.contains("Edges ("));
+    }
+
+    #[test]
+    fn renders_directed_and_symmetric_semantic_edge_kinds_distinctly() {
+        let graph = Graph::from_wire(
+            [
+                specification("a", "The daemon shall stop."),
+                specification("b", "The daemon shall not stop."),
+            ],
+            [],
+            [
+                edge_with_kind("refines", "a", "b", pb::EdgeKind::Refines),
+                edge_with_kind("conflict", "a", "b", pb::EdgeKind::HardContradiction),
+            ],
+        )
+        .unwrap();
+        let rendered = graph.render(Some(100));
+        assert!(rendered.contains("→ semantic/refines [refiner→refined] (1)"));
+        assert!(
+            rendered.contains("— semantic/hard_contradiction [conflict_peer—conflict_peer] (1)")
+        );
     }
 
     #[test]

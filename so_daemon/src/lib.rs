@@ -16,8 +16,13 @@
 //!
 //! The daemon owns the domain model. The wire contract lives separately in
 //! `so-protocol` so clients can talk to the daemon without depending on this
-//! crate. Edges (refinement, composition, conjunction), strength computation,
-//! and classification are deliberately out of scope.
+//! crate. Its graph generation persists exact term mentions and the first
+//! graph-established semantic Edge family (refinement, equivalence, and
+//! force-aware conflicts) from `so-reason`'s conservative assessment. Edge
+//! families and endpoint roles keep those semantic relations distinct from
+//! versioned selection judgments such as support, defeat, and supersession.
+//! A/G pairing, composition, and the selection policy that could produce such
+//! judgments remain out of scope.
 
 pub mod add;
 pub mod add_mailbox;

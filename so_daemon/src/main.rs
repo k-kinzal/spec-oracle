@@ -192,7 +192,7 @@ async fn schedule_job_reconciliation(
     let message_id = format!(
         "job-reconciliation:{}:{}",
         so_daemon::evidence_capture::CAPTURE_VERSION,
-        so_daemon::graph_generation::generation_version()
+        so_daemon::graph_generation::reconciliation_version()
     );
     let mut cursor: Option<String> = None;
     let mut scheduled = 0_u64;

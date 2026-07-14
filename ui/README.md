@@ -3,7 +3,30 @@
 A Next.js app that visualizes the spec-oracle specification graph as a
 force-directed cloud (GPU/WebGL via [Cosmograph](https://cosmograph.app)). Each
 specification node is one grounded sentence; derived term-form nodes connect
-specifications through vocabulary they actually share.
+specifications through vocabulary they actually share, while proved semantic
+Edges show refinement, equivalence, and force-aware conflicts.
+
+The UI exposes bounded projections of the loaded Ledger rather than treating
+one all-purpose graph as every answer:
+
+- **Graph** — specifications, term nodes, and every current Edge.
+- **Meaning** — specification-to-specification semantic Edges only.
+- **Vocabulary** — lexical `source mentions target` incidence, explicitly not
+  support.
+- **Refinement** — directed pairs with the stronger/refining source and the
+  weaker/refined target named on every card.
+- **Conflicts** — symmetric conflict pairs, isolated from unrelated topology.
+- **Isolated** — specifications with no current semantic Edge; lexical mentions
+  do not make a specification semantically connected.
+- **Selection** — independently versioned Supports, Defeats, and Supersedes
+  relations. It is empty until a selection method produces those Edges.
+- **Current set** — a deliberately non-derived diagnostic until support,
+  deduplication, and selection semantics are defined.
+
+Directed Edges have arrowheads in the canvas. The relation panel also spells
+out the endpoint roles carried over the wire, the Edge family, and its
+derivation method/version, so an arrow is never the sole explanation of
+direction. Semantic arrow direction is never reinterpreted as support flow.
 
 ## Architecture
 
@@ -34,8 +57,12 @@ requests "everything":
 
 `GetGraph` returns a bounded specification page, adjacent term nodes, and
 checked edges. Teal term nodes mean only equal normalized written forms; they
-do not assert referent identity. Semantic spec-to-spec edges are not generated
-until their graph-side establishment rules are defined.
+do not assert referent identity. Shared terms are a versioned candidate search,
+not a semantic boundary. The daemon persists only outcomes proved by its
+current `assess` rules; Unknown, Independent, and unsearched pairs are not
+topology, so Edge absence has no negative meaning. A semantic Edge may arrive
+before its other endpoint on a later page; the UI retains it and renders it
+once both endpoints are loaded.
 
 ## Run
 

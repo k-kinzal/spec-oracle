@@ -3,13 +3,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Legend from "@/components/Legend";
+import RelationPanel from "@/components/RelationPanel";
 import StatusBar from "@/components/StatusBar";
+import ViewSwitcher from "@/components/ViewSwitcher";
 import {
+  CONFLICT_EDGE_KINDS,
   SPEECH_ACT_COLORS,
   SPEECH_ACT_LABELS,
+  TERM_NODE_COLOR,
   type GraphEdge,
+  type EdgeKind,
   type GraphNode,
   type GraphPage,
+  type GraphViewMode,
   type SpeechAct,
 } from "@/lib/types";
 
@@ -28,6 +34,42 @@ const PAGE_SIZE = 1000;
 const BATCH_NODES = 4000;
 const RENDER_CAP = 50000;
 
+const VIEW_COPY: Record<GraphViewMode, { title: string; description: string }> = {
+  all: {
+    title: "Complete loaded graph",
+    description: "Specifications, written term forms, and every current checked Edge.",
+  },
+  semantic: {
+    title: "Meaning relations",
+    description: "Specification-to-specification judgments only; lexical incidence is removed.",
+  },
+  vocabulary: {
+    title: "Vocabulary incidence",
+    description: "Exact written term occurrences used for discovery, never as semantic support.",
+  },
+  refinement: {
+    title: "Refinement pairs",
+    description: "Directed refiner-to-refined pairs, isolated from every other relation.",
+  },
+  conflicts: {
+    title: "Conflict review",
+    description: "Symmetric contradiction, tension, description, and envelope conflicts.",
+  },
+  isolated: {
+    title: "Semantic isolation",
+    description: "Specifications with no current proved semantic Edge in the loaded graph.",
+  },
+  selection: {
+    title: "Selection relations",
+    description:
+      "Versioned Supports, Defeats, and Supersedes judgments; never inferred from semantic arrow direction.",
+  },
+  current: {
+    title: "Current specification set",
+    description: "Reserved for a selected view once support and selection semantics exist.",
+  },
+};
+
 type LoadState = {
   nodes: Map<string, GraphNode>;
   edges: Map<string, GraphEdge>;
@@ -44,6 +86,7 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<GraphNode | null>(null);
+  const [view, setView] = useState<GraphViewMode>("all");
 
   // The accumulator lives in a ref so paging never races the React state, which
   // we publish once per batch (re-rendering the WebGL graph on every page would
@@ -60,7 +103,14 @@ export default function Page() {
   const publish = useCallback(() => {
     const a = acc.current;
     setNodes(Array.from(a.nodes.values()));
-    setEdges(Array.from(a.edges.values()));
+    // A semantic Edge is emitted on one deterministic endpoint's page and its
+    // other endpoint may arrive later. Retain it in the accumulator but expose
+    // it to Cosmograph only after both endpoints are loaded.
+    setEdges(
+      Array.from(a.edges.values()).filter(
+        (edge) => a.nodes.has(edge.source) && a.nodes.has(edge.target),
+      ),
+    );
     setTotal(a.total);
     setReachedEnd(a.reachedEnd);
   }, []);
@@ -114,31 +164,158 @@ export default function Page() {
     void loadBatch();
   }, [loadBatch]);
 
+  const specifications = useMemo(
+    () => nodes.filter((node) => node.nodeKind === "specification"),
+    [nodes],
+  );
+  const semanticEdges = useMemo(
+    () => edges.filter((edge) => edge.family === "semantic"),
+    [edges],
+  );
+  const vocabularyEdges = useMemo(
+    () => edges.filter((edge) => edge.family === "lexical"),
+    [edges],
+  );
+  const selectionEdges = useMemo(
+    () => edges.filter((edge) => edge.family === "selection"),
+    [edges],
+  );
+  const refinementEdges = useMemo(
+    () => semanticEdges.filter((edge) => edge.kind === "refines"),
+    [semanticEdges],
+  );
+  const conflictEdges = useMemo(
+    () => semanticEdges.filter((edge) => CONFLICT_EDGE_KINDS.has(edge.kind)),
+    [semanticEdges],
+  );
+  const isolatedNodes = useMemo(() => {
+    const related = new Set<string>();
+    for (const edge of semanticEdges) {
+      related.add(edge.source);
+      related.add(edge.target);
+    }
+    return specifications.filter((node) => !related.has(node.id));
+  }, [semanticEdges, specifications]);
+
+  const viewGraph = useMemo(() => {
+    const endpoints = (selectedEdges: GraphEdge[]) => {
+      const ids = new Set<string>();
+      for (const edge of selectedEdges) {
+        ids.add(edge.source);
+        ids.add(edge.target);
+      }
+      return nodes.filter((node) => ids.has(node.id));
+    };
+    switch (view) {
+      case "all":
+        return { nodes, edges };
+      case "semantic":
+        return { nodes: specifications, edges: semanticEdges };
+      case "vocabulary":
+        return { nodes: endpoints(vocabularyEdges), edges: vocabularyEdges };
+      case "refinement":
+        return { nodes: endpoints(refinementEdges), edges: refinementEdges };
+      case "conflicts":
+        return { nodes: endpoints(conflictEdges), edges: conflictEdges };
+      case "isolated":
+        return { nodes: isolatedNodes, edges: [] as GraphEdge[] };
+      case "selection":
+        return { nodes: endpoints(selectionEdges), edges: selectionEdges };
+      case "current":
+        return { nodes: [] as GraphNode[], edges: [] as GraphEdge[] };
+    }
+  }, [
+    conflictEdges,
+    edges,
+    isolatedNodes,
+    nodes,
+    refinementEdges,
+    semanticEdges,
+    selectionEdges,
+    specifications,
+    view,
+    vocabularyEdges,
+  ]);
+
   const present = useMemo(() => {
     const s = new Set<SpeechAct>();
-    for (const n of nodes) {
+    for (const n of viewGraph.nodes) {
       if (n.nodeKind === "specification") s.add(n.speechAct);
     }
     return s;
-  }, [nodes]);
-  const loadedSpecifications = useMemo(
-    () => nodes.filter((node) => node.nodeKind === "specification").length,
-    [nodes],
+  }, [viewGraph.nodes]);
+  const loadedSpecifications = specifications.length;
+  const presentEdges = useMemo(
+    () => new Set<EdgeKind>(viewGraph.edges.map((edge) => edge.kind)),
+    [viewGraph.edges],
+  );
+  const viewCounts = useMemo<Record<GraphViewMode, number | null>>(
+    () => ({
+      all: nodes.length,
+      semantic: semanticEdges.length,
+      vocabulary: vocabularyEdges.length,
+      refinement: refinementEdges.length,
+      conflicts: conflictEdges.length,
+      isolated: isolatedNodes.length,
+      selection: selectionEdges.length,
+      current: null,
+    }),
+    [
+      conflictEdges.length,
+      isolatedNodes.length,
+      nodes.length,
+      refinementEdges.length,
+      semanticEdges.length,
+      selectionEdges.length,
+      vocabularyEdges.length,
+    ],
+  );
+
+  const selectedSemanticRelations = useMemo(
+    () =>
+      selected
+        ? semanticEdges.filter(
+            (edge) => edge.source === selected.id || edge.target === selected.id,
+          ).length
+        : 0,
+    [selected, semanticEdges],
+  );
+  const selectedSelectionRelations = useMemo(
+    () =>
+      selected
+        ? selectionEdges.filter(
+            (edge) => edge.source === selected.id || edge.target === selected.id,
+          ).length
+        : 0,
+    [selected, selectionEdges],
   );
 
   const atHardCap = nodes.length >= RENDER_CAP && !reachedEnd;
   const canLoadMore = !reachedEnd && !atHardCap;
+  const copy = VIEW_COPY[view];
+
+  const changeView = useCallback((next: GraphViewMode) => {
+    setSelected(null);
+    setView(next);
+  }, []);
 
   return (
     <main className="stage">
-      {nodes.length > 0 && (
-        <GraphView nodes={nodes} links={edges} onSelect={setSelected} />
+      {viewGraph.nodes.length > 0 && (
+        <GraphView
+          key={view}
+          nodes={viewGraph.nodes}
+          links={viewGraph.edges}
+          onSelect={setSelected}
+        />
       )}
 
       <div className="topbar">
         <div className="title panel">
           <h1>spec-oracle · graph view</h1>
-          <p>Grounded specifications connected through written term forms.</p>
+          <p>
+            <strong>{copy.title}</strong> · {copy.description}
+          </p>
         </div>
         <StatusBar
           loaded={loadedSpecifications}
@@ -150,13 +327,23 @@ export default function Page() {
         />
       </div>
 
+      <ViewSwitcher active={view} counts={viewCounts} onChange={changeView} />
+
       <Legend
         present={present}
-        termPresent={nodes.some((node) => node.nodeKind === "term")}
+        termPresent={viewGraph.nodes.some((node) => node.nodeKind === "term")}
+        edgePresent={presentEdges}
+      />
+
+      <RelationPanel
+        mode={view}
+        nodes={viewGraph.nodes}
+        edges={viewGraph.edges}
+        onSelect={setSelected}
       />
 
       {selected && (
-        <div className="detail panel">
+        <div className={view === "all" ? "detail panel" : "detail panel detail-with-panel"}>
           <button
             className="close"
             onClick={() => setSelected(null)}
@@ -172,17 +359,33 @@ export default function Page() {
                 height: 9,
                 borderRadius: "50%",
                 display: "inline-block",
-                background: SPEECH_ACT_COLORS[selected.speechAct],
+                background:
+                  selected.nodeKind === "term"
+                    ? TERM_NODE_COLOR
+                    : SPEECH_ACT_COLORS[selected.speechAct],
               }}
             />
             {selected.nodeKind === "term"
               ? "Written term form · lexical connector"
-              : `${SPEECH_ACT_LABELS[selected.speechAct]} · ${selected.evidenceCount} evidence captured · ${selected.evidenceRequestCount} request(s)`}
+              : `${SPEECH_ACT_LABELS[selected.speechAct]} · ${selectedSemanticRelations} semantic relation(s) · ${selectedSelectionRelations} selection relation(s) · ${selected.evidenceCount} evidence captured`}
           </div>
           <div className="statement">{selected.statement}</div>
           <div className="id">{selected.id}</div>
         </div>
       )}
+
+      {!loading &&
+        nodes.length > 0 &&
+        view !== "current" &&
+        viewGraph.nodes.length === 0 &&
+        !error && (
+          <div className="view-empty">
+            <div className="panel">
+              <h2>No result in this view</h2>
+              <p>{copy.description}</p>
+            </div>
+          </div>
+        )}
 
       {!loading && nodes.length === 0 && !error && (
         <div className="overlay">

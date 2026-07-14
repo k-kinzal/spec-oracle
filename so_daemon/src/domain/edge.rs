@@ -1,10 +1,14 @@
-//! A checked binary connection in the one specification graph.
+//! A checked, typed binary connection in the one specification graph.
 //!
-//! An Edge says exactly one bounded thing. `MentionsTerm` records lexical
-//! incidence. Future semantic kinds require their own graph-side establishment
-//! rules. A candidate, `Unknown`, or an unsearched pair is not topology.
+//! An Edge says exactly one bounded thing. Its family separates lexical
+//! incidence, semantic relationships, and versioned selection relationships.
+//! Endpoint roles make the ordered arguments explicit; `source`/`target` never
+//! acquire a graph-wide meaning such as "support flows this way". A candidate,
+//! `Independent`, `Unknown`, or an unsearched pair is not topology, and Edge
+//! absence has no negative meaning.
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -15,9 +19,111 @@ pub enum VertexKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum EdgeFamily {
+    /// Exact surface-language incidence used for discovery.
+    Lexical,
+    /// A graph-established relationship between specification meanings.
+    Semantic,
+    /// A versioned support, defeat, or replacement judgment used by selection.
+    Selection,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EndpointRole {
+    /// Backward-compatible read of an Edge written before endpoint roles.
+    #[default]
+    Unspecified,
+    Mentioner,
+    MentionedTerm,
+    Refiner,
+    Refined,
+    EquivalentPeer,
+    ConflictPeer,
+    Supporter,
+    Supported,
+    Defeater,
+    Defeated,
+    Superseder,
+    Superseded,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum EdgeKind {
     /// A specification contains one occurrence of a normalized term form.
     MentionsTerm,
+    /// The source specification is the concrete refinement of the target.
+    Refines,
+    /// The two endpoint specifications state one same-force claim.
+    Equivalent,
+    /// Two binding specifications cannot both be satisfied as written.
+    HardContradiction,
+    /// Following a recommendation would violate the other specification.
+    AdvisoryTension,
+    /// A description conflicts with the other specification.
+    DescriptiveConflict,
+    /// A permission admits behavior forbidden by the other specification.
+    EnvelopeConflict,
+    /// The source supplies a versioned positive selection reason for target.
+    Supports,
+    /// The source wins a versioned, explicitly resolved competition with target.
+    Defeats,
+    /// The source is a versioned selected replacement for target.
+    Supersedes,
+}
+
+impl EdgeKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::MentionsTerm => "mentions_term",
+            Self::Refines => "refines",
+            Self::Equivalent => "equivalent",
+            Self::HardContradiction => "hard_contradiction",
+            Self::AdvisoryTension => "advisory_tension",
+            Self::DescriptiveConflict => "descriptive_conflict",
+            Self::EnvelopeConflict => "envelope_conflict",
+            Self::Supports => "supports",
+            Self::Defeats => "defeats",
+            Self::Supersedes => "supersedes",
+        }
+    }
+
+    pub fn family(self) -> EdgeFamily {
+        match self {
+            Self::MentionsTerm => EdgeFamily::Lexical,
+            Self::Refines
+            | Self::Equivalent
+            | Self::HardContradiction
+            | Self::AdvisoryTension
+            | Self::DescriptiveConflict
+            | Self::EnvelopeConflict => EdgeFamily::Semantic,
+            Self::Supports | Self::Defeats | Self::Supersedes => EdgeFamily::Selection,
+        }
+    }
+
+    pub fn endpoint_roles(self) -> (EndpointRole, EndpointRole) {
+        match self {
+            Self::MentionsTerm => (EndpointRole::Mentioner, EndpointRole::MentionedTerm),
+            Self::Refines => (EndpointRole::Refiner, EndpointRole::Refined),
+            Self::Equivalent => (EndpointRole::EquivalentPeer, EndpointRole::EquivalentPeer),
+            Self::HardContradiction
+            | Self::AdvisoryTension
+            | Self::DescriptiveConflict
+            | Self::EnvelopeConflict => (EndpointRole::ConflictPeer, EndpointRole::ConflictPeer),
+            Self::Supports => (EndpointRole::Supporter, EndpointRole::Supported),
+            Self::Defeats => (EndpointRole::Defeater, EndpointRole::Defeated),
+            Self::Supersedes => (EndpointRole::Superseder, EndpointRole::Superseded),
+        }
+    }
+
+    /// Whether source/target order is part of this relationship's meaning.
+    pub fn directed(self) -> bool {
+        matches!(
+            self,
+            Self::MentionsTerm | Self::Refines | Self::Supports | Self::Defeats | Self::Supersedes
+        )
+    }
 }
 
 /// A stable pointer into the constrained sentence structure.
@@ -42,8 +148,12 @@ pub struct Edge {
     pub id: String,
     pub source: String,
     pub source_kind: VertexKind,
+    #[serde(default)]
+    pub source_role: EndpointRole,
     pub target: String,
     pub target_kind: VertexKind,
+    #[serde(default)]
+    pub target_role: EndpointRole,
     pub kind: EdgeKind,
     pub source_anchor: Option<TextAnchor>,
     pub target_anchor: Option<TextAnchor>,
@@ -53,4 +163,212 @@ pub struct Edge {
     pub basis_spec_ids: Vec<String>,
     pub derivation: Derivation,
     pub recorded_at: String,
+}
+
+impl Edge {
+    /// Build a stable specification-to-specification relationship. Semantic
+    /// and selection producers share this constructor so both families obey
+    /// the same endpoint-role, symmetry, identity, and append-only rules.
+    pub fn specification_relation(
+        kind: EdgeKind,
+        source: &str,
+        target: &str,
+        mut basis_spec_ids: Vec<String>,
+        derivation: Derivation,
+        recorded_at: &str,
+    ) -> Result<Self, String> {
+        if kind.family() == EdgeFamily::Lexical {
+            return Err("lexical incidence requires anchored term construction".to_string());
+        }
+        let (source, target) = if !kind.directed() && source > target {
+            (target, source)
+        } else {
+            (source, target)
+        };
+        basis_spec_ids.sort();
+        basis_spec_ids.dedup();
+        let mut hasher = Sha256::new();
+        hasher.update(b"edge");
+        for part in [
+            derivation.method.as_str(),
+            derivation.version.as_str(),
+            kind.as_str(),
+            source,
+            target,
+        ] {
+            hasher.update([0]);
+            hasher.update(part.as_bytes());
+        }
+        for basis in &basis_spec_ids {
+            hasher.update([0]);
+            hasher.update(basis.as_bytes());
+        }
+        let (source_role, target_role) = kind.endpoint_roles();
+        let edge = Self {
+            id: format!("edge-{:x}", hasher.finalize()),
+            source: source.to_string(),
+            source_kind: VertexKind::Specification,
+            source_role,
+            target: target.to_string(),
+            target_kind: VertexKind::Specification,
+            target_role,
+            kind,
+            source_anchor: None,
+            target_anchor: None,
+            basis_spec_ids,
+            derivation,
+            recorded_at: recorded_at.to_string(),
+        };
+        edge.validate()?;
+        Ok(edge)
+    }
+
+    pub fn family(&self) -> EdgeFamily {
+        self.kind.family()
+    }
+
+    /// Reject a newly written Edge whose physical endpoint order disagrees
+    /// with the typed relationship it claims. Historical rows without roles
+    /// remain deserializable, but no current producer may append another one.
+    pub fn validate(&self) -> Result<(), String> {
+        let expected_roles = self.kind.endpoint_roles();
+        let actual_roles = (self.source_role, self.target_role);
+        if actual_roles != expected_roles {
+            return Err(format!(
+                "{} requires endpoint roles {:?}, got {:?}",
+                self.kind.as_str(),
+                expected_roles,
+                actual_roles
+            ));
+        }
+
+        let expected_vertices = match self.kind {
+            EdgeKind::MentionsTerm => (VertexKind::Specification, VertexKind::Term),
+            _ => (VertexKind::Specification, VertexKind::Specification),
+        };
+        let actual_vertices = (self.source_kind, self.target_kind);
+        if actual_vertices != expected_vertices {
+            return Err(format!(
+                "{} requires endpoint vertex kinds {:?}, got {:?}",
+                self.kind.as_str(),
+                expected_vertices,
+                actual_vertices
+            ));
+        }
+
+        if !self.kind.directed() && self.source > self.target {
+            return Err(format!(
+                "symmetric {} endpoints must be canonically ordered",
+                self.kind.as_str()
+            ));
+        }
+        Ok(())
+    }
+
+    /// Specification-page owner used by the paginated current graph view.
+    ///
+    /// Lexical mentions belong to their mentioner. A specification-to-
+    /// specification Edge belongs to the lexically smaller endpoint,
+    /// independently of its typed argument order, so a complete Node-page walk
+    /// returns every Edge exactly once even when endpoints span pages.
+    pub fn page_owner(&self) -> &str {
+        if self.kind == EdgeKind::MentionsTerm || self.source <= self.target {
+            &self.source
+        } else {
+            &self.target
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn edge(kind: EdgeKind) -> Edge {
+        let (source_role, target_role) = kind.endpoint_roles();
+        let (source_kind, target_kind) = if kind == EdgeKind::MentionsTerm {
+            (VertexKind::Specification, VertexKind::Term)
+        } else {
+            (VertexKind::Specification, VertexKind::Specification)
+        };
+        Edge {
+            id: "edge".into(),
+            source: "a".into(),
+            source_kind,
+            source_role,
+            target: "b".into(),
+            target_kind,
+            target_role,
+            kind,
+            source_anchor: None,
+            target_anchor: None,
+            basis_spec_ids: Vec::new(),
+            derivation: Derivation {
+                method: "test".into(),
+                version: "1".into(),
+            },
+            recorded_at: "t".into(),
+        }
+    }
+
+    #[test]
+    fn every_edge_kind_has_one_family_and_endpoint_role_pair() {
+        let cases = [
+            (EdgeKind::MentionsTerm, EdgeFamily::Lexical),
+            (EdgeKind::Refines, EdgeFamily::Semantic),
+            (EdgeKind::Equivalent, EdgeFamily::Semantic),
+            (EdgeKind::HardContradiction, EdgeFamily::Semantic),
+            (EdgeKind::AdvisoryTension, EdgeFamily::Semantic),
+            (EdgeKind::DescriptiveConflict, EdgeFamily::Semantic),
+            (EdgeKind::EnvelopeConflict, EdgeFamily::Semantic),
+            (EdgeKind::Supports, EdgeFamily::Selection),
+            (EdgeKind::Defeats, EdgeFamily::Selection),
+            (EdgeKind::Supersedes, EdgeFamily::Selection),
+        ];
+        for (kind, family) in cases {
+            let edge = edge(kind);
+            assert_eq!(edge.family(), family);
+            edge.validate().unwrap();
+        }
+    }
+
+    #[test]
+    fn storage_rejects_a_direction_that_disagrees_with_endpoint_roles() {
+        let mut edge = edge(EdgeKind::Refines);
+        edge.source_role = EndpointRole::Refined;
+        edge.target_role = EndpointRole::Refiner;
+        assert!(edge.validate().unwrap_err().contains("endpoint roles"));
+    }
+
+    #[test]
+    fn selection_relation_identity_is_versioned_and_role_safe() {
+        let first = Edge::specification_relation(
+            EdgeKind::Supports,
+            "evidence-spec",
+            "supported-spec",
+            vec!["basis-b".into(), "basis-a".into(), "basis-a".into()],
+            Derivation {
+                method: "selection-policy".into(),
+                version: "v1".into(),
+            },
+            "t1",
+        )
+        .unwrap();
+        let next = Edge::specification_relation(
+            EdgeKind::Supports,
+            "evidence-spec",
+            "supported-spec",
+            vec!["basis-a".into(), "basis-b".into()],
+            Derivation {
+                method: "selection-policy".into(),
+                version: "v2".into(),
+            },
+            "t2",
+        )
+        .unwrap();
+        assert_eq!(first.source_role, EndpointRole::Supporter);
+        assert_eq!(first.target_role, EndpointRole::Supported);
+        assert_eq!(first.basis_spec_ids, ["basis-a", "basis-b"]);
+        assert_ne!(first.id, next.id);
+    }
 }

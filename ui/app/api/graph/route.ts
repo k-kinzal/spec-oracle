@@ -6,7 +6,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getGraph } from "@/lib/grpc";
-import type { GraphEdge, GraphNode, EdgeKind, SpeechAct } from "@/lib/types";
+import type {
+  EdgeFamily,
+  EdgeKind,
+  EndpointRole,
+  GraphEdge,
+  GraphNode,
+  SpeechAct,
+} from "@/lib/types";
 
 // This route talks gRPC over a raw socket, so it must run on the Node runtime,
 // and its result changes with the store, so it is never statically cached.
@@ -57,6 +64,36 @@ const SPEECH_ACTS: Record<string, SpeechAct> = {
 
 const EDGE_KINDS: Record<string, EdgeKind> = {
   EDGE_KIND_MENTIONS_TERM: "mentions_term",
+  EDGE_KIND_REFINES: "refines",
+  EDGE_KIND_EQUIVALENT: "equivalent",
+  EDGE_KIND_HARD_CONTRADICTION: "hard_contradiction",
+  EDGE_KIND_ADVISORY_TENSION: "advisory_tension",
+  EDGE_KIND_DESCRIPTIVE_CONFLICT: "descriptive_conflict",
+  EDGE_KIND_ENVELOPE_CONFLICT: "envelope_conflict",
+  EDGE_KIND_SUPPORTS: "supports",
+  EDGE_KIND_DEFEATS: "defeats",
+  EDGE_KIND_SUPERSEDES: "supersedes",
+};
+
+const EDGE_FAMILIES: Record<string, EdgeFamily> = {
+  EDGE_FAMILY_LEXICAL: "lexical",
+  EDGE_FAMILY_SEMANTIC: "semantic",
+  EDGE_FAMILY_SELECTION: "selection",
+};
+
+const ENDPOINT_ROLES: Record<string, EndpointRole> = {
+  EDGE_ENDPOINT_ROLE_MENTIONER: "mentioner",
+  EDGE_ENDPOINT_ROLE_MENTIONED_TERM: "mentioned_term",
+  EDGE_ENDPOINT_ROLE_REFINER: "refiner",
+  EDGE_ENDPOINT_ROLE_REFINED: "refined",
+  EDGE_ENDPOINT_ROLE_EQUIVALENT_PEER: "equivalent_peer",
+  EDGE_ENDPOINT_ROLE_CONFLICT_PEER: "conflict_peer",
+  EDGE_ENDPOINT_ROLE_SUPPORTER: "supporter",
+  EDGE_ENDPOINT_ROLE_SUPPORTED: "supported",
+  EDGE_ENDPOINT_ROLE_DEFEATER: "defeater",
+  EDGE_ENDPOINT_ROLE_DEFEATED: "defeated",
+  EDGE_ENDPOINT_ROLE_SUPERSEDER: "superseder",
+  EDGE_ENDPOINT_ROLE_SUPERSEDED: "superseded",
 };
 
 function toNode(raw: unknown): GraphNode {
@@ -96,11 +133,20 @@ function toEdge(raw: unknown): GraphEdge {
     source?: string;
     target?: string;
     kind?: string;
+    family?: string;
+    source_role?: string;
+    target_role?: string;
+    derivation?: { method?: string; version?: string } | null;
   };
   return {
     id: e.id ?? "",
     source: e.source ?? "",
     target: e.target ?? "",
     kind: EDGE_KINDS[e.kind ?? ""] ?? "unspecified",
+    family: EDGE_FAMILIES[e.family ?? ""] ?? "unspecified",
+    sourceRole: ENDPOINT_ROLES[e.source_role ?? ""] ?? "unspecified",
+    targetRole: ENDPOINT_ROLES[e.target_role ?? ""] ?? "unspecified",
+    derivationMethod: e.derivation?.method ?? "",
+    derivationVersion: e.derivation?.version ?? "",
   };
 }
