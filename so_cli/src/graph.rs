@@ -36,17 +36,41 @@ struct Node {
     display_id: String,
     label: String,
     kind: NodeKind,
+    current: bool,
+    policy_version: String,
+    support_score: i32,
+    evidence_score: i32,
+    relation_score: i32,
+    contributions: Vec<Contribution>,
+    exclusions: Vec<Exclusion>,
+}
+
+#[derive(Debug)]
+struct Contribution {
+    kind: String,
+    points: i32,
+    edge_id: String,
+    detail: String,
+}
+
+#[derive(Debug)]
+struct Exclusion {
+    kind: String,
+    competing_node_id: Option<String>,
+    detail: String,
 }
 
 #[derive(Debug)]
 struct Edge {
     source: usize,
     target: usize,
+    relied: Option<usize>,
     family: String,
     kind: String,
     source_role: String,
     target_role: String,
     directed: bool,
+    current: bool,
 }
 
 /// The complete topology collected by one `spec graph` invocation.
@@ -55,10 +79,19 @@ pub(crate) struct Graph {
     nodes: Vec<Node>,
     edges: Vec<Edge>,
     specification_count: usize,
+    current_specification_count: usize,
     term_count: usize,
     evidence_count: usize,
     assumption_count: usize,
     guarantee_count: usize,
+    scope: GraphScope,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum GraphScope {
+    Population,
+    Current,
+    Ledger,
 }
 
 impl Graph {
@@ -70,22 +103,53 @@ impl Graph {
     ) -> Result<Self, String> {
         let mut nodes_by_id = BTreeMap::new();
         let mut specification_count = 0;
+        let mut current_specification_count = 0;
         let mut term_count = 0;
         let mut evidence_count = 0;
         let mut assumption_count = 0;
         let mut guarantee_count = 0;
 
         for specification in specifications {
+            let selection = specification.selection.as_ref();
+            let current = selection.is_none_or(|view| view.current);
             let node = Node {
                 id: specification.id.clone(),
                 display_id: String::new(),
                 label: specification.statement,
                 kind: NodeKind::Specification,
+                current,
+                policy_version: selection
+                    .map_or_else(String::new, |view| view.policy_version.clone()),
+                support_score: selection.map_or(0, |view| view.support_score),
+                evidence_score: selection.map_or(0, |view| view.evidence_score),
+                relation_score: selection.map_or(0, |view| view.relation_score),
+                contributions: selection.map_or_else(Vec::new, |view| {
+                    view.contributions
+                        .iter()
+                        .map(|contribution| Contribution {
+                            kind: contribution.kind.clone(),
+                            points: contribution.points,
+                            edge_id: contribution.edge_id.clone(),
+                            detail: contribution.detail.clone(),
+                        })
+                        .collect()
+                }),
+                exclusions: selection.map_or_else(Vec::new, |view| {
+                    view.exclusions
+                        .iter()
+                        .map(|exclusion| Exclusion {
+                            kind: exclusion.kind.clone(),
+                            competing_node_id: exclusion.competing_node_id.clone(),
+                            detail: exclusion.detail.clone(),
+                        })
+                        .collect()
+                }),
             };
             if nodes_by_id.insert(specification.id, node).is_some() {
                 return Err("the graph contains a duplicate Node id".to_string());
             }
             specification_count += 1;
+            current_specification_count += usize::from(current);
         }
         for term in terms {
             let node = Node {
@@ -93,6 +157,13 @@ impl Graph {
                 display_id: String::new(),
                 label: term.form,
                 kind: NodeKind::Term,
+                current: true,
+                policy_version: String::new(),
+                support_score: 0,
+                evidence_score: 0,
+                relation_score: 0,
+                contributions: Vec::new(),
+                exclusions: Vec::new(),
             };
             if nodes_by_id.insert(term.id, node).is_some() {
                 return Err("Specification and Term Node ids must be disjoint".to_string());
@@ -128,6 +199,13 @@ impl Graph {
                 display_id: String::new(),
                 label,
                 kind,
+                current: true,
+                policy_version: String::new(),
+                support_score: 0,
+                evidence_score: 0,
+                relation_score: 0,
+                contributions: Vec::new(),
+                exclusions: Vec::new(),
             };
             if nodes_by_id.insert(derived.id, node).is_some() {
                 return Err("graph Node ids must be globally unique".to_string());
@@ -183,15 +261,26 @@ impl Graph {
                     edge.id, edge.target
                 )
             })?;
+            let relied = edge
+                .relied_spec_id
+                .as_deref()
+                .map(|id| {
+                    index.get(id).copied().ok_or_else(|| {
+                        format!("Edge {} refers to unavailable relied Node {}", edge.id, id)
+                    })
+                })
+                .transpose()?;
             let (kind, directed) = edge_kind(edge.kind);
             graph_edges.push(Edge {
                 source,
                 target,
+                relied,
                 family: edge_family(edge.family).to_string(),
                 kind: kind.to_string(),
                 source_role: endpoint_role(edge.source_role).to_string(),
                 target_role: endpoint_role(edge.target_role).to_string(),
                 directed,
+                current: edge.current,
             });
         }
 
@@ -199,11 +288,18 @@ impl Graph {
             nodes,
             edges: graph_edges,
             specification_count,
+            current_specification_count,
             term_count,
             evidence_count,
             assumption_count,
             guarantee_count,
+            scope: GraphScope::Population,
         })
+    }
+
+    pub(crate) fn with_scope(mut self, scope: GraphScope) -> Self {
+        self.scope = scope;
+        self
     }
 
     pub(crate) fn render(&self, requested_width: Option<u16>) -> String {
@@ -211,15 +307,39 @@ impl Graph {
             .or_else(terminal_width)
             .unwrap_or(DEFAULT_WIDTH)
             .max(MIN_WIDTH);
-        let mut output = format!(
-            "Specification graph — {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} edge(s)\n",
-            self.specification_count,
-            self.term_count,
-            self.evidence_count,
-            self.assumption_count,
-            self.guarantee_count,
-            self.edges.len()
-        );
+        let current_edge_count = self.edges.iter().filter(|edge| edge.current).count();
+        let mut output = match self.scope {
+            GraphScope::Population => format!(
+                "Specification graph — {} current / {} candidate specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} edge(s)\n",
+                self.current_specification_count,
+                self.specification_count,
+                self.term_count,
+                self.evidence_count,
+                self.assumption_count,
+                self.guarantee_count,
+                self.edges.len()
+            ),
+            GraphScope::Current => format!(
+                "Current specification graph — {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} relationship(s)\n",
+                self.specification_count,
+                self.term_count,
+                self.evidence_count,
+                self.assumption_count,
+                self.guarantee_count,
+                self.edges.len()
+            ),
+            GraphScope::Ledger => format!(
+                "Ledger graph — {} current / {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} current / {} recorded edge(s)\n",
+                self.current_specification_count,
+                self.specification_count,
+                self.term_count,
+                self.evidence_count,
+                self.assumption_count,
+                self.guarantee_count,
+                current_edge_count,
+                self.edges.len()
+            ),
+        };
         if self.nodes.is_empty() {
             output.push_str("(empty)\n");
             return output;
@@ -236,7 +356,17 @@ impl Graph {
                 for edge in &self.edges {
                     let (x1, y1) = positions[edge.source];
                     let (x2, y2) = positions[edge.target];
-                    context.draw(&Line::new(x1, y1, x2, y2, Color::Reset));
+                    context.draw(&Line::new(
+                        x1,
+                        y1,
+                        x2,
+                        y2,
+                        if edge.current {
+                            Color::Reset
+                        } else {
+                            Color::DarkGray
+                        },
+                    ));
                     if edge.directed {
                         let dx = x2 - x1;
                         let dy = y2 - y1;
@@ -261,7 +391,7 @@ impl Graph {
         canvas.render(area, &mut buffer);
         output.push_str(&buffer_text(&buffer));
         output.push_str(
-            "\n◆ specification   ○ written term   ● evidence   △ assumption   ■ guarantee\n",
+            "\n◆ current specification   ◇ non-current specification   ○ written term   ● evidence   △ assumption   ■ guarantee   dim edge = Ledger history\n",
         );
 
         let mut kinds: BTreeMap<(&str, &str, &str, &str, bool), usize> = BTreeMap::new();
@@ -285,6 +415,74 @@ impl Graph {
                 ));
             }
             output.push('\n');
+        }
+        let pairings: Vec<&Edge> = self
+            .edges
+            .iter()
+            .filter(|edge| edge.relied.is_some())
+            .collect();
+        if !pairings.is_empty() {
+            output.push_str("Pairing reliances:\n");
+            for edge in pairings {
+                let relied = edge.relied.expect("filtered pairing has relied Node");
+                output.push_str(&format!(
+                    "  {} {} --{} / relies on {}--> {}\n",
+                    if edge.current {
+                        "[current]"
+                    } else {
+                        "[history]"
+                    },
+                    self.nodes[edge.source].display_id,
+                    edge.kind,
+                    self.nodes[relied].display_id,
+                    self.nodes[edge.target].display_id,
+                ));
+            }
+        }
+        let specifications: Vec<&Node> = self
+            .nodes
+            .iter()
+            .filter(|node| node.kind == NodeKind::Specification)
+            .collect();
+        if !specifications.is_empty() {
+            let policy = specifications
+                .iter()
+                .map(|node| node.policy_version.as_str())
+                .find(|version| !version.is_empty())
+                .unwrap_or("unavailable");
+            output.push_str(&format!("Selection fitness ({policy}):\n"));
+            for node in specifications {
+                output.push_str(&format!(
+                    "  {} {} score={:+} (evidence={:+}, relations={:+}) {}\n",
+                    if node.current { "◆" } else { "◇" },
+                    node.display_id,
+                    node.support_score,
+                    node.evidence_score,
+                    node.relation_score,
+                    if node.current { "current" } else { "excluded" },
+                ));
+                output.push_str(&format!("      specification: {}\n", node.label));
+                for contribution in &node.contributions {
+                    output.push_str(&format!(
+                        "      {:+} {} — {} [{}]\n",
+                        contribution.points,
+                        contribution.kind,
+                        contribution.detail,
+                        contribution.edge_id,
+                    ));
+                }
+                for exclusion in &node.exclusions {
+                    output.push_str(&format!(
+                        "      excludes: {}{} — {}\n",
+                        exclusion.kind,
+                        exclusion
+                            .competing_node_id
+                            .as_deref()
+                            .map_or_else(String::new, |id| format!(" by {id}")),
+                        exclusion.detail,
+                    ));
+                }
+            }
         }
         output
     }
@@ -375,7 +573,8 @@ fn terminal_width() -> Option<u16> {
 
 fn node_label(node: &Node) -> String {
     let marker = match node.kind {
-        NodeKind::Specification => '◆',
+        NodeKind::Specification if node.current => '◆',
+        NodeKind::Specification => '◇',
         NodeKind::Term => '○',
         NodeKind::Evidence => '●',
         NodeKind::Assumption => '△',
@@ -440,6 +639,9 @@ fn edge_kind(kind: i32) -> (&'static str, bool) {
         pb::EdgeKind::AdvisoryTension => ("advisory_tension", false),
         pb::EdgeKind::DescriptiveConflict => ("descriptive_conflict", false),
         pb::EdgeKind::EnvelopeConflict => ("envelope_conflict", false),
+        pb::EdgeKind::OccurrenceReliance => ("occurrence_reliance", true),
+        pb::EdgeKind::GuaranteeDischarge => ("guarantee_discharge", true),
+        pb::EdgeKind::AdmissibilityEnvelope => ("admissibility_envelope", true),
         pb::EdgeKind::Supports => ("supports", true),
         pb::EdgeKind::Defeats => ("defeats", true),
         pb::EdgeKind::Supersedes => ("supersedes", true),
@@ -479,6 +681,12 @@ fn endpoint_role(role: i32) -> &'static str {
         pb::EdgeEndpointRole::ContractSpecification => "contract_specification",
         pb::EdgeEndpointRole::Assumption => "assumption",
         pb::EdgeEndpointRole::Guarantee => "guarantee",
+        pb::EdgeEndpointRole::RelianceEvidence => "reliance_evidence",
+        pb::EdgeEndpointRole::ReliantContract => "reliant_contract",
+        pb::EdgeEndpointRole::DischargingGuarantee => "discharging_guarantee",
+        pb::EdgeEndpointRole::DischargedContract => "discharged_contract",
+        pb::EdgeEndpointRole::AdmissibleEnvironment => "admissible_environment",
+        pb::EdgeEndpointRole::BoundedContract => "bounded_contract",
         pb::EdgeEndpointRole::Unspecified => "unspecified",
     }
 }
@@ -532,6 +740,21 @@ mod tests {
                 pb::EdgeEndpointRole::ConflictPeer,
                 pb::EdgeEndpointRole::ConflictPeer,
             ),
+            pb::EdgeKind::OccurrenceReliance => (
+                pb::EdgeFamily::Semantic,
+                pb::EdgeEndpointRole::RelianceEvidence,
+                pb::EdgeEndpointRole::ReliantContract,
+            ),
+            pb::EdgeKind::GuaranteeDischarge => (
+                pb::EdgeFamily::Semantic,
+                pb::EdgeEndpointRole::DischargingGuarantee,
+                pb::EdgeEndpointRole::DischargedContract,
+            ),
+            pb::EdgeKind::AdmissibilityEnvelope => (
+                pb::EdgeFamily::Semantic,
+                pb::EdgeEndpointRole::AdmissibleEnvironment,
+                pb::EdgeEndpointRole::BoundedContract,
+            ),
             pb::EdgeKind::Supports => (
                 pb::EdgeFamily::Selection,
                 pb::EdgeEndpointRole::Supporter,
@@ -576,6 +799,7 @@ mod tests {
             family: family as i32,
             source_role: source_role as i32,
             target_role: target_role as i32,
+            current: true,
             ..Default::default()
         }
     }
@@ -637,6 +861,38 @@ mod tests {
     }
 
     #[test]
+    fn renders_fitness_sum_and_exclusion_reasons() {
+        let mut candidate = specification("candidate", "The daemon shall stop.");
+        candidate.selection = Some(pb::SelectionView {
+            current: false,
+            policy_version: "selection/fitness-v4".into(),
+            support_score: -4,
+            evidence_score: -8,
+            relation_score: 4,
+            contributions: vec![pb::ScoreContribution {
+                kind: "counter_evidence".into(),
+                points: -8,
+                edge_id: "evidence-edge".into(),
+                detail: "counter at report.md contributes -8 point(s)".into(),
+                ..Default::default()
+            }],
+            exclusions: vec![pb::SelectionExclusion {
+                kind: "counterevidence".into(),
+                detail: "fitness -4 is below threshold 1".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+        let graph = Graph::from_wire([candidate], [], [], []).unwrap();
+        let rendered = graph.render(Some(90));
+        assert!(rendered.contains("Selection fitness (selection/fitness-v4):"));
+        assert!(rendered.contains("score=-4 (evidence=-8, relations=+4) excluded"));
+        assert!(rendered.contains("specification: The daemon shall stop."));
+        assert!(rendered.contains("-8 counter_evidence"));
+        assert!(rendered.contains("excludes: counterevidence"));
+    }
+
+    #[test]
     fn rejects_an_edge_whose_endpoint_was_not_returned() {
         let error = Graph::from_wire(
             [specification("spec-a", "The daemon shall stop.")],
@@ -654,5 +910,21 @@ mod tests {
         let graph = Graph::from_wire([], [], [], []).unwrap();
 
         assert!(graph.render(Some(80)).contains("(empty)"));
+    }
+
+    #[test]
+    fn current_scope_names_the_selected_topology_as_a_graph() {
+        let graph = Graph::from_wire(
+            [specification("current", "The daemon shall stop.")],
+            [],
+            [],
+            [],
+        )
+        .unwrap()
+        .with_scope(GraphScope::Current);
+
+        assert!(graph
+            .render(Some(80))
+            .starts_with("Current specification graph — 1 specification(s)"));
     }
 }

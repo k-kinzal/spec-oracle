@@ -15,6 +15,10 @@ use crate::{origin, snapshot};
 
 pub const PLUGIN_NAME: &str = "evidence-capture";
 pub const CAPTURE_VERSION: &str = "evidence-capture/v2";
+/// Persisted marker for an explicit complete Evidence-request replacement.
+/// Its generation participates in the capture fingerprint, so a daemon crash
+/// cannot make a refresh with unchanged descriptors look already complete.
+pub const REQUEST_UPDATE_SOURCE: &str = "evidence-requests";
 
 pub fn evidence_derivation() -> Derivation {
     Derivation {
@@ -24,7 +28,7 @@ pub fn evidence_derivation() -> Derivation {
 }
 
 pub fn needs_capture(node: &Node) -> bool {
-    let fingerprint = request_fingerprint(&node.meta.evidence_requests);
+    let fingerprint = request_fingerprint(node);
     !node.meta.evidence_requests.is_empty()
         && !node.meta.updates.values().any(|update| {
             update.source == PLUGIN_NAME
@@ -49,7 +53,7 @@ impl NodeMetaPlugin for EvidenceCapturePlugin {
     }
 
     fn run(&self, node: &Node, context: &PluginContext<'_>) -> Result<JobOutput, String> {
-        let request_fingerprint = request_fingerprint(&node.meta.evidence_requests);
+        let request_fingerprint = request_fingerprint(node);
         let inputs = match parse_requests(&node.meta.evidence_requests) {
             Ok(inputs) => inputs,
             Err(error) => {
@@ -136,11 +140,14 @@ impl NodeMetaPlugin for EvidenceCapturePlugin {
     }
 }
 
-fn request_fingerprint(values: &[String]) -> String {
-    let mut values = values.to_vec();
+fn request_fingerprint(node: &Node) -> String {
+    let mut values = node.meta.evidence_requests.clone();
     values.sort();
     values.dedup();
-    let parts: Vec<&str> = values.iter().map(String::as_str).collect();
+    let mut parts: Vec<&str> = values.iter().map(String::as_str).collect();
+    if !node.meta.evidence_request_generation.is_empty() {
+        parts.push(node.meta.evidence_request_generation.as_str());
+    }
     crate::mailbox::derive_id("evidence-requests", &parts)
 }
 
@@ -173,6 +180,7 @@ mod tests {
             lang_version: so_lang::LANG_VERSION.into(),
             meta: Meta {
                 evidence_requests: requests,
+                evidence_request_generation: String::new(),
                 evidence: vec![],
                 created_at: "t".into(),
                 cli: "spec".into(),
@@ -196,11 +204,36 @@ mod tests {
             },
         );
         pending.meta.updates.get_mut("job").unwrap().value["request_fingerprint"] =
-            json!(request_fingerprint(&pending.meta.evidence_requests));
+            json!(request_fingerprint(&pending));
         assert!(!needs_capture(&pending));
 
         pending.meta.evidence_requests.push("another.rs:1".into());
         assert!(needs_capture(&pending));
+    }
+
+    #[test]
+    fn explicit_generation_forces_unchanged_descriptors_to_recapture() {
+        let mut captured = node(vec!["README.md:1".into()]);
+        let fingerprint = request_fingerprint(&captured);
+        captured.meta.updates.insert(
+            "old-capture".into(),
+            crate::domain::MetaUpdate {
+                source: PLUGIN_NAME.into(),
+                applied_at: "t1".into(),
+                value: json!({
+                    "version": CAPTURE_VERSION,
+                    "request_fingerprint": fingerprint,
+                    "status": "captured"
+                }),
+            },
+        );
+        assert!(!needs_capture(&captured));
+
+        captured.meta.evidence_request_generation = "replacement-2".into();
+        assert!(
+            needs_capture(&captured),
+            "persisted replacement generation survives a crash and invalidates the prior capture"
+        );
     }
 
     #[test]

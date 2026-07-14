@@ -20,6 +20,10 @@ pub enum DerivedNode {
     Assumption {
         id: String,
         expression: String,
+        /// Canonical symbolic formula. Empty on legacy/trivial ingest
+        /// projections whose human expression is already complete (`Top`).
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        formula_json: String,
         derivation_version: String,
     },
     Guarantee {
@@ -55,6 +59,25 @@ impl DerivedNode {
         Self::Assumption {
             id,
             expression: expression.to_string(),
+            formula_json: String::new(),
+            derivation_version: derivation_version.to_string(),
+        }
+    }
+
+    pub fn assumption_formula(
+        expression: &str,
+        formula_json: &str,
+        derivation_version: &str,
+    ) -> Self {
+        let id = content_id(
+            "assumption",
+            &serde_json::to_vec(&(expression, formula_json, derivation_version))
+                .expect("assumption identity serializes"),
+        );
+        Self::Assumption {
+            id,
+            expression: expression.to_string(),
+            formula_json: formula_json.to_string(),
             derivation_version: derivation_version.to_string(),
         }
     }

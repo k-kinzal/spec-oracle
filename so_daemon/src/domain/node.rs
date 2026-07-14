@@ -54,6 +54,11 @@ pub struct Meta {
     /// Add RPC. Interpretation and I/O never happen on the Add path.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence_requests: Vec<String>,
+    /// Identity of the latest complete request-set replacement. Empty denotes
+    /// the original incremental Add semantics. Persisting this separately
+    /// makes an unchanged-descriptor refresh crash-reconcilable and ordered.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub evidence_request_generation: String,
     /// Successfully captured evidence. Empty while capture is pending, when no
     /// evidence was requested, or when a durable rejected Job result explains
     /// why the request could not be interpreted.
@@ -108,6 +113,7 @@ mod tests {
                 evidence_requests: vec![
                     r#"{"kind":"constitutive","locator":"src/pump.rs:10"}"#.into()
                 ],
+                evidence_request_generation: String::new(),
                 evidence: vec![Evidence {
                     kind: Kind::Constitutive,
                     locator: Locator::File {

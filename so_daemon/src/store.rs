@@ -25,7 +25,10 @@ use std::sync::Mutex;
 
 use thiserror::Error;
 
-use crate::domain::{DerivedNode, Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, TermNode};
+use crate::domain::{
+    DerivedNode, Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, SelectionPopulation,
+    TermNode,
+};
 
 /// A bounded, keyset-paginated page of nodes.
 ///
@@ -35,6 +38,12 @@ use crate::domain::{DerivedNode, Edge, EdgeKind, MetaUpdate, Node, RelationAsses
 /// resume key (today, the last node id), not a stable public handle.
 pub struct NodePage {
     pub nodes: Vec<Node>,
+    pub next_cursor: Option<String>,
+}
+
+/// A bounded, keyset-paginated page of immutable Ledger Edges.
+pub struct EdgePage {
+    pub edges: Vec<Edge>,
     pub next_cursor: Option<String>,
 }
 
@@ -75,6 +84,18 @@ pub trait NodeStore {
         &self,
         node_id: &str,
         requests: &[String],
+    ) -> Result<Node, StoreError>;
+
+    /// Replace the complete desired Evidence descriptor set and append the
+    /// request-generation update atomically. This is the explicit freshness
+    /// boundary: later capture replaces the convenient current Evidence view,
+    /// while prior Evidence Nodes and GroundedBy Edges remain in the Ledger.
+    fn replace_evidence_requests(
+        &self,
+        node_id: &str,
+        requests: &[String],
+        update_id: &str,
+        update: &MetaUpdate,
     ) -> Result<Node, StoreError>;
 
     /// Fetch a node by id, or `None` if no such node exists.
@@ -122,6 +143,16 @@ pub trait GraphStore: NodeStore {
     /// history rather than overwriting old topology.
     fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError>;
 
+    /// Fetch one immutable Ledger Edge by its content-derived id.
+    fn get_edge(&self, id: &str) -> Result<Option<Edge>, StoreError>;
+
+    /// Read append-only Ledger topology by Edge id, independently of current
+    /// derivation selection. This is the historical audit surface.
+    fn list_ledger_edges(&self, after: Option<&str>, limit: usize) -> Result<EdgePage, StoreError>;
+
+    /// Cheap maintained Ledger Edge count.
+    fn count_edges(&self) -> Result<u64, StoreError>;
+
     /// Idempotently append an audit record for an assessed candidate pair.
     /// These records include `Unknown` and `Independent` but are never exposed
     /// as graph topology.
@@ -162,6 +193,27 @@ pub trait GraphStore: NodeStore {
     /// at any scale (a maintained count, never a full scan): derived historical
     /// vertices do not distort specification-page progress.
     fn count_nodes(&self) -> Result<u64, StoreError>;
+
+    /// Read the complete current dependency closure for the supplied Nodes:
+    /// semantic competitors, incoming explicit selection judgments and
+    /// supporters, their own competitors and selection sources, and the direct
+    /// Evidence needed to evaluate them. Whole-closure selection prevents a
+    /// rejected intermediary or receded relationship from affecting a current
+    /// candidate invisibly.
+    fn selection_population(
+        &self,
+        node_ids: &[String],
+        current_derivations: &[crate::domain::Derivation],
+    ) -> Result<SelectionPopulation, StoreError>;
+
+    /// Current assume-guarantee pairing Edges directed into one target
+    /// contract. The native inbound lookup keeps aggregate pairing validation
+    /// proportional to that contract's actual dependencies, not Ledger size.
+    fn list_pairing_edges(
+        &self,
+        target: &str,
+        derivation: &crate::domain::Derivation,
+    ) -> Result<Vec<Edge>, StoreError>;
 
     /// Current derived Edges owned by a specification page. The current set is
     /// selected independently for each derivation method. Mention Edges are
@@ -342,6 +394,30 @@ impl NodeStore for InMemoryNodeStore {
         Ok(node.clone())
     }
 
+    fn replace_evidence_requests(
+        &self,
+        node_id: &str,
+        requests: &[String],
+        update_id: &str,
+        update: &MetaUpdate,
+    ) -> Result<Node, StoreError> {
+        let mut nodes = self.nodes.lock().expect("node store mutex poisoned");
+        let node = nodes
+            .get_mut(node_id)
+            .ok_or_else(|| StoreError::MissingNode(node_id.to_string()))?;
+        node.meta.evidence_requests = requests.to_vec();
+        node.meta.evidence_requests.sort();
+        node.meta.evidence_requests.dedup();
+        node.meta.evidence_request_generation = update_id.to_string();
+        if node.meta.evidence_requests.is_empty() {
+            node.meta.evidence.clear();
+        }
+        node.meta
+            .updates
+            .insert(update_id.to_string(), update.clone());
+        Ok(node.clone())
+    }
+
     fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError> {
         Ok(self
             .nodes
@@ -431,6 +507,53 @@ impl GraphStore for InMemoryNodeStore {
             &mut self.edges.lock().expect("edge store mutex poisoned"),
             edge,
         )
+    }
+
+    fn get_edge(&self, id: &str) -> Result<Option<Edge>, StoreError> {
+        let edges = self.edges.lock().expect("edge store mutex poisoned");
+        let Some(identity) = edges.identity_by_id.get(id) else {
+            return Ok(None);
+        };
+        Ok(edges.by_identity.get(identity).cloned())
+    }
+
+    fn list_ledger_edges(&self, after: Option<&str>, limit: usize) -> Result<EdgePage, StoreError> {
+        let edges = self.edges.lock().expect("edge store mutex poisoned");
+        let mut ids: Vec<String> = edges
+            .identity_by_id
+            .range::<str, _>((cursor_bound(after), std::ops::Bound::Unbounded))
+            .take(limit.saturating_add(1))
+            .map(|(id, _)| id.clone())
+            .collect();
+        let next_cursor = if ids.len() > limit {
+            ids.truncate(limit);
+            ids.last().cloned()
+        } else {
+            None
+        };
+        let rows = ids
+            .into_iter()
+            .filter_map(|id| {
+                edges
+                    .identity_by_id
+                    .get(&id)
+                    .and_then(|identity| edges.by_identity.get(identity))
+                    .cloned()
+            })
+            .collect();
+        Ok(EdgePage {
+            edges: rows,
+            next_cursor,
+        })
+    }
+
+    fn count_edges(&self) -> Result<u64, StoreError> {
+        Ok(self
+            .edges
+            .lock()
+            .expect("edge store mutex poisoned")
+            .by_identity
+            .len() as u64)
     }
 
     fn append_relation_assessment(
@@ -543,13 +666,125 @@ impl GraphStore for InMemoryNodeStore {
         Ok(self.nodes.lock().expect("node store mutex poisoned").len() as u64)
     }
 
+    fn selection_population(
+        &self,
+        node_ids: &[String],
+        current_derivations: &[crate::domain::Derivation],
+    ) -> Result<SelectionPopulation, StoreError> {
+        let edges = self.edges.lock().expect("edge store mutex poisoned");
+        let current: Vec<&Edge> = edges
+            .by_identity
+            .values()
+            .filter(|edge| current_derivations.contains(&edge.derivation))
+            .collect();
+        let mut component_ids: std::collections::BTreeSet<String> =
+            node_ids.iter().cloned().collect();
+        let mut relations = BTreeMap::new();
+        loop {
+            let mut expanded = false;
+            let adjacent: Vec<&Edge> = current
+                .iter()
+                .copied()
+                .filter(|edge| {
+                    edge.kind.family() == crate::domain::EdgeFamily::Semantic
+                        && crate::selection::is_semantic_competition(edge.kind)
+                        && (component_ids.contains(&edge.source)
+                            || component_ids.contains(&edge.target))
+                })
+                .collect();
+            for edge in adjacent {
+                expanded |= component_ids.insert(edge.source.clone());
+                expanded |= component_ids.insert(edge.target.clone());
+                relations.insert(edge.id.clone(), edge.clone());
+            }
+            let incoming_selection: Vec<&Edge> = current
+                .iter()
+                .copied()
+                .filter(|edge| {
+                    edge.kind.family() == crate::domain::EdgeFamily::Selection
+                        && component_ids.contains(&edge.target)
+                })
+                .collect();
+            for edge in incoming_selection {
+                expanded |= component_ids.insert(edge.source.clone());
+                relations.insert(edge.id.clone(), edge.clone());
+            }
+            if !expanded {
+                break;
+            }
+        }
+        let mut scored_ids = component_ids;
+        for edge in relations.values() {
+            scored_ids.insert(edge.source.clone());
+            scored_ids.insert(edge.target.clone());
+        }
+        let current_evidence: BTreeMap<String, std::collections::BTreeSet<String>> = self
+            .nodes
+            .lock()
+            .expect("node store mutex poisoned")
+            .values()
+            .filter(|node| scored_ids.contains(&node.id))
+            .filter_map(|node| {
+                crate::selection::current_evidence_node_ids(node).map(|ids| (node.id.clone(), ids))
+            })
+            .collect();
+        let evidence_edges: Vec<Edge> = current
+            .iter()
+            .copied()
+            .filter(|edge| {
+                edge.kind == EdgeKind::GroundedBy
+                    && scored_ids.contains(edge.source.as_str())
+                    && current_evidence
+                        .get(&edge.source)
+                        .is_none_or(|ids| ids.contains(&edge.target))
+            })
+            .cloned()
+            .collect();
+        drop(edges);
+        let evidence_ids: std::collections::BTreeSet<&str> = evidence_edges
+            .iter()
+            .map(|edge| edge.target.as_str())
+            .collect();
+        let evidence_nodes = self
+            .derived_nodes
+            .lock()
+            .expect("derived node store mutex poisoned")
+            .values()
+            .filter(|node| evidence_ids.contains(node.id()))
+            .cloned()
+            .collect();
+        Ok(SelectionPopulation {
+            relation_edges: relations.into_values().collect(),
+            evidence_edges,
+            evidence_nodes,
+        })
+    }
+
+    fn list_pairing_edges(
+        &self,
+        target: &str,
+        derivation: &crate::domain::Derivation,
+    ) -> Result<Vec<Edge>, StoreError> {
+        Ok(self
+            .edges
+            .lock()
+            .expect("edge store mutex poisoned")
+            .by_identity
+            .values()
+            .filter(|edge| {
+                edge.target == target && edge.derivation == *derivation && edge.kind.is_pairing()
+            })
+            .cloned()
+            .collect())
+    }
+
     fn list_edges(
         &self,
         owners: &[String],
         current_derivations: &[crate::domain::Derivation],
     ) -> Result<Vec<Edge>, StoreError> {
         let owners: std::collections::BTreeSet<&str> = owners.iter().map(String::as_str).collect();
-        Ok(self
+        let edges: Vec<Edge> = self
             .edges
             .lock()
             .expect("edge store mutex poisoned")
@@ -559,8 +794,60 @@ impl GraphStore for InMemoryNodeStore {
                 current_derivations.contains(&edge.derivation) && owners.contains(edge.page_owner())
             })
             .cloned()
+            .collect();
+        let current_evidence: BTreeMap<String, std::collections::BTreeSet<String>> = self
+            .nodes
+            .lock()
+            .expect("node store mutex poisoned")
+            .values()
+            .filter_map(|node| {
+                crate::selection::current_evidence_node_ids(node).map(|ids| (node.id.clone(), ids))
+            })
+            .collect();
+        Ok(select_current_assumption_projections(edges)
+            .into_iter()
+            .filter(|edge| {
+                edge.kind != EdgeKind::GroundedBy
+                    || current_evidence
+                        .get(&edge.source)
+                        .is_none_or(|ids| ids.contains(&edge.target))
+            })
             .collect())
     }
+}
+
+/// A paired (A,G) supersedes the provisional ingest (Top,G) projection in the
+/// current view while both remain in the append-only Ledger. Within paired
+/// projections, a larger authored basis is the later aggregate; stable time/id
+/// tie-breakers handle equal-size alternatives deterministically.
+pub(crate) fn select_current_assumption_projections(edges: Vec<Edge>) -> Vec<Edge> {
+    let mut selected: BTreeMap<String, (u8, usize, String, String)> = BTreeMap::new();
+    for edge in &edges {
+        if edge.kind != EdgeKind::HasAssumption {
+            continue;
+        }
+        let preference = (
+            u8::from(edge.derivation.method == crate::pairing::PAIRED_PROJECTION_METHOD),
+            edge.basis_spec_ids.len(),
+            edge.recorded_at.clone(),
+            edge.id.clone(),
+        );
+        let slot = selected
+            .entry(edge.source.clone())
+            .or_insert_with(|| preference.clone());
+        if preference > *slot {
+            *slot = preference;
+        }
+    }
+    edges
+        .into_iter()
+        .filter(|edge| {
+            edge.kind != EdgeKind::HasAssumption
+                || selected
+                    .get(&edge.source)
+                    .is_some_and(|choice| choice.3 == edge.id)
+        })
+        .collect()
 }
 
 fn insert_edge(state: &mut EdgeState, edge: &Edge) -> Result<bool, StoreError> {
@@ -633,6 +920,7 @@ mod tests {
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
                 evidence_requests: vec![],
+                evidence_request_generation: String::new(),
                 evidence: vec![],
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),
@@ -684,6 +972,7 @@ mod tests {
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
                 evidence_requests: vec![],
+                evidence_request_generation: String::new(),
                 evidence: vec![],
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),
@@ -777,6 +1066,7 @@ mod tests {
             kind: EdgeKind::MentionsTerm,
             source_anchor: None,
             target_anchor: None,
+            relied_spec_id: None,
             basis_spec_ids: vec![],
             derivation: crate::domain::Derivation {
                 method: "test".into(),
@@ -839,6 +1129,7 @@ mod tests {
                 kind: EdgeKind::MentionsTerm,
                 source_anchor: None,
                 target_anchor: None,
+                relied_spec_id: None,
                 basis_spec_ids: vec![],
                 derivation: derivation.clone(),
                 recorded_at: "t".into(),
@@ -907,6 +1198,7 @@ mod tests {
             kind: EdgeKind::Refines,
             source_anchor: None,
             target_anchor: None,
+            relied_spec_id: None,
             basis_spec_ids: vec![],
             derivation: derivation.clone(),
             recorded_at: "t".into(),
@@ -930,6 +1222,89 @@ mod tests {
     }
 
     #[test]
+    fn selection_population_contains_the_complete_competition_component() {
+        let store = InMemoryNodeStore::new();
+        for id in ["a", "b", "c"] {
+            store.add_node(&node_with_id(id)).unwrap();
+        }
+        let derivation = crate::domain::Derivation {
+            method: "semantic".into(),
+            version: "v1".into(),
+        };
+        for (source, target) in [("a", "b"), ("b", "c")] {
+            let edge = Edge::specification_relation(
+                EdgeKind::HardContradiction,
+                source,
+                target,
+                vec![],
+                derivation.clone(),
+                "t",
+            )
+            .unwrap();
+            store.append_edge(&edge).unwrap();
+        }
+
+        let population = store
+            .selection_population(&["c".into()], &[derivation])
+            .unwrap();
+        let endpoint_pairs: std::collections::BTreeSet<(&str, &str)> = population
+            .relation_edges
+            .iter()
+            .map(|edge| (edge.source.as_str(), edge.target.as_str()))
+            .collect();
+        assert_eq!(endpoint_pairs, [("a", "b"), ("b", "c")].into());
+    }
+
+    #[test]
+    fn selection_population_follows_incoming_selection_sources_to_their_competitors() {
+        let store = InMemoryNodeStore::new();
+        for id in ["source", "target", "competitor"] {
+            store.add_node(&node_with_id(id)).unwrap();
+        }
+        let semantic = crate::domain::Derivation {
+            method: "semantic".into(),
+            version: "v1".into(),
+        };
+        let selection = crate::domain::Derivation {
+            method: "selection".into(),
+            version: "v1".into(),
+        };
+        let defeats = Edge::specification_relation(
+            EdgeKind::Defeats,
+            "source",
+            "target",
+            vec![],
+            selection.clone(),
+            "t",
+        )
+        .unwrap();
+        let conflict = Edge::specification_relation(
+            EdgeKind::HardContradiction,
+            "competitor",
+            "source",
+            vec![],
+            semantic.clone(),
+            "t",
+        )
+        .unwrap();
+        store.append_edge(&defeats).unwrap();
+        store.append_edge(&conflict).unwrap();
+
+        let population = store
+            .selection_population(&["target".into()], &[semantic, selection])
+            .unwrap();
+        assert_eq!(population.relation_edges.len(), 2);
+        assert!(population
+            .relation_edges
+            .iter()
+            .any(|edge| edge.kind == EdgeKind::Defeats));
+        assert!(population
+            .relation_edges
+            .iter()
+            .any(|edge| edge.kind == EdgeKind::HardContradiction));
+    }
+
+    #[test]
     fn selection_edges_are_a_distinct_validated_family() {
         let store = InMemoryNodeStore::new();
         store.add_node(&node_with_id("a")).unwrap();
@@ -949,6 +1324,7 @@ mod tests {
             kind: EdgeKind::Supports,
             source_anchor: None,
             target_anchor: None,
+            relied_spec_id: None,
             basis_spec_ids: vec![],
             derivation: derivation.clone(),
             recorded_at: "t".into(),
@@ -1052,6 +1428,7 @@ mod tests {
             kind: EdgeKind::Refines,
             source_anchor: None,
             target_anchor: None,
+            relied_spec_id: None,
             basis_spec_ids: vec![],
             derivation: crate::domain::Derivation {
                 method: "test".into(),

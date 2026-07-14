@@ -35,12 +35,12 @@ export default function GraphView({
     [],
   );
 
-  // Size by evidence: better-grounded claims read as heavier nodes. Bounded so a
-  // single very-cited node cannot dominate the view.
+  // Size by derived positive fitness, not raw Edge count. Bounded so one highly
+  // supported candidate cannot dominate the view.
   const nodeSize = useCallback(
     (n: GraphNode) =>
       n.nodeKind === "specification"
-        ? 2.5 + Math.min(n.evidenceCount, 8) * 0.9
+        ? 2.5 + Math.min(Math.max(n.supportScore, 0), 24) * 0.22
         : 2.1,
     [],
   );
@@ -61,8 +61,12 @@ export default function GraphView({
           nodeColor={nodeColor}
           nodeSize={nodeSize}
           nodeLabelAccessor={nodeLabel}
-          linkColor={(edge) => EDGE_KIND_COLORS[edge.kind]}
-          linkWidth={(edge) => (edge.kind === "mentions_term" ? 0.4 : 1.1)}
+          linkColor={(edge) =>
+            edge.current ? EDGE_KIND_COLORS[edge.kind] : "rgba(120, 120, 130, 0.22)"
+          }
+          linkWidth={(edge) =>
+            edge.current ? (edge.kind === "mentions_term" ? 0.4 : 1.1) : 0.35
+          }
           linkArrows={(edge) => DIRECTED_EDGE_KINDS.has(edge.kind)}
           linkArrowsSizeScale={0.85}
           backgroundColor="#0f0f10"

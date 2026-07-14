@@ -14,7 +14,10 @@ const OPTIONS: Array<{
   { mode: "conflicts", label: "Conflicts", countKind: "relations" },
   { mode: "isolated", label: "Isolated", countKind: "nodes" },
   { mode: "selection", label: "Selection", countKind: "relations" },
-  { mode: "current", label: "Current set", countKind: "none" },
+  { mode: "fitness", label: "Fitness", countKind: "nodes" },
+  { mode: "contracts", label: "Contracts", countKind: "relations" },
+  { mode: "ledger", label: "Ledger", countKind: "relations" },
+  { mode: "current", label: "Current set", countKind: "nodes" },
 ];
 
 export default function ViewSwitcher({
@@ -42,7 +45,6 @@ export default function ViewSwitcher({
             {countKind !== "none" && count !== null && (
               <span className="view-count">{count.toLocaleString()}</span>
             )}
-            {mode === "current" && <span className="view-pending">pending</span>}
           </button>
         );
       })}

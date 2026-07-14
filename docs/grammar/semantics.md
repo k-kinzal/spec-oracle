@@ -357,6 +357,21 @@ assumption conjunct, and never counts against the aggregate). The
 individual booleans stay as diagnostics. The graph layer decides;
 nothing in `so-reason` rejects or repairs a formed contract.
 
+**Daemon realization.** `spec pair` / `AddAssumptionRelation` is the graph-side
+decision point. Its Edge stores `source` (evidence), `target` (the conditioned
+guarantee owner), and `relied_spec_id` (the authored awaited assertion) as
+distinct fields. `specd` re-parses all three, uses
+`for_guarantee_with_relied`, requires a `Yes` entailment rather than accepting
+the language layer's candidate `Unknown`, requires every non-envelope source
+to be contract-forming, assembles it with every current pairing into the same
+target, and rejects `No` from either aggregate judgment. Only then does it
+append the typed pairing Edge and a content-addressed paired Assumption
+projection. The current view selects this `(A,G)` projection instead of the
+ingest `(⊤,G)` projection; both remain immutable Ledger facts. Explicit command
+input supplies the component/direction decision, while the responsible-subject
+comparison remains a conservative guard: shared keys are rejected rather than
+silently treated as distinct components.
+
 **Verification doctrine (round 11, change 4).** `refines`/`assess` over a
 paired contract whose formed assumption is REFUTED
 (`assumption_satisfiable` = `No`) is VACUOUS — the saturated form
@@ -847,7 +862,7 @@ complement it never was. Envelope sources are therefore retained in
 `ContractFormula::sources` (compatibility checking needs them) but never
 enter the assumption formula and are never negated by saturation; their
 formal denotation (widening A) is graph-layer future work. Since round 8
-a retained envelope is no longer check-free: the graph layer should run
+a retained envelope is no longer check-free: the graph layer must run
 `relate::envelope_compatible` over every paired contract that retains
 one — a guarantee that forbids exactly what its own envelope admits is a
 proven incompatibility (`No`), and anything else is `Unknown`, never a
@@ -900,10 +915,13 @@ that sets `explicit_relied: true`, without which a source never forms `A`
 — and additionally validates that the evidence
 supports the reliance: `relate::implies(source formula, relied)` must not
 be `No` (`No` → `PairingError::SourceDoesNotSupportRelied`,
-`source_does_not_support_relied`); `Unknown` is ACCEPTED — conservative,
+`source_does_not_support_relied`); `Unknown` is ACCEPTED by this pure
+constructor — conservative,
 documented: the structural rules often cannot prove an entailment that
 holds, and full entailment validation of a pairing remains daemon/graph
-work.
+work. The topology-producing `spec pair` path is stricter: it requires
+the recorded `proven` flag (`Yes`), so `Unknown` never becomes a Ledger
+Edge.
 
 **Vacuous reliances are rejected (round 8, superseding the round-7
 accept-Bottom pin).** A relied formula that is — or simplifies to — `⊥`
@@ -936,7 +954,7 @@ stays out of any newly derived assumption until re-derived).
 **Two judgments guard the assembled pair (round 8; one-call summary
 since round 11, COMPLETED round 12).** Individually valid
 sources can still conjoin badly, so `relate` offers two checks the graph
-layer should run on every paired contract —
+layer must run on every paired contract — and `specd` does so before append —
 `ContractFormula::well_formed()` runs both and folds in the source-side
 gates: the `all_sources_contract_forming` aggregate (round 12 — the
 one-call verdict over all four per-source conditions), its per-source

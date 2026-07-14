@@ -71,6 +71,9 @@ const EDGE_KINDS: Record<string, EdgeKind> = {
   EDGE_KIND_ADVISORY_TENSION: "advisory_tension",
   EDGE_KIND_DESCRIPTIVE_CONFLICT: "descriptive_conflict",
   EDGE_KIND_ENVELOPE_CONFLICT: "envelope_conflict",
+  EDGE_KIND_OCCURRENCE_RELIANCE: "occurrence_reliance",
+  EDGE_KIND_GUARANTEE_DISCHARGE: "guarantee_discharge",
+  EDGE_KIND_ADMISSIBILITY_ENVELOPE: "admissibility_envelope",
   EDGE_KIND_SUPPORTS: "supports",
   EDGE_KIND_DEFEATS: "defeats",
   EDGE_KIND_SUPERSEDES: "supersedes",
@@ -104,6 +107,12 @@ const ENDPOINT_ROLES: Record<string, EndpointRole> = {
   EDGE_ENDPOINT_ROLE_CONTRACT_SPECIFICATION: "contract_specification",
   EDGE_ENDPOINT_ROLE_ASSUMPTION: "assumption",
   EDGE_ENDPOINT_ROLE_GUARANTEE: "guarantee",
+  EDGE_ENDPOINT_ROLE_RELIANCE_EVIDENCE: "reliance_evidence",
+  EDGE_ENDPOINT_ROLE_RELIANT_CONTRACT: "reliant_contract",
+  EDGE_ENDPOINT_ROLE_DISCHARGING_GUARANTEE: "discharging_guarantee",
+  EDGE_ENDPOINT_ROLE_DISCHARGED_CONTRACT: "discharged_contract",
+  EDGE_ENDPOINT_ROLE_ADMISSIBLE_ENVIRONMENT: "admissible_environment",
+  EDGE_ENDPOINT_ROLE_BOUNDED_CONTRACT: "bounded_contract",
 };
 
 function toNode(raw: unknown): GraphNode {
@@ -112,6 +121,28 @@ function toNode(raw: unknown): GraphNode {
     statement?: string;
     sentence?: { speech_act?: string } | null;
     meta?: { evidence?: unknown[]; evidence_requests?: unknown[] } | null;
+    selection?: {
+      current?: boolean;
+      supporting_edge_ids?: unknown[];
+      policy_version?: string;
+      support_score?: number;
+      evidence_score?: number;
+      relation_score?: number;
+      contributions?: Array<{
+        kind?: string;
+        points?: number;
+        edge_id?: string;
+        source_node_id?: string | null;
+        evidence_node_id?: string | null;
+        detail?: string;
+      }>;
+      exclusions?: Array<{
+        kind?: string;
+        edge_id?: string | null;
+        competing_node_id?: string | null;
+        detail?: string;
+      }>;
+    } | null;
   };
   return {
     id: n.id ?? "",
@@ -122,6 +153,25 @@ function toNode(raw: unknown): GraphNode {
     speechAct: SPEECH_ACTS[n.sentence?.speech_act ?? ""] ?? "unknown",
     evidenceCount: n.meta?.evidence?.length ?? 0,
     evidenceRequestCount: n.meta?.evidence_requests?.length ?? 0,
+    current: n.selection?.current ?? true,
+    policyVersion: n.selection?.policy_version ?? "",
+    supportScore: n.selection?.support_score ?? 0,
+    evidenceScore: n.selection?.evidence_score ?? 0,
+    relationScore: n.selection?.relation_score ?? 0,
+    contributions: (n.selection?.contributions ?? []).map((contribution) => ({
+      kind: contribution.kind ?? "unknown",
+      points: contribution.points ?? 0,
+      edgeId: contribution.edge_id ?? "",
+      sourceNodeId: contribution.source_node_id ?? null,
+      evidenceNodeId: contribution.evidence_node_id ?? null,
+      detail: contribution.detail ?? "",
+    })),
+    exclusions: (n.selection?.exclusions ?? []).map((exclusion) => ({
+      kind: exclusion.kind ?? "unknown",
+      edgeId: exclusion.edge_id ?? null,
+      competingNodeId: exclusion.competing_node_id ?? null,
+      detail: exclusion.detail ?? "",
+    })),
   };
 }
 
@@ -134,6 +184,13 @@ function toTermNode(raw: unknown): GraphNode {
     speechAct: "unknown",
     evidenceCount: 0,
     evidenceRequestCount: 0,
+    current: true,
+    policyVersion: "",
+    supportScore: 0,
+    evidenceScore: 0,
+    relationScore: 0,
+    contributions: [],
+    exclusions: [],
   };
 }
 
@@ -159,6 +216,13 @@ function toDerivedNode(raw: unknown): GraphNode {
     speechAct: "unknown",
     evidenceCount: 0,
     evidenceRequestCount: 0,
+    current: true,
+    policyVersion: "",
+    supportScore: 0,
+    evidenceScore: 0,
+    relationScore: 0,
+    contributions: [],
+    exclusions: [],
   };
 }
 
@@ -171,6 +235,8 @@ function toEdge(raw: unknown): GraphEdge {
     family?: string;
     source_role?: string;
     target_role?: string;
+    relied_spec_id?: string | null;
+    current?: boolean;
     derivation?: { method?: string; version?: string } | null;
   };
   return {
@@ -181,6 +247,8 @@ function toEdge(raw: unknown): GraphEdge {
     family: EDGE_FAMILIES[e.family ?? ""] ?? "unspecified",
     sourceRole: ENDPOINT_ROLES[e.source_role ?? ""] ?? "unspecified",
     targetRole: ENDPOINT_ROLES[e.target_role ?? ""] ?? "unspecified",
+    reliedSpecId: e.relied_spec_id ?? null,
+    current: e.current ?? true,
     derivationMethod: e.derivation?.method ?? "",
     derivationVersion: e.derivation?.version ?? "",
   };

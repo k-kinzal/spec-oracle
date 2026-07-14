@@ -9,6 +9,7 @@
 //! Jobs. Add errors map to gRPC status codes the client turns into exit codes
 //! (`INVALID_ARGUMENT` → bad input, `INTERNAL` → runtime failure).
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use tonic::{Request, Response, Status};
@@ -19,9 +20,11 @@ use so_protocol::pb;
 use so_protocol::pb::specification_graph_server::SpecificationGraph;
 
 use crate::add::AddError;
-use crate::add_mailbox::{AddInput, AddMailbox, AddMailboxError};
+use crate::add_mailbox::{
+    AddInput, AddMailbox, AddMailboxError, ReplaceEvidenceError, ReplaceEvidenceInput,
+};
 use crate::convert;
-use crate::store::{GraphStore, NodePage, StoreError};
+use crate::store::{EdgePage, GraphStore, NodePage, StoreError};
 
 /// Page size used when the request leaves `page_size` at 0.
 const DEFAULT_PAGE_SIZE: u32 = 100;
@@ -35,6 +38,15 @@ type GraphReadResult = (
     Vec<crate::domain::TermNode>,
     Vec<crate::domain::DerivedNode>,
     Vec<Edge>,
+    BTreeMap<String, crate::domain::SelectionView>,
+    u64,
+);
+
+type LedgerReadResult = (
+    EdgePage,
+    Vec<crate::domain::TermNode>,
+    Vec<crate::domain::DerivedNode>,
+    std::collections::BTreeSet<String>,
     u64,
 );
 
@@ -92,6 +104,70 @@ impl SpecificationGraph for SpecificationGraphService {
             .await
     }
 
+    async fn replace_evidence(
+        &self,
+        request: Request<pb::ReplaceEvidenceRequest>,
+    ) -> Result<Response<pb::ReplaceEvidenceResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.replace_evidence",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "ReplaceEvidence",
+            "node.id" = tracing::field::Empty,
+            "spec.evidence.request_count" = tracing::field::Empty,
+            "error.message" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move { self.replace_evidence_inner(request).await }
+            .instrument(span)
+            .await
+    }
+
+    async fn add_selection_relation(
+        &self,
+        request: Request<pb::AddSelectionRelationRequest>,
+    ) -> Result<Response<pb::AddSelectionRelationResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.add_selection_relation",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "AddSelectionRelation",
+            "selection.kind" = tracing::field::Empty,
+            "selection.source" = tracing::field::Empty,
+            "selection.target" = tracing::field::Empty,
+            "selection.basis_count" = tracing::field::Empty,
+            "edge.id" = tracing::field::Empty,
+            "error.message" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move { self.add_selection_relation_inner(request).await }
+            .instrument(span)
+            .await
+    }
+
+    async fn add_assumption_relation(
+        &self,
+        request: Request<pb::AddAssumptionRelationRequest>,
+    ) -> Result<Response<pb::AddAssumptionRelationResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.add_assumption_relation",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "AddAssumptionRelation",
+            "pairing.kind" = tracing::field::Empty,
+            "pairing.source" = tracing::field::Empty,
+            "pairing.target" = tracing::field::Empty,
+            "pairing.relied" = tracing::field::Empty,
+            "pairing.basis_count" = tracing::field::Empty,
+            "edge.id" = tracing::field::Empty,
+            "error.message" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move { self.add_assumption_relation_inner(request).await }
+            .instrument(span)
+            .await
+    }
+
     async fn get_graph(
         &self,
         request: Request<pb::GetGraphRequest>,
@@ -115,9 +191,269 @@ impl SpecificationGraph for SpecificationGraphService {
             .instrument(span)
             .await
     }
+
+    async fn get_ledger(
+        &self,
+        request: Request<pb::GetLedgerRequest>,
+    ) -> Result<Response<pb::GetLedgerResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.get_ledger",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "GetLedger",
+            "ledger.page.requested_size" = tracing::field::Empty,
+            "ledger.page.edge_count" = tracing::field::Empty,
+            "ledger.page.has_next" = tracing::field::Empty,
+            "ledger.total_edges" = tracing::field::Empty,
+            "error.message" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move { self.get_ledger_inner(request).await }
+            .instrument(span)
+            .await
+    }
 }
 
 impl SpecificationGraphService {
+    async fn replace_evidence_inner(
+        &self,
+        request: Request<pb::ReplaceEvidenceRequest>,
+    ) -> Result<Response<pb::ReplaceEvidenceResponse>, Status> {
+        let req = request.into_inner();
+        if req.node_id.is_empty() {
+            return Err(Status::invalid_argument("node id must not be empty"));
+        }
+        tracing::Span::current().record("node.id", req.node_id.as_str());
+        tracing::Span::current().record("spec.evidence.request_count", req.evidence.len() as u64);
+        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true);
+        let node = self
+            .adds
+            .replace_evidence(ReplaceEvidenceInput {
+                node_id: req.node_id,
+                evidence: req.evidence,
+                now,
+            })
+            .await
+            .map_err(|error| match error {
+                ReplaceEvidenceError::Store(crate::store::StoreError::MissingNode(id)) => {
+                    Status::not_found(format!("specification node '{id}' does not exist"))
+                }
+                other => {
+                    let message = other.to_string();
+                    tracing::Span::current().record("error.message", message.as_str());
+                    Status::internal(message)
+                }
+            })?;
+        Ok(Response::new(pb::ReplaceEvidenceResponse {
+            node: Some(convert::accepted_node_to_pb(&node)),
+        }))
+    }
+
+    async fn get_ledger_inner(
+        &self,
+        request: Request<pb::GetLedgerRequest>,
+    ) -> Result<Response<pb::GetLedgerResponse>, Status> {
+        let req = request.into_inner();
+        tracing::Span::current().record("ledger.page.requested_size", req.page_size as u64);
+        let limit = clamp_page_size(req.page_size) as usize;
+        let after = (!req.page_token.is_empty()).then_some(req.page_token);
+        let nodes = self.nodes.clone();
+        let outcome =
+            tokio::task::spawn_blocking(move || -> Result<LedgerReadResult, StoreError> {
+                let page = nodes.list_ledger_edges(after.as_deref(), limit)?;
+                let mut owners: Vec<String> = page
+                    .edges
+                    .iter()
+                    .map(|edge| edge.page_owner().to_string())
+                    .collect();
+                owners.sort();
+                owners.dedup();
+                let current: std::collections::BTreeSet<String> = nodes
+                    .list_edges(&owners, &crate::graph_generation::current_derivations())?
+                    .into_iter()
+                    .map(|edge| edge.id)
+                    .collect();
+                let mut term_ids = Vec::new();
+                let mut derived_ids = Vec::new();
+                for edge in &page.edges {
+                    for (id, kind) in [
+                        (&edge.source, edge.source_kind),
+                        (&edge.target, edge.target_kind),
+                    ] {
+                        match kind {
+                            crate::domain::VertexKind::Term => term_ids.push(id.clone()),
+                            crate::domain::VertexKind::Evidence
+                            | crate::domain::VertexKind::Assumption
+                            | crate::domain::VertexKind::Guarantee => derived_ids.push(id.clone()),
+                            crate::domain::VertexKind::Specification => {}
+                        }
+                    }
+                }
+                term_ids.sort();
+                term_ids.dedup();
+                derived_ids.sort();
+                derived_ids.dedup();
+                let terms = nodes.get_term_nodes(&term_ids)?;
+                let derived = nodes.get_derived_nodes(&derived_ids)?;
+                let total = nodes.count_edges()?;
+                Ok((page, terms, derived, current, total))
+            })
+            .await
+            .map_err(|error| {
+                Status::internal(format!("ledger read task failed to run: {error}"))
+            })?;
+        let (page, terms, derived, current, total) = outcome.map_err(|error| {
+            let message = error.to_string();
+            tracing::Span::current().record("error.message", message.as_str());
+            Status::internal(message)
+        })?;
+        let next_page_token = page.next_cursor.unwrap_or_default();
+        tracing::Span::current().record("ledger.page.edge_count", page.edges.len() as u64);
+        tracing::Span::current().record("ledger.page.has_next", !next_page_token.is_empty());
+        tracing::Span::current().record("ledger.total_edges", total);
+        Ok(Response::new(pb::GetLedgerResponse {
+            edges: page
+                .edges
+                .iter()
+                .map(|edge| convert::edge_to_pb_with_current(edge, current.contains(&edge.id)))
+                .collect(),
+            next_page_token,
+            total_edges: total,
+            term_nodes: terms.iter().map(convert::term_node_to_pb).collect(),
+            derived_nodes: derived.iter().map(convert::derived_node_to_pb).collect(),
+        }))
+    }
+
+    async fn add_assumption_relation_inner(
+        &self,
+        request: Request<pb::AddAssumptionRelationRequest>,
+    ) -> Result<Response<pb::AddAssumptionRelationResponse>, Status> {
+        let req = request.into_inner();
+        if req.source.is_empty() || req.target.is_empty() || req.relied.is_empty() {
+            return Err(Status::invalid_argument(
+                "pairing source, target, and relied node ids must not be empty",
+            ));
+        }
+        let kind = match pb::EdgeKind::try_from(req.kind).unwrap_or(pb::EdgeKind::Unspecified) {
+            pb::EdgeKind::OccurrenceReliance => crate::domain::EdgeKind::OccurrenceReliance,
+            pb::EdgeKind::GuaranteeDischarge => crate::domain::EdgeKind::GuaranteeDischarge,
+            pb::EdgeKind::AdmissibilityEnvelope => {
+                crate::domain::EdgeKind::AdmissibilityEnvelope
+            }
+            _ => {
+                return Err(Status::invalid_argument(
+                    "pairing kind must be occurrence_reliance, guarantee_discharge, or admissibility_envelope",
+                ))
+            }
+        };
+        tracing::Span::current().record("pairing.kind", kind.as_str());
+        tracing::Span::current().record("pairing.source", req.source.as_str());
+        tracing::Span::current().record("pairing.target", req.target.as_str());
+        tracing::Span::current().record("pairing.relied", req.relied.as_str());
+        tracing::Span::current().record("pairing.basis_count", req.basis_spec_ids.len() as u64);
+        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let nodes = self.nodes.clone();
+        let task_span = tracing::info_span!("spec.daemon.pairing_write_blocking");
+        let result = tokio::task::spawn_blocking(move || {
+            let _entered = task_span.enter();
+            crate::pairing::append_relation(
+                &*nodes,
+                kind,
+                &req.source,
+                &req.target,
+                &req.relied,
+                req.basis_spec_ids,
+                &now,
+            )
+        })
+        .await
+        .map_err(|error| Status::internal(format!("pairing write task failed to run: {error}")))?;
+        let edge = match result {
+            Ok(edge) => edge,
+            Err(crate::pairing::PairingError::MissingNode(id)) => {
+                return Err(Status::not_found(format!(
+                    "specification node '{id}' does not exist"
+                )))
+            }
+            Err(error) if error.is_bad_input() => {
+                return Err(Status::invalid_argument(error.to_string()))
+            }
+            Err(error) => {
+                let message = error.to_string();
+                tracing::Span::current().record("error.message", message.as_str());
+                return Err(Status::internal(message));
+            }
+        };
+        tracing::Span::current().record("edge.id", edge.id.as_str());
+        Ok(Response::new(pb::AddAssumptionRelationResponse {
+            edge: Some(convert::edge_to_pb(&edge)),
+        }))
+    }
+
+    async fn add_selection_relation_inner(
+        &self,
+        request: Request<pb::AddSelectionRelationRequest>,
+    ) -> Result<Response<pb::AddSelectionRelationResponse>, Status> {
+        let req = request.into_inner();
+        if req.source.is_empty() || req.target.is_empty() {
+            return Err(Status::invalid_argument(
+                "selection source and target node ids must not be empty",
+            ));
+        }
+        let kind = match pb::EdgeKind::try_from(req.kind).unwrap_or(pb::EdgeKind::Unspecified) {
+            pb::EdgeKind::Supports => crate::domain::EdgeKind::Supports,
+            pb::EdgeKind::Defeats => crate::domain::EdgeKind::Defeats,
+            pb::EdgeKind::Supersedes => crate::domain::EdgeKind::Supersedes,
+            _ => {
+                return Err(Status::invalid_argument(
+                    "selection kind must be supports, defeats, or supersedes",
+                ))
+            }
+        };
+        tracing::Span::current().record("selection.kind", kind.as_str());
+        tracing::Span::current().record("selection.source", req.source.as_str());
+        tracing::Span::current().record("selection.target", req.target.as_str());
+        tracing::Span::current().record("selection.basis_count", req.basis_spec_ids.len() as u64);
+        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let nodes = self.nodes.clone();
+        let task_span = tracing::info_span!("spec.daemon.selection_write_blocking");
+        let result = tokio::task::spawn_blocking(move || {
+            let _entered = task_span.enter();
+            crate::selection::append_relation(
+                &*nodes,
+                kind,
+                &req.source,
+                &req.target,
+                req.basis_spec_ids,
+                &now,
+            )
+        })
+        .await
+        .map_err(|error| {
+            Status::internal(format!("selection write task failed to run: {error}"))
+        })?;
+        let edge = match result {
+            Ok(edge) => edge,
+            Err(crate::selection::SelectionError::MissingNode(id)) => {
+                return Err(Status::not_found(format!(
+                    "specification node '{id}' does not exist"
+                )))
+            }
+            Err(error) if error.is_bad_input() => {
+                return Err(Status::invalid_argument(error.to_string()))
+            }
+            Err(error) => {
+                let message = error.to_string();
+                tracing::Span::current().record("error.message", message.as_str());
+                return Err(Status::internal(message));
+            }
+        };
+        tracing::Span::current().record("edge.id", edge.id.as_str());
+        Ok(Response::new(pb::AddSelectionRelationResponse {
+            edge: Some(convert::edge_to_pb(&edge)),
+        }))
+    }
+
     async fn add_specification_inner(
         &self,
         request: Request<pb::AddSpecificationRequest>,
@@ -217,8 +553,10 @@ impl SpecificationGraphService {
                 let _entered = read_span.enter();
                 let page = nodes.list_nodes(after.as_deref(), limit)?;
                 let ids: Vec<String> = page.nodes.iter().map(|n| n.id.clone()).collect();
-                let edges =
-                    nodes.list_edges(&ids, &crate::graph_generation::current_derivations())?;
+                let derivations = crate::graph_generation::current_derivations();
+                let population = nodes.selection_population(&ids, &derivations)?;
+                let selection = crate::selection::derive_views(&ids, &population);
+                let edges = nodes.list_edges(&ids, &derivations)?;
                 let mut term_ids: Vec<String> = edges
                     .iter()
                     .filter(|edge| {
@@ -246,12 +584,12 @@ impl SpecificationGraphService {
                 derived_ids.dedup();
                 let derived = nodes.get_derived_nodes(&derived_ids)?;
                 let total = nodes.count_nodes()?;
-                Ok((page, terms, derived, edges, total))
+                Ok((page, terms, derived, edges, selection, total))
             })
             .await
             .map_err(|e| Status::internal(format!("graph read task failed to run: {e}")))?;
 
-        let (page, terms, derived, edges, total) = match outcome {
+        let (page, terms, derived, edges, selection, total) = match outcome {
             Ok(result) => result,
             Err(e) => {
                 let message = e.to_string();
@@ -272,8 +610,45 @@ impl SpecificationGraphService {
             "graph read completed"
         );
 
+        let assumption_expressions: BTreeMap<&str, &str> = derived
+            .iter()
+            .filter_map(|node| match node {
+                crate::domain::DerivedNode::Assumption { id, expression, .. } => {
+                    Some((id.as_str(), expression.as_str()))
+                }
+                _ => None,
+            })
+            .collect();
+        let current_assumptions: BTreeMap<&str, &str> = edges
+            .iter()
+            .filter(|edge| edge.kind == crate::domain::EdgeKind::HasAssumption)
+            .filter_map(|edge| {
+                assumption_expressions
+                    .get(edge.target.as_str())
+                    .copied()
+                    .map(|expression| (edge.source.as_str(), expression))
+            })
+            .collect();
+
         Ok(Response::new(pb::GetGraphResponse {
-            nodes: page.nodes.iter().map(convert::node_to_pb).collect(),
+            nodes: page
+                .nodes
+                .iter()
+                .map(|node| {
+                    let view = selection.get(&node.id).cloned().unwrap_or_default();
+                    let mut wire = convert::node_to_pb_with_selection(node, &view);
+                    if let Some(expression) = current_assumptions.get(node.id.as_str()) {
+                        if let Some(contract) = wire
+                            .sentence
+                            .as_mut()
+                            .and_then(|sentence| sentence.contract.as_mut())
+                        {
+                            contract.assumption = (*expression).to_string();
+                        }
+                    }
+                    wire
+                })
+                .collect(),
             edges: edges.iter().map(convert::edge_to_pb).collect(),
             next_page_token,
             total_nodes: total,
@@ -347,9 +722,12 @@ fn add_error_to_status(e: AddError) -> Status {
 mod tests {
     use super::*;
     use crate::add_mailbox::AddMailbox;
-    use crate::domain::{Edge, EdgeKind, Meta, Node, VertexKind};
+    use crate::domain::{
+        Anchor, DerivedNode, Edge, EdgeKind, Evidence, Kind, Locator, Meta, Node, Origin, Snapshot,
+        VertexKind,
+    };
     use crate::jobs::JobMailbox;
-    use crate::store::{BlobStore, InMemoryNodeStore, NodeStore, StoreError};
+    use crate::store::{BlobStore, GraphStore, InMemoryNodeStore, NodeStore, StoreError};
 
     #[test]
     fn clamp_page_size_applies_default_floor_and_ceiling() {
@@ -376,6 +754,7 @@ mod tests {
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
                 evidence_requests: vec![],
+                evidence_request_generation: String::new(),
                 evidence: vec![],
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),
@@ -383,6 +762,30 @@ mod tests {
                 updates: Default::default(),
             },
         }
+    }
+
+    fn ground(store: &InMemoryNodeStore, specification: &str, kind: Kind, locator: &str) {
+        let evidence = DerivedNode::evidence(Evidence {
+            kind,
+            locator: Locator::parse(locator),
+            snapshot: Snapshot {
+                content: String::new(),
+                content_hash: format!("hash-{locator}"),
+                bytes: 1,
+                captured_at: "t".into(),
+                anchor: Anchor::Worktree,
+            },
+            origin: Origin::default(),
+        });
+        let edge = Edge::projection(
+            EdgeKind::GroundedBy,
+            specification,
+            evidence.id(),
+            crate::evidence_capture::evidence_derivation(),
+            "t",
+        )
+        .unwrap();
+        store.put_derived_node(&evidence, &edge).unwrap();
     }
 
     #[tokio::test]
@@ -448,6 +851,7 @@ mod tests {
                 kind: EdgeKind::Refines,
                 source_anchor: None,
                 target_anchor: None,
+                relied_spec_id: None,
                 basis_spec_ids: vec![],
                 derivation: crate::graph_generation::semantic_edge_derivation(),
                 recorded_at: "t".into(),
@@ -525,6 +929,627 @@ mod tests {
             edge.kind == pb::EdgeKind::HasGuarantee as i32
                 && edge.target_kind == pb::VertexKind::Guarantee as i32
         }));
+
+        adds.shutdown().await.unwrap();
+        adds_task.await.unwrap();
+        jobs.shutdown().await.unwrap();
+        jobs_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn explicit_selection_relation_changes_the_derived_current_set() {
+        let store = Arc::new(InMemoryNodeStore::new());
+        for id in ["replacement", "retired", "supporter"] {
+            store.add_node(&node(id)).unwrap();
+        }
+        ground(
+            &store,
+            "replacement",
+            Kind::Assertoric,
+            "replacement-policy",
+        );
+        ground(&store, "retired", Kind::Assertoric, "retired-policy");
+        ground(&store, "supporter", Kind::Demonstrative, "supporter-proof");
+        let blobs = Arc::new(NoBlobs);
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
+        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
+        let service = SpecificationGraphService::new(store, adds.clone());
+
+        let supersedes = service
+            .add_selection_relation(Request::new(pb::AddSelectionRelationRequest {
+                source: "replacement".into(),
+                target: "retired".into(),
+                kind: pb::EdgeKind::Supersedes as i32,
+                basis_spec_ids: vec![],
+            }))
+            .await
+            .unwrap()
+            .into_inner()
+            .edge
+            .unwrap();
+        let supports = service
+            .add_selection_relation(Request::new(pb::AddSelectionRelationRequest {
+                source: "supporter".into(),
+                target: "replacement".into(),
+                kind: pb::EdgeKind::Supports as i32,
+                basis_spec_ids: vec![],
+            }))
+            .await
+            .unwrap()
+            .into_inner()
+            .edge
+            .unwrap();
+        assert_eq!(supersedes.family, pb::EdgeFamily::Selection as i32);
+        assert_eq!(supports.family, pb::EdgeFamily::Selection as i32);
+
+        let graph = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        let retired = graph
+            .nodes
+            .iter()
+            .find(|node| node.id == "retired")
+            .unwrap();
+        let retired_view = retired.selection.as_ref().unwrap();
+        assert!(!retired_view.current);
+        assert_eq!(retired_view.support_score, 4);
+        assert_eq!(
+            retired_view.policy_version,
+            crate::selection::FITNESS_POLICY_VERSION
+        );
+        assert_eq!(retired_view.superseding_edge_ids, vec![supersedes.id]);
+        let replacement = graph
+            .nodes
+            .iter()
+            .find(|node| node.id == "replacement")
+            .unwrap();
+        let replacement_view = replacement.selection.as_ref().unwrap();
+        assert!(
+            replacement_view.current,
+            "grounded support raises the viable replacement's fitness"
+        );
+        assert_eq!(replacement_view.evidence_score, 4);
+        assert_eq!(replacement_view.relation_score, 4);
+        assert_eq!(replacement_view.support_score, 8);
+        assert_eq!(replacement_view.supporting_edge_ids, vec![supports.id]);
+        assert_eq!(
+            graph
+                .edges
+                .iter()
+                .filter(|edge| edge.family == pb::EdgeFamily::Selection as i32)
+                .count(),
+            2
+        );
+
+        adds.shutdown().await.unwrap();
+        adds_task.await.unwrap();
+        jobs.shutdown().await.unwrap();
+        jobs_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn accumulating_evidence_reselects_the_better_supported_coherent_set() {
+        let store = Arc::new(InMemoryNodeStore::new());
+        store.add_node(&node("candidate-a")).unwrap();
+        store.add_node(&node("candidate-z")).unwrap();
+        let conflict = Edge::specification_relation(
+            EdgeKind::HardContradiction,
+            "candidate-a",
+            "candidate-z",
+            vec![],
+            crate::graph_generation::semantic_edge_derivation(),
+            "t0",
+        )
+        .unwrap();
+        store.append_edge(&conflict).unwrap();
+        ground(&store, "candidate-a", Kind::Unknown, "candidate-a-hint");
+        ground(
+            &store,
+            "candidate-z",
+            Kind::Assertoric,
+            "candidate-z-policy",
+        );
+        let edge_count_before = store.count_edges().unwrap();
+
+        let blobs = Arc::new(NoBlobs);
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
+        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
+        let service = SpecificationGraphService::new(store.clone(), adds.clone());
+        let graph = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        let selected: std::collections::BTreeSet<&str> = graph
+            .nodes
+            .iter()
+            .filter(|node| node.selection.as_ref().is_some_and(|view| view.current))
+            .map(|node| node.id.as_str())
+            .collect();
+        assert_eq!(selected, std::collections::BTreeSet::from(["candidate-z"]));
+
+        // A newly accumulated, stronger independent proof changes only the
+        // derived view. The losing candidate and every older Edge remain in
+        // the Ledger.
+        ground(
+            &store,
+            "candidate-a",
+            Kind::Demonstrative,
+            "candidate-a-proof",
+        );
+        let graph = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        let selected: std::collections::BTreeSet<&str> = graph
+            .nodes
+            .iter()
+            .filter(|node| node.selection.as_ref().is_some_and(|view| view.current))
+            .map(|node| node.id.as_str())
+            .collect();
+        assert_eq!(selected, std::collections::BTreeSet::from(["candidate-a"]));
+        let winner = graph
+            .nodes
+            .iter()
+            .find(|node| node.id == "candidate-a")
+            .unwrap()
+            .selection
+            .as_ref()
+            .unwrap();
+        assert_eq!(winner.support_score, 9);
+        assert_eq!(
+            winner
+                .contributions
+                .iter()
+                .map(|contribution| contribution.points)
+                .sum::<i32>(),
+            winner.support_score
+        );
+        let loser = graph
+            .nodes
+            .iter()
+            .find(|node| node.id == "candidate-z")
+            .unwrap()
+            .selection
+            .as_ref()
+            .unwrap();
+        assert_eq!(loser.exclusions[0].kind, "contradicted");
+        assert_eq!(store.count_edges().unwrap(), edge_count_before + 1);
+
+        adds.shutdown().await.unwrap();
+        adds_task.await.unwrap();
+        jobs.shutdown().await.unwrap();
+        jobs_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn receded_selection_sources_stop_affecting_current_candidates_but_stay_in_ledger() {
+        let store = Arc::new(InMemoryNodeStore::new());
+        for id in ["source", "supported", "defeated", "competitor"] {
+            store.add_node(&node(id)).unwrap();
+        }
+        ground(&store, "source", Kind::Assertoric, "source-proof");
+        ground(&store, "supported", Kind::Circumstantial, "supported-proof");
+        ground(&store, "defeated", Kind::Circumstantial, "defeated-proof");
+        ground(
+            &store,
+            "competitor",
+            Kind::Demonstrative,
+            "competitor-proof",
+        );
+        let supports = Edge::specification_relation(
+            EdgeKind::Supports,
+            "source",
+            "supported",
+            vec![],
+            crate::selection::derivation(),
+            "t",
+        )
+        .unwrap();
+        let defeats = Edge::specification_relation(
+            EdgeKind::Defeats,
+            "source",
+            "defeated",
+            vec![],
+            crate::selection::derivation(),
+            "t",
+        )
+        .unwrap();
+        let conflict = Edge::specification_relation(
+            EdgeKind::HardContradiction,
+            "competitor",
+            "source",
+            vec![],
+            crate::graph_generation::semantic_edge_derivation(),
+            "t",
+        )
+        .unwrap();
+        for edge in [&supports, &defeats, &conflict] {
+            store.append_edge(edge).unwrap();
+        }
+
+        let blobs = Arc::new(NoBlobs);
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
+        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
+        let service = SpecificationGraphService::new(store.clone(), adds.clone());
+        let graph = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        let selection = |id: &str| {
+            graph
+                .nodes
+                .iter()
+                .find(|node| node.id == id)
+                .unwrap()
+                .selection
+                .as_ref()
+                .unwrap()
+        };
+        assert!(!selection("source").current);
+        assert!(selection("competitor").current);
+        assert!(selection("supported").current);
+        assert_eq!(selection("supported").relation_score, 0);
+        assert!(selection("defeated").current);
+        assert!(selection("defeated")
+            .exclusions
+            .iter()
+            .all(|reason| reason.kind != "defeated"));
+
+        let ledger = service
+            .get_ledger(Request::new(pb::GetLedgerRequest {
+                page_size: 100,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        assert!(ledger.edges.iter().any(|edge| edge.id == supports.id));
+        assert!(ledger.edges.iter().any(|edge| edge.id == defeats.id));
+
+        adds.shutdown().await.unwrap();
+        adds_task.await.unwrap();
+        jobs.shutdown().await.unwrap();
+        jobs_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn refresh_replaces_fitness_input_while_ledger_keeps_every_capture() {
+        let temp = tempfile::tempdir().unwrap();
+        let evidence_path = temp.path().join("pump-proof.txt");
+        std::fs::write(&evidence_path, "proof-v1").unwrap();
+        let locator = evidence_path.to_string_lossy();
+        let positive = serde_json::json!({
+            "kind": "demonstrative",
+            "locator": locator.as_ref(),
+        })
+        .to_string();
+        let counter = serde_json::json!({
+            "kind": "counter",
+            "locator": locator.as_ref(),
+        })
+        .to_string();
+
+        let store = Arc::new(InMemoryNodeStore::new());
+        let blobs =
+            Arc::new(crate::store::FileBlobStore::open(&temp.path().join("blobs")).unwrap());
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
+        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
+        let service = SpecificationGraphService::new(store.clone(), adds.clone());
+
+        let accepted = service
+            .add_specification(Request::new(pb::AddSpecificationRequest {
+                specification: "The pump shall stop.".into(),
+                evidence: vec![positive.clone()],
+                client: "test".into(),
+                client_version: "test".into(),
+            }))
+            .await
+            .unwrap()
+            .into_inner()
+            .node
+            .unwrap();
+        let first =
+            wait_for_captured_evidence(&store, &accepted.id, None, Kind::Demonstrative, None).await;
+        let first_hash = first.meta.evidence[0].snapshot.content_hash.clone();
+
+        let graph = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        let first_view = graph.nodes[0].selection.as_ref().unwrap();
+        assert!(first_view.current);
+        assert_eq!(first_view.support_score, 8);
+        assert_eq!(first_view.contributions.len(), 1);
+
+        // The descriptor is intentionally unchanged. The persisted request
+        // generation, rather than descriptor hash or wall-clock resolution,
+        // forces a fresh snapshot after the artifact changes.
+        std::fs::write(&evidence_path, "proof-v2").unwrap();
+        let refreshed = service
+            .replace_evidence(Request::new(pb::ReplaceEvidenceRequest {
+                node_id: accepted.id.clone(),
+                evidence: vec![positive],
+            }))
+            .await
+            .unwrap()
+            .into_inner()
+            .node
+            .unwrap();
+        let generation = refreshed
+            .meta
+            .as_ref()
+            .unwrap()
+            .evidence_request_generation
+            .clone();
+        assert!(!generation.is_empty());
+        let second = wait_for_captured_evidence(
+            &store,
+            &accepted.id,
+            Some(&generation),
+            Kind::Demonstrative,
+            Some(&first_hash),
+        )
+        .await;
+        let second_hash = second.meta.evidence[0].snapshot.content_hash.clone();
+        assert_ne!(first_hash, second_hash);
+
+        // Reclassifying the same locator as Counter Evidence makes the old
+        // positive GroundedBy edges inert for fitness without deleting them.
+        let replaced = service
+            .replace_evidence(Request::new(pb::ReplaceEvidenceRequest {
+                node_id: accepted.id.clone(),
+                evidence: vec![counter],
+            }))
+            .await
+            .unwrap()
+            .into_inner()
+            .node
+            .unwrap();
+        let generation = replaced
+            .meta
+            .as_ref()
+            .unwrap()
+            .evidence_request_generation
+            .clone();
+        wait_for_captured_evidence(&store, &accepted.id, Some(&generation), Kind::Counter, None)
+            .await;
+        let graph = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        let view = graph.nodes[0].selection.as_ref().unwrap();
+        assert!(!view.current);
+        assert_eq!(view.support_score, -8);
+        assert_eq!(view.contributions.len(), 1);
+        assert_eq!(view.contributions[0].kind, "counter_evidence");
+        assert_eq!(
+            graph
+                .edges
+                .iter()
+                .filter(|edge| edge.kind == pb::EdgeKind::GroundedBy as i32)
+                .count(),
+            1,
+            "the current graph exposes only the current Evidence projection"
+        );
+
+        let ledger = store.list_ledger_edges(None, 100).unwrap();
+        assert_eq!(
+            ledger
+                .edges
+                .iter()
+                .filter(|edge| edge.kind == EdgeKind::GroundedBy)
+                .count(),
+            3,
+            "all three immutable captures remain auditable"
+        );
+        let wire_ledger = service
+            .get_ledger(Request::new(pb::GetLedgerRequest {
+                page_size: 100,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        let grounding: Vec<&pb::Edge> = wire_ledger
+            .edges
+            .iter()
+            .filter(|edge| edge.kind == pb::EdgeKind::GroundedBy as i32)
+            .collect();
+        assert_eq!(grounding.len(), 3);
+        assert_eq!(
+            grounding.iter().filter(|edge| edge.current).count(),
+            1,
+            "Ledger distinguishes the one current capture from two historical projections"
+        );
+
+        adds.shutdown().await.unwrap();
+        adds_task.await.unwrap();
+        jobs.shutdown().await.unwrap();
+        jobs_task.await.unwrap();
+    }
+
+    async fn wait_for_captured_evidence(
+        store: &InMemoryNodeStore,
+        node_id: &str,
+        generation: Option<&str>,
+        kind: Kind,
+        different_from_hash: Option<&str>,
+    ) -> Node {
+        for _ in 0..200 {
+            let node = store.get_node(node_id).unwrap().unwrap();
+            let generation_matches =
+                generation.is_none_or(|expected| node.meta.evidence_request_generation == expected);
+            let evidence_matches = node
+                .meta
+                .evidence
+                .as_slice()
+                .first()
+                .is_some_and(|evidence| {
+                    evidence.kind == kind
+                        && different_from_hash
+                            .is_none_or(|old| evidence.snapshot.content_hash != old)
+                });
+            if generation_matches && evidence_matches {
+                return node;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        panic!("timed out waiting for Evidence capture of {node_id}");
+    }
+
+    #[tokio::test]
+    async fn assumption_rpc_exposes_explicit_reliance_and_current_paired_contract() {
+        let store = Arc::new(InMemoryNodeStore::new());
+        let mut source = node("source");
+        source.statement = "The sensor shall report the alarm.".into();
+        let mut target = node("target");
+        target.statement = "The controller shall stop the pump.".into();
+        store.add_node(&source).unwrap();
+        store.add_node(&target).unwrap();
+        crate::graph_generation::generate_and_persist(&target, &*store, "t0").unwrap();
+        let blobs = Arc::new(NoBlobs);
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
+        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
+        let service = SpecificationGraphService::new(store, adds.clone());
+
+        let paired = service
+            .add_assumption_relation(Request::new(pb::AddAssumptionRelationRequest {
+                source: source.id.clone(),
+                target: target.id.clone(),
+                relied: source.id.clone(),
+                kind: pb::EdgeKind::GuaranteeDischarge as i32,
+                basis_spec_ids: vec![],
+            }))
+            .await
+            .unwrap()
+            .into_inner()
+            .edge
+            .unwrap();
+        assert_eq!(paired.relied_spec_id.as_deref(), Some(source.id.as_str()));
+        assert_eq!(paired.family, pb::EdgeFamily::Semantic as i32);
+
+        let graph = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        let target_wire = graph
+            .nodes
+            .iter()
+            .find(|node| node.id == target.id)
+            .unwrap();
+        assert_eq!(
+            target_wire
+                .sentence
+                .as_ref()
+                .and_then(|sentence| sentence.contract.as_ref())
+                .map(|contract| contract.assumption.as_str()),
+            Some(source.statement.as_str())
+        );
+        let assumption_edges: Vec<&pb::Edge> = graph
+            .edges
+            .iter()
+            .filter(|edge| {
+                edge.source == target.id && edge.kind == pb::EdgeKind::HasAssumption as i32
+            })
+            .collect();
+        assert_eq!(assumption_edges.len(), 1);
+        assert_eq!(
+            assumption_edges[0].derivation.as_ref().unwrap().method,
+            crate::pairing::PAIRED_PROJECTION_METHOD
+        );
+        let ledger = service
+            .get_ledger(Request::new(pb::GetLedgerRequest {
+                page_size: 100,
+                page_token: String::new(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        let historical_assumptions: Vec<&pb::Edge> = ledger
+            .edges
+            .iter()
+            .filter(|edge| {
+                edge.source == target.id && edge.kind == pb::EdgeKind::HasAssumption as i32
+            })
+            .collect();
+        assert_eq!(historical_assumptions.len(), 2);
+        assert_eq!(
+            historical_assumptions
+                .iter()
+                .filter(|edge| edge.current)
+                .count(),
+            1
+        );
+        assert!(historical_assumptions.iter().any(|edge| {
+            !edge.current
+                && edge.derivation.as_ref().unwrap().method
+                    == crate::graph_generation::CONTRACT_PROJECTION_METHOD
+        }));
+
+        adds.shutdown().await.unwrap();
+        adds_task.await.unwrap();
+        jobs.shutdown().await.unwrap();
+        jobs_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn selection_rpc_rejects_non_selection_and_unknown_endpoints() {
+        let store = Arc::new(InMemoryNodeStore::new());
+        store.add_node(&node("known")).unwrap();
+        let blobs = Arc::new(NoBlobs);
+        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
+        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
+        let service = SpecificationGraphService::new(store, adds.clone());
+
+        let invalid = service
+            .add_selection_relation(Request::new(pb::AddSelectionRelationRequest {
+                source: "known".into(),
+                target: "missing".into(),
+                kind: pb::EdgeKind::Refines as i32,
+                basis_spec_ids: vec![],
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(invalid.code(), tonic::Code::InvalidArgument);
+        let missing = service
+            .add_selection_relation(Request::new(pb::AddSelectionRelationRequest {
+                source: "known".into(),
+                target: "missing".into(),
+                kind: pb::EdgeKind::Supports as i32,
+                basis_spec_ids: vec![],
+            }))
+            .await
+            .unwrap_err();
+        assert_eq!(missing.code(), tonic::Code::NotFound);
 
         adds.shutdown().await.unwrap();
         adds_task.await.unwrap();

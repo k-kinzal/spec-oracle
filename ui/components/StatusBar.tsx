@@ -11,6 +11,7 @@ export default function StatusBar({
   canLoadMore,
   atHardCap,
   onLoadMore,
+  unit = "specifications",
 }: {
   loaded: number;
   total: number;
@@ -18,6 +19,7 @@ export default function StatusBar({
   canLoadMore: boolean;
   atHardCap: boolean;
   onLoadMore: () => void;
+  unit?: string;
 }) {
   const pct = total > 0 ? Math.min(100, (loaded / total) * 100) : 0;
   return (
@@ -25,7 +27,7 @@ export default function StatusBar({
       {loading && <span className="spinner" aria-label="loading" />}
       <span className="count">
         <strong>{loaded.toLocaleString()}</strong>{" "}
-        <span className="muted">of {total.toLocaleString()} specifications</span>
+        <span className="muted">of {total.toLocaleString()} {unit}</span>
       </span>
       <span className="bar" aria-hidden>
         <span style={{ width: `${pct}%` }} />

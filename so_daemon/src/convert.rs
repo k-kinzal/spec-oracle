@@ -115,6 +115,9 @@ fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
         domain::EdgeKind::AdvisoryTension => pb::EdgeKind::AdvisoryTension,
         domain::EdgeKind::DescriptiveConflict => pb::EdgeKind::DescriptiveConflict,
         domain::EdgeKind::EnvelopeConflict => pb::EdgeKind::EnvelopeConflict,
+        domain::EdgeKind::OccurrenceReliance => pb::EdgeKind::OccurrenceReliance,
+        domain::EdgeKind::GuaranteeDischarge => pb::EdgeKind::GuaranteeDischarge,
+        domain::EdgeKind::AdmissibilityEnvelope => pb::EdgeKind::AdmissibilityEnvelope,
         domain::EdgeKind::Supports => pb::EdgeKind::Supports,
         domain::EdgeKind::Defeats => pb::EdgeKind::Defeats,
         domain::EdgeKind::Supersedes => pb::EdgeKind::Supersedes,
@@ -153,6 +156,12 @@ fn endpoint_role_to_pb(role: domain::EndpointRole) -> pb::EdgeEndpointRole {
         domain::EndpointRole::ContractSpecification => pb::EdgeEndpointRole::ContractSpecification,
         domain::EndpointRole::Assumption => pb::EdgeEndpointRole::Assumption,
         domain::EndpointRole::Guarantee => pb::EdgeEndpointRole::Guarantee,
+        domain::EndpointRole::RelianceEvidence => pb::EdgeEndpointRole::RelianceEvidence,
+        domain::EndpointRole::ReliantContract => pb::EdgeEndpointRole::ReliantContract,
+        domain::EndpointRole::DischargingGuarantee => pb::EdgeEndpointRole::DischargingGuarantee,
+        domain::EndpointRole::DischargedContract => pb::EdgeEndpointRole::DischargedContract,
+        domain::EndpointRole::AdmissibleEnvironment => pb::EdgeEndpointRole::AdmissibleEnvironment,
+        domain::EndpointRole::BoundedContract => pb::EdgeEndpointRole::BoundedContract,
     }
 }
 
@@ -178,6 +187,10 @@ fn text_anchor_to_pb(anchor: &domain::TextAnchor) -> pb::TextAnchor {
 /// absent: nothing receives edges into the domain yet — they are derived, not
 /// ingested — so that direction attaches with edge derivation.
 pub fn edge_to_pb(e: &domain::Edge) -> pb::Edge {
+    edge_to_pb_with_current(e, true)
+}
+
+pub fn edge_to_pb_with_current(e: &domain::Edge, current: bool) -> pb::Edge {
     pb::Edge {
         id: e.id.clone(),
         source: e.source.clone(),
@@ -196,6 +209,8 @@ pub fn edge_to_pb(e: &domain::Edge) -> pb::Edge {
         family: edge_family_to_pb(e.family()) as i32,
         source_role: endpoint_role_to_pb(e.source_role) as i32,
         target_role: endpoint_role_to_pb(e.target_role) as i32,
+        relied_spec_id: e.relied_spec_id.clone(),
+        current,
     }
 }
 
@@ -220,12 +235,14 @@ pub fn derived_node_to_pb(node: &domain::DerivedNode) -> pb::DerivedNode {
         domain::DerivedNode::Assumption {
             id,
             expression,
+            formula_json,
             derivation_version,
         } => (
             id.clone(),
             pb::derived_node::Value::Assumption(pb::AssumptionNode {
                 expression: expression.clone(),
                 derivation_version: derivation_version.clone(),
+                formula_json: formula_json.clone(),
             }),
         ),
         domain::DerivedNode::Guarantee {
@@ -387,6 +404,7 @@ fn evidence_from_pb(e: pb::Evidence) -> Result<domain::Evidence, ConvertError> {
 fn meta_to_pb(m: &domain::Meta) -> pb::Meta {
     pb::Meta {
         evidence_requests: m.evidence_requests.clone(),
+        evidence_request_generation: m.evidence_request_generation.clone(),
         evidence: m.evidence.iter().map(evidence_to_pb).collect(),
         created_at: m.created_at.clone(),
         cli: m.cli.clone(),
@@ -407,6 +425,7 @@ fn meta_to_pb(m: &domain::Meta) -> pb::Meta {
 fn meta_from_pb(m: pb::Meta) -> Result<domain::Meta, ConvertError> {
     Ok(domain::Meta {
         evidence_requests: m.evidence_requests,
+        evidence_request_generation: m.evidence_request_generation,
         evidence: m
             .evidence
             .into_iter()
@@ -452,6 +471,43 @@ pub fn accepted_node_to_pb(n: &domain::Node) -> pb::Node {
     node_to_pb_with_sentence(n, None)
 }
 
+pub fn node_to_pb_with_selection(n: &domain::Node, selection: &domain::SelectionView) -> pb::Node {
+    let mut node = node_to_pb(n);
+    node.selection = Some(pb::SelectionView {
+        current: selection.current(),
+        supporting_edge_ids: selection.supporting_edge_ids.clone(),
+        defeating_edge_ids: selection.defeating_edge_ids.clone(),
+        superseding_edge_ids: selection.superseding_edge_ids.clone(),
+        policy_version: selection.policy_version.clone(),
+        support_score: selection.support_score,
+        evidence_score: selection.evidence_score,
+        relation_score: selection.relation_score,
+        contributions: selection
+            .contributions
+            .iter()
+            .map(|contribution| pb::ScoreContribution {
+                kind: contribution.kind.as_str().into(),
+                points: contribution.points,
+                edge_id: contribution.edge_id.clone(),
+                source_node_id: contribution.source_node_id.clone(),
+                evidence_node_id: contribution.evidence_node_id.clone(),
+                detail: contribution.detail.clone(),
+            })
+            .collect(),
+        exclusions: selection
+            .exclusions
+            .iter()
+            .map(|exclusion| pb::SelectionExclusion {
+                kind: exclusion.kind.as_str().into(),
+                edge_id: exclusion.edge_id.clone(),
+                competing_node_id: exclusion.competing_node_id.clone(),
+                detail: exclusion.detail.clone(),
+            })
+            .collect(),
+    });
+    node
+}
+
 fn node_to_pb_with_sentence(n: &domain::Node, sentence: Option<pb::SentenceView>) -> pb::Node {
     pb::Node {
         id: n.id.clone(),
@@ -459,6 +515,7 @@ fn node_to_pb_with_sentence(n: &domain::Node, sentence: Option<pb::SentenceView>
         lang_version: n.lang_version.clone(),
         sentence,
         meta: Some(meta_to_pb(&n.meta)),
+        selection: None,
     }
 }
 
@@ -491,6 +548,7 @@ mod tests {
             lang_version: so_lang::LANG_VERSION.into(),
             meta: Meta {
                 evidence_requests: vec!["src/x.rs:3:7".into()],
+                evidence_request_generation: String::new(),
                 evidence: vec![
                     Evidence {
                         kind: Kind::Constitutive,
@@ -661,6 +719,7 @@ mod tests {
             kind: EdgeKind::MentionsTerm,
             source_anchor: None,
             target_anchor: None,
+            relied_spec_id: None,
             basis_spec_ids: vec![],
             derivation: Derivation {
                 method: "test".into(),
@@ -714,6 +773,21 @@ mod tests {
                 pb::EdgeFamily::Semantic,
             ),
             (
+                EdgeKind::OccurrenceReliance,
+                pb::EdgeKind::OccurrenceReliance,
+                pb::EdgeFamily::Semantic,
+            ),
+            (
+                EdgeKind::GuaranteeDischarge,
+                pb::EdgeKind::GuaranteeDischarge,
+                pb::EdgeFamily::Semantic,
+            ),
+            (
+                EdgeKind::AdmissibilityEnvelope,
+                pb::EdgeKind::AdmissibilityEnvelope,
+                pb::EdgeFamily::Semantic,
+            ),
+            (
                 EdgeKind::Supports,
                 pb::EdgeKind::Supports,
                 pb::EdgeFamily::Selection,
@@ -741,6 +815,7 @@ mod tests {
                 kind,
                 source_anchor: None,
                 target_anchor: None,
+                relied_spec_id: kind.is_pairing().then(|| "relied".into()),
                 basis_spec_ids: vec![],
                 derivation: Derivation {
                     method: "test".into(),
@@ -753,6 +828,7 @@ mod tests {
             assert_eq!(wire.family, wire_family as i32);
             assert_ne!(wire.source_role, pb::EdgeEndpointRole::Unspecified as i32);
             assert_ne!(wire.target_role, pb::EdgeEndpointRole::Unspecified as i32);
+            assert_eq!(wire.relied_spec_id.is_some(), kind.is_pairing());
         }
     }
 }

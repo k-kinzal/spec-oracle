@@ -56,6 +56,12 @@ pub enum EndpointRole {
     ContractSpecification,
     Assumption,
     Guarantee,
+    RelianceEvidence,
+    ReliantContract,
+    DischargingGuarantee,
+    DischargedContract,
+    AdmissibleEnvironment,
+    BoundedContract,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,6 +81,13 @@ pub enum EdgeKind {
     DescriptiveConflict,
     /// A permission admits behavior forbidden by the other specification.
     EnvelopeConflict,
+    /// The target contract explicitly relies on an occurrence/state supported
+    /// by the source; `relied_spec_id` names the awaited assertion.
+    OccurrenceReliance,
+    /// The source guarantee discharges an assumption of the target contract.
+    GuaranteeDischarge,
+    /// The source permission bounds environment behavior tolerated by target.
+    AdmissibilityEnvelope,
     /// The source supplies a versioned positive selection reason for target.
     Supports,
     /// The source wins a versioned, explicitly resolved competition with target.
@@ -99,6 +112,9 @@ impl EdgeKind {
             Self::AdvisoryTension => "advisory_tension",
             Self::DescriptiveConflict => "descriptive_conflict",
             Self::EnvelopeConflict => "envelope_conflict",
+            Self::OccurrenceReliance => "occurrence_reliance",
+            Self::GuaranteeDischarge => "guarantee_discharge",
+            Self::AdmissibilityEnvelope => "admissibility_envelope",
             Self::Supports => "supports",
             Self::Defeats => "defeats",
             Self::Supersedes => "supersedes",
@@ -116,7 +132,10 @@ impl EdgeKind {
             | Self::HardContradiction
             | Self::AdvisoryTension
             | Self::DescriptiveConflict
-            | Self::EnvelopeConflict => EdgeFamily::Semantic,
+            | Self::EnvelopeConflict
+            | Self::OccurrenceReliance
+            | Self::GuaranteeDischarge
+            | Self::AdmissibilityEnvelope => EdgeFamily::Semantic,
             Self::Supports | Self::Defeats | Self::Supersedes => EdgeFamily::Selection,
             Self::GroundedBy | Self::HasAssumption | Self::HasGuarantee => EdgeFamily::Projection,
         }
@@ -131,6 +150,18 @@ impl EdgeKind {
             | Self::AdvisoryTension
             | Self::DescriptiveConflict
             | Self::EnvelopeConflict => (EndpointRole::ConflictPeer, EndpointRole::ConflictPeer),
+            Self::OccurrenceReliance => (
+                EndpointRole::RelianceEvidence,
+                EndpointRole::ReliantContract,
+            ),
+            Self::GuaranteeDischarge => (
+                EndpointRole::DischargingGuarantee,
+                EndpointRole::DischargedContract,
+            ),
+            Self::AdmissibilityEnvelope => (
+                EndpointRole::AdmissibleEnvironment,
+                EndpointRole::BoundedContract,
+            ),
             Self::Supports => (EndpointRole::Supporter, EndpointRole::Supported),
             Self::Defeats => (EndpointRole::Defeater, EndpointRole::Defeated),
             Self::Supersedes => (EndpointRole::Superseder, EndpointRole::Superseded),
@@ -149,6 +180,9 @@ impl EdgeKind {
             self,
             Self::MentionsTerm
                 | Self::Refines
+                | Self::OccurrenceReliance
+                | Self::GuaranteeDischarge
+                | Self::AdmissibilityEnvelope
                 | Self::Supports
                 | Self::Defeats
                 | Self::Supersedes
@@ -190,6 +224,12 @@ pub struct Edge {
     pub kind: EdgeKind,
     pub source_anchor: Option<TextAnchor>,
     pub target_anchor: Option<TextAnchor>,
+    /// Authored specification whose assertion is the exact formula awaited by
+    /// an assume-guarantee pairing. This is deliberately distinct from
+    /// `source`: the source is evidence, while the relied specification says
+    /// what the target actually assumes. Present only for pairing EdgeKinds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relied_spec_id: Option<String>,
     /// Specifications, beyond the endpoints, that make this connection
     /// checkable. Empty when the endpoints and anchored term incidence are the
     /// complete basis.
@@ -225,10 +265,37 @@ impl Edge {
             kind,
             source_anchor: None,
             target_anchor: None,
+            relied_spec_id: None,
             basis_spec_ids: Vec::new(),
             derivation,
             recorded_at: recorded_at.to_string(),
         };
+        edge.id = edge.identity_key();
+        edge.validate()?;
+        Ok(edge)
+    }
+
+    /// Build the current paired-assumption projection. Its specification
+    /// basis names every authored source/relied Node used to derive the
+    /// aggregate formula; a later pairing therefore appends a new projection
+    /// without deleting the previous Ledger view.
+    pub fn paired_assumption_projection(
+        specification: &str,
+        target: &str,
+        mut basis_spec_ids: Vec<String>,
+        derivation: Derivation,
+        recorded_at: &str,
+    ) -> Result<Self, String> {
+        basis_spec_ids.sort();
+        basis_spec_ids.dedup();
+        let mut edge = Self::projection(
+            EdgeKind::HasAssumption,
+            specification,
+            target,
+            derivation,
+            recorded_at,
+        )?;
+        edge.basis_spec_ids = basis_spec_ids;
         edge.id = edge.identity_key();
         edge.validate()?;
         Ok(edge)
@@ -247,6 +314,11 @@ impl Edge {
     ) -> Result<Self, String> {
         if kind.family() == EdgeFamily::Lexical {
             return Err("lexical incidence requires anchored term construction".to_string());
+        }
+        if kind.is_pairing() {
+            return Err(
+                "assume-guarantee pairing requires an explicit relied specification".to_string(),
+            );
         }
         let (source, target) = if !kind.directed() && source > target {
             (target, source)
@@ -267,6 +339,47 @@ impl Edge {
             kind,
             source_anchor: None,
             target_anchor: None,
+            relied_spec_id: None,
+            basis_spec_ids,
+            derivation,
+            recorded_at: recorded_at.to_string(),
+        };
+        edge.id = edge.identity_key();
+        edge.validate()?;
+        Ok(edge)
+    }
+
+    /// Build a checked specification-to-specification assume-guarantee edge.
+    /// The relied specification is part of the relationship identity because
+    /// changing what the target awaits changes the contract, even when source
+    /// and target remain the same.
+    pub fn assumption_relation(
+        kind: EdgeKind,
+        source: &str,
+        target: &str,
+        relied_spec_id: &str,
+        mut basis_spec_ids: Vec<String>,
+        derivation: Derivation,
+        recorded_at: &str,
+    ) -> Result<Self, String> {
+        if !kind.is_pairing() {
+            return Err("assumption relation construction requires a pairing EdgeKind".into());
+        }
+        basis_spec_ids.sort();
+        basis_spec_ids.dedup();
+        let (source_role, target_role) = kind.endpoint_roles();
+        let mut edge = Self {
+            id: String::new(),
+            source: source.to_string(),
+            source_kind: VertexKind::Specification,
+            source_role,
+            target: target.to_string(),
+            target_kind: VertexKind::Specification,
+            target_role,
+            kind,
+            source_anchor: None,
+            target_anchor: None,
+            relied_spec_id: Some(relied_spec_id.to_string()),
             basis_spec_ids,
             derivation,
             recorded_at: recorded_at.to_string(),
@@ -295,6 +408,7 @@ impl Edge {
             kind: EdgeKind,
             source_anchor: &'a Option<TextAnchor>,
             target_anchor: &'a Option<TextAnchor>,
+            relied_spec_id: &'a Option<String>,
             basis_spec_ids: Vec<&'a str>,
             derivation: &'a Derivation,
         }
@@ -313,6 +427,7 @@ impl Edge {
             kind: self.kind,
             source_anchor: &self.source_anchor,
             target_anchor: &self.target_anchor,
+            relied_spec_id: &self.relied_spec_id,
             basis_spec_ids,
             derivation: &self.derivation,
         };
@@ -362,6 +477,17 @@ impl Edge {
                 self.kind.as_str()
             ));
         }
+        if self.kind.is_pairing() != self.relied_spec_id.is_some() {
+            return Err(format!(
+                "{} {} an explicit relied specification",
+                self.kind.as_str(),
+                if self.kind.is_pairing() {
+                    "requires"
+                } else {
+                    "forbids"
+                }
+            ));
+        }
         Ok(())
     }
 
@@ -377,6 +503,15 @@ impl Edge {
         } else {
             &self.target
         }
+    }
+}
+
+impl EdgeKind {
+    pub fn is_pairing(self) -> bool {
+        matches!(
+            self,
+            Self::OccurrenceReliance | Self::GuaranteeDischarge | Self::AdmissibilityEnvelope
+        )
     }
 }
 
@@ -402,6 +537,7 @@ mod tests {
             kind,
             source_anchor: None,
             target_anchor: None,
+            relied_spec_id: kind.is_pairing().then(|| "relied".into()),
             basis_spec_ids: Vec::new(),
             derivation: Derivation {
                 method: "test".into(),
@@ -421,6 +557,9 @@ mod tests {
             (EdgeKind::AdvisoryTension, EdgeFamily::Semantic),
             (EdgeKind::DescriptiveConflict, EdgeFamily::Semantic),
             (EdgeKind::EnvelopeConflict, EdgeFamily::Semantic),
+            (EdgeKind::OccurrenceReliance, EdgeFamily::Semantic),
+            (EdgeKind::GuaranteeDischarge, EdgeFamily::Semantic),
+            (EdgeKind::AdmissibilityEnvelope, EdgeFamily::Semantic),
             (EdgeKind::Supports, EdgeFamily::Selection),
             (EdgeKind::Defeats, EdgeFamily::Selection),
             (EdgeKind::Supersedes, EdgeFamily::Selection),

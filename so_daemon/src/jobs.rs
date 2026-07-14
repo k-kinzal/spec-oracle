@@ -379,6 +379,7 @@ mod tests {
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
                 evidence_requests: vec![],
+                evidence_request_generation: String::new(),
                 evidence: vec![],
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),

@@ -9,8 +9,8 @@
 
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
 use so_daemon::domain::{
-    Anchor, AssessmentOutcome, EdgeKind, Evidence, Kind, Locator, Meta, MetaUpdate, Node, Origin,
-    RelationAssessment, Snapshot,
+    Anchor, AssessmentOutcome, DerivedNode, Edge, EdgeKind, Evidence, Kind, Locator, Meta,
+    MetaUpdate, Node, Origin, RelationAssessment, Snapshot,
 };
 use so_daemon::store::{GraphStore, NodeStore};
 
@@ -23,6 +23,7 @@ fn sample_node(id: &str) -> Node {
             evidence_requests: vec![
                 r#"{"kind":"constitutive","locator":"src/pump.rs:10"}"#.to_string()
             ],
+            evidence_request_generation: String::new(),
             evidence: vec![],
             created_at: "2026-07-05T00:00:00Z".to_string(),
             cli: "spec".to_string(),
@@ -72,7 +73,7 @@ fn arango_round_trip_when_available() {
     };
     let store = ArangoNodeStore::connect(&cfg).expect("connect to ArangoDB");
 
-    // Assessment coverage is append-only audit data, separate from topology.
+    // Relation assessments are append-only audit data, separate from topology.
     let assessment = RelationAssessment {
         id: format!("test-assessment-{}", uuid::Uuid::new_v4()),
         left: "candidate-a".into(),
@@ -175,6 +176,36 @@ fn arango_round_trip_when_available() {
         .get("hard_contradiction")
         .is_some_and(|count| *count >= 1));
     assert!(conflict_report.assessments_inserted >= 1);
+
+    // The native adjacency queries return the complete bounded input needed by
+    // the shared fitness policy, including semantic competitors and their
+    // Evidence projection Nodes.
+    let proof = DerivedNode::evidence(captured_evidence());
+    let proof_edge = Edge::projection(
+        EdgeKind::GroundedBy,
+        &node.id,
+        proof.id(),
+        so_daemon::evidence_capture::evidence_derivation(),
+        "2026-07-12T00:00:03Z",
+    )
+    .unwrap();
+    store
+        .put_derived_node(&proof, &proof_edge)
+        .expect("persist selection evidence");
+    let population = store
+        .selection_population(
+            &[node.id.clone(), conflicting.id.clone()],
+            &so_daemon::graph_generation::current_derivations(),
+        )
+        .expect("read fitness neighborhood");
+    let views =
+        so_daemon::selection::derive_views(&[node.id.clone(), conflicting.id.clone()], &population);
+    assert!(views[&node.id].current);
+    assert!(!views[&conflicting.id].current);
+    assert!(views[&conflicting.id]
+        .exclusions
+        .iter()
+        .any(|reason| reason.kind.as_str() == "insufficient_support"));
     let term_ids: Vec<String> = edges
         .iter()
         .filter(|edge| edge.target_kind == so_daemon::domain::VertexKind::Term)

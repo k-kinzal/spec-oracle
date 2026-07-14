@@ -33,6 +33,20 @@ pub enum Kind {
     Unknown,
 }
 
+impl Kind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Constitutive => "constitutive",
+            Self::Demonstrative => "demonstrative",
+            Self::Testimonial => "testimonial",
+            Self::Assertoric => "assertoric",
+            Self::Circumstantial => "circumstantial",
+            Self::Counter => "counter",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
 /// A resolved evidence locator. The variant is derived from the surface string:
 /// an `http`/`https` URL becomes [`Locator::Url`]; anything else is a filesystem
 /// path with an optional `:line[:col]` suffix.

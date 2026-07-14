@@ -18,20 +18,34 @@ Job appends the captured view and materializes shared Evidence Nodes.
 
 > **Scope.** The tool ingests (`spec add` — parse exactly one sentence and
 > persist exactly one Node), processes Evidence and graph structure through
-> Jobs, and renders the same graph through `spec graph`. NodeAdded generation
+> Jobs, accepts explicit versioned selection judgments through `spec select`,
+> accepts proved assume-guarantee pairings through `spec pair`, and renders the
+> same Ledger-derived graph through `spec graph`. `spec current` emits the
+> automatically selected specification set.
+> NodeAdded generation
 > connects specifications through derived written-term vertices. Those lexical
 > connectors are a versioned candidate search, not semantic identity. Candidate
 > pairs that `so-reason::relate::assess` can prove become the first persisted
 > semantic Edge family: refinement, equivalence, and force-aware conflicts.
 > Unknown/Independent outcomes are audit records rather than topology, and Edge
 > absence has no negative meaning. The trivial ingest contract is projected to
-> Assumption and Guarantee Nodes; non-trivial A/G pairing and composition remain
-> open graph-side methods. Every Edge belongs to a lexical, semantic, selection,
+> Assumption and Guarantee Nodes. A non-trivial pairing records its evidence
+> source, target contract, and explicitly selected relied specification as
+> distinct authored roles. Only structurally proved, well-formed aggregates are
+> admitted; the paired Assumption supersedes `⊤` in the current projection
+> while every prior projection remains in the append-only Ledger. Every Edge belongs to a lexical, semantic, selection,
 > or projection
 > family and carries explicit endpoint roles. Its `source` and `target` are the
 > ordered arguments of that typed relation, not a universal support-flow
-> direction. Supports, Defeats, and Supersedes are reserved as independently
-> versioned selection relations; no current policy produces them yet.
+> direction. Supports, Defeats, and Supersedes are independently versioned
+> selection relations produced only by explicit selection input. The
+> `selection/fitness-v4` current-set policy derives bounded Evidence and
+> grounded-support fitness from Ledger relationships. Admission creates a
+> candidate, not automatic authority. Only selected Defeats/Supersedes sources
+> and selected grounded supporters remain effective; a relation recedes when
+> its source recedes. Selected semantic competitors remove lower-priority
+> candidates while preserving all candidates and relations in the Ledger. See
+> [`docs/selection.md`](docs/selection.md).
 
 ## Architecture
 
@@ -68,6 +82,7 @@ spec (CLI) ──▶ so-client ──gRPC──▶ specd Add Mailbox ──▶ S
                                                       ├─ Evidence Node + blob
                                                       ├─ origin enrichment
                                                       └─ term + A/G + semantic graph generation
+spec pair ──▶ proved source / explicit relied / target pairing ──▶ current paired A
 ```
 
 ## The language
@@ -176,8 +191,9 @@ deleting that directory.
 ### Reading the graph
 
 `spec graph` renders the one specification graph in the terminal. With no
-required selector or starting Node, it reads the whole current graph and draws
-its Node/Edge topology directly in the terminal:
+required selector or starting Node, it reads the whole candidate population
+under the current derivation policies and draws its Node/Edge topology directly
+in the terminal:
 
 ```sh
 # Read and draw the whole specification graph.
@@ -185,27 +201,142 @@ cargo run --bin spec -- graph
 
 # Set the terminal drawing width without changing the selected graph.
 cargo run --bin spec -- graph --width 160
+
+# Draw the current-set projection: selected specifications and only the current
+# relationships and projections that remain attached to them.
+cargo run --bin spec -- graph --current --width 160
+
+# Audit every immutable Edge version; current derivations stay marked and
+# historical derivations are dimmed. This includes the provisional ⊤
+# projection after pairing.
+cargo run --bin spec -- graph --ledger --width 160
 ```
 
 The daemon still returns bounded keyset pages because transport must remain
 bounded. The CLI follows those pages to the end, combines their Specification
 Nodes, connector and projection Nodes, and Edges, and then lays out that one graph. Refinement
 and term mentions are directed by their explicit endpoint roles; equivalence
-and conflicts are symmetric. Selection-family relationships, when produced by
-a future versioned selection method, retain their own supporter/defeater/
-superseder roles rather than reversing semantic Edges. A
+and conflicts are symmetric. Selection-family relationships retain their own
+supporter/defeater/superseder roles rather than reversing semantic Edges.
+Assume-guarantee Edges retain three separately visible facts: the arrow's
+source is the evidence-bearing sentence, its target owns the conditioned
+guarantee, and the `Pairing reliances` list names the authored specification
+whose assertion is actually awaited. The target's current `has_assumption`
+projection points at the resulting content-addressed Assumption Node; after a
+successful pairing it is the relied authored text (or conjunction), not `⊤`.
+Current specifications use `◆`; candidates outside the current set use `◇`. A
 semantic Edge is owned by its lexically smaller endpoint for pagination, so it
 may arrive before its other endpoint and is rendered after the complete walk.
 Paging is an implementation detail of the read; it does not select a finite
-subgraph. Future graph filters belong to optional flags rather than required
-seeds. `--server` selects the daemon and `--width` changes presentation only.
+subgraph. `spec graph` uses the current derivation view across the candidate
+population; `--current` renders its selected induced graph. `--ledger` instead
+walks the separate Edge-id-keyset Ledger API and renders every recorded Edge
+version. The Ledger header reports current and recorded Edge counts, and
+historical edges are dimmed, so persistence history is visible without being
+mistaken for the current specification graph. Future graph filters belong to
+optional flags rather than required seeds. `--server` selects the daemon and
+`--width` changes presentation only.
+
+### Selecting the current specification set
+
+Selection judgments connect existing Specification Node ids and are appended
+idempotently to the Ledger. `source` plays the supporter, defeater, or
+superseder role; `target` plays the corresponding selected-against role.
+Additional `--basis` specifications record what makes the judgment checkable.
+
+```sh
+spec select supports SOURCE_NODE_ID TARGET_NODE_ID
+spec select defeats WINNER_NODE_ID LOSER_NODE_ID --basis REVIEW_NODE_ID
+spec select supersedes REPLACEMENT_NODE_ID OLD_NODE_ID
+
+# Re-capture an artifact even when its descriptor is unchanged, or replace the
+# complete Evidence set (supplying no --evidence clears the current view).
+spec refresh NODE_ID --evidence '{"kind":"demonstrative","locator":"tests/pump.rs:20"}'
+```
+
+The current-set projection is automatic, versioned and auditable. Under
+`selection/fitness-v4`, every specification starts as an unselected candidate.
+Typed `GroundedBy` Evidence supplies bounded points; a directly grounded
+supporter can transfer at most four points and ungrounded support cycles remain
+inert. Explicit defeat/replacement Edges act only from selected sources, and
+selected conflict, equivalence, or refinement competitors explain why a
+candidate recedes. Every
+effective or capped contribution and every exclusion is returned in the graph
+view. The selected set itself is a usable output rather than a display-only
+flag:
+
+```sh
+# Human-readable current-set projection.
+spec current
+
+# The selected specification set as a relationship-preserving graph.
+spec graph --current
+
+# Machine-readable current graph: specifications, Term/derived Nodes, Edges,
+# and the complete fitness decomposition.
+spec current --json
+
+```
+
+`spec current` walks the daemon's bounded pages and rejects a changing or
+incomplete walk instead of silently exporting a partial set. The UI Current-set
+panel reports selected/loaded candidates, candidates without direct Evidence,
+net Counter Evidence, transferred-support-only selections, and any selected
+conflict Edge. These diagnostics show where further accumulation or newly
+derived relationships can change the selected specification graph; they are
+not a completeness percentage for the unreachable conceptual whole.
+`spec refresh` persists a new request generation before scheduling capture.
+After capture succeeds, fitness reads exactly the Node Meta current Evidence
+view; prior Evidence Nodes and `GroundedBy` Edges remain only as Ledger history.
+Thus unchanged locators can be re-snapshotted after their content changes, and
+reclassifying or clearing Evidence deterministically makes obsolete support
+recede without relying on wall-clock tie breaks.
+The complete calculation and its limits are specified in
+[`docs/selection.md`](docs/selection.md).
+
+### Pairing assume-guarantee contracts
+
+`spec pair` appends a non-trivial contract relation between existing authored
+Specification Nodes. The explicit `--relied` Node is not incidental basis: its
+parsed assertion is exactly the formula conjoined into the target's assumption.
+The source is separately checked as evidence for that formula.
+
+```sh
+spec pair guarantee-discharge SOURCE_NODE_ID TARGET_NODE_ID \
+  --relied AWAITED_ASSERTION_NODE_ID
+spec pair occurrence-reliance SOURCE_NODE_ID TARGET_NODE_ID \
+  --relied AWAITED_STATE_NODE_ID --basis INTERFACE_SPEC_NODE_ID
+spec pair admissibility-envelope PERMISSION_NODE_ID TARGET_NODE_ID \
+  --relied PERMISSION_NODE_ID
+```
+
+The daemon accepts an assumption-side Edge only when `so-reason` proves
+source ⇒ relied (`Yes`, never `Unknown`), the speech act/force is admissible,
+the explicit source/target component direction passes the responsible-subject
+guard, the aggregate assumption is not refuted as unsatisfiable, and its
+permissions are not refuted as envelope-incompatible. A recommendation never
+relieves a guarantee. An admissibility envelope remains compatibility data and
+never becomes an assumption conjunct. Repeating a valid request is idempotent;
+adding an aggregate that would be contradictory is rejected without deleting
+the already accepted Ledger fact.
+
+The graph read selects the aggregate paired Assumption for the target and
+suppresses its provisional ingest `⊤` projection from the current view. Both
+projections remain immutable Ledger history. The guarantee projection is
+unchanged: pairing conditions what is owed; it does not rewrite the authored
+guarantee.
 
 ### Graph view (`ui/`)
 
 A Next.js app visualizes the graph as a force-directed cloud (Cosmograph,
 GPU/WebGL), coloring authored nodes by speech act and derived nodes by kind. It is an independent graph
 view and is not launched or controlled by `spec graph`. It pages in bounded
-batches and caps what it renders. A thin Next.js backend-for-frontend speaks
+batches and caps what it renders. Its **Ledger** tab lazily walks the same
+bounded historical Edge API: current derivations retain their relation colors while
+superseded derivations and projections are dimmed and identified as `Ledger
+history` in the relation panel; the panel labels the bright state `Current
+derivation`, distinct from membership in the Current specification graph. A
+thin Next.js backend-for-frontend speaks
 gRPC to `specd`, so the browser never needs gRPC.
 
 ```sh

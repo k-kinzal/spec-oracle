@@ -591,7 +591,7 @@ impl AssumptionSource {
     ) -> Result<AssumptionSource, PairingError> {
         let act = speech_act(sentence);
         validate_act_kind(kind, act)?;
-        let formula = guarded_claim(sentence).expect("a non-definition sentence has a claim");
+        let formula = assertion_formula(sentence).expect("a non-definition sentence has a claim");
         // Documented default: the reliance is the whole source formula —
         // self-entailment, so the reliance is proven (round 8).
         let relied = formula.clone();
@@ -672,7 +672,7 @@ impl AssumptionSource {
         } else {
             SubjectRelation::DisjointKeys
         };
-        let formula = guarded_claim(source).expect("a non-definition sentence has a claim");
+        let formula = assertion_formula(source).expect("a non-definition sentence has a claim");
         // Documented default: the reliance is the whole source formula —
         // self-entailment, so the reliance is proven (round 8).
         let relied = formula.clone();
@@ -1316,7 +1316,11 @@ pub fn claim_formula(sentence: &Sentence) -> Option<Formula> {
 /// shape an assumption source contributes in
 /// [`AssumptionSource::from_sentence`] — one conditional, two roles. `None`
 /// only for definitions (no claim).
-fn guarded_claim(sentence: &Sentence) -> Option<Formula> {
+/// The complete behavioral assertion made by a sentence, including its
+/// applicability guards. This is the formula a graph pairing may select as an
+/// explicit relied specification. Unlike [`contract_formula`], permissions are
+/// included as admissibility assertions; definitions return `None`.
+pub fn assertion_formula(sentence: &Sentence) -> Option<Formula> {
     let claim = claim_formula(sentence)?;
     let applicability = applicability(sentence);
     Some(if applicability == Formula::Top {
@@ -1342,7 +1346,7 @@ pub fn contract_formula(sentence: &Sentence) -> Option<ContractFormula> {
     ) {
         return None;
     }
-    let guarantee = guarded_claim(sentence)?;
+    let guarantee = assertion_formula(sentence)?;
     Some(ContractFormula {
         assumption: Formula::Top,
         guarantee,

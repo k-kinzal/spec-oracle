@@ -48,8 +48,11 @@ impl NodeAdded {
         let mut evidence_requests = node.meta.evidence_requests.clone();
         evidence_requests.sort();
         evidence_requests.dedup();
-        let mut parts = Vec::with_capacity(evidence_requests.len() + 1);
+        let mut parts = Vec::with_capacity(evidence_requests.len() + 2);
         parts.push(node.id.as_str());
+        if !node.meta.evidence_request_generation.is_empty() {
+            parts.push(node.meta.evidence_request_generation.as_str());
+        }
         parts.extend(evidence_requests.iter().map(String::as_str));
         let id = derive_id("node-added", &parts);
         NodeAdded {
@@ -82,6 +85,7 @@ mod tests {
             lang_version: so_lang::LANG_VERSION.to_string(),
             meta: Meta {
                 evidence_requests: vec![],
+                evidence_request_generation: String::new(),
                 evidence: vec![],
                 created_at: "t".to_string(),
                 cli: "spec".to_string(),

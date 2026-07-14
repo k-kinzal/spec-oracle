@@ -246,6 +246,7 @@ mod tests {
             lang_version: so_lang::LANG_VERSION.into(),
             meta: crate::domain::Meta {
                 evidence_requests: requests,
+                evidence_request_generation: String::new(),
                 evidence: vec![],
                 created_at: "t".into(),
                 cli: "spec".into(),

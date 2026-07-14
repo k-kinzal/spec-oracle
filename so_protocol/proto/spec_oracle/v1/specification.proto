@@ -26,12 +26,35 @@ service SpecificationGraph {
   // INTERNAL.
   rpc AddSpecification(AddSpecificationRequest) returns (AddSpecificationResponse);
 
+  // Replace the complete desired Evidence descriptor set of an existing
+  // Specification Node and schedule a fresh capture. The prior captures and
+  // GroundedBy Edges remain immutable Ledger history; only the current
+  // Evidence view and fitness input advance.
+  rpc ReplaceEvidence(ReplaceEvidenceRequest) returns (ReplaceEvidenceResponse);
+
+  // Append one explicit, versioned selection judgment between existing
+  // Specification Nodes. Only Supports, Defeats, and Supersedes are accepted;
+  // semantic relationships remain derived exclusively by so-reason.
+  rpc AddSelectionRelation(AddSelectionRelationRequest) returns (AddSelectionRelationResponse);
+
+  // Append a proved assume-guarantee pairing. `relied` is an authored
+  // specification naming exactly what the target contract awaits; it is not
+  // conflated with the source sentence that supplies evidence for it.
+  rpc AddAssumptionRelation(AddAssumptionRelationRequest) returns (AddAssumptionRelationResponse);
+
   // Read the specification graph one bounded page at a time. The graph can hold
   // billions of nodes, so there is deliberately no "return everything" call:
   // the caller walks the graph with keyset pagination (an opaque `page_token`),
   // and the server hard-caps the page size. Each specification page includes
   // its adjacent term-form vertices and checked edges.
   rpc GetGraph(GetGraphRequest) returns (GetGraphResponse);
+
+  // Read immutable Ledger Edges in Edge-id keyset order. Unlike GetGraph this
+  // does not select current derivation versions; each returned Edge says
+  // whether its derivation/projection is current in the candidate graph. The
+  // selected current specification graph additionally requires its
+  // Specification endpoints to be selected.
+  rpc GetLedger(GetLedgerRequest) returns (GetLedgerResponse);
 
 }
 
@@ -52,6 +75,49 @@ message AddSpecificationRequest {
 
 message AddSpecificationResponse {
   Node node = 1;
+}
+
+message ReplaceEvidenceRequest {
+  string node_id = 1;
+  // The complete replacement set, not an incremental merge. Empty clears the
+  // current Evidence view while preserving its Ledger history.
+  repeated string evidence = 2;
+}
+
+message ReplaceEvidenceResponse {
+  // Stored Node state immediately after replacement; capture remains
+  // asynchronous, so meta.evidence may still show the prior successful view
+  // until the new Job completes (or be empty when evidence is cleared).
+  Node node = 1;
+}
+
+message AddSelectionRelationRequest {
+  // The supporter, defeater, or superseder Specification Node id.
+  string source = 1;
+  // The supported, defeated, or superseded Specification Node id.
+  string target = 2;
+  // Must be EDGE_KIND_SUPPORTS, EDGE_KIND_DEFEATS, or EDGE_KIND_SUPERSEDES.
+  EdgeKind kind = 3;
+  // Additional Specification Nodes that make this judgment checkable. The
+  // endpoints are already intrinsic to the Edge and must not be repeated here.
+  repeated string basis_spec_ids = 4;
+}
+
+message AddSelectionRelationResponse {
+  Edge edge = 1;
+}
+
+message AddAssumptionRelationRequest {
+  string source = 1;
+  string target = 2;
+  string relied = 3;
+  // OCCURRENCE_RELIANCE, GUARANTEE_DISCHARGE, or ADMISSIBILITY_ENVELOPE.
+  EdgeKind kind = 4;
+  repeated string basis_spec_ids = 5;
+}
+
+message AddAssumptionRelationResponse {
+  Edge edge = 1;
 }
 
 // ---- graph read ------------------------------------------------------------
@@ -92,6 +158,20 @@ message GetGraphResponse {
   repeated DerivedNode derived_nodes = 6;
 }
 
+message GetLedgerRequest {
+  uint32 page_size = 1;
+  string page_token = 2;
+}
+
+message GetLedgerResponse {
+  repeated Edge edges = 1;
+  string next_page_token = 2;
+  uint64 total_edges = 3;
+  // Non-Specification endpoint values needed to render this Edge page.
+  repeated TermNode term_nodes = 4;
+  repeated DerivedNode derived_nodes = 5;
+}
+
 message TermNode {
   string id = 1;
   string form = 2;
@@ -116,6 +196,9 @@ message EvidenceNode {
 message AssumptionNode {
   string expression = 1;
   string derivation_version = 2;
+  // Canonical serialized so-reason Formula. Empty for legacy/trivial ingest
+  // assumptions; authored words remain the display authority.
+  string formula_json = 3;
 }
 
 message GuaranteeNode {
@@ -163,6 +246,15 @@ message Edge {
   EdgeFamily family = 12;
   EdgeEndpointRole source_role = 13;
   EdgeEndpointRole target_role = 14;
+  // The authored assertion explicitly selected as the target's awaited
+  // formula. Set only for assume-guarantee pairing Edges.
+  optional string relied_spec_id = 15;
+  // True when this immutable Ledger fact is selected by its current
+  // derivation/projection policy in the candidate graph. GetGraph only returns
+  // true Edges; GetLedger returns both. Membership in the selected current
+  // specification graph additionally requires selected Specification
+  // endpoints.
+  bool current = 16;
 }
 
 // The relationship family keeps lexical discovery, semantic truth, versioned
@@ -196,6 +288,12 @@ enum EdgeEndpointRole {
   EDGE_ENDPOINT_ROLE_CONTRACT_SPECIFICATION = 15;
   EDGE_ENDPOINT_ROLE_ASSUMPTION = 16;
   EDGE_ENDPOINT_ROLE_GUARANTEE = 17;
+  EDGE_ENDPOINT_ROLE_RELIANCE_EVIDENCE = 18;
+  EDGE_ENDPOINT_ROLE_RELIANT_CONTRACT = 19;
+  EDGE_ENDPOINT_ROLE_DISCHARGING_GUARANTEE = 20;
+  EDGE_ENDPOINT_ROLE_DISCHARGED_CONTRACT = 21;
+  EDGE_ENDPOINT_ROLE_ADMISSIBLE_ENVIRONMENT = 22;
+  EDGE_ENDPOINT_ROLE_BOUNDED_CONTRACT = 23;
 }
 
 // The kind of relationship an Edge asserts. Its direction is its endpoint-role
@@ -220,6 +318,9 @@ enum EdgeKind {
   EDGE_KIND_GROUNDED_BY = 18;
   EDGE_KIND_HAS_ASSUMPTION = 19;
   EDGE_KIND_HAS_GUARANTEE = 20;
+  EDGE_KIND_OCCURRENCE_RELIANCE = 21;
+  EDGE_KIND_GUARANTEE_DISCHARGE = 22;
+  EDGE_KIND_ADMISSIBILITY_ENVELOPE = 23;
 }
 
 // ---- domain mirror ---------------------------------------------------------
@@ -235,6 +336,45 @@ message Node {
   // Derived reading of the sentence — never stored.
   SentenceView sentence = 4;
   Meta meta = 5;
+  // Present on graph reads. AddSpecification returns stored facts only and
+  // leaves this absent. This view is derived from the current version of the
+  // fitness selection policy; it is never persisted into the authored Node.
+  SelectionView selection = 6;
+}
+
+// The current-set projection of one authored Specification Node. Admission
+// creates a candidate, never automatic authority. A versioned fitness policy
+// derives score and exclusions entirely from current Ledger relationships.
+message SelectionView {
+  bool current = 1;
+  repeated string supporting_edge_ids = 2;
+  repeated string defeating_edge_ids = 3;
+  repeated string superseding_edge_ids = 4;
+  string policy_version = 5;
+  sint32 support_score = 6;
+  sint32 evidence_score = 7;
+  sint32 relation_score = 8;
+  repeated ScoreContribution contributions = 9;
+  repeated SelectionExclusion exclusions = 10;
+}
+
+// One auditable term in the fitness sum. `points` is effective after policy
+// caps, so summing the list reproduces support_score exactly.
+message ScoreContribution {
+  string kind = 1;
+  sint32 points = 2;
+  string edge_id = 3;
+  optional string source_node_id = 4;
+  optional string evidence_node_id = 5;
+  string detail = 6;
+}
+
+// One independently checkable reason a candidate is absent from current set.
+message SelectionExclusion {
+  string kind = 1;
+  optional string edge_id = 2;
+  optional string competing_node_id = 3;
+  string detail = 4;
 }
 
 // The specification act a sentence performs.
@@ -286,6 +426,9 @@ message Meta {
   // asynchronous Evidence Job captures them. This makes retry/reconciliation
   // independent of the original client process.
   repeated string evidence_requests = 6;
+  // Latest complete-request replacement generation. Empty means the original
+  // incremental Add request set. Used to reconcile unchanged-locator refreshes.
+  string evidence_request_generation = 7;
 }
 
 message MetaUpdate {

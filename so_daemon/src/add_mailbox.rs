@@ -14,7 +14,7 @@ use crate::add::{self, AddError, AddRequest};
 use crate::domain::Node;
 use crate::jobs::JobMailbox;
 use crate::mailbox::{new_message_id, NodeAdded};
-use crate::store::GraphStore;
+use crate::store::{GraphStore, StoreError};
 
 const MAILBOX_CAPACITY: usize = 256;
 
@@ -24,6 +24,12 @@ pub struct AddInput {
     pub now: String,
     pub cli: String,
     pub cli_version: String,
+}
+
+pub struct ReplaceEvidenceInput {
+    pub node_id: String,
+    pub evidence: Vec<String>,
+    pub now: String,
 }
 
 #[derive(Clone)]
@@ -43,12 +49,28 @@ pub enum AddMailboxError {
     ShutdownDropped,
 }
 
+#[derive(Debug, Error)]
+pub enum ReplaceEvidenceError {
+    #[error(transparent)]
+    Store(#[from] StoreError),
+    #[error("Add Mailbox is closed")]
+    Closed,
+    #[error("Add Mailbox stopped before replying")]
+    ReplyDropped,
+}
+
 enum Message {
     Add {
         message_id: String,
         input: AddInput,
         parent_span: tracing::Span,
         reply: oneshot::Sender<Result<Node, AddError>>,
+    },
+    ReplaceEvidence {
+        message_id: String,
+        input: ReplaceEvidenceInput,
+        parent_span: tracing::Span,
+        reply: oneshot::Sender<Result<Node, StoreError>>,
     },
     Shutdown {
         reply: oneshot::Sender<()>,
@@ -81,6 +103,26 @@ impl AddMailbox {
             .await
             .map_err(|_| AddMailboxError::ReplyDropped)?
             .map_err(AddMailboxError::Add)
+    }
+
+    pub async fn replace_evidence(
+        &self,
+        input: ReplaceEvidenceInput,
+    ) -> Result<Node, ReplaceEvidenceError> {
+        let (reply, received) = oneshot::channel();
+        self.sender
+            .send(Message::ReplaceEvidence {
+                message_id: new_message_id(),
+                input,
+                parent_span: tracing::Span::current(),
+                reply,
+            })
+            .await
+            .map_err(|_| ReplaceEvidenceError::Closed)?;
+        received
+            .await
+            .map_err(|_| ReplaceEvidenceError::ReplyDropped)?
+            .map_err(ReplaceEvidenceError::Store)
     }
 
     pub async fn shutdown(&self) -> Result<(), AddMailboxError> {
@@ -152,6 +194,76 @@ async fn run(
                             "message.id" = %message_id,
                             "error.message" = %error,
                             "Add Mailbox worker failed"
+                        );
+                        drop(reply);
+                    }
+                }
+            }
+            Message::ReplaceEvidence {
+                message_id,
+                input,
+                parent_span,
+                reply,
+            } => {
+                let nodes = nodes.clone();
+                let operation_id = message_id.clone();
+                let event_parent = parent_span.clone();
+                let outcome = tokio::task::spawn_blocking(move || {
+                    let span = tracing::info_span!(
+                        parent: &parent_span,
+                        "spec.evidence.replace.mailbox.handle",
+                        "message.id" = %operation_id,
+                        "node.id" = %input.node_id,
+                        "spec.evidence.request_count" = input.evidence.len() as u64,
+                    );
+                    let _entered = span.enter();
+                    let update = crate::domain::MetaUpdate {
+                        source: crate::evidence_capture::REQUEST_UPDATE_SOURCE.to_string(),
+                        applied_at: input.now,
+                        value: serde_json::json!({
+                            "generation": operation_id.clone(),
+                            "evidence_requests": input.evidence,
+                        }),
+                    };
+                    let requests: Vec<String> = update.value["evidence_requests"]
+                        .as_array()
+                        .expect("request update stores an array")
+                        .iter()
+                        .filter_map(serde_json::Value::as_str)
+                        .map(str::to_string)
+                        .collect();
+                    nodes.replace_evidence_requests(
+                        &input.node_id,
+                        &requests,
+                        &operation_id,
+                        &update,
+                    )
+                })
+                .await;
+
+                match outcome {
+                    Ok(Ok(node)) => {
+                        let event = NodeAdded::with_parent(&message_id, node.clone(), event_parent);
+                        let no_evidence = node.meta.evidence_requests.is_empty();
+                        let _ = reply.send(Ok(node));
+                        if !no_evidence {
+                            if let Err(error) = jobs.node_added(event).await {
+                                tracing::error!(
+                                    "message.id" = %message_id,
+                                    "error.message" = %error,
+                                    "Evidence replacement event could not enter the Job Mailbox"
+                                );
+                            }
+                        }
+                    }
+                    Ok(Err(error)) => {
+                        let _ = reply.send(Err(error));
+                    }
+                    Err(error) => {
+                        tracing::error!(
+                            "message.id" = %message_id,
+                            "error.message" = %error,
+                            "Evidence replacement worker failed"
                         );
                         drop(reply);
                     }

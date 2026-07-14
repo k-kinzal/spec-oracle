@@ -115,7 +115,10 @@ pub fn current_derivations() -> Vec<Derivation> {
     vec![
         term_derivation(),
         semantic_edge_derivation(),
+        crate::selection::derivation(),
+        crate::pairing::derivation(),
         contract_projection_derivation(),
+        crate::pairing::projection_derivation(),
         crate::evidence_capture::evidence_derivation(),
     ]
 }
@@ -509,6 +512,7 @@ fn mention_edge(node: &Node, occurrence: &TermOccurrence, recorded_at: &str) -> 
         kind: EdgeKind::MentionsTerm,
         source_anchor: Some(occurrence.anchor.clone()),
         target_anchor: None,
+        relied_spec_id: None,
         basis_spec_ids: Vec::new(),
         derivation: Derivation {
             method: TERM_DERIVATION_METHOD.to_string(),
@@ -596,6 +600,7 @@ mod tests {
             lang_version: so_lang::LANG_VERSION.into(),
             meta: Meta {
                 evidence_requests: vec![],
+                evidence_request_generation: String::new(),
                 evidence: vec![],
                 created_at: "2026-07-12T00:00:00Z".into(),
                 cli: "test".into(),

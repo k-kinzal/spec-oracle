@@ -35,10 +35,22 @@ export type WireGraphPage = {
   total_nodes: string;
 };
 
+export type WireLedgerPage = {
+  term_nodes: unknown[];
+  derived_nodes: unknown[];
+  edges: unknown[];
+  next_page_token: string;
+  total_edges: string;
+};
+
 type GraphClient = grpc.Client & {
   GetGraph: (
     req: { page_size: number; page_token: string },
     cb: (err: grpc.ServiceError | null, resp: WireGraphPage) => void,
+  ) => void;
+  GetLedger: (
+    req: { page_size: number; page_token: string },
+    cb: (err: grpc.ServiceError | null, resp: WireLedgerPage) => void,
   ) => void;
 };
 
@@ -71,6 +83,18 @@ function client(): GraphClient {
     grpc.credentials.createInsecure(),
   );
   return cached;
+}
+
+export function getLedger(
+  pageSize: number,
+  pageToken: string,
+): Promise<WireLedgerPage> {
+  return new Promise((resolve, reject) => {
+    client().GetLedger(
+      { page_size: pageSize, page_token: pageToken },
+      (err, resp) => (err ? reject(err) : resolve(resp)),
+    );
+  });
 }
 
 /** Fetch one bounded page of the graph from specd. */

@@ -138,8 +138,7 @@ main {
   background: rgba(74, 144, 217, 0.24);
 }
 
-.view-count,
-.view-pending {
+.view-count {
   min-width: 20px;
   border-radius: 999px;
   padding: 2px 6px;
@@ -148,11 +147,6 @@ main {
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   text-align: center;
-}
-
-.view-pending {
-  color: #e8b84b;
-  background: rgba(232, 184, 75, 0.12);
 }
 
 /* Status bar (loaded X of TOTAL). */
@@ -500,6 +494,8 @@ main {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
 }
 
 .detail-with-panel {
@@ -519,6 +515,22 @@ main {
 .detail .statement {
   font-size: 14px;
   line-height: 1.45;
+}
+
+.fitness-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.fitness-detail strong {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .detail .id {

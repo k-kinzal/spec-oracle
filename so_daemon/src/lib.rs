@@ -8,8 +8,10 @@
 //! *contract* is a derived reading of a sentence: assumption and guarantee are
 //! roles an assertion plays relative to a responsible subject, and pairing a
 //! guarantee with a non-trivial assumption is a graph-level relationship
-//! between sentences — out of scope here. The trivial ingest projection is
-//! persisted as shared Assumption and Guarantee vertices. This crate owns everything that
+//! between sentences. This crate validates and persists those explicit
+//! source/relied/target pairings and materializes their current aggregate
+//! Assumption; the trivial ingest projection remains immutable Ledger history.
+//! Ingest projections are persisted as shared Assumption and Guarantee vertices. This crate owns everything that
 //! touches the daemon's environment — Job-side Evidence interpretation,
 //! snapshotting the locator's content, discovering source provenance, and persisting to
 //! ArangoDB + a blob store — and exposes it over the `spec_oracle.v1` wire
@@ -21,9 +23,11 @@
 //! graph-established semantic Edge family (refinement, equivalence, and
 //! force-aware conflicts) from `so-reason`'s conservative assessment. Edge
 //! families and endpoint roles keep those semantic relations distinct from
-//! versioned selection judgments such as support, defeat, and supersession.
-//! Non-trivial A/G pairing, composition, and the selection policy that could produce such
-//! judgments remain out of scope.
+//! explicit, versioned selection judgments such as support, defeat, and
+//! supersession. The daemon accepts those judgments and derives the first
+//! current-set view from them without rewriting semantic Edges. Proved
+//! non-trivial A/G pairing is likewise append-only and never rewrites authored
+//! words or the target Guarantee.
 
 pub mod add;
 pub mod add_mailbox;
@@ -37,6 +41,8 @@ pub mod graph_generation;
 pub mod jobs;
 pub mod mailbox;
 pub mod origin;
+pub mod pairing;
+pub mod selection;
 pub mod service;
 pub mod snapshot;
 pub mod store;

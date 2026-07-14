@@ -8,6 +8,7 @@ import StatusBar from "@/components/StatusBar";
 import ViewSwitcher from "@/components/ViewSwitcher";
 import {
   CONFLICT_EDGE_KINDS,
+  PAIRING_EDGE_KINDS,
   DERIVED_NODE_COLORS,
   SPEECH_ACT_COLORS,
   SPEECH_ACT_LABELS,
@@ -16,6 +17,7 @@ import {
   type EdgeKind,
   type GraphNode,
   type GraphPage,
+  type LedgerPage,
   type GraphViewMode,
   type SpeechAct,
 } from "@/lib/types";
@@ -37,7 +39,7 @@ const RENDER_CAP = 50000;
 
 const VIEW_COPY: Record<GraphViewMode, { title: string; description: string }> = {
   all: {
-    title: "Complete loaded graph",
+    title: "Loaded candidate graph",
     description: "Specifications, written term forms, and every current checked Edge.",
   },
   semantic: {
@@ -65,9 +67,25 @@ const VIEW_COPY: Record<GraphViewMode, { title: string; description: string }> =
     description:
       "Versioned Supports, Defeats, and Supersedes judgments; never inferred from semantic arrow direction.",
   },
+  fitness: {
+    title: "Fitness and exclusions",
+    description:
+      "Every candidate's versioned Evidence/support score, effective contributions, and exact reason for survival or exclusion.",
+  },
+  contracts: {
+    title: "Assume–guarantee contracts",
+    description:
+      "Proved pairings show evidence source, explicitly relied assertion, target guarantee, and the materialized current Assumption.",
+  },
+  ledger: {
+    title: "Append-only Ledger",
+    description:
+      "Every recorded Edge version, with current derivations bright and superseded or historical derivations dimmed for audit.",
+  },
   current: {
-    title: "Current specification set",
-    description: "Reserved for a selected view once support and selection semantics exist.",
+    title: "Current specification graph",
+    description:
+      "Selected specifications together with their current Evidence, meaning projections, and relationships.",
   },
 };
 
@@ -88,6 +106,11 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const [view, setView] = useState<GraphViewMode>("all");
+  const [ledgerNodes, setLedgerNodes] = useState<GraphNode[]>([]);
+  const [ledgerEdges, setLedgerEdges] = useState<GraphEdge[]>([]);
+  const [ledgerTotal, setLedgerTotal] = useState(0);
+  const [ledgerReachedEnd, setLedgerReachedEnd] = useState(false);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
 
   // The accumulator lives in a ref so paging never races the React state, which
   // we publish once per batch (re-rendering the WebGL graph on every page would
@@ -100,6 +123,14 @@ export default function Page() {
     reachedEnd: false,
   });
   const inFlight = useRef(false);
+  const ledgerAcc = useRef({
+    nodes: new Map<string, GraphNode>(),
+    edges: new Map<string, GraphEdge>(),
+    nextToken: "",
+    total: 0,
+    reachedEnd: false,
+  });
+  const ledgerInFlight = useRef(false);
 
   const publish = useCallback(() => {
     const a = acc.current;
@@ -109,7 +140,10 @@ export default function Page() {
     // it to Cosmograph only after both endpoints are loaded.
     setEdges(
       Array.from(a.edges.values()).filter(
-        (edge) => a.nodes.has(edge.source) && a.nodes.has(edge.target),
+        (edge) =>
+          a.nodes.has(edge.source) &&
+          a.nodes.has(edge.target) &&
+          (!edge.reliedSpecId || a.nodes.has(edge.reliedSpecId)),
       ),
     );
     setTotal(a.total);
@@ -160,10 +194,56 @@ export default function Page() {
     }
   }, [publish]);
 
+  const loadLedger = useCallback(async () => {
+    if (ledgerInFlight.current || ledgerAcc.current.reachedEnd) return;
+    ledgerInFlight.current = true;
+    setLedgerLoading(true);
+    setError(null);
+    const start = ledgerAcc.current.edges.size;
+    try {
+      while (
+        !ledgerAcc.current.reachedEnd &&
+        ledgerAcc.current.edges.size - start < BATCH_NODES &&
+        ledgerAcc.current.edges.size < RENDER_CAP
+      ) {
+        const params = new URLSearchParams({ pageSize: String(PAGE_SIZE) });
+        if (ledgerAcc.current.nextToken) {
+          params.set("pageToken", ledgerAcc.current.nextToken);
+        }
+        const response = await fetch(`/api/ledger?${params.toString()}`, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          const body = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? `Ledger request failed (${response.status})`);
+        }
+        const page = (await response.json()) as LedgerPage;
+        for (const node of page.nodes) ledgerAcc.current.nodes.set(node.id, node);
+        for (const edge of page.edges) ledgerAcc.current.edges.set(edge.id, edge);
+        ledgerAcc.current.total = page.totalEdges;
+        ledgerAcc.current.nextToken = page.nextPageToken;
+        if (!page.nextPageToken) ledgerAcc.current.reachedEnd = true;
+      }
+      setLedgerNodes(Array.from(ledgerAcc.current.nodes.values()));
+      setLedgerEdges(Array.from(ledgerAcc.current.edges.values()));
+      setLedgerTotal(ledgerAcc.current.total);
+      setLedgerReachedEnd(ledgerAcc.current.reachedEnd);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "failed to load the Ledger");
+    } finally {
+      ledgerInFlight.current = false;
+      setLedgerLoading(false);
+    }
+  }, []);
+
   // Initial load on mount.
   useEffect(() => {
     void loadBatch();
   }, [loadBatch]);
+
+  useEffect(() => {
+    if (view === "ledger") void loadLedger();
+  }, [loadLedger, view]);
 
   const specifications = useMemo(
     () => nodes.filter((node) => node.nodeKind === "specification"),
@@ -181,6 +261,19 @@ export default function Page() {
     () => edges.filter((edge) => edge.family === "selection"),
     [edges],
   );
+  const pairingEdges = useMemo(
+    () => semanticEdges.filter((edge) => PAIRING_EDGE_KINDS.has(edge.kind)),
+    [semanticEdges],
+  );
+  const contractEdges = useMemo(() => {
+    const targets = new Set(pairingEdges.map((edge) => edge.target));
+    const projections = edges.filter(
+      (edge) =>
+        targets.has(edge.source) &&
+        (edge.kind === "has_assumption" || edge.kind === "has_guarantee"),
+    );
+    return [...pairingEdges, ...projections];
+  }, [edges, pairingEdges]);
   const refinementEdges = useMemo(
     () => semanticEdges.filter((edge) => edge.kind === "refines"),
     [semanticEdges],
@@ -197,15 +290,20 @@ export default function Page() {
     }
     return specifications.filter((node) => !related.has(node.id));
   }, [semanticEdges, specifications]);
+  const currentSpecifications = useMemo(
+    () => specifications.filter((node) => node.current),
+    [specifications],
+  );
 
   const viewGraph = useMemo(() => {
-    const endpoints = (selectedEdges: GraphEdge[]) => {
+    const endpoints = (selectedEdges: GraphEdge[], pool = nodes) => {
       const ids = new Set<string>();
       for (const edge of selectedEdges) {
         ids.add(edge.source);
         ids.add(edge.target);
+        if (edge.reliedSpecId) ids.add(edge.reliedSpecId);
       }
-      return nodes.filter((node) => ids.has(node.id));
+      return pool.filter((node) => ids.has(node.id));
     };
     switch (view) {
       case "all":
@@ -222,17 +320,54 @@ export default function Page() {
         return { nodes: isolatedNodes, edges: [] as GraphEdge[] };
       case "selection":
         return { nodes: endpoints(selectionEdges), edges: selectionEdges };
+      case "fitness":
+        return { nodes: specifications, edges: [] as GraphEdge[] };
+      case "contracts":
+        return { nodes: endpoints(contractEdges), edges: contractEdges };
+      case "ledger":
+        return {
+          nodes: endpoints(ledgerEdges, [...specifications, ...ledgerNodes]),
+          edges: ledgerEdges,
+        };
       case "current":
-        return { nodes: [] as GraphNode[], edges: [] as GraphEdge[] };
+        {
+          const currentIds = new Set(currentSpecifications.map((node) => node.id));
+          const byId = new Map(nodes.map((node) => [node.id, node]));
+          const endpointRemains = (id: string) => {
+            const node = byId.get(id);
+            return Boolean(
+              node && (node.nodeKind !== "specification" || currentIds.has(id)),
+            );
+          };
+          const currentEdges = edges.filter(
+            (edge) =>
+              endpointRemains(edge.source) &&
+              endpointRemains(edge.target) &&
+              (!edge.reliedSpecId || currentIds.has(edge.reliedSpecId)),
+          );
+          const connected = endpoints(currentEdges);
+          return {
+            nodes: [
+              ...currentSpecifications,
+              ...connected.filter((node) => node.nodeKind !== "specification"),
+            ],
+            edges: currentEdges,
+          };
+        }
     }
   }, [
     conflictEdges,
+    currentSpecifications,
     edges,
     isolatedNodes,
     nodes,
     refinementEdges,
     semanticEdges,
     selectionEdges,
+    pairingEdges,
+    contractEdges,
+    ledgerEdges,
+    ledgerNodes,
     specifications,
     view,
     vocabularyEdges,
@@ -259,15 +394,23 @@ export default function Page() {
       conflicts: conflictEdges.length,
       isolated: isolatedNodes.length,
       selection: selectionEdges.length,
-      current: null,
+      fitness: specifications.length,
+      contracts: pairingEdges.length,
+      ledger: ledgerTotal || ledgerEdges.length,
+      current: currentSpecifications.length,
     }),
     [
       conflictEdges.length,
+      currentSpecifications.length,
       isolatedNodes.length,
       nodes.length,
       refinementEdges.length,
       semanticEdges.length,
       selectionEdges.length,
+      specifications.length,
+      pairingEdges.length,
+      ledgerEdges.length,
+      ledgerTotal,
       vocabularyEdges.length,
     ],
   );
@@ -276,7 +419,10 @@ export default function Page() {
     () =>
       selected
         ? semanticEdges.filter(
-            (edge) => edge.source === selected.id || edge.target === selected.id,
+            (edge) =>
+            edge.source === selected.id ||
+            edge.target === selected.id ||
+            edge.reliedSpecId === selected.id,
           ).length
         : 0,
     [selected, semanticEdges],
@@ -291,8 +437,13 @@ export default function Page() {
     [selected, selectionEdges],
   );
 
-  const atHardCap = nodes.length >= RENDER_CAP && !reachedEnd;
-  const canLoadMore = !reachedEnd && !atHardCap;
+  const showingLedger = view === "ledger";
+  const atHardCap = showingLedger
+    ? ledgerEdges.length >= RENDER_CAP && !ledgerReachedEnd
+    : nodes.length >= RENDER_CAP && !reachedEnd;
+  const canLoadMore = showingLedger
+    ? !ledgerReachedEnd && !atHardCap
+    : !reachedEnd && !atHardCap;
   const copy = VIEW_COPY[view];
 
   const changeView = useCallback((next: GraphViewMode) => {
@@ -319,12 +470,13 @@ export default function Page() {
           </p>
         </div>
         <StatusBar
-          loaded={loadedSpecifications}
-          total={total}
-          loading={loading}
+          loaded={showingLedger ? ledgerEdges.length : loadedSpecifications}
+          total={showingLedger ? ledgerTotal : total}
+          loading={showingLedger ? ledgerLoading : loading}
           canLoadMore={canLoadMore}
           atHardCap={atHardCap}
-          onLoadMore={() => void loadBatch()}
+          onLoadMore={() => void (showingLedger ? loadLedger() : loadBatch())}
+          unit={showingLedger ? "Ledger edges" : "specifications"}
         />
       </div>
 
@@ -340,6 +492,8 @@ export default function Page() {
         mode={view}
         nodes={viewGraph.nodes}
         edges={viewGraph.edges}
+        population={specifications}
+        populationComplete={reachedEnd}
         onSelect={setSelected}
       />
 
@@ -371,17 +525,34 @@ export default function Page() {
             {selected.nodeKind === "term"
               ? "Written term form · lexical connector"
               : selected.nodeKind === "specification"
-                ? `${SPEECH_ACT_LABELS[selected.speechAct]} · ${selectedSemanticRelations} semantic relation(s) · ${selectedSelectionRelations} selection relation(s) · ${selected.evidenceCount} evidence captured`
+                ? `${SPEECH_ACT_LABELS[selected.speechAct]} · ${selected.current ? "current" : "non-current"} · fitness ${selected.supportScore >= 0 ? "+" : ""}${selected.supportScore} (${selected.evidenceScore >= 0 ? "+" : ""}${selected.evidenceScore} Evidence, ${selected.relationScore >= 0 ? "+" : ""}${selected.relationScore} relations) · ${selected.policyVersion || "policy unavailable"}`
                 : `${selected.nodeKind[0].toUpperCase()}${selected.nodeKind.slice(1)} node · shared content-addressed projection`}
           </div>
           <div className="statement">{selected.statement}</div>
+          {selected.nodeKind === "specification" && (
+            <div className="fitness-detail">
+              {selected.contributions.map((contribution) => (
+                <div key={`${contribution.edgeId}-${contribution.kind}`}>
+                  <strong>
+                    {contribution.points >= 0 ? "+" : ""}
+                    {contribution.points} · {contribution.kind}
+                  </strong>{" "}
+                  {contribution.detail}
+                </div>
+              ))}
+              {selected.exclusions.map((exclusion, index) => (
+                <div key={`${exclusion.edgeId ?? "score"}-${exclusion.kind}-${index}`}>
+                  <strong>Excluded · {exclusion.kind}</strong> {exclusion.detail}
+                </div>
+              ))}
+            </div>
+          )}
           <div className="id">{selected.id}</div>
         </div>
       )}
 
       {!loading &&
         nodes.length > 0 &&
-        view !== "current" &&
         viewGraph.nodes.length === 0 &&
         !error && (
           <div className="view-empty">

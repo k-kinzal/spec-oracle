@@ -11,7 +11,7 @@ The UI exposes bounded projections of the loaded Ledger rather than treating
 one all-purpose graph as every answer:
 
 - **Graph** — specifications, term, Evidence, Assumption, and Guarantee nodes,
-  and every current Edge.
+  and every Edge selected by its current derivation/projection policy.
 - **Meaning** — specification-to-specification semantic Edges only.
 - **Vocabulary** — lexical `source mentions target` incidence, explicitly not
   support.
@@ -21,10 +21,27 @@ one all-purpose graph as every answer:
 - **Isolated** — specifications with no current semantic Edge; lexical mentions
   do not make a specification semantically connected.
 - **Selection** — independently versioned Supports, Defeats, and Supersedes
-  relations. It is empty until a selection method produces those Edges.
-- **Current set** — a deliberately non-derived diagnostic until support,
-  deduplication, and selection semantics are defined.
-
+  relations appended through `spec select`.
+- **Fitness** — every candidate ranked by `selection/fitness-v4`, with the
+  effective Evidence/support point sum and all survival or exclusion reasons.
+- **Contracts** — proved `spec pair` relations together with the target's
+  current Assumption/Guarantee projections. Each pairing card names the source
+  evidence, the explicit relied authored assertion, and the target contract;
+  the Assumption node shows the relied words (or their conjunction), while its
+  wire value also carries the canonical formula JSON.
+- **Ledger** — every immutable Edge version, fetched lazily from the separate
+  Edge-keyset API. Current derivations retain their colors; superseded derivations
+  and projections are dimmed and labeled `Ledger history`. This is where the
+  provisional `⊤` Assumption remains observable after a paired Assumption
+  becomes current.
+- **Current set** — candidates with positive fitness and no selected explicit
+  blocker or selected semantic competitor. Admission alone never makes a sentence
+  current. The view is the induced graph of selected specifications, their
+  current Evidence and meaning projections, and the relationships that remain
+  between them. Its panel reports loaded-scope grounding, Counter Evidence,
+  transferred-support-only, and selected-conflict diagnostics.
+  The exact versioned calculation is documented in
+  [`../docs/selection.md`](../docs/selection.md).
 Directed Edges have arrowheads in the canvas. The relation panel also spells
 out the endpoint roles carried over the wire, the Edge family, and its
 derivation method/version, so an arrow is never the sole explanation of
@@ -34,10 +51,10 @@ direction. Semantic arrow direction is never reinterpreted as support flow.
 
 ```
 Browser (Cosmograph, WebGL)
-   │  JSON  GET /api/graph?pageSize&pageToken
+   │  JSON  GET /api/graph
    ▼
 Next.js Route Handler  (app/api/graph/route.ts)  ── the BFF, Node runtime
-   │  gRPC  GetGraph(page_size, page_token)       (lib/grpc.ts)
+   │  gRPC  GetGraph                              (lib/grpc.ts)
    ▼
 specd  (spec_oracle.v1.SpecificationGraph)
 ```
