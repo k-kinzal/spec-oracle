@@ -25,6 +25,12 @@ use tonic::transport::Channel;
 use tonic::Request;
 use tracing::Instrument;
 
+// A graph page contains authored Nodes plus their attached Term/Derived Nodes
+// and Edges. At the protocol's 1,000-Node page ceiling that envelope can exceed
+// tonic's 4 MiB default, and the unpaged current-set response can be larger
+// still. Keep the transport ceiling comfortably above those protocol payloads.
+const MAX_DECODING_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
+
 /// Failure resolving an evidence input channel (client-side files/stdin).
 #[derive(Debug, Error)]
 pub enum ChannelError {
@@ -130,7 +136,8 @@ impl Client {
         async move {
             let inner = SpecificationGraphClient::connect(endpoint)
                 .await
-                .map_err(ClientError::Connect)?;
+                .map_err(ClientError::Connect)?
+                .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE);
             Ok(Client { inner })
         }
         .instrument(span)

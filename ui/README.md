@@ -1,7 +1,9 @@
 # spec-oracle UI — graph view
 
 A Next.js app that visualizes the spec-oracle specification graph as a
-force-directed cloud (GPU/WebGL via [Cosmograph](https://cosmograph.app)). Each
+force-directed 3D cloud. Three.js renders nodes as one instanced WebGL draw and
+edges as one dynamic line-segment draw; a persistent `d3-force-3d` Worker owns
+the three-dimensional layout. Each
 specification node is one grounded sentence; derived term-form nodes connect
 specifications through vocabulary they actually share, Evidence nodes expose
 captured grounding, Assumption/Guarantee nodes expose the ingest contract, and
@@ -21,10 +23,10 @@ one all-purpose graph as every answer:
 - **Isolated** — specifications with no current semantic Edge; lexical mentions
   do not make a specification semantically connected.
 - **Selection** — independently versioned Supports, Defeats, and Supersedes
-  relations appended through `spec select`.
+  relations already present in the Ledger.
 - **Fitness** — every candidate ranked by `selection/fitness-v4`, with the
   effective Evidence/support point sum and all survival or exclusion reasons.
-- **Contracts** — proved `spec pair` relations together with the target's
+- **Contracts** — proved pairing relations together with the target's
   current Assumption/Guarantee projections. Each pairing card names the source
   evidence, the explicit relied authored assertion, and the target contract;
   the Assumption node shows the relied words (or their conjunction), while its
@@ -42,15 +44,18 @@ one all-purpose graph as every answer:
   transferred-support-only, and selected-conflict diagnostics.
   The exact versioned calculation is documented in
   [`../docs/selection.md`](../docs/selection.md).
-Directed Edges have arrowheads in the canvas. The relation panel also spells
-out the endpoint roles carried over the wire, the Edge family, and its
-derivation method/version, so an arrow is never the sole explanation of
-direction. Semantic arrow direction is never reinterpreted as support flow.
+Directed Edges shade from a dim source endpoint to a bright target endpoint.
+The relation panel also spells out the endpoint roles carried over the wire,
+the Edge family, and its derivation method/version, so color ordering is never
+the sole explanation of direction. Semantic direction is never reinterpreted
+as support flow.
 
 ## Architecture
 
 ```
-Browser (Cosmograph, WebGL)
+Browser (Three.js, instanced WebGL, 24 Hz presentation clock)
+   │
+   ├── d3-force-3d Web Worker (persistent 3D layout)
    │  JSON  GET /api/graph
    ▼
 Next.js Route Handler  (app/api/graph/route.ts)  ── the BFF, Node runtime
@@ -70,9 +75,15 @@ requests "everything":
 
 - **Keyset pagination** end to end — the daemon hard-caps a page at 1000 nodes
   and returns an opaque `next_page_token`; the BFF clamps the requested size too.
-- The UI pulls the graph in **bounded batches** (`BATCH_NODES`) and **caps** what
-  it renders (`RENDER_CAP`), showing "loaded X of TOTAL" and a "Load more"
-  control (see `app/page.tsx`).
+- The UI pulls the graph in **100-specification automatic pages** and
+  **caps** what it renders (`RENDER_CAP`). Network pages feed a buffer while the
+  canvas grows in small, stable increments, showing live "loaded X of TOTAL"
+  progress without requiring a user action between batches (see `app/page.tsx`).
+  Acquisition never waits for presentation. The 3D force layout runs in a
+  Worker throughout growth and convergence. The main thread samples its latest
+  coordinates, updates the two GPU batches, and renders at a 24 Hz target; it
+  sleeps once settled and wakes for later data or pointer interaction. The UI
+  reports measured fps and render time rather than claiming the target rate.
 
 `GetGraph` returns a bounded specification page, adjacent term and projection
 nodes, and checked edges. Teal term nodes mean only equal normalized written forms; they

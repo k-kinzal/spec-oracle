@@ -18,10 +18,9 @@ Job appends the captured view and materializes shared Evidence Nodes.
 
 > **Scope.** The tool ingests (`spec add` — parse exactly one sentence and
 > persist exactly one Node), processes Evidence and graph structure through
-> Jobs, accepts explicit versioned selection judgments through `spec select`,
-> accepts proved assume-guarantee pairings through `spec pair`, and renders the
-> same Ledger-derived graph through `spec graph`. `spec current` emits the
-> automatically selected specification set.
+> Jobs, and renders the same Ledger-derived graph through `spec graph`.
+> The `--current` graph view exposes the automatically selected specification
+> set without adding a separate command surface.
 > NodeAdded generation
 > connects specifications through derived written-term vertices. Those lexical
 > connectors are a versioned candidate search, not semantic identity. Candidate
@@ -62,7 +61,7 @@ they do not depend on each other.
 | `so-client`  | lib                  | A thin gRPC client; resolves the caller's `@file`/`-`(stdin) input channels.              |
 | `so-cli`     | bin `spec`           | The command-line front end over the client.                                              |
 | `so-tracing` | lib                  | Shared tracing/OpenTelemetry setup and gRPC trace propagation.                           |
-| `ui`         | Next.js app          | Graph visualization (Cosmograph, GPU/WebGL). A thin BFF speaks gRPC to `specd`; not a Cargo crate. See [`ui/README.md`](ui/README.md). |
+| `ui`         | Next.js app          | Instanced 3D graph visualization (Three.js/WebGL with a `d3-force-3d` Worker). A thin BFF speaks gRPC to `specd`; not a Cargo crate. See [`ui/README.md`](ui/README.md). |
 
 **Acceptance and processing are separate.** The Add Mailbox in `specd` parses
 exactly one sentence and persists exactly one Node, retaining Evidence
@@ -82,7 +81,6 @@ spec (CLI) ──▶ so-client ──gRPC──▶ specd Add Mailbox ──▶ S
                                                       ├─ Evidence Node + blob
                                                       ├─ origin enrichment
                                                       └─ term + A/G + semantic graph generation
-spec pair ──▶ proved source / explicit relied / target pairing ──▶ current paired A
 ```
 
 ## The language
@@ -237,22 +235,7 @@ mistaken for the current specification graph. Future graph filters belong to
 optional flags rather than required seeds. `--server` selects the daemon and
 `--width` changes presentation only.
 
-### Selecting the current specification set
-
-Selection judgments connect existing Specification Node ids and are appended
-idempotently to the Ledger. `source` plays the supporter, defeater, or
-superseder role; `target` plays the corresponding selected-against role.
-Additional `--basis` specifications record what makes the judgment checkable.
-
-```sh
-spec select supports SOURCE_NODE_ID TARGET_NODE_ID
-spec select defeats WINNER_NODE_ID LOSER_NODE_ID --basis REVIEW_NODE_ID
-spec select supersedes REPLACEMENT_NODE_ID OLD_NODE_ID
-
-# Re-capture an artifact even when its descriptor is unchanged, or replace the
-# complete Evidence set (supplying no --evidence clears the current view).
-spec refresh NODE_ID --evidence '{"kind":"demonstrative","locator":"tests/pump.rs:20"}'
-```
+### Viewing the current specification set
 
 The current-set projection is automatic, versioned and auditable. Under
 `selection/fitness-v4`, every specification starts as an unselected candidate.
@@ -266,49 +249,26 @@ view. The selected set itself is a usable output rather than a display-only
 flag:
 
 ```sh
-# Human-readable current-set projection.
-spec current
-
 # The selected specification set as a relationship-preserving graph.
 spec graph --current
-
-# Machine-readable current graph: specifications, Term/derived Nodes, Edges,
-# and the complete fitness decomposition.
-spec current --json
-
 ```
 
-`spec current` walks the daemon's bounded pages and rejects a changing or
-incomplete walk instead of silently exporting a partial set. The UI Current-set
+`spec graph --current` walks the daemon's bounded pages and rejects a changing
+or incomplete walk instead of silently rendering a partial set. The UI Current-set
 panel reports selected/loaded candidates, candidates without direct Evidence,
 net Counter Evidence, transferred-support-only selections, and any selected
 conflict Edge. These diagnostics show where further accumulation or newly
 derived relationships can change the selected specification graph; they are
 not a completeness percentage for the unreachable conceptual whole.
-`spec refresh` persists a new request generation before scheduling capture.
-After capture succeeds, fitness reads exactly the Node Meta current Evidence
-view; prior Evidence Nodes and `GroundedBy` Edges remain only as Ledger history.
-Thus unchanged locators can be re-snapshotted after their content changes, and
-reclassifying or clearing Evidence deterministically makes obsolete support
-recede without relying on wall-clock tie breaks.
 The complete calculation and its limits are specified in
 [`docs/selection.md`](docs/selection.md).
 
 ### Pairing assume-guarantee contracts
 
-`spec pair` appends a non-trivial contract relation between existing authored
-Specification Nodes. The explicit `--relied` Node is not incidental basis: its
-parsed assertion is exactly the formula conjoined into the target's assumption.
-The source is separately checked as evidence for that formula.
-
-```sh
-spec pair guarantee-discharge SOURCE_NODE_ID TARGET_NODE_ID \
-  --relied AWAITED_ASSERTION_NODE_ID
-spec pair occurrence-reliance SOURCE_NODE_ID TARGET_NODE_ID \
-  --relied AWAITED_STATE_NODE_ID --basis INTERFACE_SPEC_NODE_ID
-spec pair admissibility-envelope PERMISSION_NODE_ID TARGET_NODE_ID \
-  --relied PERMISSION_NODE_ID
-```
+The domain service can append a non-trivial contract relation between existing
+authored Specification Nodes. The explicit relied Node is not incidental basis:
+its parsed assertion is exactly the formula conjoined into the target's
+assumption. The source is separately checked as evidence for that formula.
 
 The daemon accepts an assumption-side Edge only when `so-reason` proves
 source ⇒ relied (`Yes`, never `Unknown`), the speech act/force is admissible,
@@ -328,8 +288,9 @@ guarantee.
 
 ### Graph view (`ui/`)
 
-A Next.js app visualizes the graph as a force-directed cloud (Cosmograph,
-GPU/WebGL), coloring authored nodes by speech act and derived nodes by kind. It is an independent graph
+A Next.js app visualizes the graph as a force-directed 3D cloud (instanced
+Three.js/WebGL with a `d3-force-3d` Worker), coloring authored nodes by speech
+act and derived nodes by kind. It is an independent graph
 view and is not launched or controlled by `spec graph`. It pages in bounded
 batches and caps what it renders. Its **Ledger** tab lazily walks the same
 bounded historical Edge API: current derivations retain their relation colors while

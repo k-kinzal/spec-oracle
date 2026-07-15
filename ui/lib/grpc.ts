@@ -24,6 +24,11 @@ const PROTO_PATH = path.join(
 // host:port with NO scheme — grpc-js dials it directly.
 const GRPC_ADDR = process.env.SPEC_ORACLE_GRPC_ADDR ?? "127.0.0.1:50051";
 
+// A graph page includes the authored specification Nodes plus their adjacent
+// Term/Derived Nodes and Edges. At the daemon's 1,000-specification page limit
+// that protobuf envelope can exceed grpc-js's 4 MiB default.
+const MAX_RECEIVE_MESSAGE_SIZE = 64 * 1024 * 1024;
+
 // The wire page, field names verbatim from the proto (keepCase). `total_nodes`
 // is a uint64 rendered as a string (longs: String) to avoid precision loss.
 export type WireGraphPage = {
@@ -74,6 +79,7 @@ function client(): GraphClient {
         SpecificationGraph: new (
           addr: string,
           creds: grpc.ChannelCredentials,
+          options?: grpc.ChannelOptions,
         ) => GraphClient;
       };
     };
@@ -81,6 +87,7 @@ function client(): GraphClient {
   cached = new proto.spec_oracle.v1.SpecificationGraph(
     GRPC_ADDR,
     grpc.credentials.createInsecure(),
+    { "grpc.max_receive_message_length": MAX_RECEIVE_MESSAGE_SIZE },
   );
   return cached;
 }

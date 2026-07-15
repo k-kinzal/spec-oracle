@@ -357,7 +357,7 @@ assumption conjunct, and never counts against the aggregate). The
 individual booleans stay as diagnostics. The graph layer decides;
 nothing in `so-reason` rejects or repairs a formed contract.
 
-**Daemon realization.** `spec pair` / `AddAssumptionRelation` is the graph-side
+**Daemon realization.** The `AddAssumptionRelation` RPC is the graph-side
 decision point. Its Edge stores `source` (evidence), `target` (the conditioned
 guarantee owner), and `relied_spec_id` (the authored awaited assertion) as
 distinct fields. `specd` re-parses all three, uses
@@ -919,7 +919,7 @@ be `No` (`No` → `PairingError::SourceDoesNotSupportRelied`,
 constructor — conservative,
 documented: the structural rules often cannot prove an entailment that
 holds, and full entailment validation of a pairing remains daemon/graph
-work. The topology-producing `spec pair` path is stricter: it requires
+work. The topology-producing daemon pairing path is stricter: it requires
 the recorded `proven` flag (`Yes`), so `Unknown` never becomes a Ledger
 Edge.
 

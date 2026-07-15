@@ -7,7 +7,7 @@ const OPTIONS: Array<{
   label: string;
   countKind: "nodes" | "relations" | "none";
 }> = [
-  { mode: "all", label: "Graph", countKind: "nodes" },
+  { mode: "all", label: "Overview", countKind: "nodes" },
   { mode: "semantic", label: "Meaning", countKind: "relations" },
   { mode: "vocabulary", label: "Vocabulary", countKind: "relations" },
   { mode: "refinement", label: "Refinement", countKind: "relations" },

@@ -91,10 +91,12 @@ export default function RelationPanel({
   if (mode === "all") return null;
 
   if (mode === "fitness") {
-    const ranked = [...nodes].sort(
+    const ranked = [...(population ?? nodes)]
+      .filter((node) => node.nodeKind === "specification")
+      .sort(
       (left, right) =>
         right.supportScore - left.supportScore || left.id.localeCompare(right.id),
-    );
+      );
     return (
       <aside className="relation-panel panel" data-testid="relation-panel">
         <div className="relation-panel-heading">
@@ -135,10 +137,13 @@ export default function RelationPanel({
   }
 
   if (mode === "isolated" || mode === "current") {
-    const specifications = nodes.filter((node) => node.nodeKind === "specification");
-    const candidates = (population ?? specifications).filter(
+    const candidates = (population ?? nodes).filter(
       (node) => node.nodeKind === "specification",
     );
+    const specifications =
+      mode === "current"
+        ? candidates.filter((node) => node.current)
+        : candidates;
     const ungrounded = candidates.filter((node) => node.evidenceScore === 0).length;
     const countered = candidates.filter((node) => node.evidenceScore < 0).length;
     const supportOnly = candidates.filter(
@@ -187,7 +192,7 @@ export default function RelationPanel({
         </div>
         {specifications.length > DISPLAY_LIMIT && (
           <div className="panel-footnote">
-            Showing {DISPLAY_LIMIT.toLocaleString()} of {specifications.length.toLocaleString()} loaded specifications.
+            Showing {DISPLAY_LIMIT.toLocaleString()} of {specifications.length.toLocaleString()} matching specifications.
           </div>
         )}
       </aside>
@@ -211,7 +216,7 @@ export default function RelationPanel({
         </span>
         <h2>{panelTitle(mode)}</h2>
         <p>
-          {edges.length.toLocaleString()} relation{edges.length === 1 ? "" : "s"} in the loaded graph.
+          {edges.length.toLocaleString()} relation{edges.length === 1 ? "" : "s"} shown in this overview.
         </p>
       </div>
       {visible.length === 0 ? (

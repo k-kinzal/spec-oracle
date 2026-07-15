@@ -1,30 +1,29 @@
 "use client";
 
-/** The scale indicator: how many authored specifications are on screen,
- *  plus the control to pull the next bounded batch. Derived adjacent term
- *  nodes are deliberately outside this progress count. This is where the
- *  "never load everything" contract is made visible to the user. */
+/** The scale indicator: how many authored specifications have been acquired while
+ *  bounded batches load automatically. Derived adjacent term nodes are
+ *  deliberately outside this progress count. */
 export default function StatusBar({
   loaded,
   total,
   loading,
-  canLoadMore,
+  complete,
   atHardCap,
-  onLoadMore,
+  drawing,
   unit = "specifications",
 }: {
   loaded: number;
   total: number;
   loading: boolean;
-  canLoadMore: boolean;
+  complete: boolean;
   atHardCap: boolean;
-  onLoadMore: () => void;
+  drawing: boolean;
   unit?: string;
 }) {
   const pct = total > 0 ? Math.min(100, (loaded / total) * 100) : 0;
   return (
     <div className="status panel">
-      {loading && <span className="spinner" aria-label="loading" />}
+      {(loading || drawing) && <span className="spinner" aria-label="loading" />}
       <span className="count">
         <strong>{loaded.toLocaleString()}</strong>{" "}
         <span className="muted">of {total.toLocaleString()} {unit}</span>
@@ -34,14 +33,12 @@ export default function StatusBar({
       </span>
       {atHardCap ? (
         <span className="muted">render cap reached</span>
+      ) : complete && drawing ? (
+        <span className="muted">Growing 3D graph · 24 fps target</span>
+      ) : complete ? (
+        <span className="muted">All loaded</span>
       ) : (
-        <button
-          className="btn"
-          onClick={onLoadMore}
-          disabled={loading || !canLoadMore}
-        >
-          {canLoadMore ? "Load more" : "All loaded"}
-        </button>
+        <span className="muted">Loading remaining pages</span>
       )}
     </div>
   );

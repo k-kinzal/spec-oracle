@@ -7,9 +7,6 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["@grpc/grpc-js", "@grpc/proto-loader"],
   },
-  // Cosmograph ships as ESM; transpiling it (and its cosmos core) keeps the Next
-  // build happy across module formats.
-  transpilePackages: ["@cosmograph/react", "@cosmograph/cosmos"],
 };
 
 export default nextConfig;

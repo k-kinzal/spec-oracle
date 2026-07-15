@@ -12,7 +12,7 @@ mod graph;
 use std::collections::{BTreeMap, BTreeSet};
 use std::process::ExitCode;
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use so_client::Client;
 use so_protocol::pb;
 use tracing::Instrument;
@@ -37,16 +37,8 @@ struct Cli {
 enum Command {
     /// Add exactly one specification sentence; Evidence capture is asynchronous.
     Add(AddArgs),
-    /// Replace or refresh one candidate's complete Evidence descriptor set.
-    Refresh(RefreshArgs),
-    /// Append an explicit selection judgment between Specification Nodes.
-    Select(SelectArgs),
-    /// Append a proved assume-guarantee pairing with an explicit reliance.
-    Pair(PairArgs),
     /// Render the specification graph directly in the terminal.
     Graph(GraphArgs),
-    /// Emit the fitness-selected current specification set.
-    Current(CurrentArgs),
 }
 
 #[derive(clap::Args)]
@@ -79,132 +71,6 @@ struct AddArgs {
 }
 
 #[derive(clap::Args)]
-struct RefreshArgs {
-    /// Existing Specification Node id whose current Evidence input is replaced.
-    node_id: String,
-
-    /// Complete replacement Evidence set. Repeatable; values use the same
-    /// JSON/bare-locator and @file/stdin channels as `spec add`. Supplying none
-    /// clears the current Evidence view while Ledger history remains.
-    #[arg(long = "evidence", value_name = "JSON|LOCATOR")]
-    evidence: Vec<String>,
-
-    /// Address of the spec-oracle daemon.
-    #[arg(
-        long = "server",
-        env = "SPEC_ORACLE_SERVER",
-        default_value = "http://127.0.0.1:50051",
-        value_name = "URL"
-    )]
-    server: String,
-
-    /// Print the stored pre-capture Node state as JSON.
-    #[arg(long)]
-    json: bool,
-}
-
-#[derive(Clone, Copy, Debug, ValueEnum)]
-enum SelectionKind {
-    Supports,
-    Defeats,
-    Supersedes,
-}
-
-impl SelectionKind {
-    fn wire(self) -> pb::EdgeKind {
-        match self {
-            Self::Supports => pb::EdgeKind::Supports,
-            Self::Defeats => pb::EdgeKind::Defeats,
-            Self::Supersedes => pb::EdgeKind::Supersedes,
-        }
-    }
-
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::Supports => "supports",
-            Self::Defeats => "defeats",
-            Self::Supersedes => "supersedes",
-        }
-    }
-}
-
-#[derive(clap::Args)]
-struct SelectArgs {
-    /// The explicit selection judgment to append.
-    kind: SelectionKind,
-    /// Supporter, defeater, or superseder Specification Node id.
-    source: String,
-    /// Supported, defeated, or superseded Specification Node id.
-    target: String,
-    /// Additional Specification Node id that makes the judgment checkable.
-    #[arg(long = "basis", value_name = "NODE_ID")]
-    basis_spec_ids: Vec<String>,
-    /// Address of the spec-oracle daemon.
-    #[arg(
-        long = "server",
-        env = "SPEC_ORACLE_SERVER",
-        default_value = "http://127.0.0.1:50051",
-        value_name = "URL"
-    )]
-    server: String,
-    /// Print the appended Edge as JSON.
-    #[arg(long = "json")]
-    json: bool,
-}
-
-#[derive(Clone, Copy, Debug, ValueEnum)]
-enum PairingKind {
-    OccurrenceReliance,
-    GuaranteeDischarge,
-    AdmissibilityEnvelope,
-}
-
-impl PairingKind {
-    fn wire(self) -> pb::EdgeKind {
-        match self {
-            Self::OccurrenceReliance => pb::EdgeKind::OccurrenceReliance,
-            Self::GuaranteeDischarge => pb::EdgeKind::GuaranteeDischarge,
-            Self::AdmissibilityEnvelope => pb::EdgeKind::AdmissibilityEnvelope,
-        }
-    }
-
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::OccurrenceReliance => "occurrence_reliance",
-            Self::GuaranteeDischarge => "guarantee_discharge",
-            Self::AdmissibilityEnvelope => "admissibility_envelope",
-        }
-    }
-}
-
-#[derive(clap::Args)]
-struct PairArgs {
-    /// The causal role of the source in the target contract.
-    kind: PairingKind,
-    /// Evidence-bearing Specification Node id.
-    source: String,
-    /// Specification Node id whose guarantee is conditioned.
-    target: String,
-    /// Authored Specification Node naming exactly what the target awaits.
-    #[arg(long, value_name = "NODE_ID")]
-    relied: String,
-    /// Additional authored Specification Node making the pairing checkable.
-    #[arg(long = "basis", value_name = "NODE_ID")]
-    basis_spec_ids: Vec<String>,
-    /// Address of the spec-oracle daemon.
-    #[arg(
-        long = "server",
-        env = "SPEC_ORACLE_SERVER",
-        default_value = "http://127.0.0.1:50051",
-        value_name = "URL"
-    )]
-    server: String,
-    /// Print the appended Edge as JSON.
-    #[arg(long = "json")]
-    json: bool,
-}
-
-#[derive(clap::Args)]
 struct GraphArgs {
     /// Address of the spec-oracle daemon.
     #[arg(
@@ -231,23 +97,6 @@ struct GraphArgs {
     current: bool,
 }
 
-#[derive(clap::Args)]
-struct CurrentArgs {
-    /// Address of the spec-oracle daemon.
-    #[arg(
-        long = "server",
-        env = "SPEC_ORACLE_SERVER",
-        default_value = "http://127.0.0.1:50051",
-        value_name = "URL"
-    )]
-    server: String,
-
-    /// Emit one machine-readable current graph containing the selected
-    /// specifications, attached nodes and relationships, and fitness reasons.
-    #[arg(long)]
-    json: bool,
-}
-
 fn main() -> ExitCode {
     let _telemetry =
         match so_tracing::init_without_console_output("spec", env!("CARGO_PKG_VERSION")) {
@@ -261,159 +110,7 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
         Command::Add(args) => run_add(args),
-        Command::Refresh(args) => run_refresh(args),
-        Command::Select(args) => run_select(args),
-        Command::Pair(args) => run_pair(args),
         Command::Graph(args) => run_graph(args),
-        Command::Current(args) => run_current(args),
-    }
-}
-
-fn run_pair(args: PairArgs) -> ExitCode {
-    let runtime = match tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-    {
-        Ok(rt) => rt,
-        Err(error) => {
-            eprintln!("error: failed to start async runtime: {error}");
-            return ExitCode::from(EXIT_RUNTIME);
-        }
-    };
-    let result = runtime.block_on(async {
-        let mut client = Client::connect(args.server.clone()).await?;
-        client
-            .add_assumption_relation(
-                &args.source,
-                &args.target,
-                &args.relied,
-                args.kind.wire(),
-                &args.basis_spec_ids,
-            )
-            .await
-    });
-    match result {
-        Ok(edge) => {
-            if args.json {
-                let derivation = edge.derivation.as_ref();
-                let value = serde_json::json!({
-                    "id": edge.id,
-                    "source": edge.source,
-                    "target": edge.target,
-                    "relied_spec_id": edge.relied_spec_id,
-                    "kind": args.kind.as_str(),
-                    "basis_spec_ids": edge.basis_spec_ids,
-                    "derivation": derivation.map(|d| serde_json::json!({
-                        "method": d.method,
-                        "version": d.version,
-                    })),
-                    "recorded_at": edge.recorded_at,
-                });
-                match serde_json::to_string_pretty(&value) {
-                    Ok(output) => println!("{output}"),
-                    Err(error) => {
-                        eprintln!("error: failed to render Edge: {error}");
-                        return ExitCode::from(EXIT_RUNTIME);
-                    }
-                }
-            } else {
-                println!(
-                    "Paired {}  {} {} {} (relied {})",
-                    edge.id,
-                    edge.source,
-                    args.kind.as_str(),
-                    edge.target,
-                    edge.relied_spec_id.as_deref().unwrap_or("")
-                );
-            }
-            ExitCode::SUCCESS
-        }
-        Err(error) => {
-            eprintln!("error: {error}");
-            ExitCode::from(if error.is_bad_input() {
-                EXIT_USAGE
-            } else {
-                EXIT_RUNTIME
-            })
-        }
-    }
-}
-
-fn run_select(args: SelectArgs) -> ExitCode {
-    let runtime = match tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-    {
-        Ok(rt) => rt,
-        Err(e) => {
-            eprintln!("error: failed to start async runtime: {e}");
-            return ExitCode::from(EXIT_RUNTIME);
-        }
-    };
-    let span = tracing::info_span!(
-        "spec.cli.select",
-        "selection.kind" = args.kind.as_str(),
-        "selection.source" = %args.source,
-        "selection.target" = %args.target,
-        "selection.basis_count" = args.basis_spec_ids.len() as u64,
-        "server.address" = %args.server,
-    );
-    let result = runtime.block_on(
-        async {
-            let mut client = Client::connect(args.server.clone()).await?;
-            client
-                .add_selection_relation(
-                    &args.source,
-                    &args.target,
-                    args.kind.wire(),
-                    &args.basis_spec_ids,
-                )
-                .await
-        }
-        .instrument(span),
-    );
-    match result {
-        Ok(edge) => {
-            if args.json {
-                let derivation = edge.derivation.as_ref();
-                let value = serde_json::json!({
-                    "id": edge.id,
-                    "source": edge.source,
-                    "target": edge.target,
-                    "kind": args.kind.as_str(),
-                    "basis_spec_ids": edge.basis_spec_ids,
-                    "derivation": derivation.map(|d| serde_json::json!({
-                        "method": d.method,
-                        "version": d.version,
-                    })),
-                    "recorded_at": edge.recorded_at,
-                });
-                match serde_json::to_string_pretty(&value) {
-                    Ok(output) => println!("{output}"),
-                    Err(error) => {
-                        eprintln!("error: failed to render Edge: {error}");
-                        return ExitCode::from(EXIT_RUNTIME);
-                    }
-                }
-            } else {
-                println!(
-                    "Selected {}  {} {} {}",
-                    edge.id,
-                    edge.source,
-                    args.kind.as_str(),
-                    edge.target
-                );
-            }
-            ExitCode::SUCCESS
-        }
-        Err(error) => {
-            eprintln!("error: {error}");
-            ExitCode::from(if error.is_bad_input() {
-                EXIT_USAGE
-            } else {
-                EXIT_RUNTIME
-            })
-        }
     }
 }
 
@@ -492,56 +189,6 @@ fn run_add(args: AddArgs) -> ExitCode {
     }
 }
 
-fn run_refresh(args: RefreshArgs) -> ExitCode {
-    let runtime = match tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-    {
-        Ok(runtime) => runtime,
-        Err(error) => {
-            eprintln!("error: failed to start async runtime: {error}");
-            return ExitCode::from(EXIT_RUNTIME);
-        }
-    };
-    let result = runtime.block_on(async {
-        let mut client = Client::connect(args.server.clone()).await?;
-        client.replace_evidence(&args.node_id, &args.evidence).await
-    });
-    match result {
-        Ok(node) => {
-            if args.json {
-                match serde_json::to_string_pretty(&node_to_json(&node)) {
-                    Ok(output) => println!("{output}"),
-                    Err(error) => {
-                        eprintln!("error: failed to render Node: {error}");
-                        return ExitCode::from(EXIT_RUNTIME);
-                    }
-                }
-            } else if args.evidence.is_empty() {
-                println!(
-                    "Cleared current Evidence for {}; prior captures remain in the Ledger",
-                    node.id
-                );
-            } else {
-                println!(
-                    "Replaced Evidence inputs for {}; capture scheduled ({} request(s))",
-                    node.id,
-                    args.evidence.len()
-                );
-            }
-            ExitCode::SUCCESS
-        }
-        Err(error) => {
-            eprintln!("error: {error}");
-            ExitCode::from(if error.is_bad_input() {
-                EXIT_USAGE
-            } else {
-                EXIT_RUNTIME
-            })
-        }
-    }
-}
-
 fn run_graph(args: GraphArgs) -> ExitCode {
     let runtime = match tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -580,127 +227,6 @@ fn run_graph(args: GraphArgs) -> ExitCode {
             ExitCode::from(code)
         }
     }
-}
-
-fn run_current(args: CurrentArgs) -> ExitCode {
-    let runtime = match tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-    {
-        Ok(runtime) => runtime,
-        Err(error) => {
-            eprintln!("error: failed to start async runtime: {error}");
-            return ExitCode::from(EXIT_RUNTIME);
-        }
-    };
-    let span = tracing::info_span!(
-        "spec.cli.current",
-        "server.address" = %args.server,
-        "spec.current.candidate_count" = tracing::field::Empty,
-        "spec.current.selected_count" = tracing::field::Empty,
-    );
-    if args.json {
-        let result = runtime.block_on(read_current_graph_json(args.server).instrument(span));
-        return match result {
-            Ok(value) => match serde_json::to_string_pretty(&value) {
-                Ok(output) => {
-                    println!("{output}");
-                    ExitCode::SUCCESS
-                }
-                Err(error) => {
-                    eprintln!("error: failed to render current graph: {error}");
-                    ExitCode::from(EXIT_RUNTIME)
-                }
-            },
-            Err(error) => {
-                eprintln!("error: {error}");
-                ExitCode::from(if error.is_bad_input() {
-                    EXIT_USAGE
-                } else {
-                    EXIT_RUNTIME
-                })
-            }
-        };
-    }
-    let result = runtime.block_on(read_all_specifications(args.server).instrument(span));
-
-    match result {
-        Ok(specifications) => {
-            let total = specifications.len();
-            let selected: Vec<&pb::Node> = specifications
-                .iter()
-                .filter(|node| node.selection.as_ref().is_some_and(|view| view.current))
-                .collect();
-            let policy_version = specifications
-                .iter()
-                .filter_map(|node| node.selection.as_ref())
-                .map(|view| view.policy_version.as_str())
-                .find(|version| !version.is_empty())
-                .unwrap_or("unavailable");
-            tracing::Span::current().record("spec.current.candidate_count", total as u64);
-            tracing::Span::current().record("spec.current.selected_count", selected.len() as u64);
-
-            println!(
-                "Current specification set ({policy_version}): {} of {total} candidates",
-                selected.len()
-            );
-            for node in selected {
-                let selection = node
-                    .selection
-                    .as_ref()
-                    .expect("selected Node has a selection view");
-                println!(
-                    "{}  fitness {:+} (Evidence {:+}, relations {:+})  {}",
-                    node.id,
-                    selection.support_score,
-                    selection.evidence_score,
-                    selection.relation_score,
-                    node.statement
-                );
-            }
-            ExitCode::SUCCESS
-        }
-        Err(error) => {
-            eprintln!("error: {error}");
-            ExitCode::from(if error.is_bad_input() {
-                EXIT_USAGE
-            } else {
-                EXIT_RUNTIME
-            })
-        }
-    }
-}
-
-async fn read_all_specifications(server: String) -> Result<Vec<pb::Node>, so_client::ClientError> {
-    const PAGE_SIZE: u32 = 1000;
-
-    let mut client = Client::connect(server).await?;
-    let mut specifications = BTreeMap::new();
-    let mut page_token = String::new();
-    let mut seen_tokens = BTreeSet::new();
-    let reported_count = loop {
-        let page = client.get_graph(PAGE_SIZE, &page_token).await?;
-        let page_total = page.total_nodes;
-        for node in page.nodes {
-            specifications.insert(node.id.clone(), node);
-        }
-        if page.next_page_token.is_empty() {
-            break page_total;
-        }
-        if !seen_tokens.insert(page.next_page_token.clone()) {
-            return Err(so_client::ClientError::InvalidGraphResponse(
-                "daemon repeated a graph page token".to_string(),
-            ));
-        }
-        page_token = page.next_page_token;
-    };
-    if specifications.len() as u64 != reported_count {
-        return Err(so_client::ClientError::InvalidGraphResponse(format!(
-            "graph changed while the current set was being read: daemon reported {reported_count} specifications but {} were received; rerun spec current",
-            specifications.len()
-        )));
-    }
-    Ok(specifications.into_values().collect())
 }
 
 struct WireGraph {
@@ -857,37 +383,6 @@ fn retain_current_graph(graph: &mut WireGraph) {
     graph.derived.retain(|id, _| referenced_ids.contains(id));
 }
 
-async fn read_current_graph_json(
-    server: String,
-) -> Result<serde_json::Value, so_client::ClientError> {
-    let mut graph = read_wire_graph(server, false).await?;
-    let candidate_count = graph.specifications.len();
-    let policy_version = graph
-        .specifications
-        .values()
-        .filter_map(|node| node.selection.as_ref())
-        .map(|view| view.policy_version.clone())
-        .find(|version| !version.is_empty())
-        .unwrap_or_else(|| "unavailable".into());
-    retain_current_graph(&mut graph);
-    tracing::Span::current().record("spec.current.candidate_count", candidate_count as u64);
-    tracing::Span::current().record(
-        "spec.current.selected_count",
-        graph.specifications.len() as u64,
-    );
-    Ok(serde_json::json!({
-        "policy_version": policy_version,
-        "candidate_count": candidate_count,
-        "current_count": graph.specifications.len(),
-        "specifications": graph.specifications.values()
-            .map(specification_with_selection_to_json)
-            .collect::<Vec<_>>(),
-        "term_nodes": graph.terms.values().map(term_node_to_json).collect::<Vec<_>>(),
-        "derived_nodes": graph.derived.values().map(derived_node_to_json).collect::<Vec<_>>(),
-        "edges": graph.edges.values().map(edge_to_json).collect::<Vec<_>>(),
-    }))
-}
-
 fn edge_belongs_to_current_graph(edge: &pb::Edge, current_ids: &BTreeSet<String>) -> bool {
     let endpoint_is_current = |kind: i32, id: &str| {
         pb::VertexKind::try_from(kind).unwrap_or(pb::VertexKind::Unspecified)
@@ -902,92 +397,6 @@ fn edge_belongs_to_current_graph(edge: &pb::Edge, current_ids: &BTreeSet<String>
             .is_none_or(|id| current_ids.contains(id))
 }
 
-fn term_node_to_json(node: &pb::TermNode) -> serde_json::Value {
-    serde_json::json!({
-        "id": &node.id,
-        "form": &node.form,
-        "head": &node.head,
-        "lang_version": &node.lang_version,
-        "derivation_version": &node.derivation_version,
-    })
-}
-
-fn derived_node_to_json(node: &pb::DerivedNode) -> serde_json::Value {
-    match node.value.as_ref() {
-        Some(pb::derived_node::Value::Evidence(value)) => serde_json::json!({
-            "id": &node.id,
-            "node_kind": "evidence",
-            "evidence": value.evidence.as_ref().map(evidence_to_json),
-        }),
-        Some(pb::derived_node::Value::Assumption(value)) => serde_json::json!({
-            "id": &node.id,
-            "node_kind": "assumption",
-            "expression": &value.expression,
-            "formula_json": &value.formula_json,
-            "derivation_version": &value.derivation_version,
-        }),
-        Some(pb::derived_node::Value::Guarantee(value)) => serde_json::json!({
-            "id": &node.id,
-            "node_kind": "guarantee",
-            "expression": &value.expression,
-            "force": &value.force,
-            "derivation_version": &value.derivation_version,
-        }),
-        None => serde_json::json!({
-            "id": &node.id,
-            "node_kind": "unknown",
-        }),
-    }
-}
-
-fn edge_to_json(edge: &pb::Edge) -> serde_json::Value {
-    let kind = pb::EdgeKind::try_from(edge.kind).unwrap_or(pb::EdgeKind::Unspecified);
-    let family = pb::EdgeFamily::try_from(edge.family).unwrap_or(pb::EdgeFamily::Unspecified);
-    let source_kind =
-        pb::VertexKind::try_from(edge.source_kind).unwrap_or(pb::VertexKind::Unspecified);
-    let target_kind =
-        pb::VertexKind::try_from(edge.target_kind).unwrap_or(pb::VertexKind::Unspecified);
-    let source_role = pb::EdgeEndpointRole::try_from(edge.source_role)
-        .unwrap_or(pb::EdgeEndpointRole::Unspecified);
-    let target_role = pb::EdgeEndpointRole::try_from(edge.target_role)
-        .unwrap_or(pb::EdgeEndpointRole::Unspecified);
-    serde_json::json!({
-        "id": &edge.id,
-        "source": &edge.source,
-        "target": &edge.target,
-        "kind": enum_label(kind.as_str_name(), "EDGE_KIND_"),
-        "family": enum_label(family.as_str_name(), "EDGE_FAMILY_"),
-        "source_kind": enum_label(source_kind.as_str_name(), "VERTEX_KIND_"),
-        "target_kind": enum_label(target_kind.as_str_name(), "VERTEX_KIND_"),
-        "source_role": enum_label(source_role.as_str_name(), "EDGE_ENDPOINT_ROLE_"),
-        "target_role": enum_label(target_role.as_str_name(), "EDGE_ENDPOINT_ROLE_"),
-        "source_anchor": edge.source_anchor.as_ref().map(text_anchor_to_json),
-        "target_anchor": edge.target_anchor.as_ref().map(text_anchor_to_json),
-        "relied_spec_id": &edge.relied_spec_id,
-        "basis_spec_ids": &edge.basis_spec_ids,
-        "derivation": edge.derivation.as_ref().map(|derivation| serde_json::json!({
-            "method": &derivation.method,
-            "version": &derivation.version,
-        })),
-        "recorded_at": &edge.recorded_at,
-        "current": edge.current,
-    })
-}
-
-fn text_anchor_to_json(anchor: &pb::TextAnchor) -> serde_json::Value {
-    serde_json::json!({
-        "selector": &anchor.selector,
-        "text": &anchor.text,
-        "role": &anchor.role,
-    })
-}
-
-fn enum_label(name: &str, prefix: &str) -> String {
-    name.strip_prefix(prefix)
-        .unwrap_or(name)
-        .to_ascii_lowercase()
-}
-
 fn node_to_json(node: &pb::Node) -> serde_json::Value {
     serde_json::json!({
         "id": &node.id,
@@ -995,42 +404,6 @@ fn node_to_json(node: &pb::Node) -> serde_json::Value {
         "lang_version": &node.lang_version,
         "sentence": sentence_to_json(node.sentence.as_ref()),
         "meta": meta_to_json(node.meta.as_ref()),
-    })
-}
-
-fn specification_with_selection_to_json(node: &pb::Node) -> serde_json::Value {
-    let mut value = node_to_json(node);
-    value["selection"] = selection_to_json(node.selection.as_ref());
-    value
-}
-
-fn selection_to_json(selection: Option<&pb::SelectionView>) -> serde_json::Value {
-    let Some(selection) = selection else {
-        return serde_json::Value::Null;
-    };
-    serde_json::json!({
-        "current": selection.current,
-        "policy_version": &selection.policy_version,
-        "support_score": selection.support_score,
-        "evidence_score": selection.evidence_score,
-        "relation_score": selection.relation_score,
-        "supporting_edge_ids": &selection.supporting_edge_ids,
-        "defeating_edge_ids": &selection.defeating_edge_ids,
-        "superseding_edge_ids": &selection.superseding_edge_ids,
-        "contributions": selection.contributions.iter().map(|contribution| serde_json::json!({
-            "kind": &contribution.kind,
-            "points": contribution.points,
-            "edge_id": &contribution.edge_id,
-            "source_node_id": &contribution.source_node_id,
-            "evidence_node_id": &contribution.evidence_node_id,
-            "detail": &contribution.detail,
-        })).collect::<Vec<_>>(),
-        "exclusions": selection.exclusions.iter().map(|exclusion| serde_json::json!({
-            "kind": &exclusion.kind,
-            "edge_id": &exclusion.edge_id,
-            "competing_node_id": &exclusion.competing_node_id,
-            "detail": &exclusion.detail,
-        })).collect::<Vec<_>>(),
     })
 }
 
@@ -1208,92 +581,18 @@ mod tests {
         let cli = Cli::try_parse_from(args).expect("graph arguments should parse");
         match cli.command {
             Command::Graph(args) => args,
-            Command::Add(_)
-            | Command::Refresh(_)
-            | Command::Select(_)
-            | Command::Pair(_)
-            | Command::Current(_) => {
-                panic!("expected graph command")
-            }
+            Command::Add(_) => panic!("expected graph command"),
         }
     }
 
     #[test]
-    fn current_command_exposes_a_machine_readable_mode() {
-        let cli = Cli::try_parse_from(["spec", "current", "--json", "--server", "http://specd"])
-            .expect("current arguments should parse");
-        let Command::Current(args) = cli.command else {
-            panic!("expected current command");
-        };
-        assert!(args.json);
-        assert_eq!(args.server, "http://specd");
-    }
-
-    #[test]
-    fn refresh_accepts_a_complete_replacement_evidence_set() {
-        let cli = Cli::try_parse_from([
-            "spec",
-            "refresh",
-            "node-1",
-            "--evidence",
-            "proof.rs:1",
-            "--evidence",
-            r#"{"kind":"counter","locator":"report.md:2"}"#,
-        ])
-        .expect("refresh arguments should parse");
-        let Command::Refresh(args) = cli.command else {
-            panic!("expected refresh command");
-        };
-        assert_eq!(args.node_id, "node-1");
-        assert_eq!(args.evidence.len(), 2);
-    }
-
-    #[test]
-    fn select_accepts_only_the_explicit_selection_vocabulary() {
-        let cli = Cli::try_parse_from([
-            "spec",
-            "select",
-            "supersedes",
-            "replacement",
-            "old",
-            "--basis",
-            "review",
-        ])
-        .unwrap();
-        let Command::Select(args) = cli.command else {
-            panic!("expected select command")
-        };
-        assert!(matches!(args.kind, SelectionKind::Supersedes));
-        assert_eq!(args.source, "replacement");
-        assert_eq!(args.target, "old");
-        assert_eq!(args.basis_spec_ids, vec!["review"]);
-
-        assert!(Cli::try_parse_from(["spec", "select", "refines", "a", "b"]).is_err());
-    }
-
-    #[test]
-    fn pair_requires_an_explicit_relied_specification() {
-        let cli = Cli::try_parse_from([
-            "spec",
-            "pair",
-            "guarantee-discharge",
-            "source",
-            "target",
-            "--relied",
-            "awaited",
-        ])
-        .unwrap();
-        let Command::Pair(args) = cli.command else {
-            panic!("expected pair command")
-        };
-        assert!(matches!(args.kind, PairingKind::GuaranteeDischarge));
-        assert_eq!(args.source, "source");
-        assert_eq!(args.target, "target");
-        assert_eq!(args.relied, "awaited");
-        assert!(
-            Cli::try_parse_from(["spec", "pair", "guarantee-discharge", "source", "target"])
-                .is_err()
-        );
+    fn cli_rejects_removed_subcommands() {
+        for command in ["refresh", "select", "pair", "current"] {
+            assert!(
+                Cli::try_parse_from(["spec", command]).is_err(),
+                "{command} must not remain on the CLI surface"
+            );
+        }
     }
 
     #[test]
