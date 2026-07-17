@@ -32,6 +32,7 @@
 pub mod add;
 pub mod add_mailbox;
 pub mod arango;
+pub mod contract_algebra;
 pub mod convert;
 pub mod domain;
 pub mod evidence;

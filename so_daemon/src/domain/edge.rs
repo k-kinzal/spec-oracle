@@ -18,6 +18,7 @@ pub enum VertexKind {
     Evidence,
     Assumption,
     Guarantee,
+    Contract,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,6 +63,17 @@ pub enum EndpointRole {
     DischargedContract,
     AdmissibleEnvironment,
     BoundedContract,
+    Contract,
+    ContractRefiner,
+    ContractRefined,
+    EquivalentContract,
+    CompositionOperand,
+    CompositionResult,
+    QuotientDividend,
+    QuotientDivisor,
+    QuotientResult,
+    MergeOperand,
+    MergeResult,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -100,6 +112,20 @@ pub enum EdgeKind {
     HasAssumption,
     /// The target is the guarantee side of the source specification's contract.
     HasGuarantee,
+    /// The target is the current semantic `(A,G)` projection of the source.
+    HasContract,
+    /// Contract-to-contract standard A/G refinement.
+    ContractRefines,
+    /// Contract-to-contract mutual A/G refinement.
+    ContractEquivalent,
+    /// An operand used to derive a parallel-composition result.
+    CompositionOperand,
+    /// The contract being divided in a quotient derivation.
+    QuotientDividend,
+    /// The known contract divided out in a quotient derivation.
+    QuotientDivisor,
+    /// An operand used to derive a viewpoint merge.
+    MergeOperand,
 }
 
 impl EdgeKind {
@@ -121,6 +147,13 @@ impl EdgeKind {
             Self::GroundedBy => "grounded_by",
             Self::HasAssumption => "has_assumption",
             Self::HasGuarantee => "has_guarantee",
+            Self::HasContract => "has_contract",
+            Self::ContractRefines => "contract_refines",
+            Self::ContractEquivalent => "contract_equivalent",
+            Self::CompositionOperand => "composition_operand",
+            Self::QuotientDividend => "quotient_dividend",
+            Self::QuotientDivisor => "quotient_divisor",
+            Self::MergeOperand => "merge_operand",
         }
     }
 
@@ -137,7 +170,15 @@ impl EdgeKind {
             | Self::GuaranteeDischarge
             | Self::AdmissibilityEnvelope => EdgeFamily::Semantic,
             Self::Supports | Self::Defeats | Self::Supersedes => EdgeFamily::Selection,
-            Self::GroundedBy | Self::HasAssumption | Self::HasGuarantee => EdgeFamily::Projection,
+            Self::GroundedBy
+            | Self::HasAssumption
+            | Self::HasGuarantee
+            | Self::HasContract
+            | Self::CompositionOperand
+            | Self::QuotientDividend
+            | Self::QuotientDivisor
+            | Self::MergeOperand => EdgeFamily::Projection,
+            Self::ContractRefines | Self::ContractEquivalent => EdgeFamily::Semantic,
         }
     }
 
@@ -171,6 +212,21 @@ impl EdgeKind {
                 EndpointRole::Assumption,
             ),
             Self::HasGuarantee => (EndpointRole::ContractSpecification, EndpointRole::Guarantee),
+            Self::HasContract => (EndpointRole::ContractSpecification, EndpointRole::Contract),
+            Self::ContractRefines => (EndpointRole::ContractRefiner, EndpointRole::ContractRefined),
+            Self::ContractEquivalent => (
+                EndpointRole::EquivalentContract,
+                EndpointRole::EquivalentContract,
+            ),
+            Self::CompositionOperand => (
+                EndpointRole::CompositionOperand,
+                EndpointRole::CompositionResult,
+            ),
+            Self::QuotientDividend => {
+                (EndpointRole::QuotientDividend, EndpointRole::QuotientResult)
+            }
+            Self::QuotientDivisor => (EndpointRole::QuotientDivisor, EndpointRole::QuotientResult),
+            Self::MergeOperand => (EndpointRole::MergeOperand, EndpointRole::MergeResult),
         }
     }
 
@@ -189,6 +245,12 @@ impl EdgeKind {
                 | Self::GroundedBy
                 | Self::HasAssumption
                 | Self::HasGuarantee
+                | Self::HasContract
+                | Self::ContractRefines
+                | Self::CompositionOperand
+                | Self::QuotientDividend
+                | Self::QuotientDivisor
+                | Self::MergeOperand
         )
     }
 }
@@ -251,6 +313,7 @@ impl Edge {
             EdgeKind::GroundedBy => VertexKind::Evidence,
             EdgeKind::HasAssumption => VertexKind::Assumption,
             EdgeKind::HasGuarantee => VertexKind::Guarantee,
+            EdgeKind::HasContract => VertexKind::Contract,
             _ => return Err("projection construction requires a projection EdgeKind".into()),
         };
         let (source_role, target_role) = kind.endpoint_roles();
@@ -267,6 +330,57 @@ impl Edge {
             target_anchor: None,
             relied_spec_id: None,
             basis_spec_ids: Vec::new(),
+            derivation,
+            recorded_at: recorded_at.to_string(),
+        };
+        edge.id = edge.identity_key();
+        edge.validate()?;
+        Ok(edge)
+    }
+
+    /// Build a checked relationship whose endpoints are semantic Contract
+    /// vertices. `basis_spec_ids` supplies deterministic specification-page
+    /// ownership and the authored provenance of the judgment.
+    pub fn contract_relation(
+        kind: EdgeKind,
+        source: &str,
+        target: &str,
+        mut basis_spec_ids: Vec<String>,
+        derivation: Derivation,
+        recorded_at: &str,
+    ) -> Result<Self, String> {
+        if !matches!(
+            kind,
+            EdgeKind::ContractRefines
+                | EdgeKind::ContractEquivalent
+                | EdgeKind::CompositionOperand
+                | EdgeKind::QuotientDividend
+                | EdgeKind::QuotientDivisor
+                | EdgeKind::MergeOperand
+        ) {
+            return Err("contract relation construction requires a contract EdgeKind".into());
+        }
+        let (source, target) = if !kind.directed() && source > target {
+            (target, source)
+        } else {
+            (source, target)
+        };
+        basis_spec_ids.sort();
+        basis_spec_ids.dedup();
+        let (source_role, target_role) = kind.endpoint_roles();
+        let mut edge = Self {
+            id: String::new(),
+            source: source.to_string(),
+            source_kind: VertexKind::Contract,
+            source_role,
+            target: target.to_string(),
+            target_kind: VertexKind::Contract,
+            target_role,
+            kind,
+            source_anchor: None,
+            target_anchor: None,
+            relied_spec_id: None,
+            basis_spec_ids,
             derivation,
             recorded_at: recorded_at.to_string(),
         };
@@ -459,6 +573,13 @@ impl Edge {
             EdgeKind::GroundedBy => (VertexKind::Specification, VertexKind::Evidence),
             EdgeKind::HasAssumption => (VertexKind::Specification, VertexKind::Assumption),
             EdgeKind::HasGuarantee => (VertexKind::Specification, VertexKind::Guarantee),
+            EdgeKind::HasContract => (VertexKind::Specification, VertexKind::Contract),
+            EdgeKind::ContractRefines
+            | EdgeKind::ContractEquivalent
+            | EdgeKind::CompositionOperand
+            | EdgeKind::QuotientDividend
+            | EdgeKind::QuotientDivisor
+            | EdgeKind::MergeOperand => (VertexKind::Contract, VertexKind::Contract),
             _ => (VertexKind::Specification, VertexKind::Specification),
         };
         let actual_vertices = (self.source_kind, self.target_kind);
@@ -498,6 +619,14 @@ impl Edge {
     /// independently of its typed argument order, so a complete Node-page walk
     /// returns every Edge exactly once even when endpoints span pages.
     pub fn page_owner(&self) -> &str {
+        if self.source_kind == VertexKind::Contract {
+            return self
+                .basis_spec_ids
+                .iter()
+                .min()
+                .map(String::as_str)
+                .unwrap_or(&self.source);
+        }
         if self.target_kind != VertexKind::Specification || self.source <= self.target {
             &self.source
         } else {

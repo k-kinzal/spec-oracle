@@ -28,6 +28,7 @@ enum NodeKind {
     Evidence,
     Assumption,
     Guarantee,
+    Contract,
 }
 
 #[derive(Debug)]
@@ -84,6 +85,7 @@ pub(crate) struct Graph {
     evidence_count: usize,
     assumption_count: usize,
     guarantee_count: usize,
+    contract_count: usize,
     scope: GraphScope,
 }
 
@@ -108,6 +110,7 @@ impl Graph {
         let mut evidence_count = 0;
         let mut assumption_count = 0;
         let mut guarantee_count = 0;
+        let mut contract_count = 0;
 
         for specification in specifications {
             let selection = specification.selection.as_ref();
@@ -192,6 +195,13 @@ impl Graph {
                     guarantee_count += 1;
                     (NodeKind::Guarantee, value.expression)
                 }
+                Some(pb::derived_node::Value::Contract(value)) => {
+                    contract_count += 1;
+                    (
+                        NodeKind::Contract,
+                        format!("{} A/G contract", value.operation),
+                    )
+                }
                 None => return Err(format!("Derived Node {} has no value", derived.id)),
             };
             let node = Node {
@@ -218,6 +228,7 @@ impl Graph {
         let mut evidence_number = 0;
         let mut assumption_number = 0;
         let mut guarantee_number = 0;
+        let mut contract_number = 0;
         for node in &mut nodes {
             node.display_id = match node.kind {
                 NodeKind::Specification => {
@@ -239,6 +250,10 @@ impl Graph {
                 NodeKind::Guarantee => {
                     guarantee_number += 1;
                     format!("G{guarantee_number:02}")
+                }
+                NodeKind::Contract => {
+                    contract_number += 1;
+                    format!("C{contract_number:02}")
                 }
             };
         }
@@ -293,6 +308,7 @@ impl Graph {
             evidence_count,
             assumption_count,
             guarantee_count,
+            contract_count,
             scope: GraphScope::Population,
         })
     }
@@ -310,32 +326,35 @@ impl Graph {
         let current_edge_count = self.edges.iter().filter(|edge| edge.current).count();
         let mut output = match self.scope {
             GraphScope::Population => format!(
-                "Specification graph — {} current / {} candidate specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} edge(s)\n",
+                "Specification graph — {} current / {} candidate specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} contract(s), {} edge(s)\n",
                 self.current_specification_count,
                 self.specification_count,
                 self.term_count,
                 self.evidence_count,
                 self.assumption_count,
                 self.guarantee_count,
+                self.contract_count,
                 self.edges.len()
             ),
             GraphScope::Current => format!(
-                "Current specification graph — {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} relationship(s)\n",
+                "Current specification graph — {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} contract(s), {} relationship(s)\n",
                 self.specification_count,
                 self.term_count,
                 self.evidence_count,
                 self.assumption_count,
                 self.guarantee_count,
+                self.contract_count,
                 self.edges.len()
             ),
             GraphScope::Ledger => format!(
-                "Ledger graph — {} current / {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} current / {} recorded edge(s)\n",
+                "Ledger graph — {} current / {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} contract(s), {} current / {} recorded edge(s)\n",
                 self.current_specification_count,
                 self.specification_count,
                 self.term_count,
                 self.evidence_count,
                 self.assumption_count,
                 self.guarantee_count,
+                self.contract_count,
                 current_edge_count,
                 self.edges.len()
             ),
@@ -579,6 +598,7 @@ fn node_label(node: &Node) -> String {
         NodeKind::Evidence => '●',
         NodeKind::Assumption => '△',
         NodeKind::Guarantee => '■',
+        NodeKind::Contract => '⬡',
     };
     format!(
         "{marker} {} {}",
@@ -648,6 +668,13 @@ fn edge_kind(kind: i32) -> (&'static str, bool) {
         pb::EdgeKind::GroundedBy => ("grounded_by", true),
         pb::EdgeKind::HasAssumption => ("has_assumption", true),
         pb::EdgeKind::HasGuarantee => ("has_guarantee", true),
+        pb::EdgeKind::HasContract => ("has_contract", true),
+        pb::EdgeKind::ContractRefines => ("contract_refines", true),
+        pb::EdgeKind::ContractEquivalent => ("contract_equivalent", false),
+        pb::EdgeKind::CompositionOperand => ("composition_operand", true),
+        pb::EdgeKind::QuotientDividend => ("quotient_dividend", true),
+        pb::EdgeKind::QuotientDivisor => ("quotient_divisor", true),
+        pb::EdgeKind::MergeOperand => ("merge_operand", true),
         pb::EdgeKind::Unspecified => ("unspecified", false),
     }
 }
@@ -687,6 +714,17 @@ fn endpoint_role(role: i32) -> &'static str {
         pb::EdgeEndpointRole::DischargedContract => "discharged_contract",
         pb::EdgeEndpointRole::AdmissibleEnvironment => "admissible_environment",
         pb::EdgeEndpointRole::BoundedContract => "bounded_contract",
+        pb::EdgeEndpointRole::Contract => "contract",
+        pb::EdgeEndpointRole::ContractRefiner => "contract_refiner",
+        pb::EdgeEndpointRole::ContractRefined => "contract_refined",
+        pb::EdgeEndpointRole::EquivalentContract => "equivalent_contract",
+        pb::EdgeEndpointRole::CompositionOperand => "composition_operand",
+        pb::EdgeEndpointRole::CompositionResult => "composition_result",
+        pb::EdgeEndpointRole::QuotientDividend => "quotient_dividend",
+        pb::EdgeEndpointRole::QuotientDivisor => "quotient_divisor",
+        pb::EdgeEndpointRole::QuotientResult => "quotient_result",
+        pb::EdgeEndpointRole::MergeOperand => "merge_operand",
+        pb::EdgeEndpointRole::MergeResult => "merge_result",
         pb::EdgeEndpointRole::Unspecified => "unspecified",
     }
 }
@@ -784,6 +822,41 @@ mod tests {
                 pb::EdgeFamily::Projection,
                 pb::EdgeEndpointRole::ContractSpecification,
                 pb::EdgeEndpointRole::Guarantee,
+            ),
+            pb::EdgeKind::HasContract => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::ContractSpecification,
+                pb::EdgeEndpointRole::Contract,
+            ),
+            pb::EdgeKind::ContractRefines => (
+                pb::EdgeFamily::Semantic,
+                pb::EdgeEndpointRole::ContractRefiner,
+                pb::EdgeEndpointRole::ContractRefined,
+            ),
+            pb::EdgeKind::ContractEquivalent => (
+                pb::EdgeFamily::Semantic,
+                pb::EdgeEndpointRole::EquivalentContract,
+                pb::EdgeEndpointRole::EquivalentContract,
+            ),
+            pb::EdgeKind::CompositionOperand => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::CompositionOperand,
+                pb::EdgeEndpointRole::CompositionResult,
+            ),
+            pb::EdgeKind::QuotientDividend => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::QuotientDividend,
+                pb::EdgeEndpointRole::QuotientResult,
+            ),
+            pb::EdgeKind::QuotientDivisor => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::QuotientDivisor,
+                pb::EdgeEndpointRole::QuotientResult,
+            ),
+            pb::EdgeKind::MergeOperand => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::MergeOperand,
+                pb::EdgeEndpointRole::MergeResult,
             ),
             pb::EdgeKind::Unspecified => (
                 pb::EdgeFamily::Unspecified,

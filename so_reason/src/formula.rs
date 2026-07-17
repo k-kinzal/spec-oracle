@@ -1,8 +1,8 @@
 //! The formula layer: symbolic Boolean structure over opaque atoms.
 //!
 //! This module is the structural precondition for sound graph edges — the
-//! twice-raised prerequisite for *refines*, *composes*, and *contradicts*
-//! meaning something checkable. It gives every behavioral sentence a
+//! twice-raised prerequisite for implication, contract refinement, and
+//! contradiction meaning something checkable. It gives every behavioral sentence a
 //! propositional shape: which guard atoms scope it, how they conjoin and
 //! disjoin, where the exception negates, and what the claim atom is.
 //!
@@ -255,43 +255,10 @@ impl BehaviorAtom {
     }
 }
 
-/// The sentence-internal contract shape: an assumption (trivially `Top` at
-/// ingest — non-trivial assumptions arrive only by pairing between
-/// sentences, see [`ContractFormula::paired`]) and a guarantee that is the
-/// sentence's own conditional, applicability → claim.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ContractFormula {
-    /// `Top` at ingest. When graph-side pairing later selects real
-    /// assumption sources for this guarantee, the paired (A, G) SUPERSEDES
-    /// this lone (⊤, G) — the two are never conjoined; [`Self::paired`]
-    /// encodes that doctrine by REPLACING the assumption.
-    ///
-    /// DERIVED from [`Self::sources`]: always the conjunction of the
-    /// CONTRACT-FORMING source RELIED formulas — non-envelope AND PROVEN
-    /// (round 9) AND not merely RECOMMENDED AND responsible-subject keys
-    /// DISJOINT (round 10; see
-    /// [`AssumptionSource::contract_forming`] and [`Self::paired`]).
-    /// Round 7: A is built from the
-    /// reliances, not from the source formulas, which are evidence; `Top`
-    /// for none, the lone reliance for one. Envelope sources are
-    /// compatibility data, not assumption conjuncts (round 6), and
-    /// UNPROVEN sources are CANDIDATES the graph layer must confirm —
-    /// they are retained in [`Self::sources`] but leave the assumption
-    /// unchanged (round 9). [`Self::paired`] keeps the two in sync.
-    pub assumption: Formula,
-    /// `applicability → claim`, i.e. `Or(Not(applicability), claim)` — with
-    /// the `Top` applicability simplified away: an unconditional sentence's
-    /// guarantee is its claim.
-    pub guarantee: Formula,
-    /// The typed assumption sources the assumption was derived from — empty
-    /// at ingest. Round 5: [`Self::paired`] RETAINS its sources so the edge
-    /// kind of each conjunct stays checkable (a permission stays visibly an
-    /// envelope, a reliance stays visibly undischargeable) instead of being
-    /// erased into an untyped `And`. `#[serde(default)]` keeps pre-round-5
-    /// serialized contracts readable.
-    #[serde(default)]
-    pub sources: Vec<AssumptionSource>,
-}
+// Compatibility exports. The semantic A/G pair and its formation now live in
+// `crate::contract`; these names remain available here while downstream users
+// migrate from the former formula-owned API.
+pub use crate::contract::{contract_formula, Contract, ContractFormula, FormedContract};
 
 /// How an assumption source relates to the guarantee it is paired with —
 /// the typed edges of the causal pair {A₁…Aₗ} ⇒ G. Which sentence supplies
@@ -314,10 +281,10 @@ pub enum EdgeKind {
     /// (a permission never narrows what must be withstood); being
     /// admissibility (see [`AtomRef::Admissibility`]), it never witnesses
     /// occurrence and never discharges. Round 6: an envelope source is
-    /// retained in [`ContractFormula::sources`] but NEVER enters the paired
+    /// retained in [`FormedContract::sources`] but NEVER enters the paired
     /// assumption formula — it is compatibility data, not an assumption
     /// conjunct, so saturation never negates it (see
-    /// [`ContractFormula::paired`]).
+    /// [`FormedContract::paired`]).
     AdmissibilityEnvelope,
 }
 
@@ -367,7 +334,7 @@ pub struct AssumptionSource {
     pub formula: Formula,
     /// What the paired guarantee actually RELIES ON (round 7). The edge is
     /// evidence + reliance: `formula` is the evidence, `relied` the
-    /// reliance, and [`ContractFormula::paired`] conjoins the RELIED
+    /// reliance, and [`FormedContract::paired`] conjoins the RELIED
     /// formulas (contract-forming only: non-envelope AND proven, round 9;
     /// AND not merely recommended AND responsible-subject keys disjoint,
     /// round 10 — see [`Self::contract_forming`])
@@ -741,7 +708,7 @@ impl AssumptionSource {
     /// non-RECOMMENDED source whose reliance is [`Self::proven`]: envelopes
     /// are compatibility data (round 6), an unproven reliance is a
     /// CANDIDATE edge that must not relieve the guarantee (see
-    /// [`ContractFormula::paired`]), and — round 10 — a RECOMMENDED source
+    /// [`FormedContract::paired`]), and — round 10 — a RECOMMENDED source
     /// never forms A: `should` states a preference, not an environmental
     /// fact, and conjoining it into A would silently harden the
     /// recommendation into something the guarantee is relieved by
@@ -749,7 +716,7 @@ impl AssumptionSource {
     /// promise", which a recommendation never made). Recommendations
     /// therefore never DISCHARGE (round 5 act × kind matrix) and never
     /// form A (round 10); a recommended reliance rides in
-    /// [`ContractFormula::sources`] as a visible candidate only. Binding
+    /// [`FormedContract::sources`] as a visible candidate only. Binding
     /// sources and force-free descriptions qualify as before; permission
     /// is already envelope-only. Round 10 also requires
     /// [`SubjectRelation::DisjointKeys`]: a shared-key source is a red
@@ -767,7 +734,7 @@ impl AssumptionSource {
     /// A ("whenever the source's guard holds, its claim holds"), which is
     /// rarely what the guarantee actually awaits; defaulted sources are
     /// therefore PERMANENT CANDIDATES (migration/evidence only), and the
-    /// well-formed proven pairing ([`ContractFormula::well_formed`]) is
+    /// well-formed proven pairing ([`FormedContract::well_formed`]) is
     /// the one place the full definition lives.
     pub fn contract_forming(&self) -> bool {
         self.kind != EdgeKind::AdmissibilityEnvelope
@@ -817,20 +784,26 @@ fn validate_act_kind(kind: EdgeKind, act: SpeechAct) -> Result<(), PairingError>
     Ok(())
 }
 
-impl ContractFormula {
-    /// The saturated form `G ∨ ¬A` — the theory's `G ∪ ¬A` in symbolic
-    /// form: what the component owes once environments that break the
-    /// assumption relieve it. With the ingest assumption `Top`, this is the
-    /// guarantee itself.
+impl FormedContract {
+    /// The source-formula spelling `G ∨ ¬A`, retained for projection and
+    /// serialization compatibility.
+    ///
+    /// This is not the semantic contract-algebra complement: behavior-level
+    /// [`Formula::Not`] has quantifier-sensitive constrained-NL meaning.
+    /// Algebraic reasoning must use [`FormedContract::semantic`] and its
+    /// dedicated classical [`crate::contract::Assertion`] domain.
     pub fn saturated(&self) -> Formula {
         if self.assumption == Formula::Top {
-            return self.guarantee.clone();
-        }
-        Formula::Or {
-            items: vec![
-                self.guarantee.clone(),
-                Formula::not(self.assumption.clone()),
-            ],
+            self.guarantee.clone()
+        } else {
+            Formula::Or {
+                items: vec![
+                    self.guarantee.clone(),
+                    Formula::Not {
+                        inner: Box::new(self.assumption.clone()),
+                    },
+                ],
+            }
         }
     }
 
@@ -886,7 +859,7 @@ impl ContractFormula {
     /// [`AssumptionSource::contract_forming`]) source RELIED
     /// formulas, and `sources` keeps each
     /// conjunct's edge kind, evidence formula, and provenance checkable.
-    pub fn paired(&self, sources: &[AssumptionSource]) -> ContractFormula {
+    pub fn paired(&self, sources: &[AssumptionSource]) -> FormedContract {
         if sources.is_empty() {
             return self.clone();
         }
@@ -900,7 +873,7 @@ impl ContractFormula {
             1 => items.remove(0),
             _ => Formula::And { items },
         };
-        ContractFormula {
+        FormedContract {
             assumption,
             guarantee: self.guarantee.clone(),
             sources: sources.to_vec(),
@@ -1013,7 +986,7 @@ impl ContractFormula {
 }
 
 /// The verification summary of a paired contract — see
-/// [`ContractFormula::well_formed`] (the definition anchor). Data only;
+/// [`FormedContract::well_formed`] (the definition anchor). Data only;
 /// the graph layer decides what to do with it.
 ///
 /// THE ONE-CALL VERDICT (round 12, change 2):
@@ -1049,7 +1022,7 @@ pub struct WellFormedness {
     pub all_sources_contract_forming: bool,
     /// DIAGNOSTIC (round 12, change 2): the per-source itemization of
     /// everything the aggregate saw, by source index into
-    /// [`ContractFormula::sources`]. A source with no issues has no
+    /// [`FormedContract::sources`]. A source with no issues has no
     /// entry. Envelope sources carry the single reason
     /// [`SourceIssueReason::EnvelopeKind`] — recorded so the itemization
     /// is total, DOCUMENTED AS BY-DESIGN, not a defect (an envelope is
@@ -1068,7 +1041,7 @@ pub struct WellFormedness {
 }
 
 /// One source's issues in a [`WellFormedness`] summary (round 12,
-/// change 2): the index of the source in [`ContractFormula::sources`]
+/// change 2): the index of the source in [`FormedContract::sources`]
 /// and every reason it does not contract-form, in the fixed order of
 /// [`SourceIssueReason`]'s declaration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1079,7 +1052,7 @@ pub struct SourceIssue {
 
 /// Why a source in a [`WellFormedness`] summary does not contract-form
 /// (round 12, change 2). The first four mirror the per-source conditions
-/// of the well-formed proven pairing ([`ContractFormula::well_formed`]);
+/// of the well-formed proven pairing ([`FormedContract::well_formed`]);
 /// the last records the envelope kind — BY-DESIGN data, not a defect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -1329,27 +1302,5 @@ pub fn assertion_formula(sentence: &Sentence) -> Option<Formula> {
         Formula::Or {
             items: vec![Formula::not(applicability), claim],
         }
-    })
-}
-
-/// The sentence-internal contract formula. `None` for definitions AND
-/// permissions: vocabulary has no contract reading, and a permission has no
-/// lone contract (it enters contracts only by pairing, on the environment
-/// side — settled in [`crate::semantics::ingest_contract`]; its claim
-/// formula exists, as an [`AtomRef::Admissibility`] atom). Coordinated
-/// subjects ARE contract-bearing since round 4: the guarantee's claim is
-/// the coordination's `And`/`Or` over per-item atoms.
-pub fn contract_formula(sentence: &Sentence) -> Option<ContractFormula> {
-    if matches!(
-        speech_act(sentence),
-        SpeechAct::Definition | SpeechAct::Permission
-    ) {
-        return None;
-    }
-    let guarantee = assertion_formula(sentence)?;
-    Some(ContractFormula {
-        assumption: Formula::Top,
-        guarantee,
-        sources: Vec::new(),
     })
 }

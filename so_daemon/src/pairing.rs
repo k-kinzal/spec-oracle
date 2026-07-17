@@ -11,10 +11,10 @@ use thiserror::Error;
 
 use crate::domain::{Derivation, DerivedNode, Edge, EdgeKind, Node};
 use crate::store::{GraphStore, StoreError};
-use so_reason::formula::{
-    assertion_formula, contract_formula, AssumptionSource, ContractFormula,
-    EdgeKind as ReasonEdgeKind, Formula, SubjectRelation,
+use so_reason::contract::{
+    formed_contract, AssumptionSource, EdgeKind as ReasonEdgeKind, FormedContract, SubjectRelation,
 };
+use so_reason::formula::{assertion_formula, Formula};
 use so_reason::relate::Ternary;
 
 pub const DERIVATION_METHOD: &str = "so-daemon.contract.pairing";
@@ -73,8 +73,44 @@ pub enum PairingError {
     IncompatibleEnvelope,
     #[error("the aggregate pairing contains a non-contract-forming assumption source")]
     NonContractFormingSource,
+    #[error("relation assessment '{0}' does not exist")]
+    MissingAssessment(String),
+    #[error("relation assessment '{0}' is not a discharge candidate")]
+    NotDischargeCandidate(String),
     #[error(transparent)]
     Store(#[from] StoreError),
+}
+
+/// Promote one proved candidate assessment through the same validation path as
+/// an explicitly authored GuaranteeDischarge request. Candidate discovery
+/// itself never mutates graph topology.
+pub fn promote_discharge_candidate(
+    store: &(dyn GraphStore + Send + Sync),
+    assessment_id: &str,
+    recorded_at: &str,
+) -> Result<Edge, PairingError> {
+    let assessment = store
+        .get_relation_assessment(assessment_id)?
+        .ok_or_else(|| PairingError::MissingAssessment(assessment_id.to_string()))?;
+    let crate::domain::AssessmentOutcome::DischargeCandidate {
+        source,
+        target,
+        relied_spec_id,
+    } = assessment.outcome
+    else {
+        return Err(PairingError::NotDischargeCandidate(
+            assessment_id.to_string(),
+        ));
+    };
+    append_relation(
+        store,
+        EdgeKind::GuaranteeDischarge,
+        &source,
+        &target,
+        &relied_spec_id,
+        vec![],
+        recorded_at,
+    )
 }
 
 impl PairingError {
@@ -121,7 +157,7 @@ pub fn append_relation(
     let source_sentence = parse_current(&source_node)?;
     let target_sentence = parse_current(&target_node)?;
     let relied_sentence = parse_current(&relied_node)?;
-    let target_contract = contract_formula(&target_sentence)
+    let target_contract = formed_contract(&target_sentence)
         .ok_or_else(|| PairingError::TargetHasNoContract(target.to_string()))?;
     let relied_formula = assertion_formula(&relied_sentence)
         .ok_or_else(|| PairingError::ReliedHasNoAssertion(relied.to_string()))?;
@@ -196,6 +232,24 @@ fn parse_current(node: &Node) -> Result<so_lang::ast::Sentence, PairingError> {
         })
 }
 
+/// Reconstruct the current formed contract of an authored Node from immutable
+/// pairing Edges. The sentence supplies `G`; selected pairings supply `A`.
+pub fn current_formed_contract(
+    store: &(dyn GraphStore + Send + Sync),
+    node: &Node,
+) -> Result<Option<FormedContract>, PairingError> {
+    let sentence = parse_current(node)?;
+    let Some(base) = formed_contract(&sentence) else {
+        return Ok(None);
+    };
+    let edges = store.list_pairing_edges(&node.id, &derivation())?;
+    if edges.is_empty() {
+        return Ok(Some(base));
+    }
+    let sources = pairing_sources(store, &sentence, &edges)?;
+    Ok(Some(validate_aggregate(&base, &sources)?))
+}
+
 fn reason_kind(kind: EdgeKind) -> Option<ReasonEdgeKind> {
     match kind {
         EdgeKind::OccurrenceReliance => Some(ReasonEdgeKind::OccurrenceReliance),
@@ -260,9 +314,9 @@ fn pairing_sources(
 }
 
 fn validate_aggregate(
-    target_contract: &ContractFormula,
+    target_contract: &FormedContract,
     sources: &[AssumptionSource],
-) -> Result<ContractFormula, PairingError> {
+) -> Result<FormedContract, PairingError> {
     let paired = target_contract.paired(sources);
     let verdict = paired.well_formed();
     if !verdict.all_sources_contract_forming {
@@ -284,7 +338,7 @@ fn persist_current_assumption(
     edges: &[Edge],
     recorded_at: &str,
 ) -> Result<(), PairingError> {
-    let target_contract = contract_formula(target_sentence)
+    let target_contract = formed_contract(target_sentence)
         .ok_or_else(|| PairingError::TargetHasNoContract(target.id.clone()))?;
     let sources = pairing_sources(store, target_sentence, edges)?;
     let paired = validate_aggregate(&target_contract, &sources)?;
@@ -331,6 +385,26 @@ fn persist_current_assumption(
     )
     .map_err(|message| PairingError::Store(StoreError::InvalidEdge(message)))?;
     store.put_derived_node(&node, &projection)?;
+    let semantic_node = DerivedNode::contract(
+        &paired.semantic(),
+        "formed",
+        crate::graph_generation::CONTRACT_PROJECTION_VERSION,
+    );
+    let mut semantic_projection = Edge::projection(
+        EdgeKind::HasContract,
+        &target.id,
+        semantic_node.id(),
+        projection_derivation(),
+        recorded_at,
+    )
+    .map_err(|message| PairingError::Store(StoreError::InvalidEdge(message)))?;
+    semantic_projection.basis_spec_ids = projection.basis_spec_ids.clone();
+    semantic_projection.id = semantic_projection.identity_key();
+    semantic_projection
+        .validate()
+        .map_err(|message| PairingError::Store(StoreError::InvalidEdge(message)))?;
+    store.put_derived_node(&semantic_node, &semantic_projection)?;
+    crate::graph_generation::reconcile_contract_relations_for(target, store, recorded_at)?;
     Ok(())
 }
 
@@ -356,6 +430,141 @@ mod tests {
                 updates: Default::default(),
             },
         }
+    }
+
+    #[test]
+    fn discharge_candidate_requires_explicit_promotion_before_topology() {
+        let store = InMemoryNodeStore::new();
+        let source_one = node("source-1", "The sensor shall report the alarm.");
+        let source_two = node("source-2", "The sensor shall report the alarm.");
+        let relied = node("relied", "The sensor shall report the alarm.");
+        let target = node("target", "The controller shall stop the pump.");
+        for value in [&source_one, &source_two, &relied, &target] {
+            store.add_node(value).unwrap();
+            generate_and_persist(value, &store, "t0").unwrap();
+        }
+
+        let selected = append_relation(
+            &store,
+            EdgeKind::GuaranteeDischarge,
+            &source_one.id,
+            &target.id,
+            &relied.id,
+            vec![],
+            "t1",
+        )
+        .unwrap();
+        let assessments = store
+            .list_relation_assessments(&[
+                source_one.id.clone(),
+                source_two.id.clone(),
+                relied.id.clone(),
+                target.id.clone(),
+            ])
+            .unwrap();
+        let candidate = assessments
+            .iter()
+            .find(|assessment| {
+                matches!(
+                    &assessment.outcome,
+                    crate::domain::AssessmentOutcome::DischargeCandidate {
+                        source,
+                        target: candidate_target,
+                        relied_spec_id,
+                    } if source == &source_two.id
+                        && candidate_target == &target.id
+                        && relied_spec_id == &relied.id
+                )
+            })
+            .expect("the second guarantee is exposed as a candidate");
+
+        let before = store.list_pairing_edges(&target.id, &derivation()).unwrap();
+        assert_eq!(before.len(), 1);
+        assert_eq!(before[0].id, selected.id);
+
+        let promoted = promote_discharge_candidate(&store, &candidate.id, "t2").unwrap();
+        assert_eq!(promoted.source, source_two.id);
+        assert_eq!(promoted.kind, EdgeKind::GuaranteeDischarge);
+        assert_eq!(
+            store
+                .list_pairing_edges(&target.id, &derivation())
+                .unwrap()
+                .len(),
+            2
+        );
+    }
+
+    #[test]
+    fn changed_assumption_recedes_old_contract_relation_without_deleting_it() {
+        let store = InMemoryNodeStore::new();
+        let source = node("source", "The sensor shall report the alarm.");
+        let relied = node("relied", "The sensor shall report the alarm.");
+        let target = node(
+            "target",
+            "The controller and the logger shall stop the pump.",
+        );
+        let peer = node("peer", "The controller shall stop the pump.");
+        for value in [&source, &relied, &target, &peer] {
+            store.add_node(value).unwrap();
+            generate_and_persist(value, &store, "t0").unwrap();
+        }
+        assert!(store
+            .list_edges(
+                &[
+                    source.id.clone(),
+                    relied.id.clone(),
+                    target.id.clone(),
+                    peer.id.clone(),
+                ],
+                &current_derivations(),
+            )
+            .unwrap()
+            .iter()
+            .any(|edge| edge.kind == EdgeKind::ContractRefines
+                && edge.basis_spec_ids.contains(&target.id)
+                && edge.basis_spec_ids.contains(&peer.id)));
+
+        append_relation(
+            &store,
+            EdgeKind::GuaranteeDischarge,
+            &source.id,
+            &target.id,
+            &relied.id,
+            vec![],
+            "t1",
+        )
+        .unwrap();
+
+        assert!(!store
+            .list_edges(
+                &[
+                    source.id.clone(),
+                    relied.id.clone(),
+                    target.id.clone(),
+                    peer.id.clone(),
+                ],
+                &current_derivations(),
+            )
+            .unwrap()
+            .iter()
+            .any(|edge| edge.kind == EdgeKind::ContractRefines
+                && edge.basis_spec_ids.contains(&target.id)
+                && edge.basis_spec_ids.contains(&peer.id)));
+        let mut cursor = None;
+        let mut ledger_has_old_relation = false;
+        loop {
+            let page = store.list_ledger_edges(cursor.as_deref(), 100).unwrap();
+            ledger_has_old_relation |= page.edges.iter().any(|edge| {
+                edge.kind == EdgeKind::ContractRefines
+                    && edge.basis_spec_ids.contains(&target.id)
+                    && edge.basis_spec_ids.contains(&peer.id)
+            });
+            match page.next_cursor {
+                Some(next) => cursor = Some(next),
+                None => break,
+            }
+        }
+        assert!(ledger_has_old_relation);
     }
 
     #[test]

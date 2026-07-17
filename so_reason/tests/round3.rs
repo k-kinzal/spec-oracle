@@ -647,7 +647,7 @@ fn contract_formula_is_the_sentence_internal_conditional() {
     assert_eq!(c.saturated(), c.guarantee);
     // Round 5: `ContractFormula` carries its typed sources (empty when
     // hand-built without pairing).
-    let paired = so_reason::formula::ContractFormula {
+    let paired = so_reason::contract::ContractFormula {
         assumption: c.guarantee.clone(),
         guarantee: Formula::Top,
         sources: Vec::new(),

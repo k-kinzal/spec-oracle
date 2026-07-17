@@ -7,10 +7,13 @@ A specification is written in an EARS-derived controlled language — one or mor
 sentences, each performing one specification act (defining a term, describing
 the system, or obliging/forbidding/recommending/permitting behavior). The raw
 words are the stored truth; each behavioral sentence *denotes an assertion*,
-and the **assume-guarantee contract is a derived reading** of that assertion —
-computed deterministically, with no inference and no human-in-the-loop review.
-Its assumption and guarantee are materialized as content-addressed derived
-Nodes while the authored words remain the authority. (Definitions establish vocabulary and permissions merely
+and `so-reason::contract` forms a semantic **assume-guarantee contract** over
+a dedicated classical Boolean assertion domain projected from the constrained
+NL formula. A lone sentence forms the provisional contract `(⊤, G)`
+deterministically. Its assumption, guarantee, and semantic Contract are
+materialized as content-addressed projection Nodes while the authored words
+remain the authority. Algebraically derived composition, quotient, and merge
+results are Contract Nodes too. (Definitions establish vocabulary and permissions merely
 *admit* behavior, so neither carries a lone-sentence contract; a permission
 enters contracts only through pairing, on the environment side.) A Specification
 Node is accepted before its requested Evidence is captured; the post-acceptance
@@ -27,8 +30,11 @@ Job appends the captured view and materializes shared Evidence Nodes.
 > pairs that `so-reason::relate::assess` can prove become the first persisted
 > semantic Edge family: refinement, equivalence, and force-aware conflicts.
 > Unknown/Independent outcomes are audit records rather than topology, and Edge
-> absence has no negative meaning. The trivial ingest contract is projected to
-> Assumption and Guarantee Nodes. A non-trivial pairing records its evidence
+> absence has no negative meaning. Formula-level and Contract-level judgments
+> are separate audit records; proved A/G refinement/equivalence connects
+> Contract Nodes rather than overloading sentence Edges. The trivial ingest
+> contract is projected to Assumption, Guarantee, and Contract Nodes. A
+> non-trivial pairing records its evidence
 > source, target contract, and explicitly selected relied specification as
 > distinct authored roles. Only structurally proved, well-formed aggregates are
 > admitted; the paired Assumption supersedes `⊤` in the current projection
@@ -55,7 +61,7 @@ they do not depend on each other.
 | Crate        | Kind                 | Role                                                                                     |
 | ------------ | -------------------- | ---------------------------------------------------------------------------------------- |
 | `so-lang`    | lib                  | The constrained natural-language grammar and its *total* parser. No meaning interpretation or cross-specification reasoning lives here. |
-| `so-reason`  | lib                  | Pure derived interpretations and structural reasoning over `so-lang` parse trees: speech acts, A/G projections, formulas, and conservative judgments. |
+| `so-reason`  | lib                  | Pure derived interpretations and structural reasoning over `so-lang` parse trees: speech acts, formulas, semantic A/G contracts and their formation, and conservative judgments. |
 | `so-protocol` | lib                 | Generated `spec_oracle.v1` protobuf messages and tonic gRPC stubs only.                  |
 | `so-daemon`  | lib + `specd`        | Domain model, evidence capture, persistence, domain/protobuf conversion, and gRPC service. |
 | `so-client`  | lib                  | A thin gRPC client; resolves the caller's `@file`/`-`(stdin) input channels.              |
@@ -285,6 +291,13 @@ suppresses its provisional ingest `⊤` projection from the current view. Both
 projections remain immutable Ledger history. The guarantee projection is
 unchanged: pairing conditions what is owed; it does not rewrite the authored
 guarantee.
+
+A proved `G_source ⇒ A_target` opportunity is first stored as a
+`DischargeCandidate` Assessment, not an Edge. It becomes the existing
+`GuaranteeDischarge` relation only through explicit promotion, which runs the
+complete pairing validation again. Contract refinement/equivalence and
+composition/quotient/merge are described in
+[`docs/assume-guarantee-contracts.md`](docs/assume-guarantee-contracts.md).
 
 ### Graph view (`ui/`)
 

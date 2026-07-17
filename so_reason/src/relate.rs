@@ -51,9 +51,8 @@
 //! that can only turn some `Unknown`s into `Yes`/`No`; they will never be
 //! needed to trust a `Yes` produced here.
 
-use crate::formula::{
-    applicability, claim_formula, contract_formula, AtomRef, ContractFormula, Formula, Proposition,
-};
+use crate::contract::{formed_contract, FormedContract};
+use crate::formula::{applicability, claim_formula, AtomRef, Formula, Proposition};
 use crate::semantics::{
     force, speech_act, ComparisonSkeleton, CountOp, Force, MeasureSkeleton, ObjectSkeleton,
     Quantifier, RoleKind, RoleSkeleton, RoleValue, SpeechAct,
@@ -67,6 +66,7 @@ use so_lang::ast::{ComparisonOp, Sentence};
 /// and bump it whenever a rule change can alter an [`Outcome`]. Old results can
 /// then remain as history while a current graph view selects this version.
 pub const ASSESS_VERSION: &str = "so-reason/assess-v1";
+pub const FORMULA_ASSESS_VERSION: &str = "so-reason/formula-assess-v1";
 
 /// A conservative three-valued judgment. `Unknown` means "the structural
 /// rules cannot decide" — it is not evidence of absence and MUST never be
@@ -77,6 +77,38 @@ pub enum Ternary {
     Yes,
     No,
     Unknown,
+}
+
+/// Directional relation between two formula projections.
+///
+/// This is deliberately separate from [`Outcome`]: formula relations are
+/// force- and speech-act-blind logical facts, while sentence assessments
+/// decide whether those facts justify a graph relationship between authored
+/// specifications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FormulaRelation {
+    Equivalent,
+    Entails,
+    EntailedBy,
+    Contradicts,
+    Unknown,
+}
+
+pub fn assess_formulas(left: &Formula, right: &Formula) -> FormulaRelation {
+    let left_right = implies(left, right);
+    let right_left = implies(right, left);
+    if left_right == Ternary::Yes && right_left == Ternary::Yes {
+        FormulaRelation::Equivalent
+    } else if contradicts(left, right) == Ternary::Yes {
+        FormulaRelation::Contradicts
+    } else if left_right == Ternary::Yes {
+        FormulaRelation::Entails
+    } else if right_left == Ternary::Yes {
+        FormulaRelation::EntailedBy
+    } else {
+        FormulaRelation::Unknown
+    }
 }
 
 /// Does `a` entail `b`? Conservative: `Yes`/`No` only by structural rule,
@@ -172,7 +204,7 @@ pub fn contradicts(a: &Formula, b: &Formula) -> Ternary {
 /// `Unknown`.
 ///
 /// VACUITY GUARD (round 11, change 4 — the verification doctrine, defined
-/// at [`crate::formula::ContractFormula::well_formed`]): when either
+/// at [`crate::contract::FormedContract::well_formed`]): when either
 /// side's FORMED assumption is refuted ([`assumption_satisfiable`] ==
 /// `No`), the saturated form `G ∨ ¬A` of that side is a tautology, so any
 /// implication over it is vacuous — a "refinement" proven through it says
@@ -180,18 +212,16 @@ pub fn contradicts(a: &Formula, b: &Formula) -> Ternary {
 /// reporting a vacuous proof as a relation; `Unknown` satisfiability
 /// leaves the judgment to the structural rules, and the result carries
 /// that caveat (not disproven, never certified).
-pub fn refines(concrete: &ContractFormula, abstract_: &ContractFormula) -> Ternary {
+pub fn refines(concrete: &FormedContract, abstract_: &FormedContract) -> Ternary {
     if assumption_satisfiable(concrete) == Ternary::No
         || assumption_satisfiable(abstract_) == Ternary::No
     {
         return Ternary::Unknown;
     }
-    let assumption = implies(&abstract_.assumption, &concrete.assumption);
-    let guarantee = implies(&concrete.saturated(), &abstract_.saturated());
-    match (assumption, guarantee) {
-        (Ternary::Yes, Ternary::Yes) => Ternary::Yes,
-        (Ternary::No, _) | (_, Ternary::No) => Ternary::No,
-        _ => Ternary::Unknown,
+    if concrete.semantic().refines(&abstract_.semantic()) {
+        Ternary::Yes
+    } else {
+        Ternary::No
     }
 }
 
@@ -508,9 +538,9 @@ fn envelope_conflict(permission: &Sentence, other: &Sentence) -> bool {
 /// run` ∧ `at most 3 replicas run`), and an unsatisfiable A relieves the
 /// guarantee EVERYWHERE: the saturated form `G ∨ ¬A` becomes a tautology
 /// before saturation is even computed. Round 9: the judged set is exactly
-/// the set [`ContractFormula::paired`] conjoins — non-envelope AND proven,
+/// the set [`FormedContract::paired`] conjoins — non-envelope AND proven,
 /// and (round 10) not merely recommended AND responsible-subject keys
-/// disjoint ([`crate::formula::AssumptionSource::contract_forming`]) — so the
+/// disjoint ([`crate::contract::AssumptionSource::contract_forming`]) — so the
 /// verdict is about the assumption the contract actually formed; a
 /// candidate (unproven) source cannot make A unsatisfiable, because it
 /// never entered A.
@@ -535,13 +565,13 @@ fn envelope_conflict(permission: &Sentence, other: &Sentence) -> bool {
 /// which no syntactic rule here can witness. Callers must treat `Unknown`
 /// as the good case ("not disproven") and must never await a `Yes`.
 ///
-/// Envelope sources ([`crate::formula::EdgeKind::AdmissibilityEnvelope`])
+/// Envelope sources ([`crate::contract::EdgeKind::AdmissibilityEnvelope`])
 /// are EXCLUDED: they never enter the paired assumption formula (round 6),
 /// so they cannot make it unsatisfiable — their own judgment is
-/// [`envelope_compatible`]. The check reads [`ContractFormula::sources`];
+/// [`envelope_compatible`]. The check reads [`FormedContract::sources`];
 /// a hand-built contract whose `assumption` was set directly (no sources)
 /// is judged over that assumption formula instead.
-pub fn assumption_satisfiable(c: &ContractFormula) -> Ternary {
+pub fn assumption_satisfiable(c: &FormedContract) -> Ternary {
     let relied: Vec<Formula> = c
         .sources
         .iter()
@@ -603,7 +633,7 @@ pub fn assumption_satisfiable(c: &ContractFormula) -> Ternary {
 /// validated constructor no longer rejects shared subject keys (they are
 /// recorded as `SubjectRelation::SharedKeys` — candidate data), so a
 /// same-subject envelope CAN arrive through
-/// [`crate::formula::AssumptionSource::for_guarantee`] and this check's
+/// [`crate::contract::AssumptionSource::for_guarantee`] and this check's
 /// `No` arm is reachable through every construction path: the check is
 /// now the formal guard the round-6/8 rejection used to approximate.
 /// When `No` fires it is a real proof, no false `Yes` exists either way,
@@ -643,7 +673,7 @@ pub fn assumption_satisfiable(c: &ContractFormula) -> Ternary {
 ///   ENVELOPE side — a guarded alternative permission whose simplified
 ///   formula flattens past the `¬guard ∨ …` shape is skipped, staying
 ///   `Unknown`: conservative, never a false `No`.)
-pub fn envelope_compatible(c: &ContractFormula) -> Ternary {
+pub fn envelope_compatible(c: &FormedContract) -> Ternary {
     let (g_guard, g_claim) = guarded_split(&simplify(&c.guarantee));
     // The FORBIDDEN propositions: a single negated behavior atom, or
     // each negated behavior conjunct of a conjunction (a conjunct is in
@@ -683,7 +713,7 @@ pub fn envelope_compatible(c: &ContractFormula) -> Ternary {
         return Ternary::Unknown;
     }
     for source in &c.sources {
-        if source.kind != crate::formula::EdgeKind::AdmissibilityEnvelope {
+        if source.kind != crate::contract::EdgeKind::AdmissibilityEnvelope {
             continue;
         }
         let (p_guard, p_claim) = guarded_split(&simplify(&source.formula));
@@ -808,7 +838,7 @@ pub enum Outcome {
     /// implies admissibility, so nothing conflicts, but certifying the
     /// pair COMPATIBLE is graph work, legislated round 7: `Unknown`, not a
     /// positive outcome). Permissions otherwise participate via PAIRING
-    /// ([`crate::formula::AssumptionSource`]), not head-to-head
+    /// ([`crate::contract::AssumptionSource`]), not head-to-head
     /// assessment.
     Unknown,
 }
@@ -856,7 +886,7 @@ pub fn assess(a: &Sentence, b: &Sentence) -> Outcome {
         }
         return Outcome::Unknown;
     }
-    let (Some(ca), Some(cb)) = (contract_formula(a), contract_formula(b)) else {
+    let (Some(ca), Some(cb)) = (formed_contract(a), formed_contract(b)) else {
         return Outcome::Unknown;
     };
     let fa = force(a);
@@ -927,7 +957,7 @@ fn refinement_force_admissible(concrete: Option<Force>, abstract_: Option<Force>
 // ---- simplification ---------------------------------------------------------------
 
 /// Does this formula simplify to `Bottom` (round 8)? The vacuity gate for
-/// [`crate::formula::AssumptionSource::for_guarantee_with_relied`]: a relied
+/// [`crate::contract::AssumptionSource::for_guarantee_with_relied`]: a relied
 /// formula that is (or simplifies to) `Bottom` would make the saturated
 /// form `G ∨ ¬A` a tautology, erasing the guarantee.
 pub(crate) fn simplifies_to_bottom(f: &Formula) -> bool {

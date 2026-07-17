@@ -2,18 +2,20 @@
 //!
 //! The syntax in [`so_lang::ast`] says what a sentence *is*; this module says
 //! what a sentence *does* — its speech act, its normative force, its assertion
-//! content — and finally projects it into the assume-guarantee reading.
+//! content — and exposes the legacy lone-sentence ingest projection.
 //!
-//! The role theory behind that projection: *assumption* and *guarantee* are
+//! The role theory behind that projection is retained here because it derives
+//! directly from sentence denotation: *assumption* and *guarantee* are
 //! not sentence categories but **roles an assertion plays relative to a
 //! responsible subject**. A statement whose subject is the component under
 //! specification is a guarantee of that component's contract; a statement
 //! about the component's environment becomes an assumption only by being
 //! *paired* with a guarantee it enables. A behavioral sentence taken alone
 //! therefore ingests as a guarantee under the trivial assumption `⊤`;
-//! non-trivial assumptions are relationships **between** sentences — graph
-//! edges, out of scope for this crate. The specification set as a whole is
-//! read as the conjunction of the contracts so formed. Definitions establish
+//! non-trivial assumptions are relationships **between** sentences.
+//! [`crate::contract`] owns the semantic A/G value and the formation of those
+//! relationships; this module's [`IngestContract`] remains a compatibility
+//! projection of the authored sentence. Definitions establish
 //! vocabulary and have no contract reading at all. A permission *admits*
 //! behavior rather than constraining it, so as a lone sentence it yields no
 //! `(⊤, G)` reading either: it enters a contract only through pairing, on
@@ -1272,7 +1274,7 @@ fn group_keys(group: &NpGroup) -> Vec<String> {
 /// (`Each request shall be logged by the daemon.` keys on `request`). The
 /// responsible component of a passive claim is its AGENT: the daemon does
 /// the logging, so environment-vs-self questions (the pairing
-/// subject-relation check, [`crate::formula::SubjectRelation`]) must be
+/// subject-relation check, [`crate::contract::SubjectRelation`]) must be
 /// asked of the daemon, not the request. Both views are kept — the
 /// grammatical view stays the index of what the sentence is ABOUT; this
 /// view is who ANSWERS for it.

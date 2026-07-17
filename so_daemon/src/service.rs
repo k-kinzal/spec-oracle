@@ -38,6 +38,7 @@ type GraphReadResult = (
     Vec<crate::domain::TermNode>,
     Vec<crate::domain::DerivedNode>,
     Vec<Edge>,
+    Vec<crate::domain::RelationAssessment>,
     BTreeMap<String, crate::domain::SelectionView>,
     u64,
 );
@@ -168,6 +169,46 @@ impl SpecificationGraph for SpecificationGraphService {
             .await
     }
 
+    async fn promote_discharge_candidate(
+        &self,
+        request: Request<pb::PromoteDischargeCandidateRequest>,
+    ) -> Result<Response<pb::PromoteDischargeCandidateResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.promote_discharge_candidate",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "PromoteDischargeCandidate",
+            "assessment.id" = tracing::field::Empty,
+            "edge.id" = tracing::field::Empty,
+            "error.message" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move { self.promote_discharge_candidate_inner(request).await }
+            .instrument(span)
+            .await
+    }
+
+    async fn derive_contract(
+        &self,
+        request: Request<pb::DeriveContractRequest>,
+    ) -> Result<Response<pb::DeriveContractResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.derive_contract",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "DeriveContract",
+            "contract.left" = tracing::field::Empty,
+            "contract.right" = tracing::field::Empty,
+            "contract.operation" = tracing::field::Empty,
+            "contract.result" = tracing::field::Empty,
+            "error.message" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move { self.derive_contract_inner(request).await }
+            .instrument(span)
+            .await
+    }
+
     async fn get_graph(
         &self,
         request: Request<pb::GetGraphRequest>,
@@ -284,7 +325,8 @@ impl SpecificationGraphService {
                             crate::domain::VertexKind::Term => term_ids.push(id.clone()),
                             crate::domain::VertexKind::Evidence
                             | crate::domain::VertexKind::Assumption
-                            | crate::domain::VertexKind::Guarantee => derived_ids.push(id.clone()),
+                            | crate::domain::VertexKind::Guarantee
+                            | crate::domain::VertexKind::Contract => derived_ids.push(id.clone()),
                             crate::domain::VertexKind::Specification => {}
                         }
                     }
@@ -387,6 +429,99 @@ impl SpecificationGraphService {
         tracing::Span::current().record("edge.id", edge.id.as_str());
         Ok(Response::new(pb::AddAssumptionRelationResponse {
             edge: Some(convert::edge_to_pb(&edge)),
+        }))
+    }
+
+    async fn promote_discharge_candidate_inner(
+        &self,
+        request: Request<pb::PromoteDischargeCandidateRequest>,
+    ) -> Result<Response<pb::PromoteDischargeCandidateResponse>, Status> {
+        let req = request.into_inner();
+        if req.assessment_id.is_empty() {
+            return Err(Status::invalid_argument(
+                "discharge candidate assessment id must not be empty",
+            ));
+        }
+        tracing::Span::current().record("assessment.id", req.assessment_id.as_str());
+        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let nodes = self.nodes.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            crate::pairing::promote_discharge_candidate(&*nodes, &req.assessment_id, &now)
+        })
+        .await
+        .map_err(|error| {
+            Status::internal(format!("discharge promotion task failed to run: {error}"))
+        })?;
+        let edge = match result {
+            Ok(edge) => edge,
+            Err(crate::pairing::PairingError::MissingAssessment(id)) => {
+                return Err(Status::not_found(format!(
+                    "relation assessment '{id}' does not exist"
+                )))
+            }
+            Err(error) if error.is_bad_input() => {
+                return Err(Status::invalid_argument(error.to_string()))
+            }
+            Err(error) => return Err(Status::internal(error.to_string())),
+        };
+        tracing::Span::current().record("edge.id", edge.id.as_str());
+        Ok(Response::new(pb::PromoteDischargeCandidateResponse {
+            edge: Some(convert::edge_to_pb(&edge)),
+        }))
+    }
+
+    async fn derive_contract_inner(
+        &self,
+        request: Request<pb::DeriveContractRequest>,
+    ) -> Result<Response<pb::DeriveContractResponse>, Status> {
+        let req = request.into_inner();
+        if req.left_contract_id.is_empty() || req.right_contract_id.is_empty() {
+            return Err(Status::invalid_argument(
+                "left and right contract ids must not be empty",
+            ));
+        }
+        let operation = match pb::ContractOperation::try_from(req.operation)
+            .unwrap_or(pb::ContractOperation::Unspecified)
+        {
+            pb::ContractOperation::Composition => crate::contract_algebra::Operation::Composition,
+            pb::ContractOperation::Quotient => crate::contract_algebra::Operation::Quotient,
+            pb::ContractOperation::Merge => crate::contract_algebra::Operation::Merge,
+            pb::ContractOperation::Unspecified => {
+                return Err(Status::invalid_argument(
+                    "contract operation must be composition, quotient, or merge",
+                ))
+            }
+        };
+        tracing::Span::current().record("contract.left", req.left_contract_id.as_str());
+        tracing::Span::current().record("contract.right", req.right_contract_id.as_str());
+        tracing::Span::current().record("contract.operation", operation.as_str());
+        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let nodes = self.nodes.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            crate::contract_algebra::derive(
+                &*nodes,
+                &req.left_contract_id,
+                &req.right_contract_id,
+                operation,
+                req.basis_spec_ids,
+                &now,
+            )
+        })
+        .await
+        .map_err(|error| {
+            Status::internal(format!("contract derivation task failed to run: {error}"))
+        })?;
+        let result = match result {
+            Ok(result) => result,
+            Err(error) if error.is_bad_input() => {
+                return Err(Status::invalid_argument(error.to_string()))
+            }
+            Err(error) => return Err(Status::internal(error.to_string())),
+        };
+        tracing::Span::current().record("contract.result", result.contract.id());
+        Ok(Response::new(pb::DeriveContractResponse {
+            contract: Some(convert::derived_node_to_pb(&result.contract)),
+            derivation_edges: result.edges.iter().map(convert::edge_to_pb).collect(),
         }))
     }
 
@@ -557,6 +692,7 @@ impl SpecificationGraphService {
                 let population = nodes.selection_population(&ids, &derivations)?;
                 let selection = crate::selection::derive_views(&ids, &population);
                 let edges = nodes.list_edges(&ids, &derivations)?;
+                let assessments = nodes.list_relation_assessments(&ids)?;
                 let mut term_ids: Vec<String> = edges
                     .iter()
                     .filter(|edge| {
@@ -568,28 +704,33 @@ impl SpecificationGraphService {
                 term_ids.sort();
                 term_ids.dedup();
                 let terms = nodes.get_term_nodes(&term_ids)?;
-                let mut derived_ids: Vec<String> = edges
-                    .iter()
-                    .filter(|edge| {
-                        matches!(
-                            edge.target_kind,
+                let mut derived_ids = Vec::new();
+                for edge in &edges {
+                    for (id, kind) in [
+                        (&edge.source, edge.source_kind),
+                        (&edge.target, edge.target_kind),
+                    ] {
+                        if matches!(
+                            kind,
                             crate::domain::VertexKind::Evidence
                                 | crate::domain::VertexKind::Assumption
                                 | crate::domain::VertexKind::Guarantee
-                        )
-                    })
-                    .map(|edge| edge.target.clone())
-                    .collect();
+                                | crate::domain::VertexKind::Contract
+                        ) {
+                            derived_ids.push(id.clone());
+                        }
+                    }
+                }
                 derived_ids.sort();
                 derived_ids.dedup();
                 let derived = nodes.get_derived_nodes(&derived_ids)?;
                 let total = nodes.count_nodes()?;
-                Ok((page, terms, derived, edges, selection, total))
+                Ok((page, terms, derived, edges, assessments, selection, total))
             })
             .await
             .map_err(|e| Status::internal(format!("graph read task failed to run: {e}")))?;
 
-        let (page, terms, derived, edges, selection, total) = match outcome {
+        let (page, terms, derived, edges, assessments, selection, total) = match outcome {
             Ok(result) => result,
             Err(e) => {
                 let message = e.to_string();
@@ -654,6 +795,10 @@ impl SpecificationGraphService {
             total_nodes: total,
             term_nodes: terms.iter().map(convert::term_node_to_pb).collect(),
             derived_nodes: derived.iter().map(convert::derived_node_to_pb).collect(),
+            relation_assessments: assessments
+                .iter()
+                .map(convert::relation_assessment_to_pb)
+                .collect(),
         }))
     }
 }

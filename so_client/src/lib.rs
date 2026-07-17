@@ -58,6 +58,10 @@ pub enum ClientError {
     EmptySelectionResponse,
     #[error("daemon response contained no assumption edge")]
     EmptyAssumptionResponse,
+    #[error("daemon response contained no promoted discharge edge")]
+    EmptyDischargePromotionResponse,
+    #[error("daemon response contained no derived contract")]
+    EmptyDerivedContractResponse,
     #[error("daemon returned an invalid graph response: {0}")]
     InvalidGraphResponse(String),
 }
@@ -107,6 +111,7 @@ pub struct GraphPage {
     pub term_nodes: Vec<pb::TermNode>,
     pub derived_nodes: Vec<pb::DerivedNode>,
     pub edges: Vec<pb::Edge>,
+    pub relation_assessments: Vec<pb::RelationAssessment>,
     pub next_page_token: String,
     pub total_nodes: u64,
 }
@@ -315,6 +320,69 @@ impl Client {
         .await
     }
 
+    /// Explicitly promote a proved discharge Assessment to the ordinary
+    /// GuaranteeDischarge topology. The daemon revalidates the pairing.
+    pub async fn promote_discharge_candidate(
+        &mut self,
+        assessment_id: &str,
+    ) -> Result<pb::Edge, ClientError> {
+        let span = tracing::info_span!(
+            "spec.client.promote_discharge_candidate",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "PromoteDischargeCandidate",
+            "assessment.id" = %assessment_id,
+        );
+        async {
+            let mut request = Request::new(pb::PromoteDischargeCandidateRequest {
+                assessment_id: assessment_id.to_string(),
+            });
+            so_tracing::inject_context(request.metadata_mut());
+            self.inner
+                .promote_discharge_candidate(request)
+                .await?
+                .into_inner()
+                .edge
+                .ok_or(ClientError::EmptyDischargePromotionResponse)
+        }
+        .instrument(span)
+        .await
+    }
+
+    pub async fn derive_contract(
+        &mut self,
+        left_contract_id: &str,
+        right_contract_id: &str,
+        operation: pb::ContractOperation,
+        basis_spec_ids: &[String],
+    ) -> Result<(pb::DerivedNode, Vec<pb::Edge>), ClientError> {
+        let span = tracing::info_span!(
+            "spec.client.derive_contract",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "DeriveContract",
+            "contract.left" = %left_contract_id,
+            "contract.right" = %right_contract_id,
+            "contract.operation" = ?operation,
+        );
+        async {
+            let mut request = Request::new(pb::DeriveContractRequest {
+                left_contract_id: left_contract_id.to_string(),
+                right_contract_id: right_contract_id.to_string(),
+                operation: operation as i32,
+                basis_spec_ids: basis_spec_ids.to_vec(),
+            });
+            so_tracing::inject_context(request.metadata_mut());
+            let response = self.inner.derive_contract(request).await?.into_inner();
+            let contract = response
+                .contract
+                .ok_or(ClientError::EmptyDerivedContractResponse)?;
+            Ok((contract, response.derivation_edges))
+        }
+        .instrument(span)
+        .await
+    }
+
     /// Read one bounded page of the specification graph. `page_size` of 0 lets
     /// the daemon choose its default; the daemon clamps it to a hard maximum, so
     /// this never fetches the whole graph. `page_token` is the opaque cursor from
@@ -363,6 +431,7 @@ impl Client {
                 term_nodes: response.term_nodes,
                 derived_nodes: response.derived_nodes,
                 edges: response.edges,
+                relation_assessments: response.relation_assessments,
                 next_page_token: response.next_page_token,
                 total_nodes: response.total_nodes,
             })

@@ -12,7 +12,11 @@ use super::Derivation;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum AssessmentOutcome {
-    Refines { concrete: String, abstract_: String },
+    /// Sentence-level force-aware refinement.
+    Refines {
+        concrete: String,
+        abstract_: String,
+    },
     Equivalent,
     HardContradiction,
     AdvisoryTension,
@@ -20,6 +24,30 @@ pub enum AssessmentOutcome {
     EnvelopeConflict,
     Independent,
     Unknown,
+    /// Formula-projection facts are force/speech-act blind and never become
+    /// specification topology directly.
+    FormulaEntails {
+        antecedent: String,
+        consequence: String,
+    },
+    FormulaEquivalent,
+    FormulaContradiction,
+    FormulaUnknown,
+    /// Standard A/G relation between the current semantic contracts projected
+    /// by the endpoint specifications.
+    ContractRefines {
+        concrete: String,
+        abstract_: String,
+    },
+    ContractEquivalent,
+    ContractIncomparable,
+    /// A proved `G_source ⇒ A_target` opportunity. It remains audit data until
+    /// an explicit selection promotes it to GuaranteeDischarge topology.
+    DischargeCandidate {
+        source: String,
+        target: String,
+        relied_spec_id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

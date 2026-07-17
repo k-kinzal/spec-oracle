@@ -163,6 +163,12 @@ pub trait GraphStore: NodeStore {
 
     fn get_relation_assessment(&self, id: &str) -> Result<Option<RelationAssessment>, StoreError>;
 
+    /// Audit records canonically owned by the supplied specification ids.
+    fn list_relation_assessments(
+        &self,
+        owners: &[String],
+    ) -> Result<Vec<RelationAssessment>, StoreError>;
+
     fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError>;
 
     fn get_derived_nodes(&self, ids: &[String]) -> Result<Vec<DerivedNode>, StoreError>;
@@ -581,6 +587,21 @@ impl GraphStore for InMemoryNodeStore {
             .cloned())
     }
 
+    fn list_relation_assessments(
+        &self,
+        owners: &[String],
+    ) -> Result<Vec<RelationAssessment>, StoreError> {
+        let owners: std::collections::BTreeSet<&str> = owners.iter().map(String::as_str).collect();
+        Ok(self
+            .assessments
+            .lock()
+            .expect("assessment store mutex poisoned")
+            .values()
+            .filter(|assessment| owners.contains(assessment.left.as_str()))
+            .cloned()
+            .collect())
+    }
+
     fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError> {
         let terms = self.terms.lock().expect("term store mutex poisoned");
         Ok(ids.iter().filter_map(|id| terms.get(id).cloned()).collect())
@@ -784,17 +805,25 @@ impl GraphStore for InMemoryNodeStore {
         current_derivations: &[crate::domain::Derivation],
     ) -> Result<Vec<Edge>, StoreError> {
         let owners: std::collections::BTreeSet<&str> = owners.iter().map(String::as_str).collect();
-        let edges: Vec<Edge> = self
-            .edges
-            .lock()
-            .expect("edge store mutex poisoned")
+        let edge_guard = self.edges.lock().expect("edge store mutex poisoned");
+        let current: Vec<Edge> = edge_guard
             .by_identity
             .values()
-            .filter(|edge| {
-                current_derivations.contains(&edge.derivation) && owners.contains(edge.page_owner())
-            })
+            .filter(|edge| current_derivations.contains(&edge.derivation))
             .cloned()
             .collect();
+        let edges: Vec<Edge> = current
+            .iter()
+            .filter(|edge| owners.contains(edge.page_owner()))
+            .cloned()
+            .collect();
+        let contract_context: Vec<Edge> = current
+            .into_iter()
+            .filter(|edge| {
+                edge.kind == EdgeKind::HasContract || is_contract_operation_edge(edge.kind)
+            })
+            .collect();
+        drop(edge_guard);
         let current_evidence: BTreeMap<String, std::collections::BTreeSet<String>> = self
             .nodes
             .lock()
@@ -804,16 +833,117 @@ impl GraphStore for InMemoryNodeStore {
                 crate::selection::current_evidence_node_ids(node).map(|ids| (node.id.clone(), ids))
             })
             .collect();
-        Ok(select_current_assumption_projections(edges)
-            .into_iter()
-            .filter(|edge| {
-                edge.kind != EdgeKind::GroundedBy
-                    || current_evidence
-                        .get(&edge.source)
-                        .is_none_or(|ids| ids.contains(&edge.target))
-            })
-            .collect())
+        Ok(select_current_contract_graph(
+            select_current_assumption_projections(edges),
+            &contract_context,
+        )
+        .into_iter()
+        .filter(|edge| {
+            edge.kind != EdgeKind::GroundedBy
+                || current_evidence
+                    .get(&edge.source)
+                    .is_none_or(|ids| ids.contains(&edge.target))
+        })
+        .collect())
     }
+}
+
+fn is_contract_operation_edge(kind: EdgeKind) -> bool {
+    matches!(
+        kind,
+        EdgeKind::CompositionOperand
+            | EdgeKind::QuotientDividend
+            | EdgeKind::QuotientDivisor
+            | EdgeKind::MergeOperand
+    )
+}
+
+/// Select the active content-addressed contract subgraph. A changed paired
+/// assumption selects a new HasContract target; semantic edges about the old
+/// target remain Ledger facts but recede from the current graph. Explicit
+/// algebra results remain active only while all of their operand contracts are
+/// active.
+pub(crate) fn select_current_contract_graph(visible: Vec<Edge>, context: &[Edge]) -> Vec<Edge> {
+    let selected_projections = select_current_contract_projections(context.to_vec());
+    let selected_ids: std::collections::BTreeSet<&str> = selected_projections
+        .iter()
+        .filter(|edge| edge.kind == EdgeKind::HasContract)
+        .map(|edge| edge.id.as_str())
+        .collect();
+    let mut active: std::collections::BTreeSet<String> = selected_projections
+        .iter()
+        .filter(|edge| edge.kind == EdgeKind::HasContract)
+        .map(|edge| edge.target.clone())
+        .collect();
+
+    loop {
+        let mut changed = false;
+        let mut by_result: BTreeMap<&str, Vec<&Edge>> = BTreeMap::new();
+        for edge in context
+            .iter()
+            .filter(|edge| is_contract_operation_edge(edge.kind))
+        {
+            by_result
+                .entry(edge.target.as_str())
+                .or_default()
+                .push(edge);
+        }
+        for (result, operands) in by_result {
+            if operands
+                .iter()
+                .all(|edge| active.contains(edge.source.as_str()))
+            {
+                changed |= active.insert(result.to_string());
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+
+    visible
+        .into_iter()
+        .filter(|edge| match edge.kind {
+            EdgeKind::HasContract => selected_ids.contains(edge.id.as_str()),
+            EdgeKind::ContractRefines | EdgeKind::ContractEquivalent => {
+                active.contains(edge.source.as_str()) && active.contains(edge.target.as_str())
+            }
+            kind if is_contract_operation_edge(kind) => {
+                active.contains(edge.source.as_str()) && active.contains(edge.target.as_str())
+            }
+            _ => true,
+        })
+        .collect()
+}
+
+pub(crate) fn select_current_contract_projections(edges: Vec<Edge>) -> Vec<Edge> {
+    let mut selected: BTreeMap<String, (u8, usize, String, String)> = BTreeMap::new();
+    for edge in &edges {
+        if edge.kind != EdgeKind::HasContract {
+            continue;
+        }
+        let preference = (
+            u8::from(edge.derivation.method == crate::pairing::PAIRED_PROJECTION_METHOD),
+            edge.basis_spec_ids.len(),
+            edge.recorded_at.clone(),
+            edge.id.clone(),
+        );
+        let slot = selected
+            .entry(edge.source.clone())
+            .or_insert_with(|| preference.clone());
+        if preference > *slot {
+            *slot = preference;
+        }
+    }
+    edges
+        .into_iter()
+        .filter(|edge| {
+            edge.kind != EdgeKind::HasContract
+                || selected
+                    .get(&edge.source)
+                    .is_some_and(|choice| choice.3 == edge.id)
+        })
+        .collect()
 }
 
 /// A paired (A,G) supersedes the provisional ingest (Top,G) projection in the

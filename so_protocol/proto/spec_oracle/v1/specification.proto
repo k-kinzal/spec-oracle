@@ -42,6 +42,14 @@ service SpecificationGraph {
   // conflated with the source sentence that supplies evidence for it.
   rpc AddAssumptionRelation(AddAssumptionRelationRequest) returns (AddAssumptionRelationResponse);
 
+  // Explicitly accept one previously proved discharge opportunity. The daemon
+  // revalidates it and appends the ordinary GuaranteeDischarge Edge.
+  rpc PromoteDischargeCandidate(PromoteDischargeCandidateRequest) returns (PromoteDischargeCandidateResponse);
+
+  // Explicitly derive a semantic Contract Node using the standard contract
+  // algebra. Quotient is ordered: left is the target, right the divisor.
+  rpc DeriveContract(DeriveContractRequest) returns (DeriveContractResponse);
+
   // Read the specification graph one bounded page at a time. The graph can hold
   // billions of nodes, so there is deliberately no "return everything" call:
   // the caller walks the graph with keyset pagination (an opaque `page_token`),
@@ -120,6 +128,35 @@ message AddAssumptionRelationResponse {
   Edge edge = 1;
 }
 
+message PromoteDischargeCandidateRequest {
+  string assessment_id = 1;
+}
+
+message PromoteDischargeCandidateResponse {
+  Edge edge = 1;
+}
+
+enum ContractOperation {
+  CONTRACT_OPERATION_UNSPECIFIED = 0;
+  CONTRACT_OPERATION_COMPOSITION = 1;
+  CONTRACT_OPERATION_QUOTIENT = 2;
+  CONTRACT_OPERATION_MERGE = 3;
+}
+
+message DeriveContractRequest {
+  string left_contract_id = 1;
+  string right_contract_id = 2;
+  ContractOperation operation = 3;
+  // Optional additional authored provenance. Intrinsic provenance is recovered
+  // from the Ledger and unioned with these ids.
+  repeated string basis_spec_ids = 4;
+}
+
+message DeriveContractResponse {
+  DerivedNode contract = 1;
+  repeated Edge derivation_edges = 2;
+}
+
 // ---- graph read ------------------------------------------------------------
 
 message GetGraphRequest {
@@ -156,6 +193,9 @@ message GetGraphResponse {
   // Content-addressed grounding and assume-guarantee projection vertices
   // adjacent to this specification page.
   repeated DerivedNode derived_nodes = 6;
+  // Audit records owned by this specification page. They are not topology;
+  // Unknown/Independent/candidates remain distinguishable from Edges.
+  repeated RelationAssessment relation_assessments = 7;
 }
 
 message GetLedgerRequest {
@@ -186,6 +226,7 @@ message DerivedNode {
     EvidenceNode evidence = 2;
     AssumptionNode assumption = 3;
     GuaranteeNode guarantee = 4;
+    ContractNode contract = 5;
   }
 }
 
@@ -205,6 +246,18 @@ message GuaranteeNode {
   string expression = 1;
   string force = 2;
   string derivation_version = 3;
+  string formula_json = 4;
+}
+
+// One semantic A/G contract in the classical Boolean assertion domain.
+// `operation=formed` is projected from an authored specification; the other
+// operations are algebraically derived contracts.
+message ContractNode {
+  string assumption_json = 1;
+  string guarantee_json = 2;
+  string interface_json = 3;
+  string operation = 4;
+  string derivation_version = 5;
 }
 
 enum VertexKind {
@@ -214,6 +267,7 @@ enum VertexKind {
   VERTEX_KIND_EVIDENCE = 3;
   VERTEX_KIND_ASSUMPTION = 4;
   VERTEX_KIND_GUARANTEE = 5;
+  VERTEX_KIND_CONTRACT = 6;
 }
 
 message TextAnchor {
@@ -225,6 +279,43 @@ message TextAnchor {
 message Derivation {
   string method = 1;
   string version = 2;
+}
+
+enum AssessmentKind {
+  ASSESSMENT_KIND_UNSPECIFIED = 0;
+  ASSESSMENT_KIND_REFINES = 1;
+  ASSESSMENT_KIND_EQUIVALENT = 2;
+  ASSESSMENT_KIND_HARD_CONTRADICTION = 3;
+  ASSESSMENT_KIND_ADVISORY_TENSION = 4;
+  ASSESSMENT_KIND_DESCRIPTIVE_CONFLICT = 5;
+  ASSESSMENT_KIND_ENVELOPE_CONFLICT = 6;
+  ASSESSMENT_KIND_INDEPENDENT = 7;
+  ASSESSMENT_KIND_UNKNOWN = 8;
+  ASSESSMENT_KIND_FORMULA_ENTAILS = 9;
+  ASSESSMENT_KIND_FORMULA_EQUIVALENT = 10;
+  ASSESSMENT_KIND_FORMULA_CONTRADICTION = 11;
+  ASSESSMENT_KIND_FORMULA_UNKNOWN = 12;
+  ASSESSMENT_KIND_CONTRACT_REFINES = 13;
+  ASSESSMENT_KIND_CONTRACT_EQUIVALENT = 14;
+  ASSESSMENT_KIND_CONTRACT_INCOMPARABLE = 15;
+  ASSESSMENT_KIND_DISCHARGE_CANDIDATE = 16;
+}
+
+message RelationAssessment {
+  string id = 1;
+  string left = 2;
+  string right = 3;
+  Derivation candidate_derivation = 4;
+  Derivation semantic_derivation = 5;
+  AssessmentKind kind = 6;
+  string recorded_at = 7;
+  optional string concrete = 8;
+  optional string abstract = 9;
+  optional string antecedent = 10;
+  optional string consequence = 11;
+  optional string source = 12;
+  optional string target = 13;
+  optional string relied_spec_id = 14;
 }
 
 // One checked binary claim. Candidate overlap, Unknown, and NotSearched are
@@ -294,6 +385,17 @@ enum EdgeEndpointRole {
   EDGE_ENDPOINT_ROLE_DISCHARGED_CONTRACT = 21;
   EDGE_ENDPOINT_ROLE_ADMISSIBLE_ENVIRONMENT = 22;
   EDGE_ENDPOINT_ROLE_BOUNDED_CONTRACT = 23;
+  EDGE_ENDPOINT_ROLE_CONTRACT = 24;
+  EDGE_ENDPOINT_ROLE_CONTRACT_REFINER = 25;
+  EDGE_ENDPOINT_ROLE_CONTRACT_REFINED = 26;
+  EDGE_ENDPOINT_ROLE_EQUIVALENT_CONTRACT = 27;
+  EDGE_ENDPOINT_ROLE_COMPOSITION_OPERAND = 28;
+  EDGE_ENDPOINT_ROLE_COMPOSITION_RESULT = 29;
+  EDGE_ENDPOINT_ROLE_QUOTIENT_DIVIDEND = 30;
+  EDGE_ENDPOINT_ROLE_QUOTIENT_DIVISOR = 31;
+  EDGE_ENDPOINT_ROLE_QUOTIENT_RESULT = 32;
+  EDGE_ENDPOINT_ROLE_MERGE_OPERAND = 33;
+  EDGE_ENDPOINT_ROLE_MERGE_RESULT = 34;
 }
 
 // The kind of relationship an Edge asserts. Its direction is its endpoint-role
@@ -321,6 +423,13 @@ enum EdgeKind {
   EDGE_KIND_OCCURRENCE_RELIANCE = 21;
   EDGE_KIND_GUARANTEE_DISCHARGE = 22;
   EDGE_KIND_ADMISSIBILITY_ENVELOPE = 23;
+  EDGE_KIND_HAS_CONTRACT = 24;
+  EDGE_KIND_CONTRACT_REFINES = 25;
+  EDGE_KIND_CONTRACT_EQUIVALENT = 26;
+  EDGE_KIND_COMPOSITION_OPERAND = 27;
+  EDGE_KIND_QUOTIENT_DIVIDEND = 28;
+  EDGE_KIND_QUOTIENT_DIVISOR = 29;
+  EDGE_KIND_MERGE_OPERAND = 30;
 }
 
 // ---- domain mirror ---------------------------------------------------------

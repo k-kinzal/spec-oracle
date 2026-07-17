@@ -5,9 +5,10 @@
 The syntax layer — the [sentence layer](./sentences.md), the
 [phrase grammar](./phrases.md), the [lexical rules](./lexical.md) — says what a
 sentence *is*. This page documents
-[`so_reason/src/semantics.rs`](../../so_reason/src/semantics.rs), which says what a
-sentence *does*: its speech act, its normative force, its assertion content,
-and finally its assume-guarantee reading. Apart from one pointer in the
+[`so_reason/src/semantics.rs`](../../so_reason/src/semantics.rs) and
+[`so_reason/src/contract.rs`](../../so_reason/src/contract.rs): the first says
+what a sentence *does* and the second forms semantic assume-guarantee contracts
+over the formula interpretation. Apart from one pointer in the
 [index](./README.md), this is the only page in the grammar reference where
 assume-guarantee vocabulary appears; the syntax layer is definable without it,
 and the other pages demonstrate that.
@@ -205,9 +206,9 @@ outside the contract reading. A statement's leading conditions — scope, state,
 trigger — are the internal temporal structure of its assertion, not a contract
 split. A contract is a *pairing*: a guarantee read under its assumptions, and
 a statement taken alone is a guarantee under the trivial assumption. This is
-the single lens through which every statement is understood, and it is what
-gives words like *refine*, *compose*, and *contradict* a precise meaning
-rather than a rhetorical one.
+the contract lens through which behavioral statements are related. It gives
+refinement a precise meaning; composition is a foundation for later work, not
+an operator the current assertion domain claims to implement.
 
 ### The role theory
 
@@ -227,10 +228,11 @@ conditioned claim, "in circumstance C, the subject does X"), and the contract's
 separate assumption slot carries only what a sentence alone cannot supply: a
 claim made by some *other* statement about the environment.
 
-A sentence taken alone therefore ingests as a guarantee under the trivial
-assumption `⊤`. Non-trivial assumptions are pairings **between** sentences —
-graph edges, out of scope for `so-reason` today. The specification set as a whole
-is read as the **conjunction of the contracts** so formed.
+A sentence taken alone therefore forms a provisional guarantee under the
+trivial assumption `⊤`. Non-trivial assumptions are pairings **between**
+sentences. `so-reason::contract` defines their pure formation and semantic
+value; `specd` selects, validates, and persists the graph relationships that
+justify a formation.
 
 ### The ingest projection
 
@@ -319,7 +321,7 @@ the explicit relied formula, so `A` trusts exactly what the guarantee
 needs and the pairing validates that the source supports it.
 
 **The well-formed proven pairing (round 11 — THE definition).** This
-paragraph and the rustdoc on `ContractFormula::well_formed` are the ONE
+paragraph and the rustdoc on `FormedContract::well_formed` are the ONE
 normative statement of pairing well-formedness; everything else
 cross-links here. A paired contract is a **well-formed proven pairing**
 when every assumption-side (non-envelope) source has:
@@ -337,7 +339,7 @@ when every assumption-side (non-envelope) source has:
 and, over the pairing as a whole, **assumption satisfiability is not
 refuted** (`relate::assumption_satisfiable` is not `No`; `Unknown` is the
 good case — satisfiability is never provable syntactically).
-`ContractFormula::well_formed()` summarizes the definition as DATA —
+`FormedContract::well_formed()` summarizes the definition as DATA —
 `{ all_contract_forming_explicit, all_proven,
 all_sources_contract_forming, source_issues, assumption_satisfiability,
 envelope_compatibility }`, the booleans quantified over the non-envelope
@@ -413,8 +415,8 @@ admissibility envelope and nothing else. The full act × kind matrix is
 tabulated under [Typed pairing](#typed-pairing-paired-edgekind).
 
 Since round 4 this doctrine is **API-encoded**, not prose-only: the three
-edge types are `so_reason::formula::EdgeKind`, and
-`ContractFormula::paired(sources)` performs the supersession — it REPLACES
+edge types are `so_reason::contract::EdgeKind`, and
+`FormedContract::paired(sources)` performs the supersession — it REPLACES
 the provisional `⊤` assumption with the conjunction of the
 **contract-forming** — non-envelope, proven (round 9), not merely
 recommended, and `DisjointKeys` (round 10) —
@@ -678,7 +680,6 @@ procedure. Generating conflict edges over it is graph work.
 // so_reason::formula
 pub fn applicability(&Sentence) -> Formula
 pub fn claim_formula(&Sentence) -> Option<Formula>
-pub fn contract_formula(&Sentence) -> Option<ContractFormula>
 
 pub enum Formula {
     Atom { atom: AtomRef },      // one opaque atom
@@ -699,15 +700,52 @@ impl BehaviorAtom {
     pub fn proposition(&self) -> Proposition // the LOGICAL key (round 5)
 }
 pub struct Proposition { subject: SubjectSkeleton, atom: Atom } // no act/force/anchor
-pub struct ContractFormula {
+```
+
+The formula layer supplies the assertion domain. It does not own contracts:
+`contract_formula` remains re-exported here only as a compatibility path for
+older callers.
+
+## The contract layer
+
+```rust
+// so_reason::contract
+pub enum Assertion {
+    Atom { atom: ContractAtom },
+    And { items: Vec<Assertion> },
+    Or { items: Vec<Assertion> },
+    Not { inner: Box<Assertion> }, // classical Boolean complement
+    Top,
+    Bottom,
+}
+pub struct Contract {
+    assumption: Assertion,
+    guarantee: Assertion,
+}
+impl Contract {
+    pub fn saturated_guarantee(&self) -> Assertion // G ∨ ¬A
+    pub fn saturate(&self) -> Contract           // (A, G ∨ ¬A)
+    pub fn satisfied_by(&self, implementation: &Assertion) -> bool
+    pub fn refines(&self, abstract_: &Contract) -> bool
+    pub fn compose(&self, other: &Contract) -> Contract
+    pub fn quotient(&self, divisor: &Contract) -> Contract
+    pub fn merge(&self, other: &Contract) -> Contract
+    pub fn interface(&self) -> ContractInterface
+}
+
+pub struct FormedContract {
     assumption: Formula,             // conjunction of the CONTRACT-FORMING sources' RELIED formulas (rounds 7/9/10)
     guarantee: Formula,
-    sources: Vec<AssumptionSource>,  // retained by `paired` (round 5)
+    sources: Vec<AssumptionSource>,  // formation provenance; not Contract identity
 }
-impl ContractFormula {
-    pub fn saturated(&self) -> Formula                                    // G ∨ ¬A
-    pub fn paired(&self, sources: &[AssumptionSource]) -> ContractFormula // {A₁…Aₗ} ⇒ G
+impl FormedContract {
+    pub fn semantic(&self) -> Contract
+    pub fn saturated(&self) -> Formula // source-formula spelling, not algebraic complement
+    pub fn paired(&self, sources: &[AssumptionSource]) -> FormedContract  // {A₁…Aₗ} ⇒ G
 }
+pub type ContractFormula = FormedContract // compatibility name
+pub fn formed_contract(&Sentence) -> Option<FormedContract>
+
 pub enum EdgeKind { OccurrenceReliance, GuaranteeDischarge, AdmissibilityEnvelope }
 pub struct AssumptionSource {
     pub kind: EdgeKind,
@@ -743,6 +781,23 @@ impl AssumptionSource {
 }
 ```
 
+`Contract` is the semantic A/G pair. `FormedContract` separately records how
+its assumption was selected from authored assertions. An implementation
+assertion `M` satisfies `Contract(A,G)` exactly when `M ∧ A ⇒ G`, equivalently
+when `M ⇒ G ∨ ¬A`. `Formula` itself is not used as this Boolean algebra:
+`Formula::Not` immediately around a behavior atom is predicate denial inside
+the subject quantifier (`∀x.¬P(x)`), not generally the classical complement
+`¬∀x.P(x)`. Projection therefore turns positive and denied behavior predicates
+into distinct signed `ContractAtom`s and reserves `Assertion::Not` for the
+classical complement required by saturation and contract operations.
+
+`ContractInterface` is the deterministic behavior alphabet (the generators
+mentioned by `A` or `G`). Composition uses the union alphabet; it does not
+invent input/output directions or component ownership that the constrained
+language has not stated. See
+[`../assume-guarantee-contracts.md`](../assume-guarantee-contracts.md) for the
+standard operations, graph materialization, and proved laws.
+
 The **structural precondition for graph edges** (round 3): before edges can
 be sound, every behavioral sentence needs a propositional shape — which
 guard atoms scope it, how they conjoin and disjoin, where the exception
@@ -776,7 +831,7 @@ strengthenings. Raw text stays authoritative; formulas are derived views.
   and `No pump and the valve shall run.` is `¬run(pump) ∧ run(valve)` — a
   sibling item's `no` never leaks onto a plain item. `None` only for
   definitions: vocabulary has no claim.
-- `contract_formula` — the sentence-internal contract:
+- `formed_contract` — the provisional contract formed from one sentence:
   `assumption = Top` at ingest (non-trivial assumptions arrive only by
   pairing, and the paired `(A, G)` then supersedes this lone form), and
   `guarantee = applicability → claim`, i.e.
@@ -838,7 +893,7 @@ alone.
 ### Typed pairing (`paired`, `EdgeKind`)
 
 The supersession doctrine of [Pairing semantics](#pairing-semantics-the-graph-layers-contract)
-is **API-encoded** since round 4. `ContractFormula::paired(sources)`
+is **API-encoded** since round 4. `FormedContract::paired(sources)`
 returns a NEW contract whose assumption is the conjunction of the
 **contract-forming** source RELIED formulas — non-envelope AND proven
 (round 9) AND not merely recommended AND `DisjointKeys` (round 10) AND
@@ -859,7 +914,7 @@ this, and the pairing must stay compatible with it* — not a behavior-set
 whose complement means anything. Conjoining it into A and then saturating
 (`G ∨ ¬A`) would NEGATE the permission, reading it as a behavior-set
 complement it never was. Envelope sources are therefore retained in
-`ContractFormula::sources` (compatibility checking needs them) but never
+`FormedContract::sources` (compatibility checking needs them) but never
 enter the assumption formula and are never negated by saturation; their
 formal denotation (widening A) is graph-layer future work. Since round 8
 a retained envelope is no longer check-free: the graph layer must run
@@ -955,25 +1010,25 @@ stays out of any newly derived assumption until re-derived).
 since round 11, COMPLETED round 12).** Individually valid
 sources can still conjoin badly, so `relate` offers two checks the graph
 layer must run on every paired contract — and `specd` does so before append —
-`ContractFormula::well_formed()` runs both and folds in the source-side
+`FormedContract::well_formed()` runs both and folds in the source-side
 gates: the `all_sources_contract_forming` aggregate (round 12 — the
 one-call verdict over all four per-source conditions), its per-source
 `source_issues` itemization, and the two narrower
 explicitness/provenness booleans as diagnostics, so one call carries the
 whole verification status (data only; see [the well-formed proven
 pairing](#pairing-semantics-the-graph-layers-contract)):
-`relate::assumption_satisfiable(&ContractFormula)` — can the conjoined
+`relate::assumption_satisfiable(&FormedContract)` — can the conjoined
 contract-forming reliances all hold at once (round 9: the judged set is
 exactly the set `paired` conjoins, so the verdict is about the assumption
 actually formed)? — and
-`relate::envelope_compatible(&ContractFormula)` — does the guarantee
+`relate::envelope_compatible(&FormedContract)` — does the guarantee
 forbid exactly what a retained envelope admits? Both follow the
 never-`Yes` asymmetry doctrine described under
 [the relation engine](#the-relation-engine).
 
 The source formula is the sentence's own conditional (applicability →
 claim — the same shape a guarantee takes), and `paired` now RETAINS its
-sources on the contract (`ContractFormula::sources`), keeping the derived
+sources on the contract (`FormedContract::sources`), keeping the derived
 `assumption` conjunction and each conjunct's edge kind in sync — a
 permission can no longer be quietly treated as occurrence evidence, nor a
 recommendation as a discharge. `PairingError` carries actionable messages
@@ -996,15 +1051,15 @@ for the constructors' validity checks.
 pub enum Ternary { Yes, No, Unknown }
 pub fn implies(a: &Formula, b: &Formula) -> Ternary
 pub fn contradicts(a: &Formula, b: &Formula) -> Ternary
-pub fn refines(concrete: &ContractFormula, abstract_: &ContractFormula) -> Ternary
+pub fn refines(concrete: &FormedContract, abstract_: &FormedContract) -> Ternary
 // round 6 — the force-AWARE end-to-end judgment (round 7 adds EnvelopeConflict):
 pub enum Outcome { HardContradiction, AdvisoryTension, DescriptiveConflict,
                    Refinement { concrete_is_a: bool }, Equivalent, Independent,
                    EnvelopeConflict, Unknown }
 pub fn assess(a: &Sentence, b: &Sentence) -> Outcome
 // round 8 — contract-level checks for paired assumptions (never return Yes):
-pub fn assumption_satisfiable(c: &ContractFormula) -> Ternary
-pub fn envelope_compatible(c: &ContractFormula) -> Ternary
+pub fn assumption_satisfiable(c: &FormedContract) -> Ternary
+pub fn envelope_compatible(c: &FormedContract) -> Ternary
 ```
 
 Round 5 makes the formulas non-decorative: *implies*, *contradicts*, and
@@ -1476,7 +1531,7 @@ conventions as the syntax tree:
 | --- | --- | --- |
 | `SpeechAct`, `Force`, `Polarity`, `Assumption`, `CountOp`, `EdgeKind`, `SubjectRelation`, `SourceIssueReason` | unit variants, `snake_case` | `"obligation"`, `"top"`, `"at_least"`, `"guarantee_discharge"`, `"shared_keys"`, `"not_explicit_relied"` |
 | `Claim`, `Denotation`, `Resolution`, `Quantifier`, `RoleValue`, `Formula`, `AtomRef`, `GuardRole` | internally tagged, `"kind"`, `snake_case` | `{ "kind": "admissible", … }`, `{ "kind": "count", "op": "at_least", "n": 3 }`, `{ "kind": "heads", "items": [{ "quantifier": { "kind": "definite" }, "head": "archive" }] }`, `{ "kind": "not", "inner": … }` |
-| `Assertion`, `IngestContract`, `Reference`, `AntecedentCandidate`, `Skeleton`, `SubjectSkeleton`, `ObjectSkeleton`, `Atom`, `RoleSkeleton`, `ClauseSkeleton`, `TriggerSkeleton`, `Guards`, `BehaviorAtom`, `ContractFormula`, `AssumptionSource`, `WellFormedness`, `SourceIssue` | plain structs | field names as written |
+| `Assertion`, `IngestContract`, `Reference`, `AntecedentCandidate`, `Skeleton`, `SubjectSkeleton`, `ObjectSkeleton`, `Atom`, `RoleSkeleton`, `ClauseSkeleton`, `TriggerSkeleton`, `Guards`, `BehaviorAtom`, `Contract`, `FormedContract`, `AssumptionSource`, `WellFormedness`, `SourceIssue` | plain structs | field names as written |
 
 Internally tagged enums cannot serialize a newtype variant that holds a bare
 sequence or primitive, so the two syntax-tree variants that carry one are

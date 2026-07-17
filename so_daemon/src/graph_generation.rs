@@ -13,7 +13,9 @@ use std::collections::BTreeMap;
 
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use so_reason::relate::{assess, Outcome};
+use so_reason::contract::{assess_contracts, ContractRelation};
+use so_reason::formula::assertion_formula;
+use so_reason::relate::{assess, assess_formulas, FormulaRelation, Outcome};
 
 use crate::domain::{
     AssessmentOutcome, Derivation, DerivedNode, Edge, EdgeKind, EndpointRole, Node,
@@ -31,8 +33,15 @@ pub const SEMANTIC_DERIVATION_VERSION: &str = so_reason::relate::ASSESS_VERSION;
 pub const SEMANTIC_EDGE_METHOD: &str = "so-daemon.graph.semantic-relations";
 pub const SEMANTIC_EDGE_VERSION: &str = "spec-graph/semantic-relations-v2";
 pub const CONTRACT_PROJECTION_METHOD: &str = "so-daemon.graph.ingest-contract";
-pub const CONTRACT_PROJECTION_VERSION: &str = "spec-graph/ingest-contract-v1";
-pub const RUN_VERSION: &str = "spec-graph/node-relations-v3";
+pub const CONTRACT_PROJECTION_VERSION: &str = "spec-graph/ingest-contract-v2";
+pub const FORMULA_ASSESSMENT_METHOD: &str = "so-reason.relate.assess-formulas";
+pub const CONTRACT_ASSESSMENT_METHOD: &str = "so-reason.contract.assess";
+pub const CONTRACT_ASSESSMENT_VERSION: &str = "so-reason/contract-assess-v1";
+pub const CONTRACT_RELATION_METHOD: &str = "so-daemon.graph.contract-relations";
+pub const CONTRACT_RELATION_VERSION: &str = "spec-graph/contract-relations-v1";
+pub const DISCHARGE_CANDIDATE_METHOD: &str = "so-daemon.graph.discharge-candidates";
+pub const DISCHARGE_CANDIDATE_VERSION: &str = "spec-graph/discharge-candidates-v1";
+pub const RUN_VERSION: &str = "spec-graph/node-relations-v4";
 const PLUGIN_NAME: &str = "graph-generation";
 const CANDIDATE_PAGE_SIZE: usize = 500;
 
@@ -118,9 +127,18 @@ pub fn current_derivations() -> Vec<Derivation> {
         crate::selection::derivation(),
         crate::pairing::derivation(),
         contract_projection_derivation(),
+        contract_relation_derivation(),
+        crate::contract_algebra::derivation(),
         crate::pairing::projection_derivation(),
         crate::evidence_capture::evidence_derivation(),
     ]
+}
+
+pub fn contract_relation_derivation() -> Derivation {
+    Derivation {
+        method: CONTRACT_RELATION_METHOD.to_string(),
+        version: format!("{CONTRACT_RELATION_VERSION};reason={CONTRACT_ASSESSMENT_VERSION}"),
+    }
 }
 
 pub fn needs_generation(node: &Node) -> bool {
@@ -200,7 +218,8 @@ pub fn generate_and_persist(
         terms_seen: occurrences.len(),
         ..GenerationReport::default()
     };
-    persist_contract_projection(added, &sentence, store, recorded_at, &mut report)?;
+    let added_contract_node =
+        persist_contract_projection(added, &sentence, store, recorded_at, &mut report)?;
     for occurrence in &occurrences {
         let edge = mention_edge(added, occurrence, recorded_at);
         let write = store.put_term_mention(&occurrence.term, &edge)?;
@@ -235,8 +254,42 @@ pub fn generate_and_persist(
             let assessment = relation_assessment(added, &candidate, outcome, recorded_at);
             report.assessments_inserted +=
                 usize::from(store.append_relation_assessment(&assessment)?);
+            if let (Some(added_formula), Some(candidate_formula)) = (
+                assertion_formula(&sentence),
+                assertion_formula(&candidate_sentence),
+            ) {
+                let formula_assessment = formula_relation_assessment(
+                    added,
+                    &candidate,
+                    assess_formulas(&added_formula, &candidate_formula),
+                    recorded_at,
+                );
+                report.assessments_inserted +=
+                    usize::from(store.append_relation_assessment(&formula_assessment)?);
+            }
             if let Some(edge) = semantic_edge(added, &candidate, outcome, recorded_at) {
                 report.semantic_edges_inserted += usize::from(store.append_edge(&edge)?);
+            }
+            if let (Some(added_contract_node), Some(candidate_contract)) = (
+                added_contract_node.as_ref(),
+                crate::pairing::current_formed_contract(store, &candidate)
+                    .map_err(|error| StoreError::Backend(error.to_string()))?,
+            ) {
+                let candidate_contract_node = DerivedNode::contract(
+                    &candidate_contract.semantic(),
+                    "formed",
+                    CONTRACT_PROJECTION_VERSION,
+                );
+                persist_contract_assessment_and_edge(
+                    added,
+                    added_contract_node,
+                    &candidate,
+                    &candidate_contract_node,
+                    store,
+                    recorded_at,
+                    &mut report,
+                )?;
+                persist_discharge_candidates(added, &candidate, store, recorded_at, &mut report)?;
             }
         }
         match page.next_cursor {
@@ -248,19 +301,78 @@ pub fn generate_and_persist(
     Ok(report)
 }
 
+/// Re-assess every contract involving `changed` after its selected assumption
+/// changes. Relationships attach to content-addressed Contract vertices, so
+/// prior results remain valid Ledger facts about prior `(A,G)` values while
+/// the new HasContract projection selects the new value.
+pub fn reconcile_contract_relations_for(
+    changed: &Node,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+) -> Result<GenerationReport, StoreError> {
+    let Some(changed_contract) = crate::pairing::current_formed_contract(store, changed)
+        .map_err(|error| StoreError::Backend(error.to_string()))?
+    else {
+        return Ok(GenerationReport::default());
+    };
+    let changed_contract_node = DerivedNode::contract(
+        &changed_contract.semantic(),
+        "formed",
+        CONTRACT_PROJECTION_VERSION,
+    );
+    let mut report = GenerationReport::default();
+    let mut cursor = None;
+    loop {
+        let page = store.list_nodes(cursor.as_deref(), CANDIDATE_PAGE_SIZE)?;
+        for candidate in page.nodes {
+            if candidate.id == changed.id {
+                continue;
+            }
+            let Some(candidate_contract) =
+                crate::pairing::current_formed_contract(store, &candidate)
+                    .map_err(|error| StoreError::Backend(error.to_string()))?
+            else {
+                continue;
+            };
+            let candidate_contract_node = DerivedNode::contract(
+                &candidate_contract.semantic(),
+                "formed",
+                CONTRACT_PROJECTION_VERSION,
+            );
+            persist_contract_assessment_and_edge(
+                changed,
+                &changed_contract_node,
+                &candidate,
+                &candidate_contract_node,
+                store,
+                recorded_at,
+                &mut report,
+            )?;
+            persist_discharge_candidates(changed, &candidate, store, recorded_at, &mut report)?;
+        }
+        match page.next_cursor {
+            Some(next) => cursor = Some(next),
+            None => break,
+        }
+    }
+    Ok(report)
+}
+
 fn persist_contract_projection(
     node: &Node,
     sentence: &so_lang::ast::Sentence,
     store: &(dyn GraphStore + Send + Sync),
     recorded_at: &str,
     report: &mut GenerationReport,
-) -> Result<(), StoreError> {
-    let Some(contract) = so_reason::semantics::ingest_contract(sentence) else {
-        return Ok(());
+) -> Result<Option<DerivedNode>, StoreError> {
+    let Some(contract) = so_reason::contract::formed_contract(sentence) else {
+        return Ok(None);
     };
     let derivation = contract_projection_derivation();
+    let assumption_json =
+        serde_json::to_string(&contract.assumption).map_err(StoreError::Serialize)?;
     let assumption =
-        DerivedNode::assumption(contract.assumption.render(), CONTRACT_PROJECTION_VERSION);
+        DerivedNode::assumption_formula("⊤", &assumption_json, CONTRACT_PROJECTION_VERSION);
     let assumption_edge = Edge::projection(
         EdgeKind::HasAssumption,
         &node.id,
@@ -277,12 +389,19 @@ fn persist_contract_projection(
     // existing ContractView projection on the wire.
     let mut assertion = sentence.clone();
     assertion.purpose = None;
-    let force = match contract.force {
+    let force = match so_reason::semantics::force(sentence) {
         Some(so_reason::semantics::Force::Binding) => "binding",
         Some(so_reason::semantics::Force::Recommended) => "recommended",
         None => "",
     };
-    let guarantee = DerivedNode::guarantee(&assertion.render(), force, CONTRACT_PROJECTION_VERSION);
+    let guarantee_json =
+        serde_json::to_string(&contract.guarantee).map_err(StoreError::Serialize)?;
+    let guarantee = DerivedNode::guarantee_formula(
+        &assertion.render(),
+        force,
+        &guarantee_json,
+        CONTRACT_PROJECTION_VERSION,
+    );
     let guarantee_edge = Edge::projection(
         EdgeKind::HasGuarantee,
         &node.id,
@@ -294,7 +413,21 @@ fn persist_contract_projection(
     let write = store.put_derived_node(&guarantee, &guarantee_edge)?;
     report.contract_nodes_inserted += usize::from(write.node_inserted);
     report.contract_edges_inserted += usize::from(write.edge_inserted);
-    Ok(())
+
+    let semantic =
+        DerivedNode::contract(&contract.semantic(), "formed", CONTRACT_PROJECTION_VERSION);
+    let contract_edge = Edge::projection(
+        EdgeKind::HasContract,
+        &node.id,
+        semantic.id(),
+        contract_projection_derivation(),
+        recorded_at,
+    )
+    .expect("formed contracts always form a valid semantic projection");
+    let write = store.put_derived_node(&semantic, &contract_edge)?;
+    report.contract_nodes_inserted += usize::from(write.node_inserted);
+    report.contract_edges_inserted += usize::from(write.edge_inserted);
+    Ok(Some(semantic))
 }
 
 fn relation_assessment(
@@ -348,6 +481,219 @@ fn relation_assessment(
         candidate_derivation,
         semantic_derivation,
         outcome: normalized_outcome,
+        recorded_at: recorded_at.to_string(),
+    }
+}
+
+fn formula_relation_assessment(
+    added: &Node,
+    candidate: &Node,
+    relation: FormulaRelation,
+    recorded_at: &str,
+) -> RelationAssessment {
+    let (left, right) = ordered_ids(&added.id, &candidate.id);
+    let outcome = match relation {
+        FormulaRelation::Equivalent => AssessmentOutcome::FormulaEquivalent,
+        FormulaRelation::Entails => AssessmentOutcome::FormulaEntails {
+            antecedent: added.id.clone(),
+            consequence: candidate.id.clone(),
+        },
+        FormulaRelation::EntailedBy => AssessmentOutcome::FormulaEntails {
+            antecedent: candidate.id.clone(),
+            consequence: added.id.clone(),
+        },
+        FormulaRelation::Contradicts => AssessmentOutcome::FormulaContradiction,
+        FormulaRelation::Unknown => AssessmentOutcome::FormulaUnknown,
+    };
+    assessment_record(
+        left,
+        right,
+        Derivation {
+            method: FORMULA_ASSESSMENT_METHOD.to_string(),
+            version: so_reason::relate::FORMULA_ASSESS_VERSION.to_string(),
+        },
+        outcome,
+        recorded_at,
+        &[],
+    )
+}
+
+fn persist_contract_assessment_and_edge(
+    added: &Node,
+    added_contract_node: &DerivedNode,
+    candidate: &Node,
+    candidate_contract_node: &DerivedNode,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+    report: &mut GenerationReport,
+) -> Result<(), StoreError> {
+    let added_contract = added_contract_node
+        .semantic_contract()
+        .expect("a contract projection contains a semantic contract");
+    let candidate_contract = candidate_contract_node
+        .semantic_contract()
+        .expect("a contract projection contains a semantic contract");
+    let relation = assess_contracts(&added_contract, &candidate_contract);
+    let (left, right) = ordered_ids(&added.id, &candidate.id);
+    let outcome = match relation {
+        ContractRelation::Refines => AssessmentOutcome::ContractRefines {
+            concrete: added.id.clone(),
+            abstract_: candidate.id.clone(),
+        },
+        ContractRelation::RefinedBy => AssessmentOutcome::ContractRefines {
+            concrete: candidate.id.clone(),
+            abstract_: added.id.clone(),
+        },
+        ContractRelation::Equivalent => AssessmentOutcome::ContractEquivalent,
+        ContractRelation::Incomparable => AssessmentOutcome::ContractIncomparable,
+    };
+    let assessment = assessment_record(
+        left,
+        right,
+        Derivation {
+            method: CONTRACT_ASSESSMENT_METHOD.to_string(),
+            version: CONTRACT_ASSESSMENT_VERSION.to_string(),
+        },
+        outcome,
+        recorded_at,
+        &[added_contract_node.id(), candidate_contract_node.id()],
+    );
+    report.assessments_inserted += usize::from(store.append_relation_assessment(&assessment)?);
+
+    let edge = match relation {
+        ContractRelation::Refines => Some(Edge::contract_relation(
+            EdgeKind::ContractRefines,
+            added_contract_node.id(),
+            candidate_contract_node.id(),
+            vec![added.id.clone(), candidate.id.clone()],
+            contract_relation_derivation(),
+            recorded_at,
+        )),
+        ContractRelation::RefinedBy => Some(Edge::contract_relation(
+            EdgeKind::ContractRefines,
+            candidate_contract_node.id(),
+            added_contract_node.id(),
+            vec![added.id.clone(), candidate.id.clone()],
+            contract_relation_derivation(),
+            recorded_at,
+        )),
+        ContractRelation::Equivalent
+            if added_contract_node.id() != candidate_contract_node.id() =>
+        {
+            Some(Edge::contract_relation(
+                EdgeKind::ContractEquivalent,
+                added_contract_node.id(),
+                candidate_contract_node.id(),
+                vec![added.id.clone(), candidate.id.clone()],
+                contract_relation_derivation(),
+                recorded_at,
+            ))
+        }
+        ContractRelation::Equivalent => None,
+        ContractRelation::Incomparable => None,
+    };
+    if let Some(edge) = edge {
+        let edge = edge.expect("contract judgments map to valid contract edges");
+        report.semantic_edges_inserted += usize::from(store.append_edge(&edge)?);
+    }
+    Ok(())
+}
+
+fn persist_discharge_candidates(
+    first: &Node,
+    second: &Node,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+    report: &mut GenerationReport,
+) -> Result<(), StoreError> {
+    for (source, target) in [(first, second), (second, first)] {
+        let source_contract = crate::pairing::current_formed_contract(store, source)
+            .map_err(|error| StoreError::Backend(error.to_string()))?;
+        let Some(source_contract) = source_contract else {
+            continue;
+        };
+        let pairing_edges =
+            store.list_pairing_edges(target.id.as_str(), &crate::pairing::derivation())?;
+        let mut relied_ids: Vec<String> = pairing_edges
+            .iter()
+            .filter(|edge| edge.kind != EdgeKind::AdmissibilityEnvelope)
+            .filter_map(|edge| edge.relied_spec_id.clone())
+            .collect();
+        relied_ids.sort();
+        relied_ids.dedup();
+        for relied_id in relied_ids {
+            let Some(relied) = store.get_node(&relied_id)? else {
+                continue;
+            };
+            let Some(relied_sentence) = parse_current(&relied) else {
+                continue;
+            };
+            let Some(relied_formula) = assertion_formula(&relied_sentence) else {
+                continue;
+            };
+            if !source_contract
+                .semantic()
+                .guarantee
+                .entails(&so_reason::contract::Assertion::from(&relied_formula))
+            {
+                continue;
+            }
+            let (left, right) = ordered_ids(&source.id, &target.id);
+            let assessment = assessment_record(
+                left,
+                right,
+                Derivation {
+                    method: DISCHARGE_CANDIDATE_METHOD.to_string(),
+                    version: DISCHARGE_CANDIDATE_VERSION.to_string(),
+                },
+                AssessmentOutcome::DischargeCandidate {
+                    source: source.id.clone(),
+                    target: target.id.clone(),
+                    relied_spec_id: relied_id.clone(),
+                },
+                recorded_at,
+                &[&relied_id],
+            );
+            report.assessments_inserted +=
+                usize::from(store.append_relation_assessment(&assessment)?);
+        }
+    }
+    Ok(())
+}
+
+fn ordered_ids<'a>(a: &'a str, b: &'a str) -> (&'a str, &'a str) {
+    if a <= b {
+        (a, b)
+    } else {
+        (b, a)
+    }
+}
+
+fn assessment_record(
+    left: &str,
+    right: &str,
+    semantic_derivation: Derivation,
+    outcome: AssessmentOutcome,
+    recorded_at: &str,
+    identity_basis: &[&str],
+) -> RelationAssessment {
+    let candidate_derivation = candidate_derivation();
+    let mut identity = vec![
+        candidate_derivation.method.as_str(),
+        candidate_derivation.version.as_str(),
+        semantic_derivation.method.as_str(),
+        semantic_derivation.version.as_str(),
+        left,
+        right,
+    ];
+    identity.extend_from_slice(identity_basis);
+    RelationAssessment {
+        id: stable_id("assessment", &identity),
+        left: left.to_string(),
+        right: right.to_string(),
+        candidate_derivation,
+        semantic_derivation,
+        outcome,
         recorded_at: recorded_at.to_string(),
     }
 }

@@ -124,6 +124,13 @@ fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
         domain::EdgeKind::GroundedBy => pb::EdgeKind::GroundedBy,
         domain::EdgeKind::HasAssumption => pb::EdgeKind::HasAssumption,
         domain::EdgeKind::HasGuarantee => pb::EdgeKind::HasGuarantee,
+        domain::EdgeKind::HasContract => pb::EdgeKind::HasContract,
+        domain::EdgeKind::ContractRefines => pb::EdgeKind::ContractRefines,
+        domain::EdgeKind::ContractEquivalent => pb::EdgeKind::ContractEquivalent,
+        domain::EdgeKind::CompositionOperand => pb::EdgeKind::CompositionOperand,
+        domain::EdgeKind::QuotientDividend => pb::EdgeKind::QuotientDividend,
+        domain::EdgeKind::QuotientDivisor => pb::EdgeKind::QuotientDivisor,
+        domain::EdgeKind::MergeOperand => pb::EdgeKind::MergeOperand,
     }
 }
 
@@ -162,6 +169,17 @@ fn endpoint_role_to_pb(role: domain::EndpointRole) -> pb::EdgeEndpointRole {
         domain::EndpointRole::DischargedContract => pb::EdgeEndpointRole::DischargedContract,
         domain::EndpointRole::AdmissibleEnvironment => pb::EdgeEndpointRole::AdmissibleEnvironment,
         domain::EndpointRole::BoundedContract => pb::EdgeEndpointRole::BoundedContract,
+        domain::EndpointRole::Contract => pb::EdgeEndpointRole::Contract,
+        domain::EndpointRole::ContractRefiner => pb::EdgeEndpointRole::ContractRefiner,
+        domain::EndpointRole::ContractRefined => pb::EdgeEndpointRole::ContractRefined,
+        domain::EndpointRole::EquivalentContract => pb::EdgeEndpointRole::EquivalentContract,
+        domain::EndpointRole::CompositionOperand => pb::EdgeEndpointRole::CompositionOperand,
+        domain::EndpointRole::CompositionResult => pb::EdgeEndpointRole::CompositionResult,
+        domain::EndpointRole::QuotientDividend => pb::EdgeEndpointRole::QuotientDividend,
+        domain::EndpointRole::QuotientDivisor => pb::EdgeEndpointRole::QuotientDivisor,
+        domain::EndpointRole::QuotientResult => pb::EdgeEndpointRole::QuotientResult,
+        domain::EndpointRole::MergeOperand => pb::EdgeEndpointRole::MergeOperand,
+        domain::EndpointRole::MergeResult => pb::EdgeEndpointRole::MergeResult,
     }
 }
 
@@ -172,6 +190,7 @@ fn vertex_kind_to_pb(kind: domain::VertexKind) -> pb::VertexKind {
         domain::VertexKind::Evidence => pb::VertexKind::Evidence,
         domain::VertexKind::Assumption => pb::VertexKind::Assumption,
         domain::VertexKind::Guarantee => pb::VertexKind::Guarantee,
+        domain::VertexKind::Contract => pb::VertexKind::Contract,
     }
 }
 
@@ -249,12 +268,31 @@ pub fn derived_node_to_pb(node: &domain::DerivedNode) -> pb::DerivedNode {
             id,
             expression,
             force,
+            formula_json,
             derivation_version,
         } => (
             id.clone(),
             pb::derived_node::Value::Guarantee(pb::GuaranteeNode {
                 expression: expression.clone(),
                 force: force.clone(),
+                derivation_version: derivation_version.clone(),
+                formula_json: formula_json.clone(),
+            }),
+        ),
+        domain::DerivedNode::Contract {
+            id,
+            assumption_json,
+            guarantee_json,
+            interface_json,
+            operation,
+            derivation_version,
+        } => (
+            id.clone(),
+            pb::derived_node::Value::Contract(pb::ContractNode {
+                assumption_json: assumption_json.clone(),
+                guarantee_json: guarantee_json.clone(),
+                interface_json: interface_json.clone(),
+                operation: operation.clone(),
                 derivation_version: derivation_version.clone(),
             }),
         ),
@@ -263,6 +301,76 @@ pub fn derived_node_to_pb(node: &domain::DerivedNode) -> pb::DerivedNode {
         id,
         value: Some(value),
     }
+}
+
+pub fn relation_assessment_to_pb(
+    assessment: &domain::RelationAssessment,
+) -> pb::RelationAssessment {
+    use domain::AssessmentOutcome as Outcome;
+    let mut wire = pb::RelationAssessment {
+        id: assessment.id.clone(),
+        left: assessment.left.clone(),
+        right: assessment.right.clone(),
+        candidate_derivation: Some(pb::Derivation {
+            method: assessment.candidate_derivation.method.clone(),
+            version: assessment.candidate_derivation.version.clone(),
+        }),
+        semantic_derivation: Some(pb::Derivation {
+            method: assessment.semantic_derivation.method.clone(),
+            version: assessment.semantic_derivation.version.clone(),
+        }),
+        recorded_at: assessment.recorded_at.clone(),
+        ..Default::default()
+    };
+    wire.kind = match &assessment.outcome {
+        Outcome::Refines {
+            concrete,
+            abstract_,
+        } => {
+            wire.concrete = Some(concrete.clone());
+            wire.r#abstract = Some(abstract_.clone());
+            pb::AssessmentKind::Refines
+        }
+        Outcome::Equivalent => pb::AssessmentKind::Equivalent,
+        Outcome::HardContradiction => pb::AssessmentKind::HardContradiction,
+        Outcome::AdvisoryTension => pb::AssessmentKind::AdvisoryTension,
+        Outcome::DescriptiveConflict => pb::AssessmentKind::DescriptiveConflict,
+        Outcome::EnvelopeConflict => pb::AssessmentKind::EnvelopeConflict,
+        Outcome::Independent => pb::AssessmentKind::Independent,
+        Outcome::Unknown => pb::AssessmentKind::Unknown,
+        Outcome::FormulaEntails {
+            antecedent,
+            consequence,
+        } => {
+            wire.antecedent = Some(antecedent.clone());
+            wire.consequence = Some(consequence.clone());
+            pb::AssessmentKind::FormulaEntails
+        }
+        Outcome::FormulaEquivalent => pb::AssessmentKind::FormulaEquivalent,
+        Outcome::FormulaContradiction => pb::AssessmentKind::FormulaContradiction,
+        Outcome::FormulaUnknown => pb::AssessmentKind::FormulaUnknown,
+        Outcome::ContractRefines {
+            concrete,
+            abstract_,
+        } => {
+            wire.concrete = Some(concrete.clone());
+            wire.r#abstract = Some(abstract_.clone());
+            pb::AssessmentKind::ContractRefines
+        }
+        Outcome::ContractEquivalent => pb::AssessmentKind::ContractEquivalent,
+        Outcome::ContractIncomparable => pb::AssessmentKind::ContractIncomparable,
+        Outcome::DischargeCandidate {
+            source,
+            target,
+            relied_spec_id,
+        } => {
+            wire.source = Some(source.clone());
+            wire.target = Some(target.clone());
+            wire.relied_spec_id = Some(relied_spec_id.clone());
+            pb::AssessmentKind::DischargeCandidate
+        }
+    } as i32;
+    wire
 }
 
 // ---- Locator ---------------------------------------------------------------

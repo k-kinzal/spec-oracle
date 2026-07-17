@@ -1,8 +1,8 @@
 //! Content-addressed graph nodes derived from an authored specification.
 //!
 //! Unlike [`crate::domain::Node`], these vertices are not authored sentences.
-//! They make grounding and the two sides of the ingest assume-guarantee view
-//! explicit topology. Their identities are derived from their content so two
+//! They make grounding, contract sides, and semantic contracts explicit
+//! topology. Their identities are derived from their content so two
 //! specifications that refer to the same value share one vertex.
 
 use serde::{Deserialize, Serialize};
@@ -30,6 +30,17 @@ pub enum DerivedNode {
         id: String,
         expression: String,
         force: String,
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        formula_json: String,
+        derivation_version: String,
+    },
+    Contract {
+        id: String,
+        assumption_json: String,
+        guarantee_json: String,
+        interface_json: String,
+        /// `formed`, `composition`, `quotient`, or `merge`.
+        operation: String,
         derivation_version: String,
     },
 }
@@ -83,24 +94,82 @@ impl DerivedNode {
     }
 
     pub fn guarantee(expression: &str, force: &str, derivation_version: &str) -> Self {
+        Self::guarantee_formula(expression, force, "", derivation_version)
+    }
+
+    pub fn guarantee_formula(
+        expression: &str,
+        force: &str,
+        formula_json: &str,
+        derivation_version: &str,
+    ) -> Self {
         let id = content_id(
             "guarantee",
-            &serde_json::to_vec(&(expression, force, derivation_version))
+            &serde_json::to_vec(&(expression, force, formula_json, derivation_version))
                 .expect("guarantee identity serializes"),
         );
         Self::Guarantee {
             id,
             expression: expression.to_string(),
             force: force.to_string(),
+            formula_json: formula_json.to_string(),
             derivation_version: derivation_version.to_string(),
         }
+    }
+
+    pub fn contract(
+        contract: &so_reason::contract::Contract,
+        operation: &str,
+        derivation_version: &str,
+    ) -> Self {
+        let assumption_json =
+            serde_json::to_string(&contract.assumption).expect("contract assumption serializes");
+        let guarantee_json =
+            serde_json::to_string(&contract.guarantee).expect("contract guarantee serializes");
+        let interface_json =
+            serde_json::to_string(&contract.interface()).expect("contract interface serializes");
+        let id = content_id(
+            "contract",
+            &serde_json::to_vec(&(
+                &assumption_json,
+                &guarantee_json,
+                &interface_json,
+                operation,
+                derivation_version,
+            ))
+            .expect("contract identity serializes"),
+        );
+        Self::Contract {
+            id,
+            assumption_json,
+            guarantee_json,
+            interface_json,
+            operation: operation.to_string(),
+            derivation_version: derivation_version.to_string(),
+        }
+    }
+
+    pub fn semantic_contract(&self) -> Option<so_reason::contract::Contract> {
+        let Self::Contract {
+            assumption_json,
+            guarantee_json,
+            ..
+        } = self
+        else {
+            return None;
+        };
+        Some(so_reason::contract::Contract::new(
+            serde_json::from_str(assumption_json).ok()?,
+            serde_json::from_str(guarantee_json).ok()?,
+        ))
     }
 
     pub fn id(&self) -> &str {
         match self {
             Self::Evidence { id, .. }
             | Self::Assumption { id, .. }
-            | Self::Guarantee { id, .. } => id,
+            | Self::Guarantee { id, .. }
+            | Self::Contract { id, .. } => id,
         }
     }
 
@@ -109,6 +178,7 @@ impl DerivedNode {
             Self::Evidence { .. } => VertexKind::Evidence,
             Self::Assumption { .. } => VertexKind::Assumption,
             Self::Guarantee { .. } => VertexKind::Guarantee,
+            Self::Contract { .. } => VertexKind::Contract,
         }
     }
 }

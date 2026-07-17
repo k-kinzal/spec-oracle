@@ -290,16 +290,18 @@ impl GraphStore for ArangoNodeStore {
         let from_collection = match edge.source_kind {
             VertexKind::Specification => COLLECTION,
             VertexKind::Term => TERM_COLLECTION,
-            VertexKind::Evidence | VertexKind::Assumption | VertexKind::Guarantee => {
-                DERIVED_COLLECTION
-            }
+            VertexKind::Evidence
+            | VertexKind::Assumption
+            | VertexKind::Guarantee
+            | VertexKind::Contract => DERIVED_COLLECTION,
         };
         let to_collection = match edge.target_kind {
             VertexKind::Specification => COLLECTION,
             VertexKind::Term => TERM_COLLECTION,
-            VertexKind::Evidence | VertexKind::Assumption | VertexKind::Guarantee => {
-                DERIVED_COLLECTION
-            }
+            VertexKind::Evidence
+            | VertexKind::Assumption
+            | VertexKind::Guarantee
+            | VertexKind::Contract => DERIVED_COLLECTION,
         };
         let identity_key = edge.identity_key();
         let doc = serde_json::json!({
@@ -387,6 +389,24 @@ impl GraphStore for ArangoNodeStore {
         vars.insert("key", Value::String(id.to_string()));
         let rows: Vec<RelationAssessment> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
         Ok(rows.into_iter().next())
+    }
+
+    fn list_relation_assessments(
+        &self,
+        owners: &[String],
+    ) -> Result<Vec<RelationAssessment>, StoreError> {
+        if owners.is_empty() {
+            return Ok(Vec::new());
+        }
+        let query = format!(
+            "FOR assessment IN {ASSESSMENT_COLLECTION} \
+               FILTER assessment.left IN @owners \
+               SORT assessment._key ASC \
+               RETURN UNSET(assessment, \"_key\", \"_id\", \"_rev\")"
+        );
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("owners", serde_json::to_value(owners)?);
+        self.db.aql_bind_vars(&query, vars).map_err(backend)
     }
 
     fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError> {
@@ -708,6 +728,30 @@ impl GraphStore for ArangoNodeStore {
         let current: Vec<String> = current_derivations.iter().map(derivation_key).collect();
         vars.insert("current", serde_json::to_value(current)?);
         let edges: Vec<Edge> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        let mut contract_basis: std::collections::BTreeSet<String> =
+            owners.iter().cloned().collect();
+        for edge in &edges {
+            contract_basis.extend(edge.basis_spec_ids.iter().cloned());
+        }
+        let contract_context = if contract_basis.is_empty() {
+            Vec::new()
+        } else {
+            let context_query = format!(
+                "FOR e IN {EDGE_COLLECTION} \
+                   FILTER e.derivation_key IN @current \
+                   FILTER (e.edge.kind == \"has_contract\" AND e.edge.source IN @basis) \
+                     OR (e.edge.kind IN [\"composition_operand\", \"quotient_dividend\", \"quotient_divisor\", \"merge_operand\"] \
+                         AND LENGTH(INTERSECTION(e.edge.basis_spec_ids, @basis)) > 0) \
+                   RETURN e.edge"
+            );
+            let mut context_vars: HashMap<&str, Value> = HashMap::new();
+            let current: Vec<String> = current_derivations.iter().map(derivation_key).collect();
+            context_vars.insert("current", serde_json::to_value(current)?);
+            context_vars.insert("basis", serde_json::to_value(contract_basis)?);
+            self.db
+                .aql_bind_vars(&context_query, context_vars)
+                .map_err(backend)?
+        };
         let source_ids: std::collections::BTreeSet<String> = edges
             .iter()
             .filter(|edge| edge.kind == EdgeKind::GroundedBy)
@@ -735,15 +779,18 @@ impl GraphStore for ArangoNodeStore {
                 })
                 .collect()
         };
-        Ok(crate::store::select_current_assumption_projections(edges)
-            .into_iter()
-            .filter(|edge| {
-                edge.kind != EdgeKind::GroundedBy
-                    || current_evidence
-                        .get(&edge.source)
-                        .is_none_or(|ids| ids.contains(&edge.target))
-            })
-            .collect())
+        Ok(crate::store::select_current_contract_graph(
+            crate::store::select_current_assumption_projections(edges),
+            &contract_context,
+        )
+        .into_iter()
+        .filter(|edge| {
+            edge.kind != EdgeKind::GroundedBy
+                || current_evidence
+                    .get(&edge.source)
+                    .is_none_or(|ids| ids.contains(&edge.target))
+        })
+        .collect())
     }
 }
 
