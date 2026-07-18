@@ -692,7 +692,7 @@ mod tests {
         );
         assert_ne!(
             crate::relate::assess(&recommended, &binding),
-            crate::relate::Outcome::Equivalent
+            crate::relate::RelationVerdict::Equivalent
         );
         assert_eq!(
             assess_contracts(

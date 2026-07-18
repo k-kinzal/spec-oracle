@@ -227,7 +227,7 @@ pub fn derive_views(
         .filter(|source| scores.get(source).map_or(0, |score| score.evidence_score) > 0)
         .collect();
     let mut cycle_disabled_supporters = BTreeSet::new();
-    let (scores, outcome) = 'restart: loop {
+    let (scores, verdict) = 'restart: loop {
         let mut active_supporters: BTreeSet<String> = grounded_supporters
             .difference(&cycle_disabled_supporters)
             .cloned()
@@ -243,14 +243,14 @@ pub fn derive_views(
                 &active_supporters,
                 &cycle_disabled_supporters,
             );
-            let iteration_outcome = select_population(node_ids, population, &iteration_scores);
+            let iteration_decision = select_population(node_ids, population, &iteration_scores);
             let next_active: BTreeSet<String> = grounded_supporters
                 .difference(&cycle_disabled_supporters)
-                .filter(|source| iteration_outcome.selected.contains(*source))
+                .filter(|source| iteration_decision.selected.contains(*source))
                 .cloned()
                 .collect();
             if next_active == active_supporters {
-                break 'restart (iteration_scores, iteration_outcome);
+                break 'restart (iteration_scores, iteration_decision);
             }
             if let Some(cycle_start) = seen.get(&next_active).copied() {
                 let cycle = &history[cycle_start..];
@@ -321,7 +321,7 @@ pub fn derive_views(
             }
         }
     }
-    for (candidate, blocker) in outcome.blockers {
+    for (candidate, blocker) in verdict.blockers {
         if !requested.contains(candidate.as_str()) {
             continue;
         }
@@ -485,7 +485,7 @@ fn scores_with_supports(
 }
 
 #[derive(Debug)]
-struct SelectionOutcome {
+struct SelectionDecision {
     selected: BTreeSet<String>,
     blockers: BTreeMap<String, SelectionBlocker>,
 }
@@ -502,7 +502,7 @@ fn select_population(
     requested_ids: &[String],
     population: &SelectionPopulation,
     scores: &BTreeMap<String, ScoreSummary>,
-) -> SelectionOutcome {
+) -> SelectionDecision {
     let mut candidate_ids: BTreeSet<String> = requested_ids.iter().cloned().collect();
     let mut semantic_adjacency: BTreeMap<String, Vec<&Edge>> = BTreeMap::new();
     let mut explicit_adjacency: BTreeMap<String, Vec<&Edge>> = BTreeMap::new();
@@ -642,7 +642,7 @@ fn select_population(
             selected.insert(candidate);
         }
     }
-    SelectionOutcome { selected, blockers }
+    SelectionDecision { selected, blockers }
 }
 
 fn competition_exclusion(kind: EdgeKind, reverse_explicit: bool) -> (ExclusionKind, &'static str) {

@@ -2,11 +2,11 @@
 //! wire contract.
 //!
 //! The RPC layer is thin: it decodes the request, stamps the daemon-authoritative
-//! creation instant (sense ③), and sends an owned command to the Add Mailbox.
-//! The Mailbox parses one sentence and runs only the blocking Node save off the
+//! creation instant (sense ③), and sends an owned command to the Command Bus.
+//! The handler parses one sentence and runs only the blocking Node save off the
 //! async reactor. It replies with one stored-facts-only Node; Evidence capture,
-//! graph generation, and other processing run from the subsequent NodeAdded
-//! Jobs. Add errors map to gRPC status codes the client turns into exit codes
+//! graph generation, and other processing run from subsequent Events and
+//! Consumers. Add errors map to gRPC status codes the client turns into exit codes
 //! (`INVALID_ARGUMENT` → bad input, `INTERNAL` → runtime failure).
 
 use std::collections::BTreeMap;
@@ -20,9 +20,7 @@ use so_protocol::pb;
 use so_protocol::pb::specification_graph_server::SpecificationGraph;
 
 use crate::add::AddError;
-use crate::add_mailbox::{
-    AddInput, AddMailbox, AddMailboxError, ReplaceEvidenceError, ReplaceEvidenceInput,
-};
+use crate::command_bus::{AddNodeInput, CommandBus, CommandBusError, StartGraphRebuildInput};
 use crate::convert;
 use crate::store::{EdgePage, GraphStore, NodePage, StoreError};
 
@@ -60,15 +58,15 @@ type LedgerReadResult = (
 /// handle.
 pub struct SpecificationGraphService {
     nodes: Arc<dyn GraphStore + Send + Sync>,
-    adds: AddMailbox,
+    commands: CommandBus,
 }
 
 impl SpecificationGraphService {
     pub fn new(
         nodes: Arc<dyn GraphStore + Send + Sync>,
-        adds: AddMailbox,
+        commands: CommandBus,
     ) -> SpecificationGraphService {
-        SpecificationGraphService { nodes, adds }
+        SpecificationGraphService { nodes, commands }
     }
 }
 
@@ -101,110 +99,6 @@ impl SpecificationGraph for SpecificationGraphService {
         );
         so_tracing::set_span_parent_from_metadata(&span, request.metadata());
         async move { self.add_specification_inner(request).await }
-            .instrument(span)
-            .await
-    }
-
-    async fn replace_evidence(
-        &self,
-        request: Request<pb::ReplaceEvidenceRequest>,
-    ) -> Result<Response<pb::ReplaceEvidenceResponse>, Status> {
-        let span = tracing::info_span!(
-            "spec.daemon.replace_evidence",
-            "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "ReplaceEvidence",
-            "node.id" = tracing::field::Empty,
-            "spec.evidence.request_count" = tracing::field::Empty,
-            "error.message" = tracing::field::Empty,
-        );
-        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
-        async move { self.replace_evidence_inner(request).await }
-            .instrument(span)
-            .await
-    }
-
-    async fn add_selection_relation(
-        &self,
-        request: Request<pb::AddSelectionRelationRequest>,
-    ) -> Result<Response<pb::AddSelectionRelationResponse>, Status> {
-        let span = tracing::info_span!(
-            "spec.daemon.add_selection_relation",
-            "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "AddSelectionRelation",
-            "selection.kind" = tracing::field::Empty,
-            "selection.source" = tracing::field::Empty,
-            "selection.target" = tracing::field::Empty,
-            "selection.basis_count" = tracing::field::Empty,
-            "edge.id" = tracing::field::Empty,
-            "error.message" = tracing::field::Empty,
-        );
-        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
-        async move { self.add_selection_relation_inner(request).await }
-            .instrument(span)
-            .await
-    }
-
-    async fn add_assumption_relation(
-        &self,
-        request: Request<pb::AddAssumptionRelationRequest>,
-    ) -> Result<Response<pb::AddAssumptionRelationResponse>, Status> {
-        let span = tracing::info_span!(
-            "spec.daemon.add_assumption_relation",
-            "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "AddAssumptionRelation",
-            "pairing.kind" = tracing::field::Empty,
-            "pairing.source" = tracing::field::Empty,
-            "pairing.target" = tracing::field::Empty,
-            "pairing.relied" = tracing::field::Empty,
-            "pairing.basis_count" = tracing::field::Empty,
-            "edge.id" = tracing::field::Empty,
-            "error.message" = tracing::field::Empty,
-        );
-        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
-        async move { self.add_assumption_relation_inner(request).await }
-            .instrument(span)
-            .await
-    }
-
-    async fn promote_discharge_candidate(
-        &self,
-        request: Request<pb::PromoteDischargeCandidateRequest>,
-    ) -> Result<Response<pb::PromoteDischargeCandidateResponse>, Status> {
-        let span = tracing::info_span!(
-            "spec.daemon.promote_discharge_candidate",
-            "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "PromoteDischargeCandidate",
-            "assessment.id" = tracing::field::Empty,
-            "edge.id" = tracing::field::Empty,
-            "error.message" = tracing::field::Empty,
-        );
-        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
-        async move { self.promote_discharge_candidate_inner(request).await }
-            .instrument(span)
-            .await
-    }
-
-    async fn derive_contract(
-        &self,
-        request: Request<pb::DeriveContractRequest>,
-    ) -> Result<Response<pb::DeriveContractResponse>, Status> {
-        let span = tracing::info_span!(
-            "spec.daemon.derive_contract",
-            "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "DeriveContract",
-            "contract.left" = tracing::field::Empty,
-            "contract.right" = tracing::field::Empty,
-            "contract.operation" = tracing::field::Empty,
-            "contract.result" = tracing::field::Empty,
-            "error.message" = tracing::field::Empty,
-        );
-        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
-        async move { self.derive_contract_inner(request).await }
             .instrument(span)
             .await
     }
@@ -253,43 +147,63 @@ impl SpecificationGraph for SpecificationGraphService {
             .instrument(span)
             .await
     }
+
+    async fn start_graph_rebuild(
+        &self,
+        request: Request<pb::StartGraphRebuildRequest>,
+    ) -> Result<Response<pb::StartGraphRebuildResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.start_graph_rebuild",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "StartGraphRebuild",
+            "client.name" = tracing::field::Empty,
+            "client.version" = tracing::field::Empty,
+            "command.id" = tracing::field::Empty,
+            "spec.graph.total_nodes" = tracing::field::Empty,
+            "error.message" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move {
+            let request = request.into_inner();
+            let client = if request.client.is_empty() {
+                "spec".to_string()
+            } else {
+                request.client
+            };
+            let client_version = if request.client_version.is_empty() {
+                "unknown".to_string()
+            } else {
+                request.client_version
+            };
+            tracing::Span::current().record("client.name", client.as_str());
+            tracing::Span::current().record("client.version", client_version.as_str());
+            let (ack, total_nodes) = self
+                .commands
+                .start_graph_rebuild(StartGraphRebuildInput {
+                    client,
+                    client_version,
+                })
+                .await
+                .map_err(|error| {
+                    let message = error.to_string();
+                    tracing::Span::current().record("error.message", message.as_str());
+                    Status::internal(message)
+                })?;
+            tracing::Span::current().record("command.id", ack.command_id.as_str());
+            tracing::Span::current().record("spec.graph.total_nodes", total_nodes);
+            Ok(Response::new(pb::StartGraphRebuildResponse {
+                rebuild_id: ack.command_id,
+                started_at: ack.acknowledged_at,
+                total_nodes,
+            }))
+        }
+        .instrument(span)
+        .await
+    }
 }
 
 impl SpecificationGraphService {
-    async fn replace_evidence_inner(
-        &self,
-        request: Request<pb::ReplaceEvidenceRequest>,
-    ) -> Result<Response<pb::ReplaceEvidenceResponse>, Status> {
-        let req = request.into_inner();
-        if req.node_id.is_empty() {
-            return Err(Status::invalid_argument("node id must not be empty"));
-        }
-        tracing::Span::current().record("node.id", req.node_id.as_str());
-        tracing::Span::current().record("spec.evidence.request_count", req.evidence.len() as u64);
-        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true);
-        let node = self
-            .adds
-            .replace_evidence(ReplaceEvidenceInput {
-                node_id: req.node_id,
-                evidence: req.evidence,
-                now,
-            })
-            .await
-            .map_err(|error| match error {
-                ReplaceEvidenceError::Store(crate::store::StoreError::MissingNode(id)) => {
-                    Status::not_found(format!("specification node '{id}' does not exist"))
-                }
-                other => {
-                    let message = other.to_string();
-                    tracing::Span::current().record("error.message", message.as_str());
-                    Status::internal(message)
-                }
-            })?;
-        Ok(Response::new(pb::ReplaceEvidenceResponse {
-            node: Some(convert::accepted_node_to_pb(&node)),
-        }))
-    }
-
     async fn get_ledger_inner(
         &self,
         request: Request<pb::GetLedgerRequest>,
@@ -299,52 +213,49 @@ impl SpecificationGraphService {
         let limit = clamp_page_size(req.page_size) as usize;
         let after = (!req.page_token.is_empty()).then_some(req.page_token);
         let nodes = self.nodes.clone();
-        let outcome =
-            tokio::task::spawn_blocking(move || -> Result<LedgerReadResult, StoreError> {
-                let page = nodes.list_ledger_edges(after.as_deref(), limit)?;
-                let mut owners: Vec<String> = page
-                    .edges
-                    .iter()
-                    .map(|edge| edge.page_owner().to_string())
-                    .collect();
-                owners.sort();
-                owners.dedup();
-                let current: std::collections::BTreeSet<String> = nodes
-                    .list_edges(&owners, &crate::graph_generation::current_derivations())?
-                    .into_iter()
-                    .map(|edge| edge.id)
-                    .collect();
-                let mut term_ids = Vec::new();
-                let mut derived_ids = Vec::new();
-                for edge in &page.edges {
-                    for (id, kind) in [
-                        (&edge.source, edge.source_kind),
-                        (&edge.target, edge.target_kind),
-                    ] {
-                        match kind {
-                            crate::domain::VertexKind::Term => term_ids.push(id.clone()),
-                            crate::domain::VertexKind::Evidence
-                            | crate::domain::VertexKind::Assumption
-                            | crate::domain::VertexKind::Guarantee
-                            | crate::domain::VertexKind::Contract => derived_ids.push(id.clone()),
-                            crate::domain::VertexKind::Specification => {}
-                        }
+        let read = tokio::task::spawn_blocking(move || -> Result<LedgerReadResult, StoreError> {
+            let page = nodes.list_ledger_edges(after.as_deref(), limit)?;
+            let mut owners: Vec<String> = page
+                .edges
+                .iter()
+                .map(|edge| edge.page_owner().to_string())
+                .collect();
+            owners.sort();
+            owners.dedup();
+            let current: std::collections::BTreeSet<String> = nodes
+                .list_edges(&owners, &crate::graph_generation::current_derivations())?
+                .into_iter()
+                .map(|edge| edge.id)
+                .collect();
+            let mut term_ids = Vec::new();
+            let mut derived_ids = Vec::new();
+            for edge in &page.edges {
+                for (id, kind) in [
+                    (&edge.source, edge.source_kind),
+                    (&edge.target, edge.target_kind),
+                ] {
+                    match kind {
+                        crate::domain::VertexKind::Term => term_ids.push(id.clone()),
+                        crate::domain::VertexKind::Evidence
+                        | crate::domain::VertexKind::Assumption
+                        | crate::domain::VertexKind::Guarantee
+                        | crate::domain::VertexKind::Contract => derived_ids.push(id.clone()),
+                        crate::domain::VertexKind::Specification => {}
                     }
                 }
-                term_ids.sort();
-                term_ids.dedup();
-                derived_ids.sort();
-                derived_ids.dedup();
-                let terms = nodes.get_term_nodes(&term_ids)?;
-                let derived = nodes.get_derived_nodes(&derived_ids)?;
-                let total = nodes.count_edges()?;
-                Ok((page, terms, derived, current, total))
-            })
-            .await
-            .map_err(|error| {
-                Status::internal(format!("ledger read task failed to run: {error}"))
-            })?;
-        let (page, terms, derived, current, total) = outcome.map_err(|error| {
+            }
+            term_ids.sort();
+            term_ids.dedup();
+            derived_ids.sort();
+            derived_ids.dedup();
+            let terms = nodes.get_term_nodes(&term_ids)?;
+            let derived = nodes.get_derived_nodes(&derived_ids)?;
+            let total = nodes.count_edges()?;
+            Ok((page, terms, derived, current, total))
+        })
+        .await
+        .map_err(|error| Status::internal(format!("ledger read task failed to run: {error}")))?;
+        let (page, terms, derived, current, total) = read.map_err(|error| {
             let message = error.to_string();
             tracing::Span::current().record("error.message", message.as_str());
             Status::internal(message)
@@ -363,229 +274,6 @@ impl SpecificationGraphService {
             total_edges: total,
             term_nodes: terms.iter().map(convert::term_node_to_pb).collect(),
             derived_nodes: derived.iter().map(convert::derived_node_to_pb).collect(),
-        }))
-    }
-
-    async fn add_assumption_relation_inner(
-        &self,
-        request: Request<pb::AddAssumptionRelationRequest>,
-    ) -> Result<Response<pb::AddAssumptionRelationResponse>, Status> {
-        let req = request.into_inner();
-        if req.source.is_empty() || req.target.is_empty() || req.relied.is_empty() {
-            return Err(Status::invalid_argument(
-                "pairing source, target, and relied node ids must not be empty",
-            ));
-        }
-        let kind = match pb::EdgeKind::try_from(req.kind).unwrap_or(pb::EdgeKind::Unspecified) {
-            pb::EdgeKind::OccurrenceReliance => crate::domain::EdgeKind::OccurrenceReliance,
-            pb::EdgeKind::GuaranteeDischarge => crate::domain::EdgeKind::GuaranteeDischarge,
-            pb::EdgeKind::AdmissibilityEnvelope => {
-                crate::domain::EdgeKind::AdmissibilityEnvelope
-            }
-            _ => {
-                return Err(Status::invalid_argument(
-                    "pairing kind must be occurrence_reliance, guarantee_discharge, or admissibility_envelope",
-                ))
-            }
-        };
-        tracing::Span::current().record("pairing.kind", kind.as_str());
-        tracing::Span::current().record("pairing.source", req.source.as_str());
-        tracing::Span::current().record("pairing.target", req.target.as_str());
-        tracing::Span::current().record("pairing.relied", req.relied.as_str());
-        tracing::Span::current().record("pairing.basis_count", req.basis_spec_ids.len() as u64);
-        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-        let nodes = self.nodes.clone();
-        let task_span = tracing::info_span!("spec.daemon.pairing_write_blocking");
-        let result = tokio::task::spawn_blocking(move || {
-            let _entered = task_span.enter();
-            crate::pairing::append_relation(
-                &*nodes,
-                kind,
-                &req.source,
-                &req.target,
-                &req.relied,
-                req.basis_spec_ids,
-                &now,
-            )
-        })
-        .await
-        .map_err(|error| Status::internal(format!("pairing write task failed to run: {error}")))?;
-        let edge = match result {
-            Ok(edge) => edge,
-            Err(crate::pairing::PairingError::MissingNode(id)) => {
-                return Err(Status::not_found(format!(
-                    "specification node '{id}' does not exist"
-                )))
-            }
-            Err(error) if error.is_bad_input() => {
-                return Err(Status::invalid_argument(error.to_string()))
-            }
-            Err(error) => {
-                let message = error.to_string();
-                tracing::Span::current().record("error.message", message.as_str());
-                return Err(Status::internal(message));
-            }
-        };
-        tracing::Span::current().record("edge.id", edge.id.as_str());
-        Ok(Response::new(pb::AddAssumptionRelationResponse {
-            edge: Some(convert::edge_to_pb(&edge)),
-        }))
-    }
-
-    async fn promote_discharge_candidate_inner(
-        &self,
-        request: Request<pb::PromoteDischargeCandidateRequest>,
-    ) -> Result<Response<pb::PromoteDischargeCandidateResponse>, Status> {
-        let req = request.into_inner();
-        if req.assessment_id.is_empty() {
-            return Err(Status::invalid_argument(
-                "discharge candidate assessment id must not be empty",
-            ));
-        }
-        tracing::Span::current().record("assessment.id", req.assessment_id.as_str());
-        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-        let nodes = self.nodes.clone();
-        let result = tokio::task::spawn_blocking(move || {
-            crate::pairing::promote_discharge_candidate(&*nodes, &req.assessment_id, &now)
-        })
-        .await
-        .map_err(|error| {
-            Status::internal(format!("discharge promotion task failed to run: {error}"))
-        })?;
-        let edge = match result {
-            Ok(edge) => edge,
-            Err(crate::pairing::PairingError::MissingAssessment(id)) => {
-                return Err(Status::not_found(format!(
-                    "relation assessment '{id}' does not exist"
-                )))
-            }
-            Err(error) if error.is_bad_input() => {
-                return Err(Status::invalid_argument(error.to_string()))
-            }
-            Err(error) => return Err(Status::internal(error.to_string())),
-        };
-        tracing::Span::current().record("edge.id", edge.id.as_str());
-        Ok(Response::new(pb::PromoteDischargeCandidateResponse {
-            edge: Some(convert::edge_to_pb(&edge)),
-        }))
-    }
-
-    async fn derive_contract_inner(
-        &self,
-        request: Request<pb::DeriveContractRequest>,
-    ) -> Result<Response<pb::DeriveContractResponse>, Status> {
-        let req = request.into_inner();
-        if req.left_contract_id.is_empty() || req.right_contract_id.is_empty() {
-            return Err(Status::invalid_argument(
-                "left and right contract ids must not be empty",
-            ));
-        }
-        let operation = match pb::ContractOperation::try_from(req.operation)
-            .unwrap_or(pb::ContractOperation::Unspecified)
-        {
-            pb::ContractOperation::Composition => crate::contract_algebra::Operation::Composition,
-            pb::ContractOperation::Quotient => crate::contract_algebra::Operation::Quotient,
-            pb::ContractOperation::Merge => crate::contract_algebra::Operation::Merge,
-            pb::ContractOperation::Unspecified => {
-                return Err(Status::invalid_argument(
-                    "contract operation must be composition, quotient, or merge",
-                ))
-            }
-        };
-        tracing::Span::current().record("contract.left", req.left_contract_id.as_str());
-        tracing::Span::current().record("contract.right", req.right_contract_id.as_str());
-        tracing::Span::current().record("contract.operation", operation.as_str());
-        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-        let nodes = self.nodes.clone();
-        let result = tokio::task::spawn_blocking(move || {
-            crate::contract_algebra::derive(
-                &*nodes,
-                &req.left_contract_id,
-                &req.right_contract_id,
-                operation,
-                req.basis_spec_ids,
-                &now,
-            )
-        })
-        .await
-        .map_err(|error| {
-            Status::internal(format!("contract derivation task failed to run: {error}"))
-        })?;
-        let result = match result {
-            Ok(result) => result,
-            Err(error) if error.is_bad_input() => {
-                return Err(Status::invalid_argument(error.to_string()))
-            }
-            Err(error) => return Err(Status::internal(error.to_string())),
-        };
-        tracing::Span::current().record("contract.result", result.contract.id());
-        Ok(Response::new(pb::DeriveContractResponse {
-            contract: Some(convert::derived_node_to_pb(&result.contract)),
-            derivation_edges: result.edges.iter().map(convert::edge_to_pb).collect(),
-        }))
-    }
-
-    async fn add_selection_relation_inner(
-        &self,
-        request: Request<pb::AddSelectionRelationRequest>,
-    ) -> Result<Response<pb::AddSelectionRelationResponse>, Status> {
-        let req = request.into_inner();
-        if req.source.is_empty() || req.target.is_empty() {
-            return Err(Status::invalid_argument(
-                "selection source and target node ids must not be empty",
-            ));
-        }
-        let kind = match pb::EdgeKind::try_from(req.kind).unwrap_or(pb::EdgeKind::Unspecified) {
-            pb::EdgeKind::Supports => crate::domain::EdgeKind::Supports,
-            pb::EdgeKind::Defeats => crate::domain::EdgeKind::Defeats,
-            pb::EdgeKind::Supersedes => crate::domain::EdgeKind::Supersedes,
-            _ => {
-                return Err(Status::invalid_argument(
-                    "selection kind must be supports, defeats, or supersedes",
-                ))
-            }
-        };
-        tracing::Span::current().record("selection.kind", kind.as_str());
-        tracing::Span::current().record("selection.source", req.source.as_str());
-        tracing::Span::current().record("selection.target", req.target.as_str());
-        tracing::Span::current().record("selection.basis_count", req.basis_spec_ids.len() as u64);
-        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-        let nodes = self.nodes.clone();
-        let task_span = tracing::info_span!("spec.daemon.selection_write_blocking");
-        let result = tokio::task::spawn_blocking(move || {
-            let _entered = task_span.enter();
-            crate::selection::append_relation(
-                &*nodes,
-                kind,
-                &req.source,
-                &req.target,
-                req.basis_spec_ids,
-                &now,
-            )
-        })
-        .await
-        .map_err(|error| {
-            Status::internal(format!("selection write task failed to run: {error}"))
-        })?;
-        let edge = match result {
-            Ok(edge) => edge,
-            Err(crate::selection::SelectionError::MissingNode(id)) => {
-                return Err(Status::not_found(format!(
-                    "specification node '{id}' does not exist"
-                )))
-            }
-            Err(error) if error.is_bad_input() => {
-                return Err(Status::invalid_argument(error.to_string()))
-            }
-            Err(error) => {
-                let message = error.to_string();
-                tracing::Span::current().record("error.message", message.as_str());
-                return Err(Status::internal(message));
-            }
-        };
-        tracing::Span::current().record("edge.id", edge.id.as_str());
-        Ok(Response::new(pb::AddSelectionRelationResponse {
-            edge: Some(convert::edge_to_pb(&edge)),
         }))
     }
 
@@ -621,8 +309,8 @@ impl SpecificationGraphService {
         so_tracing::record_specification_on_span(&current, policy, &specification);
 
         let node = match self
-            .adds
-            .add(AddInput {
+            .commands
+            .add(AddNodeInput {
                 specification,
                 evidence,
                 now,
@@ -632,7 +320,7 @@ impl SpecificationGraphService {
             .await
         {
             Ok(node) => node,
-            Err(AddMailboxError::Add(e)) => {
+            Err(CommandBusError::Add(e)) => {
                 record_add_error(policy, &e);
                 return Err(add_error_to_status(e));
             }
@@ -647,7 +335,7 @@ impl SpecificationGraphService {
         tracing::Span::current().record("node.id", node.id.as_str());
         tracing::info!(
             "node.id" = %node.id,
-            "specification accepted; post-acceptance work scheduled as Jobs"
+            "specification accepted; post-acceptance Event published"
         );
         Ok(Response::new(pb::AddSpecificationResponse {
             node: Some(convert::accepted_node_to_pb(&node)),
@@ -683,54 +371,53 @@ impl SpecificationGraphService {
         // all pages, while bounded consumers defer it until both endpoints are
         // loaded. The total is a cheap maintained count, not a scan.
         let read_span = tracing::info_span!("spec.daemon.read_blocking");
-        let outcome =
-            tokio::task::spawn_blocking(move || -> Result<GraphReadResult, StoreError> {
-                let _entered = read_span.enter();
-                let page = nodes.list_nodes(after.as_deref(), limit)?;
-                let ids: Vec<String> = page.nodes.iter().map(|n| n.id.clone()).collect();
-                let derivations = crate::graph_generation::current_derivations();
-                let population = nodes.selection_population(&ids, &derivations)?;
-                let selection = crate::selection::derive_views(&ids, &population);
-                let edges = nodes.list_edges(&ids, &derivations)?;
-                let assessments = nodes.list_relation_assessments(&ids)?;
-                let mut term_ids: Vec<String> = edges
-                    .iter()
-                    .filter(|edge| {
-                        edge.target_kind == crate::domain::VertexKind::Term
-                            && edge.target_role == crate::domain::EndpointRole::MentionedTerm
-                    })
-                    .map(|edge| edge.target.clone())
-                    .collect();
-                term_ids.sort();
-                term_ids.dedup();
-                let terms = nodes.get_term_nodes(&term_ids)?;
-                let mut derived_ids = Vec::new();
-                for edge in &edges {
-                    for (id, kind) in [
-                        (&edge.source, edge.source_kind),
-                        (&edge.target, edge.target_kind),
-                    ] {
-                        if matches!(
-                            kind,
-                            crate::domain::VertexKind::Evidence
-                                | crate::domain::VertexKind::Assumption
-                                | crate::domain::VertexKind::Guarantee
-                                | crate::domain::VertexKind::Contract
-                        ) {
-                            derived_ids.push(id.clone());
-                        }
+        let read = tokio::task::spawn_blocking(move || -> Result<GraphReadResult, StoreError> {
+            let _entered = read_span.enter();
+            let page = nodes.list_nodes(after.as_deref(), limit)?;
+            let ids: Vec<String> = page.nodes.iter().map(|n| n.id.clone()).collect();
+            let derivations = crate::graph_generation::current_derivations();
+            let population = nodes.selection_population(&ids, &derivations)?;
+            let selection = crate::selection::derive_views(&ids, &population);
+            let edges = nodes.list_edges(&ids, &derivations)?;
+            let assessments = nodes.list_relation_assessments(&ids)?;
+            let mut term_ids: Vec<String> = edges
+                .iter()
+                .filter(|edge| {
+                    edge.target_kind == crate::domain::VertexKind::Term
+                        && edge.target_role == crate::domain::EndpointRole::MentionedTerm
+                })
+                .map(|edge| edge.target.clone())
+                .collect();
+            term_ids.sort();
+            term_ids.dedup();
+            let terms = nodes.get_term_nodes(&term_ids)?;
+            let mut derived_ids = Vec::new();
+            for edge in &edges {
+                for (id, kind) in [
+                    (&edge.source, edge.source_kind),
+                    (&edge.target, edge.target_kind),
+                ] {
+                    if matches!(
+                        kind,
+                        crate::domain::VertexKind::Evidence
+                            | crate::domain::VertexKind::Assumption
+                            | crate::domain::VertexKind::Guarantee
+                            | crate::domain::VertexKind::Contract
+                    ) {
+                        derived_ids.push(id.clone());
                     }
                 }
-                derived_ids.sort();
-                derived_ids.dedup();
-                let derived = nodes.get_derived_nodes(&derived_ids)?;
-                let total = nodes.count_nodes()?;
-                Ok((page, terms, derived, edges, assessments, selection, total))
-            })
-            .await
-            .map_err(|e| Status::internal(format!("graph read task failed to run: {e}")))?;
+            }
+            derived_ids.sort();
+            derived_ids.dedup();
+            let derived = nodes.get_derived_nodes(&derived_ids)?;
+            let total = nodes.count_nodes()?;
+            Ok((page, terms, derived, edges, assessments, selection, total))
+        })
+        .await
+        .map_err(|e| Status::internal(format!("graph read task failed to run: {e}")))?;
 
-        let (page, terms, derived, edges, assessments, selection, total) = match outcome {
+        let (page, terms, derived, edges, assessments, selection, total) = match read {
             Ok(result) => result,
             Err(e) => {
                 let message = e.to_string();
@@ -866,12 +553,17 @@ fn add_error_to_status(e: AddError) -> Status {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::add_mailbox::AddMailbox;
+    use crate::command_bus::{
+        ChangeSpecificationSelectionInput, CommandBus, EstablishContractRelationInput,
+        GraphCommandError, ReplaceEvidenceRequestsInput,
+    };
+    use crate::consumer::{built_in_consumers, ConsumerRuntime};
     use crate::domain::{
         Anchor, DerivedNode, Edge, EdgeKind, Evidence, Kind, Locator, Meta, Node, Origin, Snapshot,
         VertexKind,
     };
-    use crate::jobs::JobMailbox;
+    use crate::event_bus::EventBus;
+    use crate::event_sink::EventTap;
     use crate::store::{BlobStore, GraphStore, InMemoryNodeStore, NodeStore, StoreError};
 
     #[test]
@@ -890,6 +582,32 @@ mod tests {
         fn get_blob(&self, _hash: &str) -> Result<Option<Vec<u8>>, StoreError> {
             Ok(None)
         }
+    }
+
+    fn start_runtime(
+        store: Arc<InMemoryNodeStore>,
+        blobs: Arc<dyn BlobStore + Send + Sync>,
+    ) -> (
+        CommandBus,
+        tokio::task::JoinHandle<()>,
+        EventBus,
+        tokio::task::JoinHandle<()>,
+    ) {
+        let (events, events_task) = EventBus::start(EventTap::default());
+        let (commands, commands_task) = CommandBus::start(store, blobs, events.clone());
+        (commands, commands_task, events, events_task)
+    }
+
+    async fn stop_runtime(
+        commands: CommandBus,
+        commands_task: tokio::task::JoinHandle<()>,
+        events: EventBus,
+        events_task: tokio::task::JoinHandle<()>,
+    ) {
+        events.shutdown().await.unwrap();
+        events_task.await.unwrap();
+        commands.shutdown().await.unwrap();
+        commands_task.await.unwrap();
     }
 
     fn node(id: &str) -> Node {
@@ -941,9 +659,9 @@ mod tests {
             store.add_node(&node(id)).unwrap();
         }
         let blobs = Arc::new(NoBlobs);
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs.clone());
-        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
-        let service = SpecificationGraphService::new(store, adds.clone());
+        let (commands, commands_task, events, events_task) =
+            start_runtime(store.clone(), blobs.clone());
+        let service = SpecificationGraphService::new(store, commands.clone());
 
         // Page size 2 over 3 nodes: a full page plus a continuation token.
         let resp = service
@@ -972,10 +690,33 @@ mod tests {
         assert_eq!(resp2.nodes[0].id, "n3");
         assert!(resp2.next_page_token.is_empty(), "walk is complete");
 
-        adds.shutdown().await.unwrap();
-        adds_task.await.unwrap();
-        jobs.shutdown().await.unwrap();
-        jobs_task.await.unwrap();
+        stop_runtime(commands, commands_task, events, events_task).await;
+    }
+
+    #[tokio::test]
+    async fn start_graph_rebuild_returns_the_accepted_command_and_node_count() {
+        let store = Arc::new(InMemoryNodeStore::new());
+        for id in ["n1", "n2"] {
+            store.add_node(&node(id)).unwrap();
+        }
+        let blobs = Arc::new(NoBlobs);
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let service = SpecificationGraphService::new(store, commands.clone());
+
+        let response = service
+            .start_graph_rebuild(Request::new(pb::StartGraphRebuildRequest {
+                client: "spec".to_string(),
+                client_version: "test".to_string(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+
+        assert!(!response.rebuild_id.is_empty());
+        assert!(!response.started_at.is_empty());
+        assert_eq!(response.total_nodes, 2);
+
+        stop_runtime(commands, commands_task, events, events_task).await;
     }
 
     #[tokio::test]
@@ -1003,9 +744,8 @@ mod tests {
             })
             .unwrap();
         let blobs = Arc::new(NoBlobs);
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
-        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
-        let service = SpecificationGraphService::new(store, adds.clone());
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let service = SpecificationGraphService::new(store, commands.clone());
 
         let first = service
             .get_graph(Request::new(pb::GetGraphRequest {
@@ -1040,10 +780,7 @@ mod tests {
             "owner paging must not duplicate the Edge"
         );
 
-        adds.shutdown().await.unwrap();
-        adds_task.await.unwrap();
-        jobs.shutdown().await.unwrap();
-        jobs_task.await.unwrap();
+        stop_runtime(commands, commands_task, events, events_task).await;
     }
 
     #[tokio::test]
@@ -1053,9 +790,8 @@ mod tests {
         store.add_node(&specification).unwrap();
         crate::graph_generation::generate_and_persist(&specification, &*store, "t").unwrap();
         let blobs = Arc::new(NoBlobs);
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
-        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
-        let service = SpecificationGraphService::new(store, adds.clone());
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let service = SpecificationGraphService::new(store, commands.clone());
 
         let response = service
             .get_graph(Request::new(pb::GetGraphRequest {
@@ -1065,7 +801,7 @@ mod tests {
             .await
             .unwrap()
             .into_inner();
-        assert_eq!(response.derived_nodes.len(), 2);
+        assert_eq!(response.derived_nodes.len(), 3);
         assert!(response.edges.iter().any(|edge| {
             edge.kind == pb::EdgeKind::HasAssumption as i32
                 && edge.target_kind == pb::VertexKind::Assumption as i32
@@ -1075,10 +811,7 @@ mod tests {
                 && edge.target_kind == pb::VertexKind::Guarantee as i32
         }));
 
-        adds.shutdown().await.unwrap();
-        adds_task.await.unwrap();
-        jobs.shutdown().await.unwrap();
-        jobs_task.await.unwrap();
+        stop_runtime(commands, commands_task, events, events_task).await;
     }
 
     #[tokio::test]
@@ -1096,36 +829,29 @@ mod tests {
         ground(&store, "retired", Kind::Assertoric, "retired-policy");
         ground(&store, "supporter", Kind::Demonstrative, "supporter-proof");
         let blobs = Arc::new(NoBlobs);
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
-        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
-        let service = SpecificationGraphService::new(store, adds.clone());
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let service = SpecificationGraphService::new(store, commands.clone());
 
-        let supersedes = service
-            .add_selection_relation(Request::new(pb::AddSelectionRelationRequest {
+        let (_, supersedes) = commands
+            .supersede_specification(ChangeSpecificationSelectionInput {
                 source: "replacement".into(),
                 target: "retired".into(),
-                kind: pb::EdgeKind::Supersedes as i32,
                 basis_spec_ids: vec![],
-            }))
+                now: "t1".into(),
+            })
             .await
-            .unwrap()
-            .into_inner()
-            .edge
             .unwrap();
-        let supports = service
-            .add_selection_relation(Request::new(pb::AddSelectionRelationRequest {
+        let (_, supports) = commands
+            .support_specification(ChangeSpecificationSelectionInput {
                 source: "supporter".into(),
                 target: "replacement".into(),
-                kind: pb::EdgeKind::Supports as i32,
                 basis_spec_ids: vec![],
-            }))
+                now: "t2".into(),
+            })
             .await
-            .unwrap()
-            .into_inner()
-            .edge
             .unwrap();
-        assert_eq!(supersedes.family, pb::EdgeFamily::Selection as i32);
-        assert_eq!(supports.family, pb::EdgeFamily::Selection as i32);
+        assert_eq!(supersedes.family(), crate::domain::EdgeFamily::Selection);
+        assert_eq!(supports.family(), crate::domain::EdgeFamily::Selection);
 
         let graph = service
             .get_graph(Request::new(pb::GetGraphRequest {
@@ -1171,10 +897,7 @@ mod tests {
             2
         );
 
-        adds.shutdown().await.unwrap();
-        adds_task.await.unwrap();
-        jobs.shutdown().await.unwrap();
-        jobs_task.await.unwrap();
+        stop_runtime(commands, commands_task, events, events_task).await;
     }
 
     #[tokio::test]
@@ -1202,9 +925,8 @@ mod tests {
         let edge_count_before = store.count_edges().unwrap();
 
         let blobs = Arc::new(NoBlobs);
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
-        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
-        let service = SpecificationGraphService::new(store.clone(), adds.clone());
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let service = SpecificationGraphService::new(store.clone(), commands.clone());
         let graph = service
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 10,
@@ -1273,10 +995,7 @@ mod tests {
         assert_eq!(loser.exclusions[0].kind, "contradicted");
         assert_eq!(store.count_edges().unwrap(), edge_count_before + 1);
 
-        adds.shutdown().await.unwrap();
-        adds_task.await.unwrap();
-        jobs.shutdown().await.unwrap();
-        jobs_task.await.unwrap();
+        stop_runtime(commands, commands_task, events, events_task).await;
     }
 
     #[tokio::test]
@@ -1326,9 +1045,8 @@ mod tests {
         }
 
         let blobs = Arc::new(NoBlobs);
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
-        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
-        let service = SpecificationGraphService::new(store.clone(), adds.clone());
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let service = SpecificationGraphService::new(store.clone(), commands.clone());
         let graph = service
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 10,
@@ -1368,10 +1086,7 @@ mod tests {
         assert!(ledger.edges.iter().any(|edge| edge.id == supports.id));
         assert!(ledger.edges.iter().any(|edge| edge.id == defeats.id));
 
-        adds.shutdown().await.unwrap();
-        adds_task.await.unwrap();
-        jobs.shutdown().await.unwrap();
-        jobs_task.await.unwrap();
+        stop_runtime(commands, commands_task, events, events_task).await;
     }
 
     #[tokio::test]
@@ -1394,9 +1109,19 @@ mod tests {
         let store = Arc::new(InMemoryNodeStore::new());
         let blobs =
             Arc::new(crate::store::FileBlobStore::open(&temp.path().join("blobs")).unwrap());
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
-        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
-        let service = SpecificationGraphService::new(store.clone(), adds.clone());
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let consumers = ConsumerRuntime::start(
+            events.clone(),
+            commands.clone(),
+            store.clone(),
+            built_in_consumers()
+                .into_iter()
+                .filter(|definition| definition.consumer_id == crate::evidence_capture::PLUGIN_NAME)
+                .collect(),
+        )
+        .await
+        .unwrap();
+        let service = SpecificationGraphService::new(store.clone(), commands.clone());
 
         let accepted = service
             .add_specification(Request::new(pb::AddSpecificationRequest {
@@ -1431,22 +1156,15 @@ mod tests {
         // generation, rather than descriptor hash or wall-clock resolution,
         // forces a fresh snapshot after the artifact changes.
         std::fs::write(&evidence_path, "proof-v2").unwrap();
-        let refreshed = service
-            .replace_evidence(Request::new(pb::ReplaceEvidenceRequest {
+        let refreshed = commands
+            .replace_evidence_requests(ReplaceEvidenceRequestsInput {
                 node_id: accepted.id.clone(),
                 evidence: vec![positive],
-            }))
+                now: chrono::Utc::now().to_rfc3339(),
+            })
             .await
-            .unwrap()
-            .into_inner()
-            .node
             .unwrap();
-        let generation = refreshed
-            .meta
-            .as_ref()
-            .unwrap()
-            .evidence_request_generation
-            .clone();
+        let generation = refreshed.meta.evidence_request_generation.clone();
         assert!(!generation.is_empty());
         let second = wait_for_captured_evidence(
             &store,
@@ -1461,22 +1179,15 @@ mod tests {
 
         // Reclassifying the same locator as Counter Evidence makes the old
         // positive GroundedBy edges inert for fitness without deleting them.
-        let replaced = service
-            .replace_evidence(Request::new(pb::ReplaceEvidenceRequest {
+        let replaced = commands
+            .replace_evidence_requests(ReplaceEvidenceRequestsInput {
                 node_id: accepted.id.clone(),
                 evidence: vec![counter],
-            }))
+                now: chrono::Utc::now().to_rfc3339(),
+            })
             .await
-            .unwrap()
-            .into_inner()
-            .node
             .unwrap();
-        let generation = replaced
-            .meta
-            .as_ref()
-            .unwrap()
-            .evidence_request_generation
-            .clone();
+        let generation = replaced.meta.evidence_request_generation.clone();
         wait_for_captured_evidence(&store, &accepted.id, Some(&generation), Kind::Counter, None)
             .await;
         let graph = service
@@ -1532,10 +1243,11 @@ mod tests {
             "Ledger distinguishes the one current capture from two historical projections"
         );
 
-        adds.shutdown().await.unwrap();
-        adds_task.await.unwrap();
-        jobs.shutdown().await.unwrap();
-        jobs_task.await.unwrap();
+        events.shutdown().await.unwrap();
+        events_task.await.unwrap();
+        consumers.join().await;
+        commands.shutdown().await.unwrap();
+        commands_task.await.unwrap();
     }
 
     async fn wait_for_captured_evidence(
@@ -1568,7 +1280,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn assumption_rpc_exposes_explicit_reliance_and_current_paired_contract() {
+    async fn assumption_command_exposes_explicit_reliance_and_current_paired_contract() {
         let store = Arc::new(InMemoryNodeStore::new());
         let mut source = node("source");
         source.statement = "The sensor shall report the alarm.".into();
@@ -1578,25 +1290,21 @@ mod tests {
         store.add_node(&target).unwrap();
         crate::graph_generation::generate_and_persist(&target, &*store, "t0").unwrap();
         let blobs = Arc::new(NoBlobs);
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
-        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
-        let service = SpecificationGraphService::new(store, adds.clone());
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let service = SpecificationGraphService::new(store, commands.clone());
 
-        let paired = service
-            .add_assumption_relation(Request::new(pb::AddAssumptionRelationRequest {
+        let (_, paired) = commands
+            .establish_guarantee_discharge(EstablishContractRelationInput {
                 source: source.id.clone(),
                 target: target.id.clone(),
                 relied: source.id.clone(),
-                kind: pb::EdgeKind::GuaranteeDischarge as i32,
                 basis_spec_ids: vec![],
-            }))
+                now: "t1".into(),
+            })
             .await
-            .unwrap()
-            .into_inner()
-            .edge
             .unwrap();
         assert_eq!(paired.relied_spec_id.as_deref(), Some(source.id.as_str()));
-        assert_eq!(paired.family, pb::EdgeFamily::Semantic as i32);
+        assert_eq!(paired.family(), crate::domain::EdgeFamily::Semantic);
 
         let graph = service
             .get_graph(Request::new(pb::GetGraphRequest {
@@ -1660,45 +1368,30 @@ mod tests {
                     == crate::graph_generation::CONTRACT_PROJECTION_METHOD
         }));
 
-        adds.shutdown().await.unwrap();
-        adds_task.await.unwrap();
-        jobs.shutdown().await.unwrap();
-        jobs_task.await.unwrap();
+        stop_runtime(commands, commands_task, events, events_task).await;
     }
 
     #[tokio::test]
-    async fn selection_rpc_rejects_non_selection_and_unknown_endpoints() {
+    async fn selection_command_rejects_unknown_endpoints() {
         let store = Arc::new(InMemoryNodeStore::new());
         store.add_node(&node("known")).unwrap();
         let blobs = Arc::new(NoBlobs);
-        let (jobs, jobs_task) = JobMailbox::start(store.clone(), blobs);
-        let (adds, adds_task) = AddMailbox::start(store.clone(), jobs.clone());
-        let service = SpecificationGraphService::new(store, adds.clone());
-
-        let invalid = service
-            .add_selection_relation(Request::new(pb::AddSelectionRelationRequest {
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let missing = commands
+            .support_specification(ChangeSpecificationSelectionInput {
                 source: "known".into(),
                 target: "missing".into(),
-                kind: pb::EdgeKind::Refines as i32,
                 basis_spec_ids: vec![],
-            }))
+                now: "t2".into(),
+            })
             .await
             .unwrap_err();
-        assert_eq!(invalid.code(), tonic::Code::InvalidArgument);
-        let missing = service
-            .add_selection_relation(Request::new(pb::AddSelectionRelationRequest {
-                source: "known".into(),
-                target: "missing".into(),
-                kind: pb::EdgeKind::Supports as i32,
-                basis_spec_ids: vec![],
-            }))
-            .await
-            .unwrap_err();
-        assert_eq!(missing.code(), tonic::Code::NotFound);
+        assert!(matches!(
+            missing,
+            GraphCommandError::Selection(crate::selection::SelectionError::MissingNode(ref id))
+                if id == "missing"
+        ));
 
-        adds.shutdown().await.unwrap();
-        adds_task.await.unwrap();
-        jobs.shutdown().await.unwrap();
-        jobs_task.await.unwrap();
+        stop_runtime(commands, commands_task, events, events_task).await;
     }
 }

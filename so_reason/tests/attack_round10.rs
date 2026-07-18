@@ -16,7 +16,7 @@ use so_reason::formula::{
     PairingError, SubjectRelation,
 };
 use so_reason::relate::{
-    assess, assumption_satisfiable, envelope_compatible, implies, Outcome, Ternary,
+    assess, assumption_satisfiable, envelope_compatible, implies, RelationVerdict, Ternary,
 };
 use so_reason::semantics::{responsible_subject_keys, subject_keys};
 
@@ -298,14 +298,14 @@ fn where_vs_while_same_words_unknown() {
             &one("Where the mode is active, the pump shall run."),
             &one("While the mode is active, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("Where the mode is active, the pump shall run."),
             &one("Where the mode is active, the pump shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -318,14 +318,14 @@ fn if_vs_when_same_words_unknown() {
             &one("If the pump runs, then the fan shall not run."),
             &one("When the pump runs, the fan shall run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("If the pump runs, then the fan shall not run."),
             &one("If the pump runs, then the fan shall run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -339,7 +339,7 @@ fn cross_role_blocks_implication_and_refinement() {
     let (ca, cb) = (contract_formula(&a).unwrap(), contract_formula(&b).unwrap());
     assert_eq!(implies(&ca.guarantee, &cb.guarantee), Ternary::Unknown);
     assert_eq!(implies(&cb.guarantee, &ca.guarantee), Ternary::Unknown);
-    assert_eq!(assess(&a, &b), Outcome::Unknown);
+    assert_eq!(assess(&a, &b), RelationVerdict::Unknown);
 }
 
 /// The envelope-conflict witness gates on role equality: a While-guarded
@@ -352,14 +352,14 @@ fn envelope_conflict_requires_matching_roles() {
             &one("While the pump runs, the client may retry."),
             &one("When the pump runs, the client shall not retry."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("While the pump runs, the client may retry."),
             &one("While the pump runs, the client shall not retry."),
         ),
-        Outcome::EnvelopeConflict
+        RelationVerdict::EnvelopeConflict
     );
 }
 
@@ -373,7 +373,7 @@ fn exception_role_pairs() {
             &one("The fan shall run, unless the pump runs."),
             &one("The fan shall not run, unless the pump runs."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // `unless the pump runs` vs `when the pump runs` — jointly satisfiable
     // sentences; the exception atom must not meet the trigger atom.
@@ -382,7 +382,7 @@ fn exception_role_pairs() {
             &one("The fan shall run, unless the pump runs."),
             &one("When the pump runs, the fan shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -398,7 +398,7 @@ fn canonical_sort_carries_roles() {
             &one("While the pump runs, when the order ships, the fan shall run."),
             &one("While the order ships, when the pump runs, the fan shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Identical family assignment still grounds.
     assert_eq!(
@@ -406,7 +406,7 @@ fn canonical_sort_carries_roles() {
             &one("While the pump runs, when the order ships, the fan shall run."),
             &one("While the pump runs, when the order ships, the fan shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // Commutative reordering within one While coordination still grounds
     // (round 9 behavior preserved under role-carrying atoms).
@@ -415,7 +415,7 @@ fn canonical_sort_carries_roles() {
             &one("While the pump runs and the mode is active, the fan shall run."),
             &one("While the mode is active and the pump runs, the fan shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -736,7 +736,7 @@ fn guard_atom_identity_reflects_bare_object() {
             &one("When the client sends the telemetry, the fan shall run."),
             &one("When the client sends the heartbeats, the fan shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // … while the same object still does.
     assert_eq!(
@@ -744,7 +744,7 @@ fn guard_atom_identity_reflects_bare_object() {
             &one("When the client sends the telemetry, the fan shall run."),
             &one("When the client sends the telemetry, the fan shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 

@@ -96,7 +96,7 @@ separate:
 
 An entailed discharge is intentionally two-stage. Discovery records
 `DischargeCandidate(source,target,relied)` when a binding source guarantee
-entails an explicit target assumption. It is not topology. Explicit promotion
+entails an explicit target assumption. It is not topology. Explicit acceptance
 re-runs the complete pairing validator and only then appends the existing
 `GuaranteeDischarge` Edge.
 
@@ -106,8 +106,8 @@ re-runs the complete pairing validator and only then appends the existing
 |---|---|---|
 | Formula truth is not sentence force | `should P` and `shall P` may be FormulaEquivalent without becoming sentence Equivalent or the same Contract | unit test separates all three judgments |
 | A change must not stale a contract relation | pairing creates a new content-addressed Contract and current HasContract projection; old Contract Edges remain historical facts | pairing/reconciliation tests and projection selection |
-| Candidate discovery must not assert topology | an alternative `G ⇒ A` appears in RelationAssessments while no second GuaranteeDischarge exists | candidate/promotion integration test |
-| Explicit acceptance must be safe | promotion revalidates and then appends exactly the ordinary GuaranteeDischarge | candidate/promotion integration test |
+| Candidate discovery must not assert topology | an alternative `G ⇒ A` appears in RelationAssessments while no second GuaranteeDischarge exists | candidate/acceptance integration test |
+| Explicit acceptance must be safe | acceptance revalidates and then appends exactly the ordinary GuaranteeDischarge | candidate/acceptance integration test |
 | Composition is algebraic, not a grouping label | result satisfies standard formula and is commutative/associative up to contract equivalence | exhaustive finite-assertion tests |
 | Quotient represents a missing contract | `X ≤ C/C₁ ⇔ X∥C₁ ≤ C`, and `(C/C₁)∥C₁ ≤ C` | residual-law enumeration plus persisted-operation test |
 | Operations cannot invent interface vocabulary | every result atom belongs to the union of operand interfaces | daemon pre-persistence law check |

@@ -8,11 +8,11 @@
 //!     contract reading — is a computed *view*. Its Assumption/Guarantee graph
 //!     projection is stored separately as content-addressed derived Nodes;
 //!   * the **epistemic** layer — raw evidence requests recorded at acceptance,
-//!     followed by captured `meta.evidence` appended by an asynchronous Job.
+//!     followed by captured `meta.evidence` appended by an asynchronous Consumer.
 //!
 //! `meta` holds captured facts: each piece of evidence with its snapshot (sense
 //! ②) and origin (sense ①), the node's own creation facts (sense ③), and
-//! successful asynchronous updates produced by NodeAdded hooks.
+//! successful asynchronous updates produced by Event Consumers.
 
 use std::collections::BTreeMap;
 
@@ -37,8 +37,8 @@ pub struct Evidence {
     pub origin: Origin,
 }
 
-/// One successful asynchronous Meta update, keyed by its Mailbox-derived Job
-/// ID in [`Meta::updates`]. Re-executing a Job replaces the same entry.
+/// One successful asynchronous Meta update, keyed by its stable Delivery ID in
+/// [`Meta::updates`]. Redelivering the same Event replaces the same entry.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MetaUpdate {
     pub source: String,
@@ -49,18 +49,19 @@ pub struct MetaUpdate {
 /// Node metadata. Captured facts only — no deterministically computed views.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Meta {
-    /// Caller-supplied evidence descriptors. They are persisted verbatim so an
-    /// Evidence Job can be retried after daemon restart without repeating the
-    /// Add RPC. Interpretation and I/O never happen on the Add path.
+    /// Caller-supplied evidence descriptors. They are persisted verbatim so a
+    /// future feature-specific recapture Command can reuse them without
+    /// repeating the Add RPC. Interpretation and I/O never happen on the Add
+    /// path.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence_requests: Vec<String>,
     /// Identity of the latest complete request-set replacement. Empty denotes
     /// the original incremental Add semantics. Persisting this separately
-    /// makes an unchanged-descriptor refresh crash-reconcilable and ordered.
+    /// makes an unchanged-descriptor refresh distinguishable and ordered.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub evidence_request_generation: String,
     /// Successfully captured evidence. Empty while capture is pending, when no
-    /// evidence was requested, or when a durable rejected Job result explains
+    /// evidence was requested, or when a durable rejected Consumer result explains
     /// why the request could not be interpreted.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence: Vec<Evidence>,
@@ -69,8 +70,8 @@ pub struct Meta {
     pub created_at: String,
     pub cli: String,
     pub cli_version: String,
-    /// Successful results produced by NodeAdded hooks. This contains results,
-    /// not Job scheduling or retry state; all execution state remains in memory.
+    /// Successful results produced by Event Consumers. This contains results,
+    /// not Delivery or retry state; all execution state remains in memory.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub updates: BTreeMap<String, MetaUpdate>,
 }

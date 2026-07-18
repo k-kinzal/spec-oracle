@@ -81,10 +81,10 @@ pub enum PairingError {
     Store(#[from] StoreError),
 }
 
-/// Promote one proved candidate assessment through the same validation path as
+/// Accept one proved candidate assessment through the same validation path as
 /// an explicitly authored GuaranteeDischarge request. Candidate discovery
 /// itself never mutates graph topology.
-pub fn promote_discharge_candidate(
+pub fn accept_discharge_candidate(
     store: &(dyn GraphStore + Send + Sync),
     assessment_id: &str,
     recorded_at: &str,
@@ -92,11 +92,11 @@ pub fn promote_discharge_candidate(
     let assessment = store
         .get_relation_assessment(assessment_id)?
         .ok_or_else(|| PairingError::MissingAssessment(assessment_id.to_string()))?;
-    let crate::domain::AssessmentOutcome::DischargeCandidate {
+    let crate::domain::AssessmentVerdict::DischargeCandidate {
         source,
         target,
         relied_spec_id,
-    } = assessment.outcome
+    } = assessment.verdict
     else {
         return Err(PairingError::NotDischargeCandidate(
             assessment_id.to_string(),
@@ -433,7 +433,7 @@ mod tests {
     }
 
     #[test]
-    fn discharge_candidate_requires_explicit_promotion_before_topology() {
+    fn discharge_candidate_requires_explicit_acceptance_before_topology() {
         let store = InMemoryNodeStore::new();
         let source_one = node("source-1", "The sensor shall report the alarm.");
         let source_two = node("source-2", "The sensor shall report the alarm.");
@@ -466,8 +466,8 @@ mod tests {
             .iter()
             .find(|assessment| {
                 matches!(
-                    &assessment.outcome,
-                    crate::domain::AssessmentOutcome::DischargeCandidate {
+                    &assessment.verdict,
+                    crate::domain::AssessmentVerdict::DischargeCandidate {
                         source,
                         target: candidate_target,
                         relied_spec_id,
@@ -482,9 +482,9 @@ mod tests {
         assert_eq!(before.len(), 1);
         assert_eq!(before[0].id, selected.id);
 
-        let promoted = promote_discharge_candidate(&store, &candidate.id, "t2").unwrap();
-        assert_eq!(promoted.source, source_two.id);
-        assert_eq!(promoted.kind, EdgeKind::GuaranteeDischarge);
+        let accepted = accept_discharge_candidate(&store, &candidate.id, "t2").unwrap();
+        assert_eq!(accepted.source, source_two.id);
+        assert_eq!(accepted.kind, EdgeKind::GuaranteeDischarge);
         assert_eq!(
             store
                 .list_pairing_edges(&target.id, &derivation())

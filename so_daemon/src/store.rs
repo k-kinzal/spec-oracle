@@ -68,7 +68,7 @@ pub struct DerivedGraphWrite {
 /// surface never disturbs this trait or its implementors.
 pub trait NodeStore {
     /// Persist an immutable accepted Node. Idempotent on Node id: re-executing
-    /// the same Add command is a no-op and cannot erase later Job results.
+    /// the same Add command is a no-op and cannot erase later Consumer results.
     fn add_node(&self, node: &Node) -> Result<bool, StoreError>;
 
     /// Find the selected existing Node with identical authored content. This
@@ -101,13 +101,13 @@ pub trait NodeStore {
     /// Fetch a node by id, or `None` if no such node exists.
     fn get_node(&self, id: &str) -> Result<Option<Node>, StoreError>;
 
-    /// Atomically persist one successful Job result and, for an Evidence Job,
-    /// replace the current captured-evidence view. The versioned Job update
+    /// Atomically persist one successful Command update and, for Evidence capture,
+    /// replace the current captured-evidence view. The versioned update
     /// retains the complete capture as append-only history.
-    fn apply_job_result(
+    fn apply_command_update(
         &self,
         node_id: &str,
-        job_id: &str,
+        command_id: &str,
         update: &MetaUpdate,
         evidence: Option<&[crate::domain::Evidence]>,
     ) -> Result<(), StoreError>;
@@ -433,10 +433,10 @@ impl NodeStore for InMemoryNodeStore {
             .cloned())
     }
 
-    fn apply_job_result(
+    fn apply_command_update(
         &self,
         node_id: &str,
-        job_id: &str,
+        command_id: &str,
         update: &MetaUpdate,
         evidence: Option<&[crate::domain::Evidence]>,
     ) -> Result<(), StoreError> {
@@ -447,7 +447,9 @@ impl NodeStore for InMemoryNodeStore {
         if let Some(evidence) = evidence {
             node.meta.evidence = evidence.to_vec();
         }
-        node.meta.updates.insert(job_id.to_string(), update.clone());
+        node.meta
+            .updates
+            .insert(command_id.to_string(), update.clone());
         Ok(())
     }
 }
@@ -1064,7 +1066,7 @@ mod tests {
     }
 
     #[test]
-    fn meta_update_is_idempotent_on_job_id() {
+    fn meta_update_is_idempotent_on_command_id() {
         use crate::domain::MetaUpdate;
 
         let store = InMemoryNodeStore::new();
@@ -1079,19 +1081,21 @@ mod tests {
             applied_at: "t2".to_string(),
             value: serde_json::json!({"attempt": 2}),
         };
-        store.apply_job_result("n1", "job-1", &first, None).unwrap();
         store
-            .apply_job_result("n1", "job-1", &second, None)
+            .apply_command_update("n1", "command-1", &first, None)
+            .unwrap();
+        store
+            .apply_command_update("n1", "command-1", &second, None)
             .unwrap();
 
         let node = store.get_node("n1").unwrap().unwrap();
         assert_eq!(node.meta.updates.len(), 1);
-        assert_eq!(node.meta.updates["job-1"], second);
+        assert_eq!(node.meta.updates["command-1"], second);
 
-        // Re-executing the originating Add command must not erase a Job result.
+        // Re-executing the originating Add command must not erase a Consumer result.
         store.add_node(&node_with_id("n1")).unwrap();
         let node = store.get_node("n1").unwrap().unwrap();
-        assert_eq!(node.meta.updates["job-1"], second);
+        assert_eq!(node.meta.updates["command-1"], second);
     }
 
     fn node_with_id(id: &str) -> crate::domain::Node {

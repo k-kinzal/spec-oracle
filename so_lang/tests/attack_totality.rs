@@ -26,11 +26,11 @@ fn preview(input: &str) -> String {
 
 /// Assert that `parse` returns — Ok or Err, either is fine — without panicking.
 fn total(input: &str) {
-    let outcome = catch_unwind(AssertUnwindSafe(|| {
+    let result = catch_unwind(AssertUnwindSafe(|| {
         let _ = parse(input);
     }));
     assert!(
-        outcome.is_ok(),
+        result.is_ok(),
         "parse panicked on input: {}",
         preview(input)
     );

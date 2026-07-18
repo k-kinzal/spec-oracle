@@ -24,7 +24,7 @@
 //!     append-only graph topology. The derived collection contains
 //!     content-addressed Evidence, Assumption, and Guarantee vertices;
 //!   * `relation_assessments` holds append-only candidate-pair audit records,
-//!     including Unknown/Independent outcomes that must not become topology.
+//!     including Unknown/Independent verdicts that must not become topology.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -37,6 +37,8 @@ use crate::domain::{
     DerivedNode, Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, SelectionPopulation,
     TermNode, VertexKind,
 };
+use crate::event_bus::EventEnvelope;
+use crate::event_sink::EventSink;
 
 use crate::store::{
     DerivedGraphWrite, EdgePage, GraphStore, GraphWrite, NodePage, NodeStore, StoreError,
@@ -48,6 +50,7 @@ const TERM_COLLECTION: &str = "term_nodes";
 const DERIVED_COLLECTION: &str = "derived_nodes";
 const EDGE_COLLECTION: &str = "edges";
 const ASSESSMENT_COLLECTION: &str = "relation_assessments";
+const EVENT_ARCHIVE_COLLECTION: &str = "event_archive";
 
 /// Connection parameters for an ArangoDB deployment. Borrowed so the caller owns
 /// the strings (typically CLI flags and environment variables).
@@ -82,12 +85,66 @@ impl ArangoNodeStore {
         ensure_collection(&db, DERIVED_COLLECTION)?;
         ensure_edge_collection(&db, EDGE_COLLECTION)?;
         ensure_collection(&db, ASSESSMENT_COLLECTION)?;
+        ensure_collection(&db, EVENT_ARCHIVE_COLLECTION)?;
         ensure_edge_read_projection(&db)?;
         ensure_edge_identities(&db)?;
         ensure_edge_read_index(&db)?;
         ensure_edge_identity_index(&db)?;
         ensure_node_identity_index(&db)?;
         Ok(ArangoNodeStore { db })
+    }
+}
+
+impl EventSink for ArangoNodeStore {
+    fn name(&self) -> &str {
+        "arangodb-event-archive"
+    }
+
+    fn persist(&self, events: &[EventEnvelope]) -> Result<(), String> {
+        if events.is_empty() {
+            return Ok(());
+        }
+        let documents: Result<Vec<Value>, serde_json::Error> = events
+            .iter()
+            .map(|event| {
+                let mut value = serde_json::to_value(event)?;
+                value
+                    .as_object_mut()
+                    .expect("EventEnvelope serializes as an object")
+                    .insert("_key".into(), Value::String(event.id.clone()));
+                Ok(value)
+            })
+            .collect();
+        let query = format!(
+            "FOR event IN @events \
+             UPSERT {{ _key: event._key }} \
+             INSERT event \
+             UPDATE {{}} IN {EVENT_ARCHIVE_COLLECTION} \
+             RETURN true"
+        );
+        let mut vars = HashMap::new();
+        vars.insert(
+            "events",
+            Value::Array(documents.map_err(|error| error.to_string())?),
+        );
+        let _: Vec<bool> = self
+            .db
+            .aql_bind_vars(&query, vars)
+            .map_err(|error| backend(error).to_string())?;
+        Ok(())
+    }
+}
+
+impl ArangoNodeStore {
+    pub fn archived_event(&self, id: &str) -> Result<Option<EventEnvelope>, StoreError> {
+        let query = format!(
+            "FOR event IN {EVENT_ARCHIVE_COLLECTION} FILTER event._key == @key LIMIT 1 \
+             RETURN UNSET(event, \"_key\", \"_id\", \"_rev\")"
+        );
+        let mut vars = HashMap::new();
+        vars.insert("key", Value::String(id.to_string()));
+        let events: Vec<EventEnvelope> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        Ok(events.into_iter().next())
     }
 }
 
@@ -109,7 +166,7 @@ impl NodeStore for ArangoNodeStore {
         }
         // A Specification Node is immutable once accepted. Retrying the same
         // Mailbox message is a no-op, so asynchronously appended Evidence and
-        // Job results can never be erased by a repeated Add execution.
+        // Consumer results can never be erased by a repeated Add execution.
         upsert_immutable(&self.db, COLLECTION, &node.id, doc)
     }
 
@@ -202,25 +259,25 @@ impl NodeStore for ArangoNodeStore {
         Ok(nodes.into_iter().next())
     }
 
-    fn apply_job_result(
+    fn apply_command_update(
         &self,
         node_id: &str,
-        job_id: &str,
+        command_id: &str,
         update: &MetaUpdate,
         evidence: Option<&[crate::domain::Evidence]>,
     ) -> Result<(), StoreError> {
         let _span = tracing::debug_span!(
-            "spec.store.arango.apply_job_result",
+            "spec.store.arango.apply_command_update",
             "db.system" = "arangodb",
             "db.collection.name" = COLLECTION,
             "node.id" = %node_id,
-            "job.id" = %job_id,
+            "command.id" = %command_id,
         )
         .entered();
         let meta_patch = if evidence.is_some() {
-            "{ evidence: @evidence, updates: MERGE(NOT_NULL(node.meta.updates, {}), ZIP([@job_id], [@update])) }"
+            "{ evidence: @evidence, updates: MERGE(NOT_NULL(node.meta.updates, {}), ZIP([@command_id], [@update])) }"
         } else {
-            "{ updates: MERGE(NOT_NULL(node.meta.updates, {}), ZIP([@job_id], [@update])) }"
+            "{ updates: MERGE(NOT_NULL(node.meta.updates, {}), ZIP([@command_id], [@update])) }"
         };
         let query = format!(
             "FOR node IN {COLLECTION} FILTER node._key == @node_id LIMIT 1 \
@@ -229,7 +286,7 @@ impl NodeStore for ArangoNodeStore {
         );
         let mut vars = HashMap::new();
         vars.insert("node_id", Value::String(node_id.to_string()));
-        vars.insert("job_id", Value::String(job_id.to_string()));
+        vars.insert("command_id", Value::String(command_id.to_string()));
         vars.insert("update", serde_json::to_value(update)?);
         if let Some(evidence) = evidence {
             vars.insert("evidence", serde_json::to_value(evidence)?);
@@ -831,7 +888,7 @@ fn upsert_edge_immutable(
     // Check both identities: `_key` protects deterministic historical writers;
     // `identity_key` rejects the same typed relationship even if a caller
     // supplies a different Edge id. The unique persistent index closes races
-    // between concurrent Jobs.
+    // between concurrent Consumer Deliveries.
     let query = format!(
         "LET existing = FIRST( \
            FOR edge IN {EDGE_COLLECTION} \

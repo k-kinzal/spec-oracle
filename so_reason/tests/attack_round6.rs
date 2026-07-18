@@ -13,7 +13,7 @@ use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, AtomRef, ContractFormula, EdgeKind, Formula,
     PairingError, SubjectRelation,
 };
-use so_reason::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
+use so_reason::relate::{assess, contradicts, implies, refines, RelationVerdict, Ternary};
 use so_reason::semantics::{skeleton, RoleValue, Skeleton};
 
 fn one(input: &str) -> Sentence {
@@ -153,7 +153,7 @@ fn object_group_conjunction_must_block_the_false_yes() {
             &one("The daemon shall notify the admin or the owner."),
             &one("The daemon shall notify the admin and the owner."),
         ),
-        Outcome::Equivalent
+        RelationVerdict::Equivalent
     );
     // Same defect through a role NP group.
     let or_role = claim("The daemon shall send the report to the admin or the owner.");
@@ -467,8 +467,8 @@ fn contract_formula_serde_compat() {
 fn recommendation_vs_description_conflict_is_advisory_tension() {
     let rec = one("The request should be logged.");
     let desc = one("The request is never logged.");
-    assert_eq!(assess(&rec, &desc), Outcome::AdvisoryTension);
-    assert_eq!(assess(&desc, &rec), Outcome::AdvisoryTension);
+    assert_eq!(assess(&rec, &desc), RelationVerdict::AdvisoryTension);
+    assert_eq!(assess(&desc, &rec), RelationVerdict::AdvisoryTension);
 }
 
 /// Description × description conflict is descriptive.
@@ -476,7 +476,7 @@ fn recommendation_vs_description_conflict_is_advisory_tension() {
 fn description_vs_description_conflict_is_descriptive() {
     let a = one("The door is open.");
     let b = one("The door is never open.");
-    assert_eq!(assess(&a, &b), Outcome::DescriptiveConflict);
+    assert_eq!(assess(&a, &b), RelationVerdict::DescriptiveConflict);
 }
 
 /// Interval-driven conflict between a description and an obligation is
@@ -485,8 +485,14 @@ fn description_vs_description_conflict_is_descriptive() {
 fn interval_conflict_with_a_description_side_is_descriptive() {
     let described = one("The depth is between 1 and 2.");
     let required = one("The depth shall be at least 4.");
-    assert_eq!(assess(&described, &required), Outcome::DescriptiveConflict);
-    assert_eq!(assess(&required, &described), Outcome::DescriptiveConflict);
+    assert_eq!(
+        assess(&described, &required),
+        RelationVerdict::DescriptiveConflict
+    );
+    assert_eq!(
+        assess(&required, &described),
+        RelationVerdict::DescriptiveConflict
+    );
 }
 
 /// An unconditional obligation refines its conditional counterpart (the
@@ -498,13 +504,13 @@ fn unconditional_refines_conditional_with_direction() {
     let unconditional = one("The pump shall stop.");
     assert_eq!(
         assess(&conditional, &unconditional),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: false
         }
     );
     assert_eq!(
         assess(&unconditional, &conditional),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
@@ -517,7 +523,7 @@ fn comparison_containment_is_refinement() {
     let loose = one("The depth shall be at least 3.");
     assert_eq!(
         assess(&strict, &loose),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
@@ -529,7 +535,7 @@ fn comparison_containment_is_refinement() {
 fn unrelated_pair_is_unknown_not_independent() {
     let a = one("The pump shall stop.");
     let b = one("The valve shall open.");
-    assert_eq!(assess(&a, &b), Outcome::Unknown);
+    assert_eq!(assess(&a, &b), RelationVerdict::Unknown);
 }
 
 /// The force-blind core stays force-blind BY DESIGN: `should` and `shall`
@@ -543,7 +549,7 @@ fn force_blind_implies_is_unchanged() {
     assert_eq!(implies(&shall, &should), Ternary::Yes);
     assert_eq!(
         assess(&one("The pump should stop."), &one("The pump shall stop.")),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -557,12 +563,15 @@ fn force_blind_implies_is_unchanged() {
 #[test]
 fn permissions_and_definitions_always_assess_unknown() {
     let permission = one("The client may retry.");
-    assert_eq!(assess(&permission, &permission), Outcome::Unknown);
+    assert_eq!(assess(&permission, &permission), RelationVerdict::Unknown);
     let definition = one("A session means a sequence of requests.");
-    assert_eq!(assess(&definition, &definition), Outcome::Unknown);
+    assert_eq!(assess(&definition, &definition), RelationVerdict::Unknown);
     let prohibition = one("The client shall not retry.");
     // Round 7: the envelope conflict is now visible (change 6).
-    assert_eq!(assess(&permission, &prohibition), Outcome::EnvelopeConflict);
+    assert_eq!(
+        assess(&permission, &prohibition),
+        RelationVerdict::EnvelopeConflict
+    );
 }
 
 /// Alternative order does not matter: `either A or B` ≡ `either B or A`
@@ -571,25 +580,25 @@ fn permissions_and_definitions_always_assess_unknown() {
 fn alternative_order_is_equivalent() {
     let ab = one("The server shall either accept the request or reject the request.");
     let ba = one("The server shall either reject the request or accept the request.");
-    assert_eq!(assess(&ab, &ba), Outcome::Equivalent);
+    assert_eq!(assess(&ab, &ba), RelationVerdict::Equivalent);
 }
 
-/// Every Outcome variant keeps its snake_case wire name.
+/// Every RelationVerdict variant keeps its snake_case wire name.
 #[test]
-fn outcome_wire_names() {
+fn verdict_wire_names() {
     let tags = [
-        (Outcome::HardContradiction, "hard_contradiction"),
-        (Outcome::AdvisoryTension, "advisory_tension"),
-        (Outcome::DescriptiveConflict, "descriptive_conflict"),
-        (Outcome::Equivalent, "equivalent"),
-        (Outcome::Independent, "independent"),
-        (Outcome::Unknown, "unknown"),
+        (RelationVerdict::HardContradiction, "hard_contradiction"),
+        (RelationVerdict::AdvisoryTension, "advisory_tension"),
+        (RelationVerdict::DescriptiveConflict, "descriptive_conflict"),
+        (RelationVerdict::Equivalent, "equivalent"),
+        (RelationVerdict::Independent, "independent"),
+        (RelationVerdict::Unknown, "unknown"),
     ];
-    for (outcome, tag) in tags {
-        let json = serde_json::to_value(outcome).unwrap();
+    for (result, tag) in tags {
+        let json = serde_json::to_value(result).unwrap();
         assert_eq!(json["kind"], tag);
-        let back: Outcome = serde_json::from_value(json).unwrap();
-        assert_eq!(back, outcome);
+        let back: RelationVerdict = serde_json::from_value(json).unwrap();
+        assert_eq!(back, result);
     }
 }
 
@@ -1278,7 +1287,7 @@ fn disjoint_duration_bounds_now_contradict() {
             &one("The daemon shall retain the log for at least 30 days."),
             &one("The daemon shall retain the log for less than 10 days."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 

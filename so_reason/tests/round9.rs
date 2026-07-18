@@ -11,7 +11,9 @@
 use so_lang::ast::*;
 use so_lang::parse::{parse, ParseError};
 use so_reason::formula::{claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula};
-use so_reason::relate::{assess, assumption_satisfiable, contradicts, implies, Outcome, Ternary};
+use so_reason::relate::{
+    assess, assumption_satisfiable, contradicts, implies, RelationVerdict, Ternary,
+};
 use so_reason::semantics::{skeleton, subject_keys, RoleKind};
 
 fn one(input: &str) -> Sentence {
@@ -85,7 +87,7 @@ fn in_vs_on_claims_relate_unknown_not_yes_and_not_no() {
             &one("The system shall store the report in the archive."),
             &one("The system shall store the report on the archive."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Same preposition still meets: equivalence is preserved.
     assert_eq!(
@@ -93,7 +95,7 @@ fn in_vs_on_claims_relate_unknown_not_yes_and_not_no() {
             &one("The system shall store the report in the archive."),
             &one("The system shall store the report in the archive."),
         ),
-        Outcome::Equivalent
+        RelationVerdict::Equivalent
     );
 }
 
@@ -448,7 +450,7 @@ fn object_gap_enters_full_identity_but_never_subject_keys() {
             &one("Each request that the gateway forwards shall be logged."),
             &one("Each request that the proxy forwards shall be logged."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // PIN: relatives never enter subject keys — gap relatives included.
     assert_eq!(
@@ -658,12 +660,12 @@ fn guard_content_is_identity_for_the_relation_engine() {
     let valid = one("When the monitor ensures that the token is valid, the pump shall stop.");
     let expired =
         one("When the monitor ensures that the token is expired, the pump shall not stop.");
-    assert_eq!(assess(&valid, &expired), Outcome::Unknown);
+    assert_eq!(assess(&valid, &expired), RelationVerdict::Unknown);
     // Equal content still meets: the same guard over contradicting claims
     // grounds a conditional contradiction.
     let stop = one("When the monitor ensures that the token is valid, the pump shall stop.");
     let no_stop = one("When the monitor ensures that the token is valid, the pump shall not stop.");
-    assert_eq!(assess(&stop, &no_stop), Outcome::HardContradiction);
+    assert_eq!(assess(&stop, &no_stop), RelationVerdict::HardContradiction);
     // The skeleton digest carries the content.
     let k = skeleton(&valid).unwrap();
     let trigger = k.guards.trigger.as_ref().unwrap();
@@ -710,12 +712,12 @@ fn reordered_joint_guards_now_ground_contradictions() {
     // engine answers Unknown, conservatively.
     let a = one("Where the mode is manual, While the pump is running, the valve shall open.");
     let b = one("Where the pump is running, While the mode is manual, the valve shall not open.");
-    assert_eq!(assess(&a, &b), Outcome::Unknown);
+    assert_eq!(assess(&a, &b), RelationVerdict::Unknown);
     // Canonicalization itself is unchanged: reordered `and` conjuncts
     // inside ONE frame family still ground.
     let a = one("While the pump is running and the mode is manual, the valve shall open.");
     let b = one("While the mode is manual and the pump is running, the valve shall not open.");
-    assert_eq!(assess(&a, &b), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &b), RelationVerdict::HardContradiction);
 }
 
 #[test]
@@ -724,11 +726,11 @@ fn overlapping_bounded_guards_witness_for_contradicting_claims() {
     // exists), so the claims' conflict is in force somewhere: grounded.
     let a = one("While the depth is at most 5, the pump shall run.");
     let b = one("While the depth is at most 3, the pump shall not run.");
-    assert_eq!(assess(&a, &b), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &b), RelationVerdict::HardContradiction);
     // Overlap without containment witnesses too.
     let a = one("While the depth is between 2 and 6, the pump shall run.");
     let b = one("While the depth is between 4 and 8, the pump shall not run.");
-    assert_eq!(assess(&a, &b), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &b), RelationVerdict::HardContradiction);
 }
 
 #[test]
@@ -737,7 +739,7 @@ fn disjoint_bounded_guards_still_refuse_to_witness() {
     let b = one("While the depth is at least 5, the pump shall not run.");
     assert_eq!(
         assess(&a, &b),
-        Outcome::Unknown,
+        RelationVerdict::Unknown,
         "disjoint guard regions never meet"
     );
 }
@@ -747,23 +749,23 @@ fn mixed_or_ungroundable_guard_shapes_stay_unknown() {
     // Different subjects: no witness.
     let a = one("While the depth is at most 5, the pump shall run.");
     let b = one("While the height is at most 3, the pump shall not run.");
-    assert_eq!(assess(&a, &b), Outcome::Unknown);
+    assert_eq!(assess(&a, &b), RelationVerdict::Unknown);
     // Same head, different full identity (of-chain): no witness.
     let a = one("While the depth of the tank is at most 5, the pump shall run.");
     let b = one("While the depth of the sump is at most 3, the pump shall not run.");
-    assert_eq!(assess(&a, &b), Outcome::Unknown);
+    assert_eq!(assess(&a, &b), RelationVerdict::Unknown);
     // Unit mismatch: no witness.
     let a = one("While the depth is at most 5 meters, the pump shall run.");
     let b = one("While the depth is at most 3, the pump shall not run.");
-    assert_eq!(assess(&a, &b), Outcome::Unknown);
+    assert_eq!(assess(&a, &b), RelationVerdict::Unknown);
     // A comparison guard against a non-comparison guard: no witness.
     let a = one("While the depth is at most 5, the pump shall run.");
     let b = one("While the tank is draining, the pump shall not run.");
-    assert_eq!(assess(&a, &b), Outcome::Unknown);
+    assert_eq!(assess(&a, &b), RelationVerdict::Unknown);
     // A role-bearing comparison guard is out of the witness's scope.
     let a = one("While the depth is at most 5 at the depot, the pump shall run.");
     let b = one("While the depth is at most 3 at the depot, the pump shall not run.");
-    assert_eq!(assess(&a, &b), Outcome::Unknown);
+    assert_eq!(assess(&a, &b), RelationVerdict::Unknown);
 }
 
 #[test]
@@ -771,9 +773,9 @@ fn equal_guards_and_unguarded_sides_still_witness() {
     // The round-7 rules are unchanged: equal guards and Top witness.
     let a = one("While the depth is at most 5, the pump shall run.");
     let b = one("While the depth is at most 5, the pump shall not run.");
-    assert_eq!(assess(&a, &b), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &b), RelationVerdict::HardContradiction);
     let unguarded = one("The pump shall not run.");
-    assert_eq!(assess(&a, &unguarded), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &unguarded), RelationVerdict::HardContradiction);
 }
 
 // ====================================================================================

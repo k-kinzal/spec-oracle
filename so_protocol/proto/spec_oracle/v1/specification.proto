@@ -5,8 +5,8 @@ syntax = "proto3";
 // The wire carries specifications and their derived readings; the daemon owns
 // the domain. The client is thin: it sends a specification in the constrained
 // specification language plus the (channel-resolved) --evidence values. The
-// daemon's Add Mailbox parses exactly one sentence, persists exactly one Node,
-// and returns it. NodeAdded Jobs subsequently capture Evidence and derive all
+// daemon's AddNode Command handler parses exactly one sentence, persists exactly one Node,
+// and returns it. NodeAdded Event Consumers subsequently capture Evidence and derive all
 // other structure. A node stores the raw sentence text (and
 // the language version that accepted it); the `SentenceView` on each returned
 // node — speech act, canonical rendering, contract view — is derived at
@@ -20,35 +20,11 @@ package spec_oracle.v1;
 // relationships.
 service SpecificationGraph {
   // Parse exactly one specification sentence and persist exactly one Node.
-  // Evidence descriptors are opaque Job input on this path: no locator I/O,
+  // Evidence descriptors are opaque Consumer input on this path: no locator I/O,
   // snapshot, origin enrichment, or graph derivation occurs before the reply.
   // Syntax/sentence-count errors are INVALID_ARGUMENT; store failures are
   // INTERNAL.
   rpc AddSpecification(AddSpecificationRequest) returns (AddSpecificationResponse);
-
-  // Replace the complete desired Evidence descriptor set of an existing
-  // Specification Node and schedule a fresh capture. The prior captures and
-  // GroundedBy Edges remain immutable Ledger history; only the current
-  // Evidence view and fitness input advance.
-  rpc ReplaceEvidence(ReplaceEvidenceRequest) returns (ReplaceEvidenceResponse);
-
-  // Append one explicit, versioned selection judgment between existing
-  // Specification Nodes. Only Supports, Defeats, and Supersedes are accepted;
-  // semantic relationships remain derived exclusively by so-reason.
-  rpc AddSelectionRelation(AddSelectionRelationRequest) returns (AddSelectionRelationResponse);
-
-  // Append a proved assume-guarantee pairing. `relied` is an authored
-  // specification naming exactly what the target contract awaits; it is not
-  // conflated with the source sentence that supplies evidence for it.
-  rpc AddAssumptionRelation(AddAssumptionRelationRequest) returns (AddAssumptionRelationResponse);
-
-  // Explicitly accept one previously proved discharge opportunity. The daemon
-  // revalidates it and appends the ordinary GuaranteeDischarge Edge.
-  rpc PromoteDischargeCandidate(PromoteDischargeCandidateRequest) returns (PromoteDischargeCandidateResponse);
-
-  // Explicitly derive a semantic Contract Node using the standard contract
-  // algebra. Quotient is ordered: left is the target, right the divisor.
-  rpc DeriveContract(DeriveContractRequest) returns (DeriveContractResponse);
 
   // Read the specification graph one bounded page at a time. The graph can hold
   // billions of nodes, so there is deliberately no "return everything" call:
@@ -64,13 +40,19 @@ service SpecificationGraph {
   // Specification endpoints to be selected.
   rpc GetLedger(GetLedgerRequest) returns (GetLedgerResponse);
 
+  // Start an asynchronous rebuild of graph derivations for every authored
+  // Specification Node currently visible to the daemon. The Ledger remains
+  // append-only: current derivations are reapplied idempotently and newly
+  // installed derivations can append their missing Edges.
+  rpc StartGraphRebuild(StartGraphRebuildRequest) returns (StartGraphRebuildResponse);
+
 }
 
 message AddSpecificationRequest {
   // Exactly one sentence in the constrained specification language, e.g.
   // "When the order is submitted, the system shall record the total."
   string specification = 1;
-  // Opaque Evidence Job inputs. Each conventionally contains a JSON
+  // Opaque Evidence Consumer inputs. Each conventionally contains a JSON
   // object/array (kind + locator [+ origin]) or a bare locator string.
   // `@file`/`-`(stdin) channels are resolved client-side to text before
   // sending — the daemon never reads the client's stdin/files.
@@ -83,78 +65,6 @@ message AddSpecificationRequest {
 
 message AddSpecificationResponse {
   Node node = 1;
-}
-
-message ReplaceEvidenceRequest {
-  string node_id = 1;
-  // The complete replacement set, not an incremental merge. Empty clears the
-  // current Evidence view while preserving its Ledger history.
-  repeated string evidence = 2;
-}
-
-message ReplaceEvidenceResponse {
-  // Stored Node state immediately after replacement; capture remains
-  // asynchronous, so meta.evidence may still show the prior successful view
-  // until the new Job completes (or be empty when evidence is cleared).
-  Node node = 1;
-}
-
-message AddSelectionRelationRequest {
-  // The supporter, defeater, or superseder Specification Node id.
-  string source = 1;
-  // The supported, defeated, or superseded Specification Node id.
-  string target = 2;
-  // Must be EDGE_KIND_SUPPORTS, EDGE_KIND_DEFEATS, or EDGE_KIND_SUPERSEDES.
-  EdgeKind kind = 3;
-  // Additional Specification Nodes that make this judgment checkable. The
-  // endpoints are already intrinsic to the Edge and must not be repeated here.
-  repeated string basis_spec_ids = 4;
-}
-
-message AddSelectionRelationResponse {
-  Edge edge = 1;
-}
-
-message AddAssumptionRelationRequest {
-  string source = 1;
-  string target = 2;
-  string relied = 3;
-  // OCCURRENCE_RELIANCE, GUARANTEE_DISCHARGE, or ADMISSIBILITY_ENVELOPE.
-  EdgeKind kind = 4;
-  repeated string basis_spec_ids = 5;
-}
-
-message AddAssumptionRelationResponse {
-  Edge edge = 1;
-}
-
-message PromoteDischargeCandidateRequest {
-  string assessment_id = 1;
-}
-
-message PromoteDischargeCandidateResponse {
-  Edge edge = 1;
-}
-
-enum ContractOperation {
-  CONTRACT_OPERATION_UNSPECIFIED = 0;
-  CONTRACT_OPERATION_COMPOSITION = 1;
-  CONTRACT_OPERATION_QUOTIENT = 2;
-  CONTRACT_OPERATION_MERGE = 3;
-}
-
-message DeriveContractRequest {
-  string left_contract_id = 1;
-  string right_contract_id = 2;
-  ContractOperation operation = 3;
-  // Optional additional authored provenance. Intrinsic provenance is recovered
-  // from the Ledger and unioned with these ids.
-  repeated string basis_spec_ids = 4;
-}
-
-message DeriveContractResponse {
-  DerivedNode contract = 1;
-  repeated Edge derivation_edges = 2;
 }
 
 // ---- graph read ------------------------------------------------------------
@@ -210,6 +120,19 @@ message GetLedgerResponse {
   // Non-Specification endpoint values needed to render this Edge page.
   repeated TermNode term_nodes = 4;
   repeated DerivedNode derived_nodes = 5;
+}
+
+message StartGraphRebuildRequest {
+  string client = 1;
+  string client_version = 2;
+}
+
+message StartGraphRebuildResponse {
+  // Correlation identity shared by the rebuild's Command/Event chain.
+  string rebuild_id = 1;
+  string started_at = 2;
+  // Best-effort maintained count observed when the rebuild was accepted.
+  uint64 total_nodes = 3;
 }
 
 message TermNode {
@@ -396,6 +319,7 @@ enum EdgeEndpointRole {
   EDGE_ENDPOINT_ROLE_QUOTIENT_RESULT = 32;
   EDGE_ENDPOINT_ROLE_MERGE_OPERAND = 33;
   EDGE_ENDPOINT_ROLE_MERGE_RESULT = 34;
+  EDGE_ENDPOINT_ROLE_LEXEME_PEER = 35;
 }
 
 // The kind of relationship an Edge asserts. Its direction is its endpoint-role
@@ -430,6 +354,9 @@ enum EdgeKind {
   EDGE_KIND_QUOTIENT_DIVIDEND = 28;
   EDGE_KIND_QUOTIENT_DIVISOR = 29;
   EDGE_KIND_MERGE_OPERAND = 30;
+  // Historical concrete Ledger relation. Current lexical derivation uses
+  // MENTIONS_TERM, but append-only rows must remain readable and visible.
+  EDGE_KIND_SAME_LEXEME = 31;
 }
 
 // ---- domain mirror ---------------------------------------------------------
@@ -523,17 +450,16 @@ message ContractView {
 
 message Meta {
   // Current successfully captured view, populated asynchronously by the
-  // Evidence Job. Complete historical captures also remain in Job updates.
+  // Evidence Consumer. Complete historical captures also remain in Consumer updates.
   repeated Evidence evidence = 1;
   string created_at = 2;
   string cli = 3;
   string cli_version = 4;
-  // Successful asynchronous Meta updates. Job scheduling and retry state are
+  // Successful asynchronous Meta updates. Delivery and retry state are
   // process-local and are never persisted or exposed on the wire.
   repeated MetaUpdate updates = 5;
   // Verbatim, channel-resolved descriptors retained until and after the
-  // asynchronous Evidence Job captures them. This makes retry/reconciliation
-  // independent of the original client process.
+  // asynchronous Evidence Consumer captures them.
   repeated string evidence_requests = 6;
   // Latest complete-request replacement generation. Empty means the original
   // incremental Add request set. Used to reconcile unchanged-locator refreshes.
@@ -541,12 +467,12 @@ message Meta {
 }
 
 message MetaUpdate {
-  // Mailbox-derived Job identity; repeated execution replaces this result.
+  // Command identity; repeated execution of the same id replaces this record.
   string id = 1;
-  // Stable Plugin/hook name.
+  // Stable Command processor name.
   string source = 2;
   string applied_at = 3;
-  // Plugin-owned JSON value.
+  // Processor-owned JSON value.
   string value_json = 4;
 }
 

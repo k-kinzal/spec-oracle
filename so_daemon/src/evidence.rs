@@ -10,7 +10,7 @@
 //!
 //! The `@file` / `-`(stdin) input channels are resolved to text **client-side**
 //! (they name the client's own streams). The daemon persists that concrete text
-//! verbatim on the Node; the asynchronous Evidence Job then calls this module
+//! verbatim on the Node; the asynchronous Evidence Consumer then calls this module
 //! to validate its shape and normalize the locator before capture.
 
 use serde::{Deserialize, Serialize};

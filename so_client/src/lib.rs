@@ -4,13 +4,13 @@
 //! (`@file` / `-`(stdin) / inline) into concrete text — the one thing that cannot
 //! cross the wire, because it names the client's own streams — and forwards the
 //! specification plus resolved Evidence descriptors to the daemon. The Add RPC
-//! parses and persists one Node; locator capture happens later in a daemon Job.
+//! parses and persists one Node; locator capture happens later in a daemon Consumer.
 //! The returned protobuf Node is handed back unchanged; the daemon owns the
 //! domain model.
 //!
 //! Note the division of labor: **channel** resolution (reading the client's files
 //! and stdin) happens here; **locator** capture (snapshotting whatever the
-//! evidence points at) happens in a daemon Job. A file evidence value therefore
+//! evidence points at) happens in a daemon Consumer. A file evidence value therefore
 //! refers to a path on the *daemon's* filesystem, even though an `@file` channel
 //! reads the descriptor from the *client's*.
 
@@ -54,14 +54,6 @@ pub enum ClientError {
     Status(#[from] tonic::Status),
     #[error("daemon response contained no nodes")]
     EmptyResponse,
-    #[error("daemon response contained no selection edge")]
-    EmptySelectionResponse,
-    #[error("daemon response contained no assumption edge")]
-    EmptyAssumptionResponse,
-    #[error("daemon response contained no promoted discharge edge")]
-    EmptyDischargePromotionResponse,
-    #[error("daemon response contained no derived contract")]
-    EmptyDerivedContractResponse,
     #[error("daemon returned an invalid graph response: {0}")]
     InvalidGraphResponse(String),
 }
@@ -202,182 +194,33 @@ impl Client {
         .await
     }
 
-    /// Replace the complete Evidence descriptor set for an existing
-    /// specification. Input channels are resolved client-side exactly as for
-    /// Add; locator capture remains asynchronous in the daemon.
-    pub async fn replace_evidence(
+    /// Start asynchronous reapplication of every registered graph derivation
+    /// to the daemon's existing Specification Nodes.
+    pub async fn start_graph_rebuild(
         &mut self,
-        node_id: &str,
-        evidence_args: &[String],
-    ) -> Result<pb::Node, ClientError> {
+        client: &str,
+        client_version: &str,
+    ) -> Result<pb::StartGraphRebuildResponse, ClientError> {
         let span = tracing::info_span!(
-            "spec.client.replace_evidence",
+            "spec.client.start_graph_rebuild",
             "rpc.system" = "grpc",
             "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "ReplaceEvidence",
-            "node.id" = %node_id,
-            "spec.evidence.arg_count" = evidence_args.len() as u64,
+            "rpc.method" = "StartGraphRebuild",
+            "client.name" = %client,
+            "client.version" = %client_version,
+            "command.id" = tracing::field::Empty,
+            "spec.graph.total_nodes" = tracing::field::Empty,
         );
         async {
-            let mut evidence = Vec::with_capacity(evidence_args.len());
-            for arg in evidence_args {
-                evidence.push(resolve_channel(arg)?);
-            }
-            let mut request = Request::new(pb::ReplaceEvidenceRequest {
-                node_id: node_id.to_string(),
-                evidence,
+            let mut request = Request::new(pb::StartGraphRebuildRequest {
+                client: client.to_string(),
+                client_version: client_version.to_string(),
             });
             so_tracing::inject_context(request.metadata_mut());
-            self.inner
-                .replace_evidence(request)
-                .await?
-                .into_inner()
-                .node
-                .ok_or(ClientError::EmptyResponse)
-        }
-        .instrument(span)
-        .await
-    }
-
-    /// Append one explicit selection judgment between existing Specification
-    /// Nodes. The daemon validates the endpoints and owns the fixed policy
-    /// derivation attached to the resulting Edge.
-    pub async fn add_selection_relation(
-        &mut self,
-        source: &str,
-        target: &str,
-        kind: pb::EdgeKind,
-        basis_spec_ids: &[String],
-    ) -> Result<pb::Edge, ClientError> {
-        let span = tracing::info_span!(
-            "spec.client.add_selection_relation",
-            "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "AddSelectionRelation",
-            "selection.kind" = ?kind,
-            "selection.source" = %source,
-            "selection.target" = %target,
-            "selection.basis_count" = basis_spec_ids.len() as u64,
-        );
-        async {
-            let mut request = Request::new(pb::AddSelectionRelationRequest {
-                source: source.to_string(),
-                target: target.to_string(),
-                kind: kind as i32,
-                basis_spec_ids: basis_spec_ids.to_vec(),
-            });
-            so_tracing::inject_context(request.metadata_mut());
-            self.inner
-                .add_selection_relation(request)
-                .await?
-                .into_inner()
-                .edge
-                .ok_or(ClientError::EmptySelectionResponse)
-        }
-        .instrument(span)
-        .await
-    }
-
-    /// Append one proved assume-guarantee pairing between authored
-    /// Specification Nodes. `relied` names the assertion the target actually
-    /// awaits; the daemon performs all semantic and aggregate validation.
-    pub async fn add_assumption_relation(
-        &mut self,
-        source: &str,
-        target: &str,
-        relied: &str,
-        kind: pb::EdgeKind,
-        basis_spec_ids: &[String],
-    ) -> Result<pb::Edge, ClientError> {
-        let span = tracing::info_span!(
-            "spec.client.add_assumption_relation",
-            "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "AddAssumptionRelation",
-            "pairing.kind" = ?kind,
-            "pairing.source" = %source,
-            "pairing.target" = %target,
-            "pairing.relied" = %relied,
-            "pairing.basis_count" = basis_spec_ids.len() as u64,
-        );
-        async {
-            let mut request = Request::new(pb::AddAssumptionRelationRequest {
-                source: source.to_string(),
-                target: target.to_string(),
-                relied: relied.to_string(),
-                kind: kind as i32,
-                basis_spec_ids: basis_spec_ids.to_vec(),
-            });
-            so_tracing::inject_context(request.metadata_mut());
-            self.inner
-                .add_assumption_relation(request)
-                .await?
-                .into_inner()
-                .edge
-                .ok_or(ClientError::EmptyAssumptionResponse)
-        }
-        .instrument(span)
-        .await
-    }
-
-    /// Explicitly promote a proved discharge Assessment to the ordinary
-    /// GuaranteeDischarge topology. The daemon revalidates the pairing.
-    pub async fn promote_discharge_candidate(
-        &mut self,
-        assessment_id: &str,
-    ) -> Result<pb::Edge, ClientError> {
-        let span = tracing::info_span!(
-            "spec.client.promote_discharge_candidate",
-            "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "PromoteDischargeCandidate",
-            "assessment.id" = %assessment_id,
-        );
-        async {
-            let mut request = Request::new(pb::PromoteDischargeCandidateRequest {
-                assessment_id: assessment_id.to_string(),
-            });
-            so_tracing::inject_context(request.metadata_mut());
-            self.inner
-                .promote_discharge_candidate(request)
-                .await?
-                .into_inner()
-                .edge
-                .ok_or(ClientError::EmptyDischargePromotionResponse)
-        }
-        .instrument(span)
-        .await
-    }
-
-    pub async fn derive_contract(
-        &mut self,
-        left_contract_id: &str,
-        right_contract_id: &str,
-        operation: pb::ContractOperation,
-        basis_spec_ids: &[String],
-    ) -> Result<(pb::DerivedNode, Vec<pb::Edge>), ClientError> {
-        let span = tracing::info_span!(
-            "spec.client.derive_contract",
-            "rpc.system" = "grpc",
-            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
-            "rpc.method" = "DeriveContract",
-            "contract.left" = %left_contract_id,
-            "contract.right" = %right_contract_id,
-            "contract.operation" = ?operation,
-        );
-        async {
-            let mut request = Request::new(pb::DeriveContractRequest {
-                left_contract_id: left_contract_id.to_string(),
-                right_contract_id: right_contract_id.to_string(),
-                operation: operation as i32,
-                basis_spec_ids: basis_spec_ids.to_vec(),
-            });
-            so_tracing::inject_context(request.metadata_mut());
-            let response = self.inner.derive_contract(request).await?.into_inner();
-            let contract = response
-                .contract
-                .ok_or(ClientError::EmptyDerivedContractResponse)?;
-            Ok((contract, response.derivation_edges))
+            let response = self.inner.start_graph_rebuild(request).await?.into_inner();
+            tracing::Span::current().record("command.id", response.rebuild_id.as_str());
+            tracing::Span::current().record("spec.graph.total_nodes", response.total_nodes);
+            Ok(response)
         }
         .instrument(span)
         .await

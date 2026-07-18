@@ -3,7 +3,7 @@
 //! The daemon accepts exactly one constrained-NL sentence per Add and persists
 //! exactly one Specification Node. The raw words (plus the language version
 //! that accepted them) are the immediate stored truth. Raw Evidence requests
-//! are retained on that Node and a post-acceptance Job later appends captured
+//! are retained on that Node and a post-acceptance Consumer later appends captured
 //! `meta.evidence` and content-addressed Evidence vertices. The assume-guarantee
 //! *contract* is a derived reading of a sentence: assumption and guarantee are
 //! roles an assertion plays relative to a responsible subject, and pairing a
@@ -12,7 +12,7 @@
 //! source/relied/target pairings and materializes their current aggregate
 //! Assumption; the trivial ingest projection remains immutable Ledger history.
 //! Ingest projections are persisted as shared Assumption and Guarantee vertices. This crate owns everything that
-//! touches the daemon's environment — Job-side Evidence interpretation,
+//! touches the daemon's environment — Consumer-side Evidence interpretation,
 //! snapshotting the locator's content, discovering source provenance, and persisting to
 //! ArangoDB + a blob store — and exposes it over the `spec_oracle.v1` wire
 //! contract via [`service`].
@@ -30,17 +30,19 @@
 //! words or the target Guarantee.
 
 pub mod add;
-pub mod add_mailbox;
 pub mod arango;
+pub mod command_bus;
+pub mod consumer;
 pub mod contract_algebra;
 pub mod convert;
 pub mod domain;
+pub mod event_bus;
+pub mod event_sink;
 pub mod evidence;
 pub mod evidence_capture;
 pub mod github;
 pub mod graph_generation;
-pub mod jobs;
-pub mod mailbox;
+pub mod identity;
 pub mod origin;
 pub mod pairing;
 pub mod selection;

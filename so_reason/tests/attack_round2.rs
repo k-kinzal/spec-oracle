@@ -995,7 +995,7 @@ fn multiple_event_conjuncts_error_kind_and_message() {
 /// Assert that `parse` — and the semantic derivations over any accepted
 /// tree — return without panicking.
 fn total(input: &str) {
-    let outcome = catch_unwind(AssertUnwindSafe(|| {
+    let result = catch_unwind(AssertUnwindSafe(|| {
         if let Ok(spec) = parse(input) {
             for sentence in &spec.sentences {
                 let _ = speech_act(sentence);
@@ -1007,7 +1007,7 @@ fn total(input: &str) {
             let _ = references(&spec);
         }
     }));
-    assert!(outcome.is_ok(), "panic on input: {input:?}");
+    assert!(result.is_ok(), "panic on input: {input:?}");
 }
 
 #[test]
@@ -1220,7 +1220,7 @@ fn seeded_fuzz_over_round2_constructs() {
             rng.pick(&adjuncts),
             rng.pick(&terminators),
         );
-        let outcome = catch_unwind(AssertUnwindSafe(|| {
+        let result = catch_unwind(AssertUnwindSafe(|| {
             if let Ok(spec) = parse(&input) {
                 check_round2_invariants(&input, &spec);
                 for sentence in &spec.sentences {
@@ -1229,7 +1229,7 @@ fn seeded_fuzz_over_round2_constructs() {
             }
         }));
         assert!(
-            outcome.is_ok(),
+            result.is_ok(),
             "panic or invariant violation on fuzz input: {input:?}"
         );
     }

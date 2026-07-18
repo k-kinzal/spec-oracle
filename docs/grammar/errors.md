@@ -740,7 +740,7 @@ The grammar is the synchronous hard gate. `specd` parses exactly one sentence
 at the start of Add (`so_daemon/src/add.rs`) and persists its Node without
 interpreting Evidence descriptors or reading locators. A syntax or
 sentence-count error prevents the Node from being accepted. After acceptance,
-the Evidence Job performs descriptor interpretation, snapshot, origin, and blob
+the Evidence Consumer performs descriptor interpretation, snapshot, origin, and blob
 I/O independently.
 
 - The daemon rejects the specification with the message
@@ -749,7 +749,7 @@ I/O independently.
   stderr.
 - The process exits with **code 2** (`EXIT_USAGE` in `so_cli/src/main.rs`) for
   synchronous specification input the caller can fix. Evidence descriptor or
-  locator failures are durable asynchronous Job results or retries; they do not
+  locator failures are durable asynchronous Consumer results or Delivery retries; they do not
   change the already completed Add exit status. Connection/store failures exit
   with code 1.
 - On telemetry spans the daemon records the stable `kind()` name as

@@ -7,7 +7,7 @@ use so_lang::parse::parse;
 use so_reason::formula::{
     applicability, contract_formula, AssumptionSource, AtomRef, EdgeKind, Formula, GuardRole,
 };
-use so_reason::relate::{assess, Outcome};
+use so_reason::relate::{assess, RelationVerdict};
 use so_reason::semantics::{responsible_subject_keys, subject_keys};
 
 fn one(input: &str) -> so_lang::ast::Sentence {
@@ -506,7 +506,7 @@ fn while_vs_when_same_words_is_unknown() {
             &one("While the pump runs, the fan shall run."),
             &one("When the pump runs, the fan shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Same role, same words: unchanged — still grounds.
     assert_eq!(
@@ -514,14 +514,14 @@ fn while_vs_when_same_words_is_unknown() {
             &one("While the pump runs, the fan shall run."),
             &one("While the pump runs, the fan shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     assert_eq!(
         assess(
             &one("When the pump runs, the fan shall run."),
             &one("When the pump runs, the fan shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -552,7 +552,7 @@ fn trigger_equal_to_its_own_exception_still_asserts_nothing() {
             &one("When the pump runs, the fan shall run, unless the pump runs."),
             &one("When the pump runs, the fan shall not run, unless the pump runs."),
         ),
-        Outcome::Unknown,
+        RelationVerdict::Unknown,
         "two vacuous sentences must not manufacture a contradiction"
     );
 }

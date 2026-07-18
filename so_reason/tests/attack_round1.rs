@@ -1265,8 +1265,8 @@ impl Lcg {
 /// canonical render must itself parse and be a render fixpoint (canonical
 /// form is stable).
 fn total_and_render_stable(input: &str) {
-    let outcome = catch_unwind(AssertUnwindSafe(|| parse(input).map(|s| s.render())));
-    let rendered = match outcome {
+    let result = catch_unwind(AssertUnwindSafe(|| parse(input).map(|s| s.render())));
+    let rendered = match result {
         Ok(result) => result,
         Err(_) => panic!("parse panicked on input: {input:?}"),
     };

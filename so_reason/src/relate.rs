@@ -63,7 +63,7 @@ use so_lang::ast::{ComparisonOp, Sentence};
 /// Version of the graph-facing [`assess`] rules.
 ///
 /// Persisted callers must record this value with every derived relationship
-/// and bump it whenever a rule change can alter an [`Outcome`]. Old results can
+/// and bump it whenever a rule change can alter an [`RelationVerdict`]. Old results can
 /// then remain as history while a current graph view selects this version.
 pub const ASSESS_VERSION: &str = "so-reason/assess-v1";
 pub const FORMULA_ASSESS_VERSION: &str = "so-reason/formula-assess-v1";
@@ -81,7 +81,7 @@ pub enum Ternary {
 
 /// Directional relation between two formula projections.
 ///
-/// This is deliberately separate from [`Outcome`]: formula relations are
+/// This is deliberately separate from [`RelationVerdict`]: formula relations are
 /// force- and speech-act-blind logical facts, while sentence assessments
 /// decide whether those facts justify a graph relationship between authored
 /// specifications.
@@ -218,10 +218,12 @@ pub fn refines(concrete: &FormedContract, abstract_: &FormedContract) -> Ternary
     {
         return Ternary::Unknown;
     }
-    if concrete.semantic().refines(&abstract_.semantic()) {
-        Ternary::Yes
-    } else {
-        Ternary::No
+    let assumption = implies(&abstract_.assumption, &concrete.assumption);
+    let guarantee = implies(&concrete.saturated(), &abstract_.saturated());
+    match (assumption, guarantee) {
+        (Ternary::Yes, Ternary::Yes) => Ternary::Yes,
+        (Ternary::No, _) | (_, Ternary::No) => Ternary::No,
+        _ => Ternary::Unknown,
     }
 }
 
@@ -777,14 +779,14 @@ fn guarded_split(f: &Formula) -> (Formula, Formula) {
 
 // ---- force-aware assessment (round 6) ------------------------------------------------
 
-/// The force-AWARE outcome of relating two sentences end-to-end. The
+/// The force-AWARE verdict of relating two sentences end-to-end. The
 /// force-blind core ([`implies`]/[`contradicts`]/[`refines`]) stays
 /// available and stays blind BY DESIGN (it compares propositions); this
 /// enum is where act and force re-enter, so a recommendation crossing an
 /// obligation is named tension, not contradiction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum Outcome {
+pub enum RelationVerdict {
     /// Two BINDING sentences whose guarantees provably contradict: the
     /// specification set cannot be satisfied as written.
     HardContradiction,
@@ -813,7 +815,7 @@ pub enum Outcome {
     Refinement { concrete_is_a: bool },
     /// Mutual implication between SAME-FORCE sentences: the two state one
     /// claim. (Mutual implication across DIFFERENT forces — `should stop`
-    /// vs `shall stop` — is LEGISLATED [`Outcome::Unknown`]: neither
+    /// vs `shall stop` — is LEGISLATED [`RelationVerdict::Unknown`]: neither
     /// "equivalent" nor a directed refinement is structurally true of a
     /// force-divergent pair, and whether the weaker is subsumed is graph
     /// policy, not language fact.)
@@ -833,11 +835,11 @@ pub enum Outcome {
     EnvelopeConflict,
     /// The structural rules cannot classify the pair. Definitions always
     /// land here (vocabulary has no contract to relate); permissions land
-    /// here for everything EXCEPT an [`Outcome::EnvelopeConflict`] —
+    /// here for everything EXCEPT an [`RelationVerdict::EnvelopeConflict`] —
     /// including permission × obligation over one atom (an obligation
     /// implies admissibility, so nothing conflicts, but certifying the
     /// pair COMPATIBLE is graph work, legislated round 7: `Unknown`, not a
-    /// positive outcome). Permissions otherwise participate via PAIRING
+    /// positive verdict). Permissions otherwise participate via PAIRING
     /// ([`crate::contract::AssumptionSource`]), not head-to-head
     /// assessment.
     Unknown,
@@ -846,33 +848,33 @@ pub enum Outcome {
 /// Assess two sentences end-to-end: build their contract formulas, run the
 /// conservative structural judgments, then classify by act and force
 /// (round 6). Every `Yes` consumed here is a proof by structural rule, so
-/// every non-[`Outcome::Unknown`] outcome inherits that trust; `Unknown`
+/// every non-[`RelationVerdict::Unknown`] verdict inherits that trust; `Unknown`
 /// remains the honest default and must never be read as "unrelated".
 ///
 /// Classification order (first match wins):
-/// 0. a permission on either side: [`Outcome::EnvelopeConflict`] when the
+/// 0. a permission on either side: [`RelationVerdict::EnvelopeConflict`] when the
 ///    other side forbids the admitted behavior (round 7, see
-///    [`Outcome::EnvelopeConflict`]), `Unknown` otherwise — permission ×
+///    [`RelationVerdict::EnvelopeConflict`]), `Unknown` otherwise — permission ×
 ///    obligation included (legislated: compatibility certification is
 ///    graph work);
 /// 1. no contract on either side (definition or permission) → `Unknown`;
 /// 2. guarantees contradict — structurally, OR by the round-7 guard-aware
 ///    rule (guards witness a shared region and the claims contradict, see
-///    [`guards_witness_overlap`]) → [`Outcome::HardContradiction`] when
-///    both sides bind, [`Outcome::AdvisoryTension`] when a side merely
-///    recommends, [`Outcome::DescriptiveConflict`] otherwise (a
+///    [`guards_witness_overlap`]) → [`RelationVerdict::HardContradiction`] when
+///    both sides bind, [`RelationVerdict::AdvisoryTension`] when a side merely
+///    recommends, [`RelationVerdict::DescriptiveConflict`] otherwise (a
 ///    description side);
-/// 3. mutual implication with equal force → [`Outcome::Equivalent`]
-///    (unequal force → `Unknown`, legislated — see [`Outcome::Equivalent`]);
+/// 3. mutual implication with equal force → [`RelationVerdict::Equivalent`]
+///    (unequal force → `Unknown`, legislated — see [`RelationVerdict::Equivalent`]);
 /// 4. refinement in exactly the surviving direction, AND the concrete
 ///    side's force at least as strong as the abstract side's (round 12 —
-///    the force preorder, see [`Outcome::Refinement`] and
-///    [`refinement_force_admissible`]) → [`Outcome::Refinement`] with its
+///    the force preorder, see [`RelationVerdict::Refinement`] and
+///    [`refinement_force_admissible`]) → [`RelationVerdict::Refinement`] with its
 ///    direction; a force-inadmissible refinement direction is `Unknown`;
 /// 5. both implication directions provably `No` →
-///    [`Outcome::Independent`];
+///    [`RelationVerdict::Independent`];
 /// 6. otherwise `Unknown`.
-pub fn assess(a: &Sentence, b: &Sentence) -> Outcome {
+pub fn assess(a: &Sentence, b: &Sentence) -> RelationVerdict {
     // Round 7: envelope compatibility — the one head-to-head judgment a
     // permission takes part in.
     if speech_act(a) == SpeechAct::Permission || speech_act(b) == SpeechAct::Permission {
@@ -882,12 +884,12 @@ pub fn assess(a: &Sentence, b: &Sentence) -> Outcome {
             (b, a)
         };
         if speech_act(other) != SpeechAct::Permission && envelope_conflict(permission, other) {
-            return Outcome::EnvelopeConflict;
+            return RelationVerdict::EnvelopeConflict;
         }
-        return Outcome::Unknown;
+        return RelationVerdict::Unknown;
     }
     let (Some(ca), Some(cb)) = (formed_contract(a), formed_contract(b)) else {
-        return Outcome::Unknown;
+        return RelationVerdict::Unknown;
     };
     let fa = force(a);
     let fb = force(b);
@@ -897,20 +899,20 @@ pub fn assess(a: &Sentence, b: &Sentence) -> Outcome {
     if contradicts(&ca.guarantee, &cb.guarantee) == Ternary::Yes || conditional_contradiction(a, b)
     {
         return match (fa, fb) {
-            (Some(Force::Binding), Some(Force::Binding)) => Outcome::HardContradiction,
+            (Some(Force::Binding), Some(Force::Binding)) => RelationVerdict::HardContradiction,
             _ if fa == Some(Force::Recommended) || fb == Some(Force::Recommended) => {
-                Outcome::AdvisoryTension
+                RelationVerdict::AdvisoryTension
             }
-            _ => Outcome::DescriptiveConflict,
+            _ => RelationVerdict::DescriptiveConflict,
         };
     }
     let fwd = implies(&ca.guarantee, &cb.guarantee);
     let bwd = implies(&cb.guarantee, &ca.guarantee);
     if fwd == Ternary::Yes && bwd == Ternary::Yes {
         return if fa == fb {
-            Outcome::Equivalent
+            RelationVerdict::Equivalent
         } else {
-            Outcome::Unknown
+            RelationVerdict::Unknown
         };
     }
     // Round 12 (change 1): the force preorder gates the graph-facing
@@ -918,19 +920,19 @@ pub fn assess(a: &Sentence, b: &Sentence) -> Outcome {
     // level (force-blind by design), but only a force-admissible
     // direction is REPORTED as Refinement.
     if refines(&ca, &cb) == Ternary::Yes && refinement_force_admissible(fa, fb) {
-        return Outcome::Refinement {
+        return RelationVerdict::Refinement {
             concrete_is_a: true,
         };
     }
     if refines(&cb, &ca) == Ternary::Yes && refinement_force_admissible(fb, fa) {
-        return Outcome::Refinement {
+        return RelationVerdict::Refinement {
             concrete_is_a: false,
         };
     }
     if fwd == Ternary::No && bwd == Ternary::No {
-        return Outcome::Independent;
+        return RelationVerdict::Independent;
     }
-    Outcome::Unknown
+    RelationVerdict::Unknown
 }
 
 /// The FORCE PREORDER for directed refinement (round 12, change 1,

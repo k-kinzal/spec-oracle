@@ -4,7 +4,7 @@
 //!    digests match.
 //! 2. Target-aware pairing (`AssumptionSource::for_guarantee`).
 //! 3. Envelope sources stay out of the paired assumption formula.
-//! 4. Force-aware relation outcomes (`relate::assess`).
+//! 4. Force-aware relation verdicts (`relate::assess`).
 //! 5. Structured comparisons and interval reasoning.
 //! 6. VP alternatives: `either <vp> or <vp>`.
 //! 7. Plain-NP `with` is rejected.
@@ -16,7 +16,7 @@ use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula, PairingError,
     SubjectRelation,
 };
-use so_reason::relate::{assess, contradicts, implies, Outcome, Ternary};
+use so_reason::relate::{assess, contradicts, implies, RelationVerdict, Ternary};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("{input:?} must parse, got: {e}"));
@@ -251,7 +251,7 @@ fn envelope_only_pairing_keeps_assumption_top() {
     assert_eq!(paired.saturated(), paired.guarantee);
 }
 
-// ---- change 4: force-aware relation outcomes ----------------------------------------
+// ---- change 4: force-aware relation verdicts ----------------------------------------
 
 /// A recommendation crossing an obligation is tension, never a hard
 /// contradiction — the force-blind `implies` (round-5 caveat) is now
@@ -260,8 +260,8 @@ fn envelope_only_pairing_keeps_assumption_top() {
 fn should_vs_shall_conflict_is_advisory_tension() {
     let a = one("The pump should stop.");
     let b = one("The pump shall not stop.");
-    assert_eq!(assess(&a, &b), Outcome::AdvisoryTension);
-    assert_eq!(assess(&b, &a), Outcome::AdvisoryTension);
+    assert_eq!(assess(&a, &b), RelationVerdict::AdvisoryTension);
+    assert_eq!(assess(&b, &a), RelationVerdict::AdvisoryTension);
 }
 
 /// Binding × binding conflict is the hard one.
@@ -269,9 +269,9 @@ fn should_vs_shall_conflict_is_advisory_tension() {
 fn binding_conflict_is_hard_contradiction() {
     let a = one("The pump shall stop.");
     let b = one("The pump shall not stop.");
-    assert_eq!(assess(&a, &b), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &b), RelationVerdict::HardContradiction);
     let must = one("The pump must not stop.");
-    assert_eq!(assess(&a, &must), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &must), RelationVerdict::HardContradiction);
 }
 
 /// A description crossing a prohibition is a descriptive conflict: the
@@ -280,8 +280,14 @@ fn binding_conflict_is_hard_contradiction() {
 fn description_vs_prohibition_is_descriptive_conflict() {
     let described = one("The request is logged.");
     let forbidden = one("The request shall not be logged.");
-    assert_eq!(assess(&described, &forbidden), Outcome::DescriptiveConflict);
-    assert_eq!(assess(&forbidden, &described), Outcome::DescriptiveConflict);
+    assert_eq!(
+        assess(&described, &forbidden),
+        RelationVerdict::DescriptiveConflict
+    );
+    assert_eq!(
+        assess(&forbidden, &described),
+        RelationVerdict::DescriptiveConflict
+    );
 }
 
 /// Equivalence requires SAME force: `shall`/`must` meet, `should`/`shall`
@@ -292,16 +298,16 @@ fn description_vs_prohibition_is_descriptive_conflict() {
 fn assess_equivalent_only_for_same_force_pairs() {
     let shall = one("The pump shall stop.");
     let must = one("The pump must stop.");
-    assert_eq!(assess(&shall, &must), Outcome::Equivalent);
+    assert_eq!(assess(&shall, &must), RelationVerdict::Equivalent);
     let should = one("The pump should stop.");
-    assert_eq!(assess(&shall, &should), Outcome::Unknown);
-    assert_eq!(assess(&should, &shall), Outcome::Unknown);
+    assert_eq!(assess(&shall, &should), RelationVerdict::Unknown);
+    assert_eq!(assess(&should, &shall), RelationVerdict::Unknown);
     // Descriptions carry no force; two mutually implying descriptions are
     // same-force (None) and equivalent (the generic subject reads
     // universal — round 5).
     let is_a = one("A request is logged.");
     let is_b = one("Each request is logged.");
-    assert_eq!(assess(&is_a, &is_b), Outcome::Equivalent);
+    assert_eq!(assess(&is_a, &is_b), RelationVerdict::Equivalent);
 }
 
 /// Refinement reports its direction.
@@ -311,13 +317,13 @@ fn assess_reports_refinement_direction() {
     let loose = one("The daemon shall flush the buffer within 10 seconds.");
     assert_eq!(
         assess(&tight, &loose),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
     assert_eq!(
         assess(&loose, &tight),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: false
         }
     );
@@ -330,24 +336,24 @@ fn definitions_and_permissions_assess_unknown() {
     let definition = one("A session means a sequence of requests.");
     let permission = one("The client may retry.");
     let obligation = one("The client shall retry.");
-    assert_eq!(assess(&definition, &obligation), Outcome::Unknown);
-    assert_eq!(assess(&permission, &obligation), Outcome::Unknown);
-    assert_eq!(assess(&obligation, &permission), Outcome::Unknown);
+    assert_eq!(assess(&definition, &obligation), RelationVerdict::Unknown);
+    assert_eq!(assess(&permission, &obligation), RelationVerdict::Unknown);
+    assert_eq!(assess(&obligation, &permission), RelationVerdict::Unknown);
 }
 
-/// Outcome serializes with the crate's serde discipline.
+/// RelationVerdict serializes with the crate's serde discipline.
 #[test]
-fn outcome_serializes() {
-    let json = serde_json::to_value(Outcome::Refinement {
+fn verdict_serializes() {
+    let json = serde_json::to_value(RelationVerdict::Refinement {
         concrete_is_a: true,
     })
     .unwrap();
     assert_eq!(json["kind"], "refinement");
     assert_eq!(json["concrete_is_a"], true);
-    let back: Outcome = serde_json::from_value(json).unwrap();
+    let back: RelationVerdict = serde_json::from_value(json).unwrap();
     assert_eq!(
         back,
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
@@ -369,7 +375,7 @@ fn disjoint_intervals_contradict() {
             &one("The retry count is at most 3."),
             &one("The retry count is at least 5.")
         ),
-        Outcome::DescriptiveConflict
+        RelationVerdict::DescriptiveConflict
     );
     // The binding `be`-complement forms meet at the same intervals — and
     // binding × binding conflict is the hard one.
@@ -378,7 +384,7 @@ fn disjoint_intervals_contradict() {
             &one("The retry count shall be at most 3."),
             &one("The retry count shall be at least 5."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -662,7 +668,7 @@ fn single_vp_refines_its_alternative() {
     );
     assert_eq!(
         assess(&single, &alternative),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );

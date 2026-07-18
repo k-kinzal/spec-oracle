@@ -1,7 +1,7 @@
 //! The `spec` command-line interface — a thin front end over the gRPC client.
 //!
 //! The daemon (`specd`) parses and persists one Specification Node, then runs
-//! Evidence capture and all other processing as Jobs. This binary only resolves
+//! Evidence capture and all other processing as Event Consumers. This binary only resolves
 //! the caller's descriptor input channels, sends the request, and renders the
 //! one accepted Node. It
 //! therefore carries no `--arango-*`/`--dir` flags — those configure the
@@ -37,7 +37,7 @@ struct Cli {
 enum Command {
     /// Add exactly one specification sentence; Evidence capture is asynchronous.
     Add(AddArgs),
-    /// Render the specification graph directly in the terminal.
+    /// Inspect or rebuild the specification graph.
     Graph(GraphArgs),
 }
 
@@ -72,6 +72,20 @@ struct AddArgs {
 
 #[derive(clap::Args)]
 struct GraphArgs {
+    #[command(subcommand)]
+    command: GraphCommand,
+}
+
+#[derive(Subcommand)]
+enum GraphCommand {
+    /// Render the specification graph directly in the terminal.
+    Show(GraphShowArgs),
+    /// Reapply graph derivations asynchronously to every existing Node.
+    Rebuild(GraphRebuildArgs),
+}
+
+#[derive(clap::Args)]
+struct GraphShowArgs {
     /// Address of the spec-oracle daemon.
     #[arg(
         long = "server",
@@ -97,6 +111,22 @@ struct GraphArgs {
     current: bool,
 }
 
+#[derive(clap::Args)]
+struct GraphRebuildArgs {
+    /// Address of the spec-oracle daemon.
+    #[arg(
+        long = "server",
+        env = "SPEC_ORACLE_SERVER",
+        default_value = "http://127.0.0.1:50051",
+        value_name = "URL"
+    )]
+    server: String,
+
+    /// Print the accepted rebuild as a JSON object.
+    #[arg(long)]
+    json: bool,
+}
+
 fn main() -> ExitCode {
     let _telemetry =
         match so_tracing::init_without_console_output("spec", env!("CARGO_PKG_VERSION")) {
@@ -110,7 +140,12 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
         Command::Add(args) => run_add(args),
-        Command::Graph(args) => run_graph(args),
+        Command::Graph(GraphArgs {
+            command: GraphCommand::Show(args),
+        }) => run_graph_show(args),
+        Command::Graph(GraphArgs {
+            command: GraphCommand::Rebuild(args),
+        }) => run_graph_rebuild(args),
     }
 }
 
@@ -189,7 +224,7 @@ fn run_add(args: AddArgs) -> ExitCode {
     }
 }
 
-fn run_graph(args: GraphArgs) -> ExitCode {
+fn run_graph_show(args: GraphShowArgs) -> ExitCode {
     let runtime = match tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -220,6 +255,70 @@ fn run_graph(args: GraphArgs) -> ExitCode {
         Err(e) => {
             eprintln!("error: {e}");
             let code = if e.is_bad_input() {
+                EXIT_USAGE
+            } else {
+                EXIT_RUNTIME
+            };
+            ExitCode::from(code)
+        }
+    }
+}
+
+fn run_graph_rebuild(args: GraphRebuildArgs) -> ExitCode {
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("error: failed to start async runtime: {error}");
+            return ExitCode::from(EXIT_RUNTIME);
+        }
+    };
+    let span = tracing::info_span!(
+        "spec.cli.graph_rebuild",
+        "server.address" = %args.server,
+        "command.id" = tracing::field::Empty,
+        "spec.graph.total_nodes" = tracing::field::Empty,
+    );
+    let result = runtime.block_on(
+        async {
+            let mut client = Client::connect(args.server).await?;
+            client
+                .start_graph_rebuild("spec", env!("CARGO_PKG_VERSION"))
+                .await
+        }
+        .instrument(span),
+    );
+
+    match result {
+        Ok(rebuild) => {
+            tracing::Span::current().record("command.id", rebuild.rebuild_id.as_str());
+            tracing::Span::current().record("spec.graph.total_nodes", rebuild.total_nodes);
+            if args.json {
+                let value = serde_json::json!({
+                    "rebuild_id": rebuild.rebuild_id,
+                    "started_at": rebuild.started_at,
+                    "total_nodes": rebuild.total_nodes,
+                });
+                match serde_json::to_string_pretty(&value) {
+                    Ok(rendered) => println!("{rendered}"),
+                    Err(error) => {
+                        eprintln!("error: failed to render graph rebuild: {error}");
+                        return ExitCode::from(EXIT_RUNTIME);
+                    }
+                }
+            } else {
+                println!(
+                    "Graph rebuild started {}  ({} existing node(s))",
+                    rebuild.rebuild_id, rebuild.total_nodes
+                );
+            }
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            eprintln!("error: {error}");
+            let code = if error.is_bad_input() {
                 EXIT_USAGE
             } else {
                 EXIT_RUNTIME
@@ -577,17 +676,22 @@ fn origin_to_json(origin: &pb::Origin) -> Option<serde_json::Value> {
 mod tests {
     use super::*;
 
-    fn parse_graph(args: &[&str]) -> GraphArgs {
+    fn parse_graph_show(args: &[&str]) -> GraphShowArgs {
         let cli = Cli::try_parse_from(args).expect("graph arguments should parse");
         match cli.command {
-            Command::Graph(args) => args,
+            Command::Graph(GraphArgs {
+                command: GraphCommand::Show(args),
+            }) => args,
+            Command::Graph(GraphArgs {
+                command: GraphCommand::Rebuild(_),
+            }) => panic!("expected graph show command"),
             Command::Add(_) => panic!("expected graph command"),
         }
     }
 
     #[test]
     fn cli_rejects_removed_subcommands() {
-        for command in ["refresh", "select", "pair", "current"] {
+        for command in ["refresh", "redispatch", "select", "pair", "current"] {
             assert!(
                 Cli::try_parse_from(["spec", command]).is_err(),
                 "{command} must not remain on the CLI surface"
@@ -596,8 +700,13 @@ mod tests {
     }
 
     #[test]
-    fn graph_without_arguments_selects_the_whole_graph() {
-        let args = parse_graph(&["spec", "graph"]);
+    fn graph_requires_an_explicit_subcommand() {
+        assert!(Cli::try_parse_from(["spec", "graph"]).is_err());
+    }
+
+    #[test]
+    fn graph_show_without_arguments_selects_the_whole_graph() {
+        let args = parse_graph_show(&["spec", "graph", "show"]);
 
         assert_eq!(args.server, "http://127.0.0.1:50051");
         assert_eq!(args.width, None);
@@ -607,9 +716,10 @@ mod tests {
 
     #[test]
     fn graph_accepts_presentation_options_without_a_seed() {
-        let args = parse_graph(&[
+        let args = parse_graph_show(&[
             "spec",
             "graph",
+            "show",
             "--width",
             "160",
             "--server",
@@ -624,15 +734,37 @@ mod tests {
 
     #[test]
     fn graph_current_and_ledger_are_distinct_views() {
-        let current = parse_graph(&["spec", "graph", "--current"]);
+        let current = parse_graph_show(&["spec", "graph", "show", "--current"]);
         assert!(current.current);
         assert!(!current.ledger);
 
-        let ledger = parse_graph(&["spec", "graph", "--ledger"]);
+        let ledger = parse_graph_show(&["spec", "graph", "show", "--ledger"]);
         assert!(ledger.ledger);
         assert!(!ledger.current);
 
-        assert!(Cli::try_parse_from(["spec", "graph", "--current", "--ledger"]).is_err());
+        assert!(Cli::try_parse_from(["spec", "graph", "show", "--current", "--ledger"]).is_err());
+    }
+
+    #[test]
+    fn graph_rebuild_is_a_distinct_subcommand() {
+        let cli = Cli::try_parse_from([
+            "spec",
+            "graph",
+            "rebuild",
+            "--server",
+            "http://specd:50051",
+            "--json",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Graph(GraphArgs {
+                command: GraphCommand::Rebuild(args),
+            }) => {
+                assert_eq!(args.server, "http://specd:50051");
+                assert!(args.json);
+            }
+            _ => panic!("expected graph rebuild command"),
+        }
     }
 
     #[test]
@@ -683,7 +815,7 @@ mod tests {
             Ok(_) => panic!("graph must not require or accept a positional seed"),
         };
 
-        assert_eq!(error.kind(), clap::error::ErrorKind::UnknownArgument);
+        assert_eq!(error.kind(), clap::error::ErrorKind::InvalidSubcommand);
     }
 
     #[test]

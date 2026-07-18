@@ -10,7 +10,8 @@ use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula, PairingError,
 };
 use so_reason::relate::{
-    assess, assumption_satisfiable, contradicts, envelope_compatible, implies, Outcome, Ternary,
+    assess, assumption_satisfiable, contradicts, envelope_compatible, implies, RelationVerdict,
+    Ternary,
 };
 use so_reason::semantics::*;
 
@@ -593,10 +594,10 @@ fn able_to_guards_ground_a_conditional_contradiction() {
     // capability guards participate in the round-7 guard-aware rule.
     let a = one("While the client is able to retry, the gateway shall throttle the queue.");
     let b = one("While the client is able to retry, the gateway shall not throttle the queue.");
-    assert_eq!(assess(&a, &b), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &b), RelationVerdict::HardContradiction);
     // Differing capability guards do not witness a shared region: Unknown.
     let c = one("While the client is able to pause, the gateway shall not throttle the queue.");
-    assert_eq!(assess(&a, &c), Outcome::Unknown);
+    assert_eq!(assess(&a, &c), RelationVerdict::Unknown);
 }
 
 // ====================================================================================

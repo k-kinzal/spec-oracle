@@ -9,7 +9,7 @@ use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, SourceIssue, SourceIssueReason,
     WellFormedness,
 };
-use so_reason::relate::{assess, refines, Outcome, Ternary};
+use so_reason::relate::{assess, refines, RelationVerdict, Ternary};
 use so_reason::semantics::{references, AntecedentCandidate, Resolution};
 
 fn one(input: &str) -> Sentence {
@@ -29,8 +29,8 @@ fn one(input: &str) -> Sentence {
 fn should_never_refines_shall_via_assess() {
     let advice = one("The service should respond within 5 seconds.");
     let promise = one("The service shall respond within 10 seconds.");
-    assert_eq!(assess(&advice, &promise), Outcome::Unknown);
-    assert_eq!(assess(&promise, &advice), Outcome::Unknown);
+    assert_eq!(assess(&advice, &promise), RelationVerdict::Unknown);
+    assert_eq!(assess(&promise, &advice), RelationVerdict::Unknown);
 }
 
 /// The admissible directions of the force preorder: Binding refines
@@ -44,13 +44,13 @@ fn force_preorder_admissible_directions() {
     let should = one("The service should respond within 10 seconds.");
     assert_eq!(
         assess(&shall, &should),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
     assert_eq!(
         assess(&should, &shall),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: false
         }
     );
@@ -58,7 +58,7 @@ fn force_preorder_admissible_directions() {
     let should_tight = one("The service should respond within 5 seconds.");
     assert_eq!(
         assess(&should_tight, &should),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
@@ -67,14 +67,17 @@ fn force_preorder_admissible_directions() {
     let required = one("The retry count shall be at most 3.");
     assert_eq!(
         assess(&required, &described),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
     // A description does NOT refine a binding obligation.
     let described_tight = one("The retry count is at most 3.");
     let required_loose = one("The retry count shall be at most 5.");
-    assert_eq!(assess(&described_tight, &required_loose), Outcome::Unknown);
+    assert_eq!(
+        assess(&described_tight, &required_loose),
+        RelationVerdict::Unknown
+    );
 }
 
 /// Description pairs are unchanged: same-force interval containment is
@@ -85,13 +88,13 @@ fn description_refinement_unchanged() {
     let loose = one("The retry count is at most 5.");
     assert_eq!(
         assess(&tight, &loose),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
     assert_eq!(
         assess(&loose, &tight),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: false
         }
     );
@@ -524,7 +527,7 @@ fn extended_measure_words_round_trip_and_ground() {
     let loose = one("The daemon shall flush the buffer within twelve seconds.");
     assert_eq!(
         assess(&s, &loose),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );

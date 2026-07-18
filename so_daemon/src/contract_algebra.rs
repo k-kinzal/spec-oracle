@@ -54,6 +54,7 @@ impl AlgebraError {
     }
 }
 
+#[derive(Clone)]
 pub struct DerivationResult {
     pub contract: DerivedNode,
     pub edges: Vec<Edge>,

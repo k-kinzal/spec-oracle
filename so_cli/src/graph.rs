@@ -653,6 +653,7 @@ fn buffer_text(buffer: &Buffer) -> String {
 fn edge_kind(kind: i32) -> (&'static str, bool) {
     match pb::EdgeKind::try_from(kind).unwrap_or(pb::EdgeKind::Unspecified) {
         pb::EdgeKind::MentionsTerm => ("mentions_term", true),
+        pb::EdgeKind::SameLexeme => ("same_lexeme", false),
         pb::EdgeKind::Refines => ("refines", true),
         pb::EdgeKind::Equivalent => ("equivalent", false),
         pb::EdgeKind::HardContradiction => ("hard_contradiction", false),
@@ -693,6 +694,7 @@ fn endpoint_role(role: i32) -> &'static str {
     match pb::EdgeEndpointRole::try_from(role).unwrap_or(pb::EdgeEndpointRole::Unspecified) {
         pb::EdgeEndpointRole::Mentioner => "mentioner",
         pb::EdgeEndpointRole::MentionedTerm => "mentioned_term",
+        pb::EdgeEndpointRole::LexemePeer => "lexeme_peer",
         pb::EdgeEndpointRole::Refiner => "refiner",
         pb::EdgeEndpointRole::Refined => "refined",
         pb::EdgeEndpointRole::EquivalentPeer => "equivalent_peer",
@@ -759,6 +761,11 @@ mod tests {
                 pb::EdgeFamily::Lexical,
                 pb::EdgeEndpointRole::Mentioner,
                 pb::EdgeEndpointRole::MentionedTerm,
+            ),
+            pb::EdgeKind::SameLexeme => (
+                pb::EdgeFamily::Lexical,
+                pb::EdgeEndpointRole::LexemePeer,
+                pb::EdgeEndpointRole::LexemePeer,
             ),
             pb::EdgeKind::Refines => (
                 pb::EdgeFamily::Semantic,

@@ -1,10 +1,10 @@
-//! GitHub Evidence Meta Plugin.
+//! GitHub Evidence enrichment used by the `github-evidence` Consumer.
 //!
 //! GitHub evidence URLs are resolved to an immutable commit through the GitHub
 //! REST API. For `/blob/REF/PATH` URLs the Plugin captures the file at that
 //! commit from `raw.githubusercontent.com`; other repository URLs snapshot the
 //! commit API response. Bytes remain in the BlobStore and the Node receives
-//! only the resulting hash and related commit information.
+//! only the resulting hash and related immutable-commit information.
 
 use std::io::Read;
 use std::time::Duration;
@@ -15,12 +15,10 @@ use sha2::{Digest, Sha256};
 use url::Url;
 
 use crate::domain::{Locator, Node};
-use crate::jobs::{JobOutput, NodeMetaPlugin, PluginContext, PluginRegistration};
+use crate::store::BlobStore;
 
 const MAX_FETCH_BYTES: usize = 16 * 1024 * 1024;
 const FETCH_TIMEOUT: Duration = Duration::from_secs(20);
-
-pub struct GithubEvidencePlugin;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Target {
@@ -31,19 +29,17 @@ struct Target {
     path: Option<Vec<String>>,
 }
 
-impl NodeMetaPlugin for GithubEvidencePlugin {
-    fn handles(&self, node: &Node) -> bool {
-        needs_resolution(node)
+pub(crate) fn resolve_node(
+    node: &Node,
+    blobs: &(dyn BlobStore + Send + Sync),
+    now: &str,
+) -> Result<Value, String> {
+    let targets: Vec<Target> = github_targets(node).collect();
+    let mut resolved = Vec::with_capacity(targets.len());
+    for target in targets {
+        resolved.push(resolve(target, blobs, now)?);
     }
-
-    fn run(&self, node: &Node, context: &PluginContext<'_>) -> Result<JobOutput, String> {
-        let targets: Vec<Target> = github_targets(node).collect();
-        let mut resolved = Vec::with_capacity(targets.len());
-        for target in targets {
-            resolved.push(resolve(target, context)?);
-        }
-        Ok(JobOutput::metadata(json!({ "evidence": resolved })))
-    }
+    Ok(json!({ "evidence": resolved }))
 }
 
 pub fn needs_resolution(node: &Node) -> bool {
@@ -58,10 +54,10 @@ pub fn needs_resolution(node: &Node) -> bool {
 fn github_targets(node: &Node) -> std::vec::IntoIter<Target> {
     let mut targets = Vec::new();
     let mut seen = std::collections::HashSet::new();
-    // Evidence capture runs concurrently with this independent enrichment Job,
+    // Evidence capture runs concurrently with this independent enrichment Consumer,
     // so the durable raw requests are its only input. Captured Evidence is an
     // output/history view and must never be fed back as a new request (notably
-    // for pre-Job legacy Nodes that have no evidence_requests field).
+    // for legacy Nodes that have no evidence_requests field).
     for request in &node.meta.evidence_requests {
         if let Ok(inputs) = crate::evidence::parse_value(request) {
             for input in inputs {
@@ -118,7 +114,11 @@ fn parse_target(source: &str) -> Option<Target> {
     })
 }
 
-fn resolve(target: Target, context: &PluginContext<'_>) -> Result<Value, String> {
+fn resolve(
+    target: Target,
+    blobs: &(dyn BlobStore + Send + Sync),
+    now: &str,
+) -> Result<Value, String> {
     let api_url = api_commit_url(&target)?;
     let api_bytes = fetch(&api_url, "application/vnd.github+json")?;
     let commit: Value = serde_json::from_slice(&api_bytes)
@@ -141,8 +141,7 @@ fn resolve(target: Target, context: &PluginContext<'_>) -> Result<Value, String>
         None => (api_bytes, api_url),
     };
     let content_hash = hash_bytes(&snapshot_bytes);
-    context
-        .blobs
+    blobs
         .put_blob(&content_hash, &snapshot_bytes)
         .map_err(|error| error.to_string())?;
 
@@ -159,7 +158,7 @@ fn resolve(target: Target, context: &PluginContext<'_>) -> Result<Value, String>
             "url": snapshot_url,
             "content_hash": content_hash,
             "bytes": snapshot_bytes.len(),
-            "captured_at": context.now,
+            "captured_at": now,
         }
     }))
 }
@@ -225,14 +224,6 @@ fn decode_segment(segment: &str) -> String {
 
 fn hash_bytes(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
-}
-
-fn make_github() -> Box<dyn NodeMetaPlugin> {
-    Box::new(GithubEvidencePlugin)
-}
-
-inventory::submit! {
-    PluginRegistration::new("github-evidence", make_github)
 }
 
 #[cfg(test)]

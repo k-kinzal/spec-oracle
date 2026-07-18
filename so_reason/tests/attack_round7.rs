@@ -36,7 +36,7 @@ use so_lang::parse::{parse, ParseError};
 use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula, PairingError,
 };
-use so_reason::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
+use so_reason::relate::{assess, contradicts, implies, refines, RelationVerdict, Ternary};
 use so_reason::semantics::skeleton;
 
 fn one(input: &str) -> Sentence {
@@ -75,7 +75,7 @@ fn reordered_frame_conjuncts_now_ground() {
             &one("While the store is open and the till is active, the system shall issue the receipt."),
             &one("While the till is active and the store is open, the system shall not issue the receipt."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -90,14 +90,14 @@ fn or_group_guards_reordered_unknown_same_order_yes() {
             &one("When the order ships or the payment clears, the system shall issue the receipt."),
             &one("When the payment clears or the order ships, the system shall not issue the receipt."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     assert_eq!(
         assess(
             &one("When the order ships or the payment clears, the system shall issue the receipt."),
             &one("When the order ships or the payment clears, the system shall not issue the receipt."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -110,7 +110,7 @@ fn or_group_vs_and_group_guards_stay_unknown() {
             &one("While the store is open or the till is active, the system shall issue the receipt."),
             &one("While the store is open and the till is active, the system shall not issue the receipt."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -123,7 +123,7 @@ fn stacked_frames_equal_conjoined_group() {
             &one("While the store is open, While the till is active, the system shall issue the receipt."),
             &one("While the store is open and the till is active, the system shall not issue the receipt."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -136,7 +136,7 @@ fn duplicate_conjunct_dedupes_into_guard_equality() {
             &one("While the store is open and the store is open, the system shall issue the receipt."),
             &one("While the store is open, the system shall not issue the receipt."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -151,7 +151,7 @@ fn similar_guard_clauses_differing_in_object_stay_unknown() {
             &one("When the reading exceeds the limit, the pump shall stop."),
             &one("When the reading exceeds the threshold, the pump shall not stop."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Different subject casing renders differently: also Unknown — the
     // guard identity is the render, conservative both ways.
@@ -160,7 +160,7 @@ fn similar_guard_clauses_differing_in_object_stay_unknown() {
             &one("When the Order ships, the system shall issue the receipt."),
             &one("When the order ships, the system shall not issue the receipt."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -183,7 +183,7 @@ fn frame_family_and_trigger_kind_are_guard_identity_round10() {
             &one("When the order ships, the system shall issue the receipt."),
             &one("If the order ships, then the system shall not issue the receipt."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // The guarantee formulas now DIFFER across the two trigger kinds: the
     // guard atom carries `Trigger { kind }`.
@@ -197,14 +197,14 @@ fn frame_family_and_trigger_kind_are_guard_identity_round10() {
             &one("Where the store is open, the system shall issue the receipt."),
             &one("While the store is open, the system shall not issue the receipt."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("While the store is open, the system shall issue the receipt."),
             &one("When the store is open, the system shall not issue the receipt."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -218,14 +218,14 @@ fn exception_presence_is_guard_identity() {
             &one("When the order ships, the system shall issue the receipt, unless the customer cancels."),
             &one("When the order ships, the system shall not issue the receipt, unless the customer cancels."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     assert_eq!(
         assess(
             &one("When the order ships, the system shall issue the receipt."),
             &one("When the order ships, the system shall not issue the receipt, unless the customer cancels."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -244,31 +244,31 @@ fn unconditional_refines_conditional() {
     );
     assert_eq!(
         assess(&unframed, &framed),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
 }
 
 /// Guard equality survives render → reparse: the canonical form of a
-/// framed pair keeps the same outcome, `If … , then` rendering included.
+/// framed pair keeps the same result, `If … , then` rendering included.
 #[test]
-fn guard_outcomes_survive_render_reparse() {
+fn guard_verdicts_survive_render_reparse() {
     let pairs = [
         (
             "When the order ships, the system shall issue the receipt.",
             "When the order ships, the system shall not issue the receipt.",
-            Outcome::HardContradiction,
+            RelationVerdict::HardContradiction,
         ),
         (
             "If the disk fails, then the system shall alert the operator.",
             "If the disk fails, then the system shall not alert the operator.",
-            Outcome::HardContradiction,
+            RelationVerdict::HardContradiction,
         ),
         (
             "When the order ships, the system shall issue the receipt, unless the customer cancels.",
             "When the order ships, the system shall not issue the receipt, unless the customer cancels.",
-            Outcome::HardContradiction,
+            RelationVerdict::HardContradiction,
         ),
     ];
     for (a, b, expected) in pairs {
@@ -277,7 +277,7 @@ fn guard_outcomes_survive_render_reparse() {
         assert_eq!(
             assess(&a2, &b2),
             expected,
-            "outcome drifts through render for {a:?}"
+            "result drifts through render for {a:?}"
         );
     }
 }
@@ -296,12 +296,12 @@ fn vacuous_guard_must_not_witness_overlap() {
     let vacuous =
         one("When the order ships, the system shall issue the receipt, unless the order ships.");
     let top = one("The system shall not issue the receipt.");
-    assert_eq!(assess(&vacuous, &top), Outcome::Unknown);
+    assert_eq!(assess(&vacuous, &top), RelationVerdict::Unknown);
     // Equal vacuous guards on both sides: the shared region is still empty.
     let vacuous_not = one(
         "When the order ships, the system shall not issue the receipt, unless the order ships.",
     );
-    assert_eq!(assess(&vacuous, &vacuous_not), Outcome::Unknown);
+    assert_eq!(assess(&vacuous, &vacuous_not), RelationVerdict::Unknown);
 }
 
 // =====================================================================================
@@ -561,12 +561,12 @@ fn count_subjects_with_relatives_use_full_identity() {
     );
 }
 
-/// Count outcomes survive render → reparse.
+/// Count verdicts survive render → reparse.
 #[test]
-fn count_outcomes_survive_render_reparse() {
+fn count_verdicts_survive_render_reparse() {
     let a = one(&one("At least 5 replicas shall run.").render());
     let b = one(&one("At most 3 replicas shall run.").render());
-    assert_eq!(assess(&a, &b), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &b), RelationVerdict::HardContradiction);
 }
 
 /// Counts under a shared guard: the guard-aware rule and the count
@@ -578,14 +578,14 @@ fn guarded_count_exclusion_is_a_conditional_contradiction() {
             &one("When the order ships, at least 5 replicas shall run."),
             &one("When the order ships, at most 3 replicas shall run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     assert_eq!(
         assess(
             &one("When the order ships, at least 5 replicas shall run."),
             &one("When the payment clears, at most 3 replicas shall run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -641,7 +641,7 @@ fn count_obligation_and_count_prohibition_are_satisfiable_together() {
             &one("At least 5 replicas shall run."),
             &one("At least 3 replicas shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -657,7 +657,7 @@ fn exact_count_with_opposite_polarity_is_not_a_contradiction() {
             &one("Exactly 3 replicas shall run."),
             &one("Exactly 3 replicas shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -921,14 +921,14 @@ fn subject_relative_contradiction_and_lossiness() {
             &one("Each request that arrives from the gateway shall be logged."),
             &one("Each request that arrives from the gateway shall not be logged."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     assert_eq!(
         assess(
             &one("Each request that arrives from the gateway shall be logged."),
             &one("Each request that arrives from the proxy shall not be logged."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1037,14 +1037,14 @@ fn universal_permission_vs_no_subject_prohibition_conflicts() {
             &one("Each client may retry."),
             &one("No client shall retry.")
         ),
-        Outcome::EnvelopeConflict
+        RelationVerdict::EnvelopeConflict
     );
     assert_eq!(
         assess(
             &one("No client shall retry."),
             &one("Each client may retry.")
         ),
-        Outcome::EnvelopeConflict
+        RelationVerdict::EnvelopeConflict
     );
 }
 
@@ -1058,14 +1058,14 @@ fn envelope_conflict_requires_full_proposition_identity() {
             &one("The client of the gateway may retry."),
             &one("The client of the proxy shall not retry."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("The client may retry."),
             &one("The client shall not retry within 5 seconds."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1078,7 +1078,7 @@ fn permission_vs_negative_state_description_conflicts() {
             &one("The client may be active."),
             &one("The client is never active.")
         ),
-        Outcome::EnvelopeConflict
+        RelationVerdict::EnvelopeConflict
     );
 }
 
@@ -1093,21 +1093,21 @@ fn envelope_conflict_guard_matrix() {
             &one("While the store is open, the client may retry."),
             &one("While the store is open, the client shall not retry."),
         ),
-        Outcome::EnvelopeConflict
+        RelationVerdict::EnvelopeConflict
     );
     assert_eq!(
         assess(
             &one("When the queue drains, the client may retry."),
             &one("While the store is open, the client shall not retry."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("The client may retry."),
             &one("The client shall not retry, unless the link fails."),
         ),
-        Outcome::EnvelopeConflict
+        RelationVerdict::EnvelopeConflict
     );
 }
 
@@ -1121,21 +1121,21 @@ fn envelope_conflict_scope_pins() {
             &one("At least 3 clients may retry."),
             &one("At least 3 clients shall retry.")
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("The client may retry."),
             &one("The client should not retry.")
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("The client may either retry or reconnect."),
             &one("The client shall not retry."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Coordinated permission subjects: conservative Unknown (the claim is
     // an And over per-item atoms, not a single admissibility atom).
@@ -1144,7 +1144,7 @@ fn envelope_conflict_scope_pins() {
             &one("The client and the proxy may retry."),
             &one("The client shall not retry."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1162,7 +1162,7 @@ fn count_subject_envelope_pair_is_not_a_conflict() {
             &one("At least 3 clients may retry."),
             &one("At least 3 clients shall not retry."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1258,14 +1258,14 @@ fn guarded_duration_exclusion_is_a_conditional_contradiction() {
             &one("When the order ships, the daemon shall retain the log for at least 30 days."),
             &one("When the order ships, the daemon shall retain the log for less than 10 days."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     assert_eq!(
         assess(
             &one("When the order ships, the daemon shall retain the log for at least 30 days."),
             &one("When the payment clears, the daemon shall retain the log for less than 10 days."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 

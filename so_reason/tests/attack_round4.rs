@@ -1526,8 +1526,8 @@ fn seeded_fuzz_never_panics_and_accepted_sentences_render_stably() {
         if rng.next().is_multiple_of(2) {
             input.push('.');
         }
-        let outcome = catch_unwind(AssertUnwindSafe(|| parse(&input)));
-        let result = match outcome {
+        let result = catch_unwind(AssertUnwindSafe(|| parse(&input)));
+        let result = match result {
             Ok(result) => result,
             Err(_) => panic!("parse panicked on fuzz case {case}: {input:?}"),
         };

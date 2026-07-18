@@ -15,7 +15,7 @@ use so_lang::parse::parse;
 use so_reason::formula::{
     claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula, PairingError,
 };
-use so_reason::relate::{assess, contradicts, implies, refines, Outcome, Ternary};
+use so_reason::relate::{assess, contradicts, implies, refines, RelationVerdict, Ternary};
 
 fn one(input: &str) -> Sentence {
     let spec = parse(input).unwrap_or_else(|e| panic!("parse {input:?}: {e}"));
@@ -45,8 +45,8 @@ fn guarantee(input: &str) -> so_reason::formula::Formula {
 fn equal_guards_with_contradicting_claims_are_a_hard_contradiction() {
     let a = one("When the order ships, the system shall issue the receipt.");
     let b = one("When the order ships, the system shall not issue the receipt.");
-    assert_eq!(assess(&a, &b), Outcome::HardContradiction);
-    assert_eq!(assess(&b, &a), Outcome::HardContradiction);
+    assert_eq!(assess(&a, &b), RelationVerdict::HardContradiction);
+    assert_eq!(assess(&b, &a), RelationVerdict::HardContradiction);
 }
 
 /// Framed vs unframed: a Top-guarded prohibition contradicts a When-guarded
@@ -56,11 +56,20 @@ fn equal_guards_with_contradicting_claims_are_a_hard_contradiction() {
 fn top_guard_witnesses_the_other_guards_region() {
     let unframed = one("The system shall not issue the receipt.");
     let framed = one("When the order ships, the system shall issue the receipt.");
-    assert_eq!(assess(&unframed, &framed), Outcome::HardContradiction);
-    assert_eq!(assess(&framed, &unframed), Outcome::HardContradiction);
+    assert_eq!(
+        assess(&unframed, &framed),
+        RelationVerdict::HardContradiction
+    );
+    assert_eq!(
+        assess(&framed, &unframed),
+        RelationVerdict::HardContradiction
+    );
     // A While guard against Top works the same way.
     let stateful = one("While the store is open, the system shall issue the receipt.");
-    assert_eq!(assess(&unframed, &stateful), Outcome::HardContradiction);
+    assert_eq!(
+        assess(&unframed, &stateful),
+        RelationVerdict::HardContradiction
+    );
 }
 
 /// Differing guards never witness an overlap: two different When-guards
@@ -70,14 +79,14 @@ fn top_guard_witnesses_the_other_guards_region() {
 fn differing_guards_stay_unknown() {
     let a = one("When the order ships, the system shall issue the receipt.");
     let b = one("When the payment clears, the system shall not issue the receipt.");
-    assert_eq!(assess(&a, &b), Outcome::Unknown);
-    assert_eq!(assess(&b, &a), Outcome::Unknown);
+    assert_eq!(assess(&a, &b), RelationVerdict::Unknown);
+    assert_eq!(assess(&b, &a), RelationVerdict::Unknown);
     // A one-way guard implication (an extra `and` conjunct) is containment,
     // not an overlap witness: still Unknown, legislated.
     let both =
         one("When the order ships and the store is open, the system shall issue the receipt.");
     let loose = one("When the order ships, the system shall not issue the receipt.");
-    assert_eq!(assess(&both, &loose), Outcome::Unknown);
+    assert_eq!(assess(&both, &loose), RelationVerdict::Unknown);
 }
 
 /// Guards equal and claims imply: the guarantees imply (through the shared
@@ -107,13 +116,13 @@ fn guard_equal_refinement_via_deadline_containment() {
     );
     assert_eq!(
         assess(&tight, &loose),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
     assert_eq!(
         assess(&loose, &tight),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: false
         }
     );
@@ -126,10 +135,16 @@ fn guard_equal_refinement_via_deadline_containment() {
 fn conditional_conflicts_keep_force_classification() {
     let should = one("When the order ships, the system should issue the receipt.");
     let shall_not = one("When the order ships, the system shall not issue the receipt.");
-    assert_eq!(assess(&should, &shall_not), Outcome::AdvisoryTension);
+    assert_eq!(
+        assess(&should, &shall_not),
+        RelationVerdict::AdvisoryTension
+    );
     let described = one("When the order ships, the receipt is issued.");
     let forbidden = one("When the order ships, the receipt shall not be issued.");
-    assert_eq!(assess(&described, &forbidden), Outcome::DescriptiveConflict);
+    assert_eq!(
+        assess(&described, &forbidden),
+        RelationVerdict::DescriptiveConflict
+    );
 }
 
 /// The claim-level pieces are exposed: claim formulas of the guarded pair
@@ -357,7 +372,7 @@ fn at_least_five_refines_at_least_three() {
     );
     assert_eq!(
         assess(&five, &three),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
@@ -406,7 +421,7 @@ fn disjoint_counts_contradict() {
             &one("At least 5 replicas shall run."),
             &one("At most 3 replicas shall run.")
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // `at most 3` and `at least 3` meet at 3: not disjoint.
     assert_eq!(
@@ -562,7 +577,7 @@ fn content_identity_is_full_fidelity() {
             &one("The monitor shall ensure that the reading exceeds the limit."),
             &one("The monitor must ensure that the reading exceeds the limit."),
         ),
-        Outcome::Equivalent
+        RelationVerdict::Equivalent
     );
     // Content-bearing vs content-free atoms never meet.
     assert_eq!(
@@ -576,7 +591,7 @@ fn content_identity_is_full_fidelity() {
             &one("The monitor shall ensure that the reading exceeds the limit."),
             &one("The monitor shall not ensure that the reading exceeds the limit."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -660,7 +675,7 @@ fn relative_roles_are_subject_identity() {
             &one("Each request that arrives from the gateway shall be logged."),
             &one("Each request that arrives from the gateway must be logged."),
         ),
-        Outcome::Equivalent
+        RelationVerdict::Equivalent
     );
     // The full identity string carries the whole tail.
     let sk = so_reason::semantics::skeleton(&one(
@@ -700,15 +715,15 @@ fn relative_depth_stays_bounded() {
 fn permission_against_prohibition_is_an_envelope_conflict() {
     let may = one("The client may retry.");
     let shall_not = one("The client shall not retry.");
-    assert_eq!(assess(&may, &shall_not), Outcome::EnvelopeConflict);
-    assert_eq!(assess(&shall_not, &may), Outcome::EnvelopeConflict);
+    assert_eq!(assess(&may, &shall_not), RelationVerdict::EnvelopeConflict);
+    assert_eq!(assess(&shall_not, &may), RelationVerdict::EnvelopeConflict);
     // A negative description bounds the same way.
     let never = one("The client is never able to retry.");
-    assert_eq!(assess(&may, &never), Outcome::EnvelopeConflict);
+    assert_eq!(assess(&may, &never), RelationVerdict::EnvelopeConflict);
     // Different behaviors do not conflict.
     assert_eq!(
         assess(&may, &one("The client shall not reconnect.")),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -718,11 +733,14 @@ fn permission_against_prohibition_is_an_envelope_conflict() {
 fn envelope_conflict_respects_guards() {
     let framed_may = one("When the queue drains, the client may retry.");
     let framed_not = one("When the queue drains, the client shall not retry.");
-    assert_eq!(assess(&framed_may, &framed_not), Outcome::EnvelopeConflict);
+    assert_eq!(
+        assess(&framed_may, &framed_not),
+        RelationVerdict::EnvelopeConflict
+    );
     // Top-guarded prohibition against a framed permission: still a conflict.
     assert_eq!(
         assess(&framed_may, &one("The client shall not retry.")),
-        Outcome::EnvelopeConflict
+        RelationVerdict::EnvelopeConflict
     );
     // Differing guards: no overlap witness.
     assert_eq!(
@@ -730,7 +748,7 @@ fn envelope_conflict_respects_guards() {
             &framed_may,
             &one("When the link fails, the client shall not retry.")
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -744,30 +762,30 @@ fn permission_against_obligation_and_recommendation_stay_unknown() {
     let may = one("The client may retry.");
     assert_eq!(
         assess(&may, &one("The client shall retry.")),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(&one("The client shall retry."), &may),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(&may, &one("The client should not retry.")),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Permission × permission stays out entirely.
     assert_eq!(
         assess(&may, &one("The client may retry.")),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
-/// The new outcome keeps a stable wire name.
+/// The new result keeps a stable wire name.
 #[test]
 fn envelope_conflict_wire_name() {
-    let json = serde_json::to_value(Outcome::EnvelopeConflict).unwrap();
+    let json = serde_json::to_value(RelationVerdict::EnvelopeConflict).unwrap();
     assert_eq!(json["kind"], "envelope_conflict");
-    let back: Outcome = serde_json::from_value(json).unwrap();
-    assert_eq!(back, Outcome::EnvelopeConflict);
+    let back: RelationVerdict = serde_json::from_value(json).unwrap();
+    assert_eq!(back, RelationVerdict::EnvelopeConflict);
 }
 
 // =====================================================================================
@@ -787,7 +805,7 @@ fn disjoint_durations_contradict() {
             &one("The daemon shall retain the log for at least 30 days."),
             &one("The daemon shall retain the log for less than 10 days."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // Identical intervals under two spellings (`for at least 10` and the
     // plain `for 10` both denote [10, ∞)): not disjoint, so no exclusion —

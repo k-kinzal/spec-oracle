@@ -9,9 +9,11 @@
 
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
 use so_daemon::domain::{
-    Anchor, AssessmentOutcome, DerivedNode, Edge, EdgeKind, Evidence, Kind, Locator, Meta,
+    Anchor, AssessmentVerdict, DerivedNode, Edge, EdgeKind, Evidence, Kind, Locator, Meta,
     MetaUpdate, Node, Origin, RelationAssessment, Snapshot,
 };
+use so_daemon::event_bus::{EventEnvelope, EventKind};
+use so_daemon::event_sink::EventSink;
 use so_daemon::store::{GraphStore, NodeStore};
 
 fn sample_node(id: &str) -> Node {
@@ -53,6 +55,56 @@ fn captured_evidence() -> Evidence {
 }
 
 #[test]
+fn arango_event_sink_duplicate_id_is_idempotent_when_available() {
+    let url = match std::env::var("ARANGODB_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            eprintln!(
+                "skipping arango_event_sink_duplicate_id_is_idempotent_when_available: ARANGODB_URL not set"
+            );
+            return;
+        }
+    };
+    let username = std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
+    let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
+    let database = std::env::var("ARANGODB_DB").unwrap_or_else(|_| "spec_oracle_test".to_string());
+    let store = ArangoNodeStore::connect(&ArangoConfig {
+        url: &url,
+        database: &database,
+        username: &username,
+        password: &password,
+    })
+    .expect("connect to ArangoDB");
+    let event = EventEnvelope {
+        id: format!("event-sink-idempotence-{}", uuid::Uuid::new_v4()),
+        stream_instance_id: "arango-integration-stream".to_string(),
+        sequence: 1,
+        kind: EventKind::NodeAdded,
+        schema_version: 1,
+        emitted_at: "2026-07-18T00:00:00Z".to_string(),
+        command_id: "test-command".to_string(),
+        correlation_id: "test-correlation".to_string(),
+        causation_id: None,
+        subject_ids: vec!["test-node".to_string()],
+        payload: serde_json::json!({"test": "idempotence"}),
+        parent_span: None,
+    };
+    store
+        .persist(std::slice::from_ref(&event))
+        .expect("first archive write");
+    store
+        .persist(std::slice::from_ref(&event))
+        .expect("duplicate archive write");
+    assert_eq!(
+        store
+            .archived_event(&event.id)
+            .expect("read archived Event")
+            .map(|stored| stored.id),
+        Some(event.id)
+    );
+}
+
+#[test]
 fn arango_round_trip_when_available() {
     let url = match std::env::var("ARANGODB_URL") {
         Ok(u) => u,
@@ -73,6 +125,34 @@ fn arango_round_trip_when_available() {
     };
     let store = ArangoNodeStore::connect(&cfg).expect("connect to ArangoDB");
 
+    let archived = EventEnvelope {
+        id: format!("test-event-{}", uuid::Uuid::new_v4()),
+        stream_instance_id: "arango-integration-stream".to_string(),
+        sequence: 1,
+        kind: EventKind::NodeAdded,
+        schema_version: 1,
+        emitted_at: "2026-07-18T00:00:00Z".to_string(),
+        command_id: "test-command".to_string(),
+        correlation_id: "test-correlation".to_string(),
+        causation_id: None,
+        subject_ids: vec!["test-node".to_string()],
+        payload: serde_json::json!({"test": true}),
+        parent_span: None,
+    };
+    store
+        .persist(std::slice::from_ref(&archived))
+        .expect("archive Event");
+    store
+        .persist(std::slice::from_ref(&archived))
+        .expect("duplicate Event ID is idempotent");
+    assert_eq!(
+        store
+            .archived_event(&archived.id)
+            .expect("read archived Event")
+            .map(|event| event.id),
+        Some(archived.id.clone())
+    );
+
     // Relation assessments are append-only audit data, separate from topology.
     let assessment = RelationAssessment {
         id: format!("test-assessment-{}", uuid::Uuid::new_v4()),
@@ -80,7 +160,7 @@ fn arango_round_trip_when_available() {
         right: "candidate-b".into(),
         candidate_derivation: so_daemon::graph_generation::candidate_derivation(),
         semantic_derivation: so_daemon::graph_generation::semantic_derivation(),
-        outcome: AssessmentOutcome::Unknown,
+        verdict: AssessmentVerdict::Unknown,
         recorded_at: "2026-07-12T00:00:00Z".into(),
     };
     assert!(store
@@ -97,7 +177,7 @@ fn arango_round_trip_when_available() {
     );
 
     // Nodes are immutable and this integration database intentionally persists
-    // across runs. A fresh id prevents a prior run's asynchronous Job facts
+    // across runs. A fresh id prevents a prior run's asynchronous Consumer facts
     // from changing the initial-state assertions below.
     let node = sample_node(&format!(
         "test-node-arango-roundtrip-{}",
@@ -117,7 +197,7 @@ fn arango_round_trip_when_available() {
     assert_eq!(back.meta.evidence_requests, node.meta.evidence_requests);
     assert!(back.meta.evidence.is_empty());
 
-    // Job results merge into Node Meta and are idempotent on the Job ID.
+    // Consumer results merge into Node Meta and are idempotent on Delivery ID.
     let update = MetaUpdate {
         source: "arango-test".to_string(),
         applied_at: "2026-07-11T00:00:00Z".to_string(),
@@ -125,10 +205,10 @@ fn arango_round_trip_when_available() {
     };
     let evidence = [captured_evidence()];
     store
-        .apply_job_result(&node.id, "test-job", &update, Some(&evidence))
-        .expect("apply_job_result");
+        .apply_command_update(&node.id, "test-command", &update, Some(&evidence))
+        .expect("apply_command_update");
     let updated = store.get_node(&node.id).unwrap().unwrap();
-    assert_eq!(updated.meta.updates["test-job"], update);
+    assert_eq!(updated.meta.updates["test-delivery"], update);
     assert_eq!(updated.meta.evidence.len(), 1);
     assert_eq!(updated.meta.evidence[0].snapshot.content_hash, "deadbeef");
     // Snapshot bytes stay in the blob store; only metadata is in ArangoDB.
@@ -172,7 +252,7 @@ fn arango_round_trip_when_available() {
         .iter()
         .any(|edge| edge.kind == EdgeKind::HardContradiction));
     assert!(conflict_report
-        .outcomes
+        .verdicts
         .get("hard_contradiction")
         .is_some_and(|count| *count >= 1));
     assert!(conflict_report.assessments_inserted >= 1);

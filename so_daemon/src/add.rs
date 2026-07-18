@@ -2,7 +2,7 @@
 //!
 //! An Add performs exactly two domain operations: parse exactly one constrained
 //! natural-language sentence, then persist exactly one Specification Node. Raw
-//! Evidence descriptors are copied into the Node as retryable Job input; they
+//! Evidence descriptors are copied into the Node as asynchronous Consumer input; they
 //! are not interpreted, resolved, captured, or enriched here. Every derived or
 //! I/O-bearing operation starts from the subsequent `NodeAdded` event.
 
@@ -22,7 +22,7 @@ pub struct AddRequest<'a> {
     pub cli_version: &'a str,
 }
 
-pub struct AddOutcome {
+pub struct AddStatus {
     pub node: Node,
     pub inserted: bool,
 }
@@ -66,10 +66,7 @@ pub fn run(req: &AddRequest<'_>, nodes: &dyn NodeStore) -> Result<Node, AddError
     Ok(run_with_status(req, nodes)?.node)
 }
 
-pub fn run_with_status(
-    req: &AddRequest<'_>,
-    nodes: &dyn NodeStore,
-) -> Result<AddOutcome, AddError> {
+pub fn run_with_status(req: &AddRequest<'_>, nodes: &dyn NodeStore) -> Result<AddStatus, AddError> {
     let policy = so_tracing::capture_policy();
     let span = tracing::info_span!(
         "spec.add.run",
@@ -115,7 +112,7 @@ pub fn run_with_status(
         };
         tracing::Span::current().record("node.id", node.id.as_str());
         tracing::info!("node.id" = %node.id, inserted = false, "existing specification node reused");
-        return Ok(AddOutcome {
+        return Ok(AddStatus {
             node,
             inserted: false,
         });
@@ -123,9 +120,9 @@ pub fn run_with_status(
 
     let node = Node {
         // Specification identity is its accepted source sentence under the
-        // language version. Mailbox identity still scopes Events and Jobs, but
+        // language version. Command identity still scopes fresh Events, but
         // submitting the same Node content again must reuse the stored Node.
-        id: crate::mailbox::derive_id("node", &[so_lang::LANG_VERSION, &sentence.source]),
+        id: crate::identity::derive_id("node", &[so_lang::LANG_VERSION, &sentence.source]),
         statement: sentence.source.clone(),
         lang_version: so_lang::LANG_VERSION.to_string(),
         meta: Meta {
@@ -152,7 +149,7 @@ pub fn run_with_status(
     };
     tracing::Span::current().record("node.id", node.id.as_str());
     tracing::info!("node.id" = %node.id, inserted, "specification node accepted");
-    Ok(AddOutcome { node, inserted })
+    Ok(AddStatus { node, inserted })
 }
 
 #[cfg(test)]

@@ -385,9 +385,9 @@ fn nested_after_sentence(n: usize) -> String {
 fn nested_after_at_the_depth_limit_is_phrase_too_deep_not_a_crash() {
     // The shared budget is MAX_NP_DEPTH = 64; each `after` nests one clause.
     // 64 levels must be the precise error, never an abort.
-    let outcome = catch_unwind(AssertUnwindSafe(|| parse(&nested_after_sentence(64))));
+    let result = catch_unwind(AssertUnwindSafe(|| parse(&nested_after_sentence(64))));
     assert_eq!(
-        outcome.expect("parse must not panic at the depth limit"),
+        result.expect("parse must not panic at the depth limit"),
         Err(ParseError::PhraseTooDeep { limit: 64 })
     );
 }
@@ -424,9 +424,9 @@ fn nested_after_in_exception_definiens_and_purpose_hits_the_bound() {
         // Depth through a VP role, not a clause.
         format!("The pump shall rest{tail}."),
     ] {
-        let outcome = catch_unwind(AssertUnwindSafe(|| parse(&input)));
+        let result = catch_unwind(AssertUnwindSafe(|| parse(&input)));
         assert_eq!(
-            outcome.unwrap_or_else(|_| panic!("parse panicked on {input:?}")),
+            result.unwrap_or_else(|_| panic!("parse panicked on {input:?}")),
             Err(ParseError::PhraseTooDeep { limit: 64 }),
             "for {input:?}"
         );
@@ -443,9 +443,9 @@ fn of_chains_and_after_clauses_share_one_depth_budget() {
         " after the pump runs".repeat(35),
         " of the part".repeat(35)
     );
-    let outcome = catch_unwind(AssertUnwindSafe(|| parse(&deep)));
+    let result = catch_unwind(AssertUnwindSafe(|| parse(&deep)));
     assert_eq!(
-        outcome.expect("parse must not panic"),
+        result.expect("parse must not panic"),
         Err(ParseError::PhraseTooDeep { limit: 64 })
     );
     // The same shape well under the budget parses, with the of-chain inside
@@ -1624,8 +1624,8 @@ const FUZZ_WORDS: &[&str] = &[
 /// Assert that `parse` returns without panicking; when it accepts, the
 /// canonical render must itself parse, and be a render fixpoint.
 fn total_and_coherent(input: &str) {
-    let outcome = catch_unwind(AssertUnwindSafe(|| parse(input)));
-    let Ok(result) = outcome else {
+    let result = catch_unwind(AssertUnwindSafe(|| parse(input)));
+    let Ok(result) = result else {
         panic!("parse panicked on {input:?}");
     };
     let Ok(spec) = result else { return };
@@ -1735,7 +1735,7 @@ fn fuzz_templated_frames_with_random_verbal_tails() {
         // Derived views must be total over whatever parses.
         if let Ok(spec) = parse(&input) {
             for sentence in &spec.sentences {
-                let outcome = catch_unwind(AssertUnwindSafe(|| {
+                let result = catch_unwind(AssertUnwindSafe(|| {
                     let _ = denote(sentence);
                     let _ = skeleton(sentence);
                     let _ = ingest_contract(sentence);
@@ -1746,7 +1746,7 @@ fn fuzz_templated_frames_with_random_verbal_tails() {
                         let _ = contract.saturated();
                     }
                 }));
-                assert!(outcome.is_ok(), "derived views panicked on {input:?}");
+                assert!(result.is_ok(), "derived views panicked on {input:?}");
             }
         }
     }
@@ -1766,8 +1766,8 @@ fn fuzz_deep_role_chains_stay_total() {
             input.push_str(link);
         }
         input.push_str(", the system shall stop.");
-        let outcome = catch_unwind(AssertUnwindSafe(|| parse(&input)));
-        match outcome {
+        let result = catch_unwind(AssertUnwindSafe(|| parse(&input)));
+        match result {
             Ok(Ok(_)) => assert!(n < 64, "depth {n} must exceed the budget"),
             Ok(Err(e)) => assert_eq!(
                 e,

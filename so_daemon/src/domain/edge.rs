@@ -42,6 +42,8 @@ pub enum EndpointRole {
     Unspecified,
     Mentioner,
     MentionedTerm,
+    /// Either specification in the historical symmetric same-lexeme relation.
+    LexemePeer,
     Refiner,
     Refined,
     EquivalentPeer,
@@ -81,6 +83,10 @@ pub enum EndpointRole {
 pub enum EdgeKind {
     /// A specification contains one occurrence of a normalized term form.
     MentionsTerm,
+    /// Historical symmetric lexical relation between specifications that share
+    /// a normalized lexeme. Retained because the append-only Ledger may contain
+    /// this concrete Edge even though current producers use `MentionsTerm`.
+    SameLexeme,
     /// The source specification is the concrete refinement of the target.
     Refines,
     /// The two endpoint specifications state one same-force claim.
@@ -132,6 +138,7 @@ impl EdgeKind {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::MentionsTerm => "mentions_term",
+            Self::SameLexeme => "same_lexeme",
             Self::Refines => "refines",
             Self::Equivalent => "equivalent",
             Self::HardContradiction => "hard_contradiction",
@@ -159,7 +166,7 @@ impl EdgeKind {
 
     pub fn family(self) -> EdgeFamily {
         match self {
-            Self::MentionsTerm => EdgeFamily::Lexical,
+            Self::MentionsTerm | Self::SameLexeme => EdgeFamily::Lexical,
             Self::Refines
             | Self::Equivalent
             | Self::HardContradiction
@@ -185,6 +192,7 @@ impl EdgeKind {
     pub fn endpoint_roles(self) -> (EndpointRole, EndpointRole) {
         match self {
             Self::MentionsTerm => (EndpointRole::Mentioner, EndpointRole::MentionedTerm),
+            Self::SameLexeme => (EndpointRole::LexemePeer, EndpointRole::LexemePeer),
             Self::Refines => (EndpointRole::Refiner, EndpointRole::Refined),
             Self::Equivalent => (EndpointRole::EquivalentPeer, EndpointRole::EquivalentPeer),
             Self::HardContradiction
@@ -266,7 +274,7 @@ pub struct TextAnchor {
     pub role: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Derivation {
     pub method: String,
     pub version: String,
@@ -276,10 +284,15 @@ pub struct Derivation {
 pub struct Edge {
     pub id: String,
     pub source: String,
+    /// Typed endpoints were added after the first Ledger rows. All historical
+    /// specification relationships default to Specification; projection rows
+    /// were introduced together with typed endpoints and always persist this.
+    #[serde(default = "specification_vertex")]
     pub source_kind: VertexKind,
     #[serde(default)]
     pub source_role: EndpointRole,
     pub target: String,
+    #[serde(default = "specification_vertex")]
     pub target_kind: VertexKind,
     #[serde(default)]
     pub target_role: EndpointRole,
@@ -295,9 +308,16 @@ pub struct Edge {
     /// Specifications, beyond the endpoints, that make this connection
     /// checkable. Empty when the endpoints and anchored term incidence are the
     /// complete basis.
+    #[serde(default)]
     pub basis_spec_ids: Vec<String>,
+    #[serde(default)]
     pub derivation: Derivation,
+    #[serde(alias = "recorded_time")]
     pub recorded_at: String,
+}
+
+fn specification_vertex() -> VertexKind {
+    VertexKind::Specification
 }
 
 impl Edge {
@@ -680,6 +700,7 @@ mod tests {
     fn every_edge_kind_has_one_family_and_endpoint_role_pair() {
         let cases = [
             (EdgeKind::MentionsTerm, EdgeFamily::Lexical),
+            (EdgeKind::SameLexeme, EdgeFamily::Lexical),
             (EdgeKind::Refines, EdgeFamily::Semantic),
             (EdgeKind::Equivalent, EdgeFamily::Semantic),
             (EdgeKind::HardContradiction, EdgeFamily::Semantic),
@@ -715,6 +736,35 @@ mod tests {
             assert_eq!(edge.family(), family);
             edge.validate().unwrap();
         }
+    }
+
+    #[test]
+    fn historical_same_lexeme_kind_remains_deserializable() {
+        let kind: EdgeKind = serde_json::from_str("\"same_lexeme\"").unwrap();
+        assert_eq!(kind, EdgeKind::SameLexeme);
+        assert_eq!(kind.as_str(), "same_lexeme");
+        assert_eq!(kind.family(), EdgeFamily::Lexical);
+    }
+
+    #[test]
+    fn historical_untyped_relation_edge_remains_deserializable() {
+        let edge: Edge = serde_json::from_value(serde_json::json!({
+            "id": "legacy-edge",
+            "source": "a",
+            "target": "b",
+            "kind": "same_lexeme",
+            "recorded_time": "t",
+            "schema": {"id": "spec.same_lexeme", "version": "1"}
+        }))
+        .unwrap();
+
+        assert_eq!(edge.kind, EdgeKind::SameLexeme);
+        assert_eq!(edge.source_kind, VertexKind::Specification);
+        assert_eq!(edge.target_kind, VertexKind::Specification);
+        assert_eq!(edge.source_role, EndpointRole::Unspecified);
+        assert_eq!(edge.target_role, EndpointRole::Unspecified);
+        assert_eq!(edge.derivation, Derivation::default());
+        assert_eq!(edge.recorded_at, "t");
     }
 
     #[test]

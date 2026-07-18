@@ -13,7 +13,7 @@ pub mod selection;
 pub mod snapshot;
 pub mod term;
 
-pub use assessment::{AssessmentOutcome, RelationAssessment};
+pub use assessment::{AssessmentVerdict, RelationAssessment};
 pub use derived::DerivedNode;
 pub use edge::{Derivation, Edge, EdgeFamily, EdgeKind, EndpointRole, TextAnchor, VertexKind};
 pub use locator::{Kind, Locator};

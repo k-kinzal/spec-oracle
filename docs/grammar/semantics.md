@@ -359,10 +359,12 @@ assumption conjunct, and never counts against the aggregate). The
 individual booleans stay as diagnostics. The graph layer decides;
 nothing in `so-reason` rejects or repairs a formed contract.
 
-**Daemon realization.** The `AddAssumptionRelation` RPC is the graph-side
-decision point. Its Edge stores `source` (evidence), `target` (the conditioned
-guarantee owner), and `relied_spec_id` (the authored awaited assertion) as
-distinct fields. `specd` re-parses all three, uses
+**Daemon realization.** The internal `EstablishOccurrenceReliance`,
+`EstablishGuaranteeDischarge`, and `EstablishAdmissibilityEnvelope` Command
+Handlers are the graph-side decision points; they are not exposed as RPCs
+without concrete producer use cases. Their Edges store `source` (evidence),
+`target` (the conditioned guarantee owner), and `relied_spec_id` (the authored
+awaited assertion) as distinct fields. `specd` re-parses all three, uses
 `for_guarantee_with_relied`, requires a `Yes` entailment rather than accepting
 the language layer's candidate `Unknown`, requires every non-envelope source
 to be contract-forming, assembles it with every current pairing into the same
@@ -1053,10 +1055,10 @@ pub fn implies(a: &Formula, b: &Formula) -> Ternary
 pub fn contradicts(a: &Formula, b: &Formula) -> Ternary
 pub fn refines(concrete: &FormedContract, abstract_: &FormedContract) -> Ternary
 // round 6 — the force-AWARE end-to-end judgment (round 7 adds EnvelopeConflict):
-pub enum Outcome { HardContradiction, AdvisoryTension, DescriptiveConflict,
+pub enum RelationVerdict { HardContradiction, AdvisoryTension, DescriptiveConflict,
                    Refinement { concrete_is_a: bool }, Equivalent, Independent,
                    EnvelopeConflict, Unknown }
-pub fn assess(a: &Sentence, b: &Sentence) -> Outcome
+pub fn assess(a: &Sentence, b: &Sentence) -> RelationVerdict
 // round 8 — contract-level checks for paired assumptions (never return Yes):
 pub fn assumption_satisfiable(c: &FormedContract) -> Ternary
 pub fn envelope_compatible(c: &FormedContract) -> Ternary
@@ -1241,14 +1243,14 @@ must never be treated as `No`.**
   case between two statements is already caught by `assess`'s
   `EnvelopeConflict`.
 
-### Force-aware outcomes (`assess`, round 6; guard-aware and envelope-aware since round 7)
+### Force-aware verdicts (`assess`, round 6; guard-aware and envelope-aware since round 7)
 
 `assess(a, b)` is the end-to-end judgment: it builds the two contract
 formulas, runs the force-blind core, then classifies by act and force —
 the re-application of context the round-5 caveat asked consumers to do.
 First match wins:
 
-| Condition | Outcome |
+| Condition | RelationVerdict |
 | --- | --- |
 | a permission on either side, crossed by a prohibition, a subject-`no` obligation, or a negative description of the SAME behavior (matching proposition, full identities included, guards witnessing a shared region; count subjects exempt — see below) | `EnvelopeConflict` (round 7) — the prohibition forbids exactly what the permission admits |
 | a permission on either side, otherwise — permission × obligation over one atom included | `Unknown` — LEGISLATED (round 7): an obligation implies admissibility, so nothing conflicts, but certifying the pair COMPATIBLE is graph work, not a language fact; permissions otherwise participate via PAIRING, not head-to-head assessment |
@@ -1357,7 +1359,7 @@ refrainers), so the prohibition does not forbid exactly what the
 permission admits — only Definite/Universal subjects make the two atoms
 co-referential.
 
-Every non-`Unknown` outcome inherits the structural-proof trust of the
+Every non-`Unknown` verdict inherits the structural-proof trust of the
 core; `The pump should stop.` vs `The pump shall not stop.` is
 `AdvisoryTension`, `The request is logged.` vs `The request shall not be
 logged.` is `DescriptiveConflict`, and `The retry count shall be at most

@@ -11,7 +11,7 @@ use super::Derivation;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum AssessmentOutcome {
+pub enum AssessmentVerdict {
     /// Sentence-level force-aware refinement.
     Refines {
         concrete: String,
@@ -42,7 +42,7 @@ pub enum AssessmentOutcome {
     ContractEquivalent,
     ContractIncomparable,
     /// A proved `G_source ⇒ A_target` opportunity. It remains audit data until
-    /// an explicit selection promotes it to GuaranteeDischarge topology.
+    /// an explicit decision accepts it into GuaranteeDischarge topology.
     DischargeCandidate {
         source: String,
         target: String,
@@ -54,13 +54,47 @@ pub enum AssessmentOutcome {
 pub struct RelationAssessment {
     pub id: String,
     /// Canonically ordered endpoint ids. Semantic direction, when any, lives
-    /// in [`AssessmentOutcome::Refines`].
+    /// in [`AssessmentVerdict::Refines`].
     pub left: String,
     pub right: String,
     /// How this pair entered the assessment frontier.
     pub candidate_derivation: Derivation,
-    /// Which graph-facing judgment rules produced `outcome`.
+    /// Which graph-facing judgment rules produced `verdict`.
     pub semantic_derivation: Derivation,
-    pub outcome: AssessmentOutcome,
+    /// Historical rows called this same concrete judgment `outcome`. The
+    /// append-only Ledger must retain and expose it without rewriting the row.
+    #[serde(alias = "outcome")]
+    pub verdict: AssessmentVerdict,
     pub recorded_at: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn historical_outcome_field_remains_deserializable_as_the_concrete_verdict() {
+        let assessment: RelationAssessment = serde_json::from_value(serde_json::json!({
+            "id": "assessment-1",
+            "left": "a",
+            "right": "b",
+            "candidate_derivation": {"method": "candidate", "version": "1"},
+            "semantic_derivation": {"method": "semantic", "version": "1"},
+            "outcome": {
+                "kind": "refines",
+                "concrete": "a",
+                "abstract_": "b"
+            },
+            "recorded_at": "t"
+        }))
+        .unwrap();
+
+        assert_eq!(
+            assessment.verdict,
+            AssessmentVerdict::Refines {
+                concrete: "a".into(),
+                abstract_: "b".into(),
+            }
+        );
+    }
 }

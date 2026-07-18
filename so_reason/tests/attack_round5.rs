@@ -1556,10 +1556,10 @@ impl Rng {
 }
 
 fn total(input: &str) {
-    let outcome = catch_unwind(AssertUnwindSafe(|| {
+    let result = catch_unwind(AssertUnwindSafe(|| {
         let _ = parse(input);
     }));
-    assert!(outcome.is_ok(), "parse panicked on {input:?}");
+    assert!(result.is_ok(), "parse panicked on {input:?}");
 }
 
 #[test]

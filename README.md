@@ -17,11 +17,11 @@ results are Contract Nodes too. (Definitions establish vocabulary and permission
 *admit* behavior, so neither carries a lone-sentence contract; a permission
 enters contracts only through pairing, on the environment side.) A Specification
 Node is accepted before its requested Evidence is captured; the post-acceptance
-Job appends the captured view and materializes shared Evidence Nodes.
+Consumer appends the captured view and materializes shared Evidence Nodes.
 
 > **Scope.** The tool ingests (`spec add` — parse exactly one sentence and
 > persist exactly one Node), processes Evidence and graph structure through
-> Jobs, and renders the same Ledger-derived graph through `spec graph`.
+> Event Consumers, and renders the same Ledger-derived graph through `spec graph show`.
 > The `--current` graph view exposes the automatically selected specification
 > set without adding a separate command surface.
 > NodeAdded generation
@@ -29,7 +29,7 @@ Job appends the captured view and materializes shared Evidence Nodes.
 > connectors are a versioned candidate search, not semantic identity. Candidate
 > pairs that `so-reason::relate::assess` can prove become the first persisted
 > semantic Edge family: refinement, equivalence, and force-aware conflicts.
-> Unknown/Independent outcomes are audit records rather than topology, and Edge
+> Unknown/Independent verdicts are audit records rather than topology, and Edge
 > absence has no negative meaning. Formula-level and Contract-level judgments
 > are separate audit records; proved A/G refinement/equivalence connects
 > Contract Nodes rather than overloading sentence Edges. The trivial ingest
@@ -69,10 +69,10 @@ they do not depend on each other.
 | `so-tracing` | lib                  | Shared tracing/OpenTelemetry setup and gRPC trace propagation.                           |
 | `ui`         | Next.js app          | Instanced 3D graph visualization (Three.js/WebGL with a `d3-force-3d` Worker). A thin BFF speaks gRPC to `specd`; not a Cargo crate. See [`ui/README.md`](ui/README.md). |
 
-**Acceptance and processing are separate.** The Add Mailbox in `specd` parses
+**Acceptance and processing are separate.** The AddNode Command handler in `specd` parses
 exactly one sentence and persists exactly one Node, retaining Evidence
 descriptors verbatim. A successful save emits an in-process `NodeAdded` event;
-registered Jobs then capture Evidence, store snapshot blobs, enrich origin, and
+registered Event Consumers then capture Evidence, store snapshot blobs, enrich origin, and
 derive graph structure. Successful results are appended to Node Meta. The
 client only resolves input
 *channels* — reading the descriptor from its own files/stdin — and forwards the
@@ -81,12 +81,12 @@ resolved against the daemon's filesystem/git**, so the daemon must run where
 the evidence lives (or where a checkout of it is reachable).
 
 ```text
-spec (CLI) ──▶ so-client ──gRPC──▶ specd Add Mailbox ──▶ Specification Node
-  resolves @file/-/inline              │         Parse + persist only
-                                       └─NodeAdded─▶ Job Mailbox
-                                                      ├─ Evidence Node + blob
-                                                      ├─ origin enrichment
-                                                      └─ term + A/G + semantic graph generation
+spec (CLI) ──▶ so-client ──gRPC──▶ specd Command Bus ──▶ Specification Node
+  resolves @file/-/inline              │       AddNode Ack
+                                       └─NodeAdded─▶ volatile Event Bus
+                                                       ├─ Evidence Consumer
+                                                       ├─ origin Consumer
+                                                       └─ graph Consumers
 ```
 
 ## The language
@@ -125,7 +125,7 @@ Storage is split by concern (both owned by the daemon):
   `#[serde(skip)]`, so bytes never travel into the database — or across the wire
   — only the hash does.
 
-A Mailbox submission still receives a random `message_id` for request tracing,
+A Command submission receives a random `command_id` for identity and tracing,
 but a Specification Node ID is a SHA-256 of its accepted sentence and
 language version. Adding the same sentence again therefore returns the existing
 Node; any new Evidence descriptors are merged into that Node's retryable input
@@ -135,26 +135,85 @@ except its recording time, so an identical Edge is reused even if a producer is
 retried or supplies another incidental ID. Content-addressing applies to blobs
 independently.
 
-## In-memory Jobs
+## Volatile Commands and Events
 
-The Add and Job Mailboxes are process-local by design. The Add RPC succeeds when
-the one Node save succeeds; Evidence availability and all other Job completion
-are separate concerns.
-Each `NodeAdded` Event is Node-addressed, and each hook derives a stable Job ID
-from that Event ID and Plugin name. Concurrent duplicate submissions therefore
-coalesce while an incomplete existing Node can be reconciled after restart.
-The Job manager retains ownership while a worker runs, retries failures and
-worker panics with bounded exponential backoff, and applies successful results
-idempotently under that Job ID in Node Meta.
+The Command Bus and Event Bus are process-local by design. The standard flow is
+Command → handler completion/fresh Event → per-Consumer Delivery.
+Each Consumer independently receives its Delivery, submits the next Command,
+waits for that Command to complete, and explicitly Acks or Nacks the Delivery.
+The Event Bus retains an accepted Event until every Consumer that was subscribed
+at acceptance has acknowledged its independent Delivery. It does not start or
+invoke Consumers, execute Plugins, submit Commands, interpret processing
+results, or access the Ledger.
 
-Graceful shutdown stops gRPC intake, drains the Add Mailbox and its NodeAdded
-events, then drains the Job Mailbox. A Job that continues to fail prevents
-shutdown from completing, preserving the requirement that accepted work reaches
-a consistent result. Job/Event scheduling state is never written to ArangoDB;
-the database contains specification nodes, derived term-form, Evidence,
-Assumption, and Guarantee nodes, versioned Edges, and non-topological
-relation-assessment audit records—not transient
-queue state.
+A Nack schedules bounded-backoff redelivery. An expired lease makes the same
+Event and stable Delivery ID available for another attempt; an Ack from an
+older attempt cannot complete the newer one. Consumer Commands use an ID
+derived from Consumer ID, Event ID, and operation, so redelivery repeats the
+same idempotent Command. A Consumer registered later does not receive older
+retained Events.
+
+Events are intentionally not replayed after restart: a new daemon starts a new,
+empty stream. There is no generic Node-processing Event, startup Reconciler, or
+historical Event replay. Graph re-entry is expressed by the concrete
+`StartGraphRebuild` and `BeginNodeGraphRebuild` Commands below. A future
+Evidence recapture or other lifecycle operation must likewise introduce a
+concrete Command/Event pair that names the fact that occurred; it must not
+synthesize `NodeAdded` or publish an implementation-level wake-up signal.
+
+Graceful shutdown stops gRPC intake, drains Commands, derived Events, and all
+accepted Deliveries. An EventTap separately copies accepted Events into
+pluggable best-effort archives. The ArangoDB sink is enabled with the ArangoDB
+store; sink failure or a full sink mailbox is observable but never participates
+in Consumer Ack or recovery. Ledger Nodes and Edges remain the persistent
+authority, not the transient queue or its archive.
+
+Command handlers are the only publishers of processing Events:
+
+| Command | Fresh Event |
+| --- | --- |
+| `AddNode` | `NodeAdded` |
+| `ReplaceEvidenceRequests` | `EvidenceRequestsReplaced` |
+| `StartGraphRebuild` | `GraphRebuildStarted` |
+| `BeginNodeGraphRebuild` | `NodeGraphRebuildStarted` |
+| `CompleteGraphRebuildPage` | `GraphRebuildPageCompleted` |
+| `DeriveContract` | `ContractDerived` |
+| `EstablishOccurrenceReliance` | `OccurrenceRelianceEstablished` |
+| `EstablishGuaranteeDischarge` | `GuaranteeDischargeEstablished` |
+| `EstablishAdmissibilityEnvelope` | `AdmissibilityEnvelopeEstablished` |
+| `AcceptDischargeCandidate` | `DischargeCandidateAccepted` |
+| `SupportSpecification` | `SpecificationSupported` |
+| `DefeatSpecification` | `SpecificationDefeated` |
+| `SupersedeSpecification` | `SpecificationSuperseded` |
+| `ProjectNodeTerms` | `NodeTermsProjected` |
+| `ProjectNodeContract` | `NodeContractProjected` |
+| `CaptureEvidence` | `EvidenceCaptured` when capture applies |
+| `PinGithubEvidenceToCommit` | `GithubEvidencePinnedToCommit` when pinning applies |
+| `AssessNodeSemanticRelations` | `NodeSemanticRelationAssessmentCompleted` |
+| `AssessNodeContractRelations` | `NodeContractRelationAssessmentCompleted` |
+| `AssessNodeDischargeCandidates` | `NodeDischargeCandidateAssessmentCompleted` |
+
+The 20 concrete Command kinds therefore map to 20 distinct concrete Event
+kinds. Concrete Events are never rounded into names such as `ContractChanged`,
+`EdgeAdded`, or `RelationAssessed`. Subscriptions may additionally select the
+abstract categories `DomainEvent`, `GraphEvent`, `NodeEvent`, `EvidenceEvent`,
+`ContractEvent`, `RelationEvent`, `ProjectionEvent`, `AssessmentEvent`, and
+`SelectionEvent`. A category match delivers the original concrete Event once;
+it does not emit another abstract Event. One concrete kind may belong to
+several categories.
+
+The built-in Consumer subscriptions are:
+
+| Consumer | Events received | Command submitted |
+| --- | --- | --- |
+| `graph-rebuild` | `GraphRebuildStarted`, `GraphRebuildPageCompleted` | bounded `BeginNodeGraphRebuild` Commands, then `CompleteGraphRebuildPage` |
+| `term-projection` | `NodeAdded`, `NodeGraphRebuildStarted` | `ProjectNodeTerms` |
+| `contract-projection` | `NodeAdded`, `NodeGraphRebuildStarted` | `ProjectNodeContract` |
+| `evidence-capture` | `NodeAdded`, `EvidenceRequestsReplaced` | `CaptureEvidence` |
+| `github-evidence` | `NodeAdded`, `EvidenceRequestsReplaced` | `PinGithubEvidenceToCommit` |
+| `semantic-relation` | `NodeTermsProjected` | `AssessNodeSemanticRelations` |
+| `contract-relation` | `NodeContractProjected`, the three established A/G relation Events, `DischargeCandidateAccepted` | `AssessNodeContractRelations` |
+| `discharge-candidate` | contract projection, established A/G and selection facts, completed semantic/contract assessments | `AssessNodeDischargeCandidates` |
 
 ## Quickstart
 
@@ -173,12 +232,12 @@ docker compose ps             # wait until arangodb is "healthy"
 #    This also exports the local OpenTelemetry defaults from .env.example.
 set -a; . ./.env; set +a
 
-# 4. Start the daemon. Evidence Jobs resolve files against its working
+# 4. Start the daemon. Evidence Consumers resolve files against its working
 #    directory, so run it from the repo root. Listens on 127.0.0.1:50051.
 cargo run --bin specd
 
 # 5. In another shell, add your first specification. The Node is accepted first;
-#    its Evidence Job then captures and hashes the file region.
+#    its Evidence Consumer then captures and hashes the file region.
 cargo run --bin spec -- add \
   "When evidence is captured, the system shall record its content hash." \
   --evidence so_daemon/src/snapshot.rs:1
@@ -194,26 +253,26 @@ deleting that directory.
 
 ### Reading the graph
 
-`spec graph` renders the one specification graph in the terminal. With no
+`spec graph show` renders the one specification graph in the terminal. With no
 required selector or starting Node, it reads the whole candidate population
 under the current derivation policies and draws its Node/Edge topology directly
 in the terminal:
 
 ```sh
 # Read and draw the whole specification graph.
-cargo run --bin spec -- graph
+cargo run --bin spec -- graph show
 
 # Set the terminal drawing width without changing the selected graph.
-cargo run --bin spec -- graph --width 160
+cargo run --bin spec -- graph show --width 160
 
 # Draw the current-set projection: selected specifications and only the current
 # relationships and projections that remain attached to them.
-cargo run --bin spec -- graph --current --width 160
+cargo run --bin spec -- graph show --current --width 160
 
 # Audit every immutable Edge version; current derivations stay marked and
 # historical derivations are dimmed. This includes the provisional ⊤
 # projection after pairing.
-cargo run --bin spec -- graph --ledger --width 160
+cargo run --bin spec -- graph show --ledger --width 160
 ```
 
 The daemon still returns bounded keyset pages because transport must remain
@@ -232,7 +291,7 @@ Current specifications use `◆`; candidates outside the current set use `◇`. 
 semantic Edge is owned by its lexically smaller endpoint for pagination, so it
 may arrive before its other endpoint and is rendered after the complete walk.
 Paging is an implementation detail of the read; it does not select a finite
-subgraph. `spec graph` uses the current derivation view across the candidate
+subgraph. `spec graph show` uses the current derivation view across the candidate
 population; `--current` renders its selected induced graph. `--ledger` instead
 walks the separate Edge-id-keyset Ledger API and renders every recorded Edge
 version. The Ledger header reports current and recorded Edge counts, and
@@ -240,6 +299,36 @@ historical edges are dimmed, so persistence history is visible without being
 mistaken for the current specification graph. Future graph filters belong to
 optional flags rather than required seeds. `--server` selects the daemon and
 `--width` changes presentation only.
+
+### Rebuilding graph derivations
+
+`spec graph rebuild` asynchronously reapplies the installed graph derivations
+to every authored Node currently visible to the daemon:
+
+```sh
+spec graph rebuild
+spec graph rebuild --json
+```
+
+The Command Handler emits `GraphRebuildStarted`. The `graph-rebuild` Consumer
+walks Nodes in bounded keyset pages and submits one idempotent
+`BeginNodeGraphRebuild` Command per Node. That Command records the rebuild
+entry on the Node and emits the concrete `NodeGraphRebuildStarted` fact;
+ordinary graph Consumers receive it alongside `NodeAdded` and submit their
+normal projection Commands. Evidence Consumers do not receive it, so rebuilding
+the graph never repeats external Evidence capture.
+
+Each bounded scan page ends with
+`CompleteGraphRebuildPage → GraphRebuildPageCompleted`; the next page is
+therefore another Event Delivery rather than one unbounded Consumer lease.
+The rebuild is volatile across daemon restart, like every other Command/Event
+chain. It does not replay `NodeAdded` and has no historical Event dependency.
+
+Ledger Edges are never deleted. Reapplying an unchanged derivation is
+idempotent, a changed derivation version appends new history and recedes the old
+version from the current view, and a newly installed derivation appends the
+Edges that older Nodes did not previously have. Thus “rebuild” replaces the
+current derived graph semantically while preserving its audit history.
 
 ### Viewing the current specification set
 
@@ -256,10 +345,10 @@ flag:
 
 ```sh
 # The selected specification set as a relationship-preserving graph.
-spec graph --current
+spec graph show --current
 ```
 
-`spec graph --current` walks the daemon's bounded pages and rejects a changing
+`spec graph show --current` walks the daemon's bounded pages and rejects a changing
 or incomplete walk instead of silently rendering a partial set. The UI Current-set
 panel reports selected/loaded candidates, candidates without direct Evidence,
 net Counter Evidence, transferred-support-only selections, and any selected
@@ -294,7 +383,7 @@ guarantee.
 
 A proved `G_source ⇒ A_target` opportunity is first stored as a
 `DischargeCandidate` Assessment, not an Edge. It becomes the existing
-`GuaranteeDischarge` relation only through explicit promotion, which runs the
+`GuaranteeDischarge` relation only through explicit acceptance, which runs the
 complete pairing validation again. Contract refinement/equivalence and
 composition/quotient/merge are described in
 [`docs/assume-guarantee-contracts.md`](docs/assume-guarantee-contracts.md).
@@ -304,7 +393,7 @@ composition/quotient/merge are described in
 A Next.js app visualizes the graph as a force-directed 3D cloud (instanced
 Three.js/WebGL with a `d3-force-3d` Worker), coloring authored nodes by speech
 act and derived nodes by kind. It is an independent graph
-view and is not launched or controlled by `spec graph`. It pages in bounded
+view and is not launched or controlled by `spec graph show`. It pages in bounded
 batches and caps what it renders. Its **Ledger** tab lazily walks the same
 bounded historical Edge API: current derivations retain their relation colors while
 superseded derivations and projections are dimmed and identified as `Ledger
@@ -333,13 +422,13 @@ See [`ui/README.md`](ui/README.md) for details.
 A locator is an `http(s)://` URL (fetched and snapshotted) or a filesystem path
 with an optional `:line[:col]` suffix (the cited region, with context, is
 captured and hashed). The referenced file or URL is resolved **in the daemon**
-by the asynchronous Evidence Job. An unreadable locator does not roll back the
-accepted specification; the Job remains retryable.
+by the asynchronous Evidence Consumer. An unreadable locator does not roll back the
+accepted specification; the Delivery remains retryable.
 
 Prefix a value with `@` to read the evidence *descriptor* from a file, or use `-`
 to read it from stdin. These channels are resolved on the **client** (they name
 the client's own streams); the resulting text is persisted verbatim on the
-Node, then interpreted and captured by the daemon's Evidence Job. A successful
+Node, then interpreted and captured by the daemon's Evidence Consumer. A successful
 capture also creates or reuses a content-addressed Evidence Node and connects it
 with a `grounded_by` projection Edge.
 
@@ -368,7 +457,7 @@ so they do not leak into shell history or the process table.
 | `ARANGODB_DB`       | `--arango-db`   | `spec_oracle`            | Database name (auto-created).                        |
 | `ARANGODB_USER`     | *(env only)*    | `root`                   | Authenticating user.                                 |
 | `ARANGODB_PASSWORD` | *(env only)*    | *(empty)*                | Password. Must match the container's root password.  |
-| `GITHUB_TOKEN`      | *(env only)*    | *(unset)*                | Optional bearer token for GitHub Evidence Jobs.       |
+| `GITHUB_TOKEN`      | *(env only)*    | *(unset)*                | Optional bearer token for GitHub Evidence Consumers.  |
 
 The store backend is **selectable**: `--store arango` (default) persists to
 ArangoDB, while `--store memory` runs a first-class in-memory backend with no
@@ -471,34 +560,45 @@ binary (e.g. an `extern crate`/`use`).
 
 [`inventory`]: https://docs.rs/inventory
 
-## Extending: Node Meta Plugins
+## Extending: Event Consumers
 
-`NodeMetaPlugin` hooks run after a Node has been saved. `handles(&Node)` selects
-applicable Nodes and `run(&Node, &PluginContext)` returns a Plugin-owned JSON
-value. Register a stable name at link time:
+An Event Consumer is an independently running receive loop, not a callback
+owned by the Event Bus. It registers a stable Consumer ID and the Event kinds
+it needs, receives leased Deliveries, and explicitly Acks only after its work
+has completed. Domain work normally enters the Command Bus; the Command handler
+owns persistence and publication of any fresh Event.
+
+Plugins use this same interface as one possible kind of Consumer. There is no
+Plugin-specific queue, retry loop, completion value, or Event publication
+path. The daemon's built-in Evidence and graph processors are ordinary
+Consumers wired by `consumer::built_in_consumers`.
 
 ```rust
-use so_daemon::jobs::{NodeMetaPlugin, PluginContext, PluginRegistration};
+use so_daemon::event_bus::{EventBus, EventBusError, EventKind, Subscription};
 
-struct TrackerPlugin;
-impl NodeMetaPlugin for TrackerPlugin {
-    fn handles(&self, node: &so_daemon::domain::Node) -> bool { /* ... */ true }
-    fn run(
-        &self,
-        node: &so_daemon::domain::Node,
-        context: &PluginContext<'_>,
-    ) -> Result<serde_json::Value, String> { /* ... */ todo!() }
-}
-fn make() -> Box<dyn NodeMetaPlugin> { Box::new(TrackerPlugin) }
+async fn consume(events: EventBus) -> Result<(), EventBusError> {
+    events
+        .register(Subscription::new(
+            "tracker",
+            [EventKind::NodeAdded],
+            1,
+        ))
+        .await?;
 
-so_daemon::inventory::submit! {
-    PluginRegistration::new("tracker", make)
+    loop {
+        let delivery = events.receive("tracker").await?;
+
+        // Submit an idempotent Command derived from delivery.event.id and wait
+        // for its handler to finish before acknowledging this attempt.
+        process_with_a_command(&delivery.event).await;
+
+        events.ack(&delivery).await?;
+    }
 }
 ```
 
-Plugins can execute more than once and must keep their external effects
-idempotent. The Node update itself is idempotent because retries use the same
-Mailbox-derived Job ID. The built-in `github-evidence` Plugin handles
+Consumers can execute more than once, so their Commands and any external
+effects must be idempotent. The built-in `github-evidence` Consumer handles
 `https://github.com/OWNER/REPO/...` evidence: it resolves the commit through the
 GitHub REST API and, for `/blob/REF/PATH`, captures the commit-fixed raw file in
 the BlobStore before recording its hash and commit metadata on the Node.

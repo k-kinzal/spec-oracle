@@ -1,16 +1,16 @@
 //! Asynchronous Evidence capture for an accepted Specification Node.
 //!
 //! The Add path persists caller-supplied descriptors verbatim and performs no
-//! Evidence interpretation or I/O. This Job expands those descriptors, captures
+//! Evidence interpretation or I/O. This Consumer expands those descriptors, captures
 //! each locator, stores snapshot bytes by content hash, enriches origin, and
 //! creates or reuses content-addressed Evidence graph Nodes, and atomically
-//! appends the captured Evidence plus its durable Job result.
+//! appends the captured Evidence plus its durable Consumer result.
 
-use serde_json::json;
+use serde_json::{json, Value};
 
 use crate::domain::{Derivation, DerivedNode, Edge, EdgeKind, Evidence, Node};
 use crate::evidence::{self, EvidenceInput};
-use crate::jobs::{JobOutput, NodeMetaPlugin, PluginContext, PluginRegistration};
+use crate::store::{BlobStore, GraphStore};
 use crate::{origin, snapshot};
 
 pub const PLUGIN_NAME: &str = "evidence-capture";
@@ -45,99 +45,107 @@ pub fn needs_capture(node: &Node) -> bool {
         })
 }
 
-pub struct EvidenceCapturePlugin;
+pub struct EvidenceCaptureRecord {
+    pub metadata: Value,
+    pub evidence: Vec<Evidence>,
+    pub captured: bool,
+}
 
-impl NodeMetaPlugin for EvidenceCapturePlugin {
-    fn handles(&self, node: &Node) -> bool {
-        needs_capture(node)
-    }
-
-    fn run(&self, node: &Node, context: &PluginContext<'_>) -> Result<JobOutput, String> {
-        let request_fingerprint = request_fingerprint(node);
-        let inputs = match parse_requests(&node.meta.evidence_requests) {
-            Ok(inputs) => inputs,
-            Err(error) => {
-                // Shape errors cannot be repaired by retrying I/O. Preserve the
-                // accepted specification and append a durable rejected result.
-                tracing::warn!(
-                    "error.message" = %error,
-                    "Evidence descriptor rejected by asynchronous capture Job"
-                );
-                return Ok(JobOutput::metadata(json!({
+pub fn capture(
+    node: &Node,
+    graph: &(dyn GraphStore + Send + Sync),
+    blobs: &(dyn BlobStore + Send + Sync),
+    now: &str,
+) -> Result<EvidenceCaptureRecord, String> {
+    let request_fingerprint = request_fingerprint(node);
+    let inputs = match parse_requests(&node.meta.evidence_requests) {
+        Ok(inputs) => inputs,
+        Err(error) => {
+            // Shape errors cannot be repaired by retrying I/O. Preserve the
+            // accepted specification and append a durable rejected result.
+            tracing::warn!(
+                "error.message" = %error,
+                "Evidence descriptor rejected by asynchronous capture Consumer"
+            );
+            return Ok(EvidenceCaptureRecord {
+                metadata: json!({
                     "version": CAPTURE_VERSION,
                     "request_fingerprint": request_fingerprint,
                     "status": "rejected",
                     "error": error.to_string(),
-                })));
-            }
-        };
-
-        let enrichers = origin::registered_enrichers();
-        let mut captured = Vec::with_capacity(inputs.len());
-        let mut evidence_nodes_inserted = 0_usize;
-        let mut evidence_edges_inserted = 0_usize;
-        for (index, input) in inputs.into_iter().enumerate() {
-            let span = tracing::info_span!(
-                "spec.job.evidence.capture",
-                "spec.evidence.index" = index as u64,
-                "spec.evidence.kind" = ?input.kind,
-                "spec.snapshot.bytes" = tracing::field::Empty,
-                "spec.snapshot.hash" = tracing::field::Empty,
-            );
-            let _entered = span.enter();
-            let capture = snapshot::capture(&input.locator, context.now)
-                .map_err(|error| error.to_string())?;
-            tracing::Span::current().record("spec.snapshot.bytes", capture.snapshot.bytes as u64);
-            tracing::Span::current()
-                .record("spec.snapshot.hash", capture.snapshot.content_hash.as_str());
-            context
-                .blobs
-                .put_blob(&capture.snapshot.content_hash, &capture.blob)
-                .map_err(|error| error.to_string())?;
-            let final_origin = origin::finalize(
-                &input.locator,
-                &input.origin,
-                &capture.origin_hints,
-                &enrichers,
-            );
-            let evidence = Evidence {
-                kind: input.kind,
-                locator: input.locator,
-                snapshot: capture.snapshot,
-                origin: final_origin,
-            };
-            let evidence_node = DerivedNode::evidence(evidence.clone());
-            let edge = Edge::projection(
-                EdgeKind::GroundedBy,
-                &node.id,
-                evidence_node.id(),
-                evidence_derivation(),
-                context.now,
-            )
-            .expect("captured Evidence always forms a valid projection");
-            let write = context
-                .graph
-                .put_derived_node(&evidence_node, &edge)
-                .map_err(|error| error.to_string())?;
-            evidence_nodes_inserted += usize::from(write.node_inserted);
-            evidence_edges_inserted += usize::from(write.edge_inserted);
-            captured.push(evidence);
+                }),
+                evidence: Vec::new(),
+                captured: false,
+            });
         }
+    };
 
-        let value = json!({
-            "version": CAPTURE_VERSION,
-            "request_fingerprint": request_fingerprint,
-            "status": "captured",
-            "evidence_count": captured.len(),
-            "evidence_nodes_inserted": evidence_nodes_inserted,
-            "evidence_edges_inserted": evidence_edges_inserted,
-            // Preserve the complete capture in this versioned append-only
-            // Job result even though meta.evidence is the convenient
-            // current captured view.
-            "evidence": captured,
-        });
-        Ok(JobOutput::captured_evidence(value, captured))
+    let enrichers = origin::registered_enrichers();
+    let mut captured = Vec::with_capacity(inputs.len());
+    let mut evidence_nodes_inserted = 0_usize;
+    let mut evidence_edges_inserted = 0_usize;
+    for (index, input) in inputs.into_iter().enumerate() {
+        let span = tracing::info_span!(
+            "spec.consumer.evidence.capture",
+            "spec.evidence.index" = index as u64,
+            "spec.evidence.kind" = ?input.kind,
+            "spec.snapshot.bytes" = tracing::field::Empty,
+            "spec.snapshot.hash" = tracing::field::Empty,
+        );
+        let _entered = span.enter();
+        let capture = snapshot::capture(&input.locator, now).map_err(|error| error.to_string())?;
+        tracing::Span::current().record("spec.snapshot.bytes", capture.snapshot.bytes as u64);
+        tracing::Span::current()
+            .record("spec.snapshot.hash", capture.snapshot.content_hash.as_str());
+        blobs
+            .put_blob(&capture.snapshot.content_hash, &capture.blob)
+            .map_err(|error| error.to_string())?;
+        let final_origin = origin::finalize(
+            &input.locator,
+            &input.origin,
+            &capture.origin_hints,
+            &enrichers,
+        );
+        let evidence = Evidence {
+            kind: input.kind,
+            locator: input.locator,
+            snapshot: capture.snapshot,
+            origin: final_origin,
+        };
+        let evidence_node = DerivedNode::evidence(evidence.clone());
+        let edge = Edge::projection(
+            EdgeKind::GroundedBy,
+            &node.id,
+            evidence_node.id(),
+            evidence_derivation(),
+            now,
+        )
+        .expect("captured Evidence always forms a valid projection");
+        let write = graph
+            .put_derived_node(&evidence_node, &edge)
+            .map_err(|error| error.to_string())?;
+        evidence_nodes_inserted += usize::from(write.node_inserted);
+        evidence_edges_inserted += usize::from(write.edge_inserted);
+        captured.push(evidence);
     }
+
+    let value = json!({
+        "version": CAPTURE_VERSION,
+        "request_fingerprint": request_fingerprint,
+        "status": "captured",
+        "evidence_count": captured.len(),
+        "evidence_nodes_inserted": evidence_nodes_inserted,
+        "evidence_edges_inserted": evidence_edges_inserted,
+        // Preserve the complete capture in this versioned append-only
+        // Consumer result even though meta.evidence is the convenient
+        // current captured view.
+        "evidence": captured,
+    });
+    Ok(EvidenceCaptureRecord {
+        metadata: value,
+        evidence: captured,
+        captured: true,
+    })
 }
 
 fn request_fingerprint(node: &Node) -> String {
@@ -148,7 +156,7 @@ fn request_fingerprint(node: &Node) -> String {
     if !node.meta.evidence_request_generation.is_empty() {
         parts.push(node.meta.evidence_request_generation.as_str());
     }
-    crate::mailbox::derive_id("evidence-requests", &parts)
+    crate::identity::derive_id("evidence-requests", &parts)
 }
 
 fn parse_requests(values: &[String]) -> Result<Vec<EvidenceInput>, evidence::EvidenceError> {
@@ -157,14 +165,6 @@ fn parse_requests(values: &[String]) -> Result<Vec<EvidenceInput>, evidence::Evi
         inputs.extend(evidence::parse_value(value)?);
     }
     Ok(inputs)
-}
-
-fn make_plugin() -> Box<dyn NodeMetaPlugin> {
-    Box::new(EvidenceCapturePlugin)
-}
-
-inventory::submit! {
-    PluginRegistration::new(PLUGIN_NAME, make_plugin)
 }
 
 #[cfg(test)]
@@ -241,22 +241,16 @@ mod tests {
         let graph = crate::store::InMemoryNodeStore::new();
         let temp = tempfile::tempdir().unwrap();
         let blobs = crate::store::FileBlobStore::open(temp.path()).unwrap();
-        let output = EvidenceCapturePlugin
-            .run(
-                &node(vec!["{".into()]),
-                &PluginContext {
-                    blobs: &blobs,
-                    graph: &graph,
-                    now: "t",
-                },
-            )
-            .expect("a permanent descriptor error is a durable Job result");
-        assert_eq!(output.value["status"], "rejected");
-        assert!(output.value["error"]
+        let capture = capture(&node(vec!["{".into()]), &graph, &blobs, "t")
+            .expect("a permanent descriptor error is a durable Consumer result");
+        let value = &capture.metadata;
+        assert_eq!(value["status"], "rejected");
+        assert!(value["error"]
             .as_str()
             .unwrap()
             .contains("invalid evidence JSON"));
-        assert!(output.evidence.is_none());
+        assert!(capture.evidence.is_empty());
+        assert!(!capture.captured);
     }
 
     #[test]
@@ -268,18 +262,10 @@ mod tests {
         let blobs = crate::store::FileBlobStore::open(&temp.path().join("blobs")).unwrap();
         let source = node(vec![path.to_string_lossy().into_owned()]);
 
-        let output = EvidenceCapturePlugin
-            .run(
-                &source,
-                &PluginContext {
-                    blobs: &blobs,
-                    graph: &graph,
-                    now: "2026-07-14T00:00:00Z",
-                },
-            )
-            .unwrap();
-        assert_eq!(output.value["evidence_nodes_inserted"], 1);
-        assert_eq!(output.value["evidence_edges_inserted"], 1);
+        let capture = capture(&source, &graph, &blobs, "2026-07-14T00:00:00Z").unwrap();
+        let value = &capture.metadata;
+        assert_eq!(value["evidence_nodes_inserted"], 1);
+        assert_eq!(value["evidence_edges_inserted"], 1);
 
         let edges = graph
             .list_edges(&[source.id], &[evidence_derivation()])

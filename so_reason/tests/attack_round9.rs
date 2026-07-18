@@ -25,7 +25,9 @@
 use so_lang::ast::*;
 use so_lang::parse::{parse, ParseError};
 use so_reason::formula::{claim_formula, contract_formula, AssumptionSource, EdgeKind, Formula};
-use so_reason::relate::{assess, assumption_satisfiable, contradicts, implies, Outcome, Ternary};
+use so_reason::relate::{
+    assess, assumption_satisfiable, contradicts, implies, RelationVerdict, Ternary,
+};
 use so_reason::semantics::{skeleton, subject_keys, ClauseSkeleton, RoleKind, RoleSkeleton};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
@@ -116,7 +118,7 @@ fn locative_pairs_relate_unknown_never_yes_never_no() {
             &one("The crane shall move the beam above the platform."),
             &one("The crane shall move the beam below the platform."),
         ),
-        Outcome::Unknown,
+        RelationVerdict::Unknown,
         "above vs below is Unknown — disjointness of places is not provable syntactically"
     );
 }
@@ -128,7 +130,7 @@ fn same_locative_preposition_still_matches_end_to_end() {
             &one("The system shall store the report under the ledge."),
             &one("The system shall store the report under the ledge."),
         ),
-        Outcome::Equivalent
+        RelationVerdict::Equivalent
     );
     // Casing never splits: the marker is lowercased.
     assert_eq!(
@@ -146,7 +148,7 @@ fn locative_identity_in_guard_clause_position() {
             &one("While the pump runs in the bay, the fan shall spin."),
             &one("While the pump runs on the bay, the fan shall not spin."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Same preposition: one region, hard contradiction.
     assert_eq!(
@@ -154,7 +156,7 @@ fn locative_identity_in_guard_clause_position() {
             &one("While the pump runs in the bay, the fan shall spin."),
             &one("While the pump runs in the bay, the fan shall not spin."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // The guard digest itself carries the marker.
     let k = skeleton(&one("While the pump runs in the bay, the fan shall spin.")).unwrap();
@@ -176,14 +178,14 @@ fn locative_identity_in_description_role_position() {
             &one("The request is logged by the daemon in the vault."),
             &one("The request is logged by the daemon on the vault."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("The request is logged by the daemon in the vault."),
             &one("The request is logged by the daemon in the vault."),
         ),
-        Outcome::Equivalent
+        RelationVerdict::Equivalent
     );
     // Agentless descriptions keep the preposition inside the predicate
     // words, so the pair already separates there.
@@ -192,7 +194,7 @@ fn locative_identity_in_description_role_position() {
             &one("The report is stored in the archive."),
             &one("The report is stored on the archive."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -785,14 +787,14 @@ fn object_gap_enters_np_full_but_never_subject_keys() {
             &one("Each request that the gateway forwards shall be logged."),
             &one("Each request that the proxy forwards shall be logged."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     assert_eq!(
         assess(
             &one("Each request that the gateway forwards shall be logged."),
             &one("Each request that the gateway forwards shall be logged."),
         ),
-        Outcome::Equivalent
+        RelationVerdict::Equivalent
     );
 }
 
@@ -997,7 +999,7 @@ fn guard_content_gates_relate_judgments() {
             &one("When the monitor ensures that the token is valid, the pump shall run."),
             &one("When the monitor ensures that the token is valid, the pump shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // Differing content: the guards no longer witness one region.
     assert_eq!(
@@ -1005,7 +1007,7 @@ fn guard_content_gates_relate_judgments() {
             &one("When the monitor ensures that the token is valid, the pump shall run."),
             &one("When the monitor ensures that the badge is valid, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Verb-phrase content lossiness (round 7, still gated): differing
     // content blocks Yes in both core judgments.
@@ -1076,7 +1078,7 @@ fn reordered_conjuncts_ground_contradictions_within_matching_roles() {
             &one("Where the mode is active, Where the depth is at most 5, the pump shall run."),
             &one("Where the depth is at most 5, Where the mode is active, the pump shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // SUPERSEDED (round 10, change 4): SWAPPING the families — `Where A,
     // While B` against `Where B, While A` — no longer witnesses one
@@ -1088,7 +1090,7 @@ fn reordered_conjuncts_ground_contradictions_within_matching_roles() {
             &one("Where the mode is active, While the depth is at most 5, the pump shall run."),
             &one("Where the depth is at most 5, While the mode is active, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1099,7 +1101,7 @@ fn reordered_or_group_guards_ground_contradictions() {
             &one("When the pump starts or the valve opens, the fan shall run."),
             &one("When the valve opens or the pump starts, the fan shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
 }
 
@@ -1110,7 +1112,7 @@ fn duplicate_conjuncts_collapse_via_idempotence() {
             &one("Where the mode is active and the mode is active, the pump shall run."),
             &one("Where the mode is active, the pump shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // SUPERSEDED (round 10, change 4): duplicates ACROSS frame families no
     // longer collapse — the family is part of guard identity now
@@ -1121,7 +1123,7 @@ fn duplicate_conjuncts_collapse_via_idempotence() {
             &one("Where the mode is active, While the mode is active, the pump shall run."),
             &one("Where the mode is active, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1133,7 +1135,7 @@ fn overlapping_bounded_guards_witness_and_disjoint_refuse() {
             &one("While the depth is at most 5, the pump shall run."),
             &one("While the depth is at most 3, the pump shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // Overlapping between-intervals: [5, 9].
     assert_eq!(
@@ -1141,7 +1143,7 @@ fn overlapping_bounded_guards_witness_and_disjoint_refuse() {
             &one("While the depth is between 2 and 9, the pump shall run."),
             &one("While the depth is between 5 and 20, the pump shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // Same written unit still grounds.
     assert_eq!(
@@ -1149,7 +1151,7 @@ fn overlapping_bounded_guards_witness_and_disjoint_refuse() {
             &one("While the depth is at most 5 meters, the pump shall run."),
             &one("While the depth is at most 3 meters, the pump shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // Disjoint intervals refuse: no shared region, honest Unknown.
     assert_eq!(
@@ -1157,7 +1159,7 @@ fn overlapping_bounded_guards_witness_and_disjoint_refuse() {
             &one("While the depth is at most 3, the pump shall run."),
             &one("While the depth is at least 5, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1174,7 +1176,7 @@ fn boundary_touching_intervals_pin_the_legislated_answers() {
             &one("While the depth is at most 3, the pump shall run."),
             &one("While the depth is at least 3, the pump shall not run."),
         ),
-        Outcome::HardContradiction
+        RelationVerdict::HardContradiction
     );
     // An OPEN bound touching a closed one shares no point: refuses.
     assert_eq!(
@@ -1182,7 +1184,7 @@ fn boundary_touching_intervals_pin_the_legislated_answers() {
             &one("While the depth is less than 3, the pump shall run."),
             &one("While the depth is at least 3, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1194,7 +1196,7 @@ fn witness_refusals_mixed_shapes_units_subjects() {
             &one("While the depth is at most 5, the pump shall run."),
             &one("While the depth is at most 3 and the mode is active, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Unit mismatch never grounds.
     assert_eq!(
@@ -1202,7 +1204,7 @@ fn witness_refusals_mixed_shapes_units_subjects() {
             &one("While the depth is at most 5 meters, the pump shall run."),
             &one("While the depth is at most 3 seconds, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Different subjects never ground.
     assert_eq!(
@@ -1210,7 +1212,7 @@ fn witness_refusals_mixed_shapes_units_subjects() {
             &one("While the depth is at most 5, the pump shall run."),
             &one("While the width is at most 3, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // Different copulas (`is` vs `remains`) keep distinct anchors: refuse.
     assert_eq!(
@@ -1218,7 +1220,7 @@ fn witness_refusals_mixed_shapes_units_subjects() {
             &one("While the depth is at most 5, the pump shall run."),
             &one("While the depth remains at most 3, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
     // A noun-phrase bound cannot ground an interval: refuse.
     assert_eq!(
@@ -1226,7 +1228,7 @@ fn witness_refusals_mixed_shapes_units_subjects() {
             &one("While the depth is at most the limit, the pump shall run."),
             &one("While the depth is at most 3, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1243,7 +1245,7 @@ fn interval_witness_no_longer_crosses_frame_families() {
             &one("When the depth is at most 5, the pump shall run."),
             &one("While the depth is at most 3, the pump shall not run."),
         ),
-        Outcome::Unknown
+        RelationVerdict::Unknown
     );
 }
 
@@ -1254,7 +1256,7 @@ fn interval_witness_extends_to_envelope_conflicts() {
             &one("While the depth is at most 5, the client may retry."),
             &one("While the depth is at most 3, the client shall not retry."),
         ),
-        Outcome::EnvelopeConflict
+        RelationVerdict::EnvelopeConflict
     );
 }
 
@@ -1349,7 +1351,7 @@ fn equal_and_np_bounds_pass_through() {
             &one("The retry count is between 4 and 4."),
             &one("The retry count is at least 5."),
         ),
-        Outcome::DescriptiveConflict
+        RelationVerdict::DescriptiveConflict
     );
     // Noun-phrase bounds are value names: unchecked, accepted.
     roundtrip("The retry count is between the floor and the ceiling.");
@@ -1361,7 +1363,7 @@ fn equal_and_np_bounds_pass_through() {
             &one("The retry count is between 4 and 6."),
             &one("The retry count is at least 7."),
         ),
-        Outcome::DescriptiveConflict
+        RelationVerdict::DescriptiveConflict
     );
 }
 
@@ -1455,7 +1457,7 @@ impl XorShift {
 /// re-parses to the same tree, survive serde, and feed every derived view
 /// without panicking.
 fn assault(input: &str) {
-    let outcome = catch_unwind(AssertUnwindSafe(|| {
+    let result = catch_unwind(AssertUnwindSafe(|| {
         if let Ok(spec) = parse(input) {
             for s in &spec.sentences {
                 let rendered = s.render();
@@ -1478,7 +1480,7 @@ fn assault(input: &str) {
             }
         }
     }));
-    assert!(outcome.is_ok(), "panicked on {input:?}");
+    assert!(result.is_ok(), "panicked on {input:?}");
 }
 
 #[test]

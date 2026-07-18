@@ -17,7 +17,8 @@ use so_reason::formula::{
     PairingError,
 };
 use so_reason::relate::{
-    assess, assumption_satisfiable, contradicts, envelope_compatible, implies, Outcome, Ternary,
+    assess, assumption_satisfiable, contradicts, envelope_compatible, implies, RelationVerdict,
+    Ternary,
 };
 use so_reason::semantics::*;
 
@@ -643,7 +644,7 @@ fn differing_able_to_guard_objects_do_not_witness_overlap() {
     // asserted the digest COLLISION): capability clause bodies now carry
     // their verb phrase's object digests, so the lock and token guards
     // differ in the INDEX itself, not only in the lossless render anchor.
-    // The assess() outcome is unchanged — no shared-region witness, no
+    // The assess() result is unchanged — no shared-region witness, no
     // false HardContradiction.
     let a = one("While the client is able to hold the lock, the gateway shall throttle the queue.");
     let b = one(
@@ -659,7 +660,7 @@ fn differing_able_to_guard_objects_do_not_witness_overlap() {
     assert_eq!(kb.guards.states[0].objects[0].head, "token");
     assert_eq!(
         assess(&a, &b),
-        Outcome::Unknown,
+        RelationVerdict::Unknown,
         "still no manufactured witness"
     );
 }
@@ -675,13 +676,13 @@ fn able_to_guards_ground_a_deadline_refinement() {
         one("While the client is able to retry, the gateway shall stop within 10 seconds.");
     assert_eq!(
         assess(&concrete, &abstract_),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: true
         }
     );
     assert_eq!(
         assess(&abstract_, &concrete),
-        Outcome::Refinement {
+        RelationVerdict::Refinement {
             concrete_is_a: false
         }
     );
@@ -921,7 +922,7 @@ fn seeded_fuzz_over_round8_shapes_never_panics() {
                 for tail in tails {
                     let input = format!("{frame}{subject} {core}{tail}.");
                     let Ok(spec) = parse(&input) else {
-                        continue; // a precise rejection is a fine outcome
+                        continue; // a precise rejection is a fine result
                     };
                     for sentence in spec.sentences {
                         let rendered = sentence.render();

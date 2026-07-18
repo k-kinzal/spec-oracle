@@ -109,6 +109,7 @@ fn sentence_view(statement: &str) -> Option<pb::SentenceView> {
 fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
     match k {
         domain::EdgeKind::MentionsTerm => pb::EdgeKind::MentionsTerm,
+        domain::EdgeKind::SameLexeme => pb::EdgeKind::SameLexeme,
         domain::EdgeKind::Refines => pb::EdgeKind::Refines,
         domain::EdgeKind::Equivalent => pb::EdgeKind::Equivalent,
         domain::EdgeKind::HardContradiction => pb::EdgeKind::HardContradiction,
@@ -148,6 +149,7 @@ fn endpoint_role_to_pb(role: domain::EndpointRole) -> pb::EdgeEndpointRole {
         domain::EndpointRole::Unspecified => pb::EdgeEndpointRole::Unspecified,
         domain::EndpointRole::Mentioner => pb::EdgeEndpointRole::Mentioner,
         domain::EndpointRole::MentionedTerm => pb::EdgeEndpointRole::MentionedTerm,
+        domain::EndpointRole::LexemePeer => pb::EdgeEndpointRole::LexemePeer,
         domain::EndpointRole::Refiner => pb::EdgeEndpointRole::Refiner,
         domain::EndpointRole::Refined => pb::EdgeEndpointRole::Refined,
         domain::EndpointRole::EquivalentPeer => pb::EdgeEndpointRole::EquivalentPeer,
@@ -306,7 +308,7 @@ pub fn derived_node_to_pb(node: &domain::DerivedNode) -> pb::DerivedNode {
 pub fn relation_assessment_to_pb(
     assessment: &domain::RelationAssessment,
 ) -> pb::RelationAssessment {
-    use domain::AssessmentOutcome as Outcome;
+    use domain::AssessmentVerdict as RelationVerdict;
     let mut wire = pb::RelationAssessment {
         id: assessment.id.clone(),
         left: assessment.left.clone(),
@@ -322,8 +324,8 @@ pub fn relation_assessment_to_pb(
         recorded_at: assessment.recorded_at.clone(),
         ..Default::default()
     };
-    wire.kind = match &assessment.outcome {
-        Outcome::Refines {
+    wire.kind = match &assessment.verdict {
+        RelationVerdict::Refines {
             concrete,
             abstract_,
         } => {
@@ -331,14 +333,14 @@ pub fn relation_assessment_to_pb(
             wire.r#abstract = Some(abstract_.clone());
             pb::AssessmentKind::Refines
         }
-        Outcome::Equivalent => pb::AssessmentKind::Equivalent,
-        Outcome::HardContradiction => pb::AssessmentKind::HardContradiction,
-        Outcome::AdvisoryTension => pb::AssessmentKind::AdvisoryTension,
-        Outcome::DescriptiveConflict => pb::AssessmentKind::DescriptiveConflict,
-        Outcome::EnvelopeConflict => pb::AssessmentKind::EnvelopeConflict,
-        Outcome::Independent => pb::AssessmentKind::Independent,
-        Outcome::Unknown => pb::AssessmentKind::Unknown,
-        Outcome::FormulaEntails {
+        RelationVerdict::Equivalent => pb::AssessmentKind::Equivalent,
+        RelationVerdict::HardContradiction => pb::AssessmentKind::HardContradiction,
+        RelationVerdict::AdvisoryTension => pb::AssessmentKind::AdvisoryTension,
+        RelationVerdict::DescriptiveConflict => pb::AssessmentKind::DescriptiveConflict,
+        RelationVerdict::EnvelopeConflict => pb::AssessmentKind::EnvelopeConflict,
+        RelationVerdict::Independent => pb::AssessmentKind::Independent,
+        RelationVerdict::Unknown => pb::AssessmentKind::Unknown,
+        RelationVerdict::FormulaEntails {
             antecedent,
             consequence,
         } => {
@@ -346,10 +348,10 @@ pub fn relation_assessment_to_pb(
             wire.consequence = Some(consequence.clone());
             pb::AssessmentKind::FormulaEntails
         }
-        Outcome::FormulaEquivalent => pb::AssessmentKind::FormulaEquivalent,
-        Outcome::FormulaContradiction => pb::AssessmentKind::FormulaContradiction,
-        Outcome::FormulaUnknown => pb::AssessmentKind::FormulaUnknown,
-        Outcome::ContractRefines {
+        RelationVerdict::FormulaEquivalent => pb::AssessmentKind::FormulaEquivalent,
+        RelationVerdict::FormulaContradiction => pb::AssessmentKind::FormulaContradiction,
+        RelationVerdict::FormulaUnknown => pb::AssessmentKind::FormulaUnknown,
+        RelationVerdict::ContractRefines {
             concrete,
             abstract_,
         } => {
@@ -357,9 +359,9 @@ pub fn relation_assessment_to_pb(
             wire.r#abstract = Some(abstract_.clone());
             pb::AssessmentKind::ContractRefines
         }
-        Outcome::ContractEquivalent => pb::AssessmentKind::ContractEquivalent,
-        Outcome::ContractIncomparable => pb::AssessmentKind::ContractIncomparable,
-        Outcome::DischargeCandidate {
+        RelationVerdict::ContractEquivalent => pb::AssessmentKind::ContractEquivalent,
+        RelationVerdict::ContractIncomparable => pb::AssessmentKind::ContractIncomparable,
+        RelationVerdict::DischargeCandidate {
             source,
             target,
             relied_spec_id,

@@ -348,7 +348,7 @@ The core's subject is parsed left to right as a noun-phrase group with the
 sentence stop set; collection halts at the first reserved word. The word at
 that halt is the **pivot**, and its identity alone selects the core:
 
-| Word at the halt | Outcome |
+| Word at the halt | RelationVerdict |
 | --- | --- |
 | `shall` / `must` / `should` / `may` | deontic core |
 | `is` / `are` | description core |

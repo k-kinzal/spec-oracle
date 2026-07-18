@@ -15,10 +15,11 @@ use clap::Parser;
 use tonic::transport::Server;
 use tracing::Instrument;
 
-use so_daemon::add_mailbox::AddMailbox;
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
-use so_daemon::jobs::JobMailbox;
-use so_daemon::mailbox::NodeAdded;
+use so_daemon::command_bus::CommandBus;
+use so_daemon::consumer::{built_in_consumers, ConsumerRuntime};
+use so_daemon::event_bus::EventBus;
+use so_daemon::event_sink::{EventSink, EventTap};
 use so_daemon::service::SpecificationGraphService;
 use so_daemon::store::{FileBlobStore, GraphStore, InMemoryNodeStore};
 use so_protocol::pb::specification_graph_server::SpecificationGraphServer;
@@ -125,28 +126,37 @@ fn run(args: Args) -> anyhow::Result<()> {
 
     // Build the selected node-store backend. Both implement the same
     // `GraphStore` seam, so the service is identical either way.
-    let nodes: Arc<dyn GraphStore + Send + Sync> = match args.store {
-        StoreKind::Arango => {
-            // Credentials come from the environment, never the command line, so
-            // they do not leak into shell history or the process table.
-            let username = std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
-            let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
-            let cfg = ArangoConfig {
-                url: &args.arango_url,
-                database: &args.arango_db,
-                username: &username,
-                password: &password,
-            };
-            tracing::info!("db.url" = %args.arango_url, "connecting to ArangoDB");
-            Arc::new(ArangoNodeStore::connect(&cfg)?)
-        }
-        StoreKind::Memory => {
-            tracing::warn!(
+    let (nodes, event_sinks): (Arc<dyn GraphStore + Send + Sync>, Vec<Arc<dyn EventSink>>) =
+        match args.store {
+            StoreKind::Arango => {
+                // Credentials come from the environment, never the command line, so
+                // they do not leak into shell history or the process table.
+                let username =
+                    std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
+                let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
+                let cfg = ArangoConfig {
+                    url: &args.arango_url,
+                    database: &args.arango_db,
+                    username: &username,
+                    password: &password,
+                };
+                tracing::info!("db.url" = %args.arango_url, "connecting to ArangoDB");
+                let store = Arc::new(ArangoNodeStore::connect(&cfg)?);
+                (
+                    store.clone() as Arc<dyn GraphStore + Send + Sync>,
+                    vec![store as Arc<dyn EventSink>],
+                )
+            }
+            StoreKind::Memory => {
+                tracing::warn!(
                 "using the in-memory node store: nodes are NOT persisted and are lost on restart"
             );
-            Arc::new(InMemoryNodeStore::new())
-        }
-    };
+                (
+                    Arc::new(InMemoryNodeStore::new()),
+                    Vec::<Arc<dyn EventSink>>::new(),
+                )
+            }
+        };
 
     let blobs: Arc<dyn so_daemon::store::BlobStore + Send + Sync> = Arc::new(blobs);
 
@@ -156,67 +166,38 @@ fn run(args: Args) -> anyhow::Result<()> {
     drop(run_entered);
     runtime.block_on(
         async move {
-            let (jobs, jobs_task) = JobMailbox::start(nodes.clone(), blobs.clone());
-            let scheduled = schedule_job_reconciliation(nodes.clone(), &jobs).await?;
-            tracing::info!(
-                "job.reconciliation.scheduled" = scheduled,
-                "post-acceptance Job reconciliation scheduled"
-            );
-            let (adds, adds_task) = AddMailbox::start(nodes.clone(), jobs.clone());
-            let service = SpecificationGraphService::new(nodes, adds.clone());
+            let tap = EventTap::new(event_sinks, 4096, 100);
+            let (events, events_task) = EventBus::start(tap.clone());
+            let (commands, commands_task) =
+                CommandBus::start(nodes.clone(), blobs.clone(), events.clone());
+            let consumers = ConsumerRuntime::start(
+                events.clone(),
+                commands.clone(),
+                nodes.clone(),
+                built_in_consumers(),
+            )
+            .await?;
+            let service = SpecificationGraphService::new(nodes, commands.clone());
             tracing::info!("specd listening");
             let serve_result = Server::builder()
                 .add_service(SpecificationGraphServer::new(service))
                 .serve_with_shutdown(args.listen, shutdown_signal())
                 .await;
 
-            tracing::info!("draining Add Mailbox");
-            adds.shutdown().await?;
-            adds_task.await?;
-            tracing::info!("draining Job Mailbox");
-            jobs.shutdown().await?;
-            jobs_task.await?;
+            tracing::info!("draining Event Bus");
+            events.shutdown().await?;
+            events_task.await?;
+            consumers.join().await;
+            tracing::info!("draining Command Bus");
+            commands.shutdown().await?;
+            commands_task.await?;
+            tap.shutdown().await;
             serve_result?;
             Ok::<(), anyhow::Error>(())
         }
         .instrument(run_span),
     )?;
     Ok(())
-}
-
-async fn schedule_job_reconciliation(
-    nodes: Arc<dyn GraphStore + Send + Sync>,
-    jobs: &JobMailbox,
-) -> anyhow::Result<u64> {
-    const PAGE_SIZE: usize = 500;
-    let message_id = format!(
-        "job-reconciliation:{}:{}",
-        so_daemon::evidence_capture::CAPTURE_VERSION,
-        so_daemon::graph_generation::reconciliation_version()
-    );
-    let mut cursor: Option<String> = None;
-    let mut scheduled = 0_u64;
-    loop {
-        let store = nodes.clone();
-        let after = cursor.clone();
-        let page =
-            tokio::task::spawn_blocking(move || store.list_nodes(after.as_deref(), PAGE_SIZE))
-                .await??;
-        for node in page.nodes {
-            if so_daemon::evidence_capture::needs_capture(&node)
-                || so_daemon::graph_generation::needs_generation(&node)
-                || so_daemon::github::needs_resolution(&node)
-            {
-                jobs.node_added(NodeAdded::new(&message_id, node)).await?;
-                scheduled = scheduled.saturating_add(1);
-            }
-        }
-        match page.next_cursor {
-            Some(next) => cursor = Some(next),
-            None => break,
-        }
-    }
-    Ok(scheduled)
 }
 
 async fn shutdown_signal() {
