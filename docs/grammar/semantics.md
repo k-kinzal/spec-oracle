@@ -796,9 +796,8 @@ classical complement required by saturation and contract operations.
 `ContractInterface` is the deterministic behavior alphabet (the generators
 mentioned by `A` or `G`). Composition uses the union alphabet; it does not
 invent input/output directions or component ownership that the constrained
-language has not stated. See
-[`../assume-guarantee-contracts.md`](../assume-guarantee-contracts.md) for the
-standard operations, graph materialization, and proved laws.
+language has not stated. Contract operations and graph materialization remain
+outside the constrained-language grammar.
 
 The **structural precondition for graph edges** (round 3): before edges can
 be sound, every behavioral sentence needs a propositional shape — which

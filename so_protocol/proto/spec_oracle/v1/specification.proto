@@ -271,13 +271,14 @@ message Edge {
   bool current = 16;
 }
 
-// The relationship family keeps lexical discovery, semantic truth, versioned
-// selection judgments, and deterministic projections distinct in the Ledger.
+// The relationship family keeps lexical discovery, mechanically derived
+// semantic truth, and deterministic projections distinct in the Ledger.
 enum EdgeFamily {
   EDGE_FAMILY_UNSPECIFIED = 0;
   EDGE_FAMILY_LEXICAL = 1;
   EDGE_FAMILY_SEMANTIC = 2;
-  EDGE_FAMILY_SELECTION = 3;
+  reserved 3;
+  reserved "EDGE_FAMILY_SELECTION";
   EDGE_FAMILY_PROJECTION = 4;
 }
 
@@ -291,12 +292,13 @@ enum EdgeEndpointRole {
   EDGE_ENDPOINT_ROLE_REFINED = 4;
   EDGE_ENDPOINT_ROLE_EQUIVALENT_PEER = 5;
   EDGE_ENDPOINT_ROLE_CONFLICT_PEER = 6;
-  EDGE_ENDPOINT_ROLE_SUPPORTER = 7;
-  EDGE_ENDPOINT_ROLE_SUPPORTED = 8;
-  EDGE_ENDPOINT_ROLE_DEFEATER = 9;
-  EDGE_ENDPOINT_ROLE_DEFEATED = 10;
-  EDGE_ENDPOINT_ROLE_SUPERSEDER = 11;
-  EDGE_ENDPOINT_ROLE_SUPERSEDED = 12;
+  reserved 7 to 12;
+  reserved "EDGE_ENDPOINT_ROLE_SUPPORTER";
+  reserved "EDGE_ENDPOINT_ROLE_SUPPORTED";
+  reserved "EDGE_ENDPOINT_ROLE_DEFEATER";
+  reserved "EDGE_ENDPOINT_ROLE_DEFEATED";
+  reserved "EDGE_ENDPOINT_ROLE_SUPERSEDER";
+  reserved "EDGE_ENDPOINT_ROLE_SUPERSEDED";
   EDGE_ENDPOINT_ROLE_GROUNDED_SPECIFICATION = 13;
   EDGE_ENDPOINT_ROLE_EVIDENCE = 14;
   EDGE_ENDPOINT_ROLE_CONTRACT_SPECIFICATION = 15;
@@ -336,11 +338,10 @@ enum EdgeKind {
   EDGE_KIND_ADVISORY_TENSION = 12;
   EDGE_KIND_DESCRIPTIVE_CONFLICT = 13;
   EDGE_KIND_ENVELOPE_CONFLICT = 14;
-  // Selection-family relations are versioned judgments, not reinterpretations
-  // or reversals of semantic Edges.
-  EDGE_KIND_SUPPORTS = 15;
-  EDGE_KIND_DEFEATS = 16;
-  EDGE_KIND_SUPERSEDES = 17;
+  reserved 15 to 17;
+  reserved "EDGE_KIND_SUPPORTS";
+  reserved "EDGE_KIND_DEFEATS";
+  reserved "EDGE_KIND_SUPERSEDES";
   EDGE_KIND_GROUNDED_BY = 18;
   EDGE_KIND_HAS_ASSUMPTION = 19;
   EDGE_KIND_HAS_GUARANTEE = 20;
@@ -383,12 +384,15 @@ message Node {
 // derives score and exclusions entirely from current Ledger relationships.
 message SelectionView {
   bool current = 1;
-  repeated string supporting_edge_ids = 2;
-  repeated string defeating_edge_ids = 3;
-  repeated string superseding_edge_ids = 4;
+  reserved 2 to 4;
+  reserved "supporting_edge_ids";
+  reserved "defeating_edge_ids";
+  reserved "superseding_edge_ids";
   string policy_version = 5;
   sint32 support_score = 6;
   sint32 evidence_score = 7;
+  // Compatibility field for pre-v5 clients. v5 has no relationship score and
+  // always returns zero.
   sint32 relation_score = 8;
   repeated ScoreContribution contributions = 9;
   repeated SelectionExclusion exclusions = 10;

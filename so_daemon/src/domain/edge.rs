@@ -1,7 +1,7 @@
 //! A checked, typed binary connection in the one specification graph.
 //!
 //! An Edge says exactly one bounded thing. Its family separates lexical
-//! incidence, semantic relationships, and versioned selection relationships.
+//! incidence, semantic relationships, and deterministic projections.
 //! Endpoint roles make the ordered arguments explicit; `source`/`target` never
 //! acquire a graph-wide meaning such as "support flows this way". A candidate,
 //! `Independent`, `Unknown`, or an unsearched pair is not topology, and Edge
@@ -28,8 +28,6 @@ pub enum EdgeFamily {
     Lexical,
     /// A graph-established relationship between specification meanings.
     Semantic,
-    /// A versioned support, defeat, or replacement judgment used by selection.
-    Selection,
     /// A deterministic projection from an authored sentence or its grounding.
     Projection,
 }
@@ -48,12 +46,6 @@ pub enum EndpointRole {
     Refined,
     EquivalentPeer,
     ConflictPeer,
-    Supporter,
-    Supported,
-    Defeater,
-    Defeated,
-    Superseder,
-    Superseded,
     GroundedSpecification,
     Evidence,
     ContractSpecification,
@@ -106,12 +98,6 @@ pub enum EdgeKind {
     GuaranteeDischarge,
     /// The source permission bounds environment behavior tolerated by target.
     AdmissibilityEnvelope,
-    /// The source supplies a versioned positive selection reason for target.
-    Supports,
-    /// The source wins a versioned, explicitly resolved competition with target.
-    Defeats,
-    /// The source is a versioned selected replacement for target.
-    Supersedes,
     /// The target Evidence vertex grounds the source specification.
     GroundedBy,
     /// The target is the assumption side of the source specification's contract.
@@ -148,9 +134,6 @@ impl EdgeKind {
             Self::OccurrenceReliance => "occurrence_reliance",
             Self::GuaranteeDischarge => "guarantee_discharge",
             Self::AdmissibilityEnvelope => "admissibility_envelope",
-            Self::Supports => "supports",
-            Self::Defeats => "defeats",
-            Self::Supersedes => "supersedes",
             Self::GroundedBy => "grounded_by",
             Self::HasAssumption => "has_assumption",
             Self::HasGuarantee => "has_guarantee",
@@ -176,7 +159,6 @@ impl EdgeKind {
             | Self::OccurrenceReliance
             | Self::GuaranteeDischarge
             | Self::AdmissibilityEnvelope => EdgeFamily::Semantic,
-            Self::Supports | Self::Defeats | Self::Supersedes => EdgeFamily::Selection,
             Self::GroundedBy
             | Self::HasAssumption
             | Self::HasGuarantee
@@ -211,9 +193,6 @@ impl EdgeKind {
                 EndpointRole::AdmissibleEnvironment,
                 EndpointRole::BoundedContract,
             ),
-            Self::Supports => (EndpointRole::Supporter, EndpointRole::Supported),
-            Self::Defeats => (EndpointRole::Defeater, EndpointRole::Defeated),
-            Self::Supersedes => (EndpointRole::Superseder, EndpointRole::Superseded),
             Self::GroundedBy => (EndpointRole::GroundedSpecification, EndpointRole::Evidence),
             Self::HasAssumption => (
                 EndpointRole::ContractSpecification,
@@ -247,9 +226,6 @@ impl EdgeKind {
                 | Self::OccurrenceReliance
                 | Self::GuaranteeDischarge
                 | Self::AdmissibilityEnvelope
-                | Self::Supports
-                | Self::Defeats
-                | Self::Supersedes
                 | Self::GroundedBy
                 | Self::HasAssumption
                 | Self::HasGuarantee
@@ -710,9 +686,6 @@ mod tests {
             (EdgeKind::OccurrenceReliance, EdgeFamily::Semantic),
             (EdgeKind::GuaranteeDischarge, EdgeFamily::Semantic),
             (EdgeKind::AdmissibilityEnvelope, EdgeFamily::Semantic),
-            (EdgeKind::Supports, EdgeFamily::Selection),
-            (EdgeKind::Defeats, EdgeFamily::Selection),
-            (EdgeKind::Supersedes, EdgeFamily::Selection),
             (EdgeKind::GroundedBy, EdgeFamily::Projection),
             (EdgeKind::HasAssumption, EdgeFamily::Projection),
             (EdgeKind::HasGuarantee, EdgeFamily::Projection),
@@ -747,6 +720,13 @@ mod tests {
     }
 
     #[test]
+    fn former_manual_selection_kinds_are_not_edge_kinds() {
+        for kind in ["supports", "defeats", "supersedes"] {
+            assert!(serde_json::from_value::<EdgeKind>(kind.into()).is_err());
+        }
+    }
+
+    #[test]
     fn historical_untyped_relation_edge_remains_deserializable() {
         let edge: Edge = serde_json::from_value(serde_json::json!({
             "id": "legacy-edge",
@@ -773,37 +753,5 @@ mod tests {
         edge.source_role = EndpointRole::Refined;
         edge.target_role = EndpointRole::Refiner;
         assert!(edge.validate().unwrap_err().contains("endpoint roles"));
-    }
-
-    #[test]
-    fn selection_relation_identity_is_versioned_and_role_safe() {
-        let first = Edge::specification_relation(
-            EdgeKind::Supports,
-            "evidence-spec",
-            "supported-spec",
-            vec!["basis-b".into(), "basis-a".into(), "basis-a".into()],
-            Derivation {
-                method: "selection-policy".into(),
-                version: "v1".into(),
-            },
-            "t1",
-        )
-        .unwrap();
-        let next = Edge::specification_relation(
-            EdgeKind::Supports,
-            "evidence-spec",
-            "supported-spec",
-            vec!["basis-a".into(), "basis-b".into()],
-            Derivation {
-                method: "selection-policy".into(),
-                version: "v2".into(),
-            },
-            "t2",
-        )
-        .unwrap();
-        assert_eq!(first.source_role, EndpointRole::Supporter);
-        assert_eq!(first.target_role, EndpointRole::Supported);
-        assert_eq!(first.basis_spec_ids, ["basis-a", "basis-b"]);
-        assert_ne!(first.id, next.id);
     }
 }

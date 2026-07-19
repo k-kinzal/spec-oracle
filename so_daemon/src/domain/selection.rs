@@ -1,8 +1,8 @@
 //! A derived view of one Specification Node under a versioned fitness policy.
 //!
-//! Authored Nodes and their relationship Edges remain immutable Ledger facts.
-//! This module contains only the explainable output of selection: the score
-//! contributed by current graph relationships and every reason a candidate was
+//! Authored Nodes and their mechanically derived Edges remain Ledger facts.
+//! This module contains only the explainable output of selection: current
+//! Evidence fitness and every semantic-competition reason a candidate was
 //! excluded from the current specification set.
 
 use super::{DerivedNode, Edge};
@@ -16,8 +16,6 @@ pub enum ScoreContributionKind {
     CircumstantialEvidence,
     UnknownEvidence,
     CounterEvidence,
-    GroundedSupport,
-    InertSupport,
 }
 
 impl ScoreContributionKind {
@@ -30,8 +28,6 @@ impl ScoreContributionKind {
             Self::CircumstantialEvidence => "circumstantial_evidence",
             Self::UnknownEvidence => "unknown_evidence",
             Self::CounterEvidence => "counter_evidence",
-            Self::GroundedSupport => "grounded_support",
-            Self::InertSupport => "inert_support",
         }
     }
 }
@@ -50,12 +46,9 @@ pub struct ScoreContribution {
 pub enum ExclusionKind {
     InsufficientSupport,
     Counterevidence,
-    Defeated,
-    Superseded,
     Contradicted,
     EquivalentDuplicate,
     RefinementDominated,
-    SelectionCycle,
 }
 
 impl ExclusionKind {
@@ -63,12 +56,9 @@ impl ExclusionKind {
         match self {
             Self::InsufficientSupport => "insufficient_support",
             Self::Counterevidence => "counterevidence",
-            Self::Defeated => "defeated",
-            Self::Superseded => "superseded",
             Self::Contradicted => "contradicted",
             Self::EquivalentDuplicate => "equivalent_duplicate",
             Self::RefinementDominated => "refinement_dominated",
-            Self::SelectionCycle => "selection_cycle",
         }
     }
 }
@@ -88,9 +78,6 @@ pub struct SelectionView {
     pub support_score: i32,
     pub evidence_score: i32,
     pub relation_score: i32,
-    pub supporting_edge_ids: Vec<String>,
-    pub defeating_edge_ids: Vec<String>,
-    pub superseding_edge_ids: Vec<String>,
     pub contributions: Vec<ScoreContribution>,
     pub exclusions: Vec<SelectionExclusion>,
 }
@@ -103,9 +90,6 @@ impl Default for SelectionView {
             support_score: 0,
             evidence_score: 0,
             relation_score: 0,
-            supporting_edge_ids: Vec::new(),
-            defeating_edge_ids: Vec::new(),
-            superseding_edge_ids: Vec::new(),
             contributions: Vec::new(),
             exclusions: Vec::new(),
         }
@@ -118,14 +102,6 @@ impl SelectionView {
     }
 
     pub fn sort_and_dedup(&mut self) {
-        for ids in [
-            &mut self.supporting_edge_ids,
-            &mut self.defeating_edge_ids,
-            &mut self.superseding_edge_ids,
-        ] {
-            ids.sort();
-            ids.dedup();
-        }
         self.contributions.sort_by(|left, right| {
             (
                 left.kind.as_str(),
@@ -156,9 +132,9 @@ impl SelectionView {
 }
 
 /// The current graph population needed by the pure fitness derivation.
-/// Stores collect the complete semantic-competition and incoming-selection
-/// dependency closure plus its direct Evidence inputs; policy and weights stay
-/// outside storage.
+/// Stores collect the complete mechanically derived semantic-competition
+/// component plus its direct Evidence inputs; policy and weights stay outside
+/// storage.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SelectionPopulation {
     pub relation_edges: Vec<Edge>,

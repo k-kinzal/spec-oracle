@@ -86,6 +86,7 @@ impl ArangoNodeStore {
         ensure_edge_collection(&db, EDGE_COLLECTION)?;
         ensure_collection(&db, ASSESSMENT_COLLECTION)?;
         ensure_collection(&db, EVENT_ARCHIVE_COLLECTION)?;
+        remove_legacy_manual_selection_edges(&db)?;
         ensure_edge_read_projection(&db)?;
         ensure_edge_identities(&db)?;
         ensure_edge_read_index(&db)?;
@@ -639,24 +640,15 @@ impl GraphStore for ArangoNodeStore {
             EdgeKind::EnvelopeConflict,
         ]
         .map(EdgeKind::as_str);
-        // Walk the whole competition/selection dependency closure one indexed
-        // hop at a time. Selection must not let an already rejected middle
-        // candidate or receded relation affect a farther endpoint. The loop
-        // has no arbitrary graph-depth cap and touches only the closure.
+        // Walk the whole mechanically derived competition component one
+        // indexed hop at a time. The loop has no arbitrary graph-depth cap and
+        // touches only the closure.
         let relation_query = format!(
             "FOR node_id IN @node_ids \
                FOR adjacent, e IN 1..1 ANY \
                    CONCAT(\"{COLLECTION}/\", node_id) {EDGE_COLLECTION} \
                  FILTER e.derivation_key IN @current \
                  FILTER e.edge.kind IN @relation_kinds \
-                 RETURN DISTINCT e.edge"
-        );
-        let selection_query = format!(
-            "FOR node_id IN @node_ids \
-               FOR source, e IN 1..1 INBOUND \
-                   CONCAT(\"{COLLECTION}/\", node_id) {EDGE_COLLECTION} \
-                 FILTER e.derivation_key IN @current \
-                 FILTER e.edge.kind IN [\"supports\", \"defeats\", \"supersedes\"] \
                  RETURN DISTINCT e.edge"
         );
         let mut component_ids: std::collections::BTreeSet<String> =
@@ -679,19 +671,6 @@ impl GraphStore for ArangoNodeStore {
                 }
                 if component_ids.insert(edge.target.clone()) {
                     next.insert(edge.target.clone());
-                }
-                relations.insert(edge.id.clone(), edge);
-            }
-            let mut selection_vars: HashMap<&str, Value> = HashMap::new();
-            selection_vars.insert("node_ids", serde_json::to_value(&frontier)?);
-            selection_vars.insert("current", serde_json::to_value(&current)?);
-            let selection_edges: Vec<Edge> = self
-                .db
-                .aql_bind_vars(&selection_query, selection_vars)
-                .map_err(backend)?;
-            for edge in selection_edges {
-                if component_ids.insert(edge.source.clone()) {
-                    next.insert(edge.source.clone());
                 }
                 relations.insert(edge.id.clone(), edge);
             }
@@ -960,6 +939,38 @@ fn ensure_edge_collection(db: &Database<ReqwestClient>, name: &str) -> Result<()
     }
 }
 
+/// Remove rows written by the former manual Selection-Edge path.
+///
+/// These rows were operator assertions disguised as derived topology and
+/// therefore never satisfied the Edge invariant. Remove them before typed
+/// deserialization so an existing database can migrate to the mechanically
+/// derived-only Edge model.
+fn remove_legacy_manual_selection_edges(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let query = format!(
+        "LET removed = ( \
+           FOR e IN {EDGE_COLLECTION} \
+             FILTER e.kind IN @kinds OR e.edge.kind IN @kinds \
+             REMOVE e IN {EDGE_COLLECTION} \
+             RETURN OLD._key \
+         ) \
+         RETURN LENGTH(removed)"
+    );
+    let mut vars = HashMap::new();
+    vars.insert(
+        "kinds",
+        serde_json::json!(["supports", "defeats", "supersedes"]),
+    );
+    let removed: Vec<u64> = db.aql_bind_vars(&query, vars).map_err(backend)?;
+    let removed = removed.into_iter().next().unwrap_or(0);
+    if removed > 0 {
+        tracing::warn!(
+            removed,
+            "removed legacy manually asserted Selection Edge rows"
+        );
+    }
+    Ok(())
+}
+
 /// Backfill query-only scalar projections on historical Edge documents. The
 /// immutable nested `edge` fact is never changed; these fields only make the
 /// append-only history indexable by page owner and derivation.
@@ -975,9 +986,7 @@ fn ensure_edge_read_projection(db: &Database<ReqwestClient>) -> Result<(), Store
              ? \"lexical\" \
              : POSITION([\"grounded_by\", \"has_assumption\", \"has_guarantee\"], e.edge.kind) \
                ? \"projection\" \
-             : POSITION([\"supports\", \"defeats\", \"supersedes\"], e.edge.kind) \
-               ? \"selection\" \
-               : \"semantic\" \
+             : \"semantic\" \
            UPDATE e WITH {{ \
              page_owner: owner, \
              family: family, \

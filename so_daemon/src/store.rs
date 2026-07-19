@@ -720,18 +720,6 @@ impl GraphStore for InMemoryNodeStore {
                 expanded |= component_ids.insert(edge.target.clone());
                 relations.insert(edge.id.clone(), edge.clone());
             }
-            let incoming_selection: Vec<&Edge> = current
-                .iter()
-                .copied()
-                .filter(|edge| {
-                    edge.kind.family() == crate::domain::EdgeFamily::Selection
-                        && component_ids.contains(&edge.target)
-                })
-                .collect();
-            for edge in incoming_selection {
-                expanded |= component_ids.insert(edge.source.clone());
-                relations.insert(edge.id.clone(), edge.clone());
-            }
             if !expanded {
                 break;
             }
@@ -1390,99 +1378,15 @@ mod tests {
     }
 
     #[test]
-    fn selection_population_follows_incoming_selection_sources_to_their_competitors() {
-        let store = InMemoryNodeStore::new();
-        for id in ["source", "target", "competitor"] {
-            store.add_node(&node_with_id(id)).unwrap();
-        }
-        let semantic = crate::domain::Derivation {
-            method: "semantic".into(),
-            version: "v1".into(),
-        };
-        let selection = crate::domain::Derivation {
-            method: "selection".into(),
-            version: "v1".into(),
-        };
-        let defeats = Edge::specification_relation(
-            EdgeKind::Defeats,
-            "source",
-            "target",
-            vec![],
-            selection.clone(),
-            "t",
-        )
-        .unwrap();
-        let conflict = Edge::specification_relation(
-            EdgeKind::HardContradiction,
-            "competitor",
-            "source",
-            vec![],
-            semantic.clone(),
-            "t",
-        )
-        .unwrap();
-        store.append_edge(&defeats).unwrap();
-        store.append_edge(&conflict).unwrap();
-
-        let population = store
-            .selection_population(&["target".into()], &[semantic, selection])
-            .unwrap();
-        assert_eq!(population.relation_edges.len(), 2);
-        assert!(population
-            .relation_edges
-            .iter()
-            .any(|edge| edge.kind == EdgeKind::Defeats));
-        assert!(population
-            .relation_edges
-            .iter()
-            .any(|edge| edge.kind == EdgeKind::HardContradiction));
-    }
-
-    #[test]
-    fn selection_edges_are_a_distinct_validated_family() {
-        let store = InMemoryNodeStore::new();
-        store.add_node(&node_with_id("a")).unwrap();
-        store.add_node(&node_with_id("b")).unwrap();
-        let derivation = crate::domain::Derivation {
-            method: "selection-policy".into(),
-            version: "v1".into(),
-        };
-        let edge = Edge {
-            id: "supports-a-b".into(),
-            source: "a".into(),
-            source_kind: crate::domain::VertexKind::Specification,
-            source_role: crate::domain::EndpointRole::Supporter,
-            target: "b".into(),
-            target_kind: crate::domain::VertexKind::Specification,
-            target_role: crate::domain::EndpointRole::Supported,
-            kind: EdgeKind::Supports,
-            source_anchor: None,
-            target_anchor: None,
-            relied_spec_id: None,
-            basis_spec_ids: vec![],
-            derivation: derivation.clone(),
-            recorded_at: "t".into(),
-        };
-        assert!(store.append_edge(&edge).unwrap());
-        assert_eq!(edge.family(), crate::domain::EdgeFamily::Selection);
-        assert_eq!(
-            store
-                .list_edges(&["a".into()], std::slice::from_ref(&derivation))
-                .unwrap(),
-            [edge]
-        );
-    }
-
-    #[test]
     fn duplicate_edge_content_is_reused_even_with_a_different_id_and_time() {
         let store = InMemoryNodeStore::new();
         let edge = Edge::specification_relation(
-            EdgeKind::Supports,
+            EdgeKind::HardContradiction,
             "a",
             "b",
             vec!["basis".into()],
             crate::domain::Derivation {
-                method: "selection-policy".into(),
+                method: "semantic".into(),
                 version: "v1".into(),
             },
             "t1",

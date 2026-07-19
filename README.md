@@ -38,19 +38,16 @@ Consumer appends the captured view and materializes shared Evidence Nodes.
 > source, target contract, and explicitly selected relied specification as
 > distinct authored roles. Only structurally proved, well-formed aggregates are
 > admitted; the paired Assumption supersedes `⊤` in the current projection
-> while every prior projection remains in the append-only Ledger. Every Edge belongs to a lexical, semantic, selection,
-> or projection
-> family and carries explicit endpoint roles. Its `source` and `target` are the
-> ordered arguments of that typed relation, not a universal support-flow
-> direction. Supports, Defeats, and Supersedes are independently versioned
-> selection relations produced only by explicit selection input. The
-> `selection/fitness-v4` current-set policy derives bounded Evidence and
-> grounded-support fitness from Ledger relationships. Admission creates a
-> candidate, not automatic authority. Only selected Defeats/Supersedes sources
-> and selected grounded supporters remain effective; a relation recedes when
-> its source recedes. Selected semantic competitors remove lower-priority
-> candidates while preserving all candidates and relations in the Ledger. See
-> [`docs/selection.md`](docs/selection.md).
+> while every prior projection remains in the append-only Ledger. Every Edge
+> belongs to a lexical, semantic, or projection family, carries explicit
+> endpoint roles, and is produced by a registered mechanical derivation. Its
+> `source` and `target` are the ordered arguments of that typed relation, not a
+> universal support-flow direction. There is no manual Edge-addition path.
+> The `selection/fitness-v5` current-set policy derives bounded fitness from
+> captured Evidence and uses mechanically proved conflict, equivalence, and
+> refinement relationships to select a coherent subset. Admission creates a
+> candidate, not automatic authority. All candidates and relationships remain
+> in the Ledger.
 
 ## Architecture
 
@@ -182,9 +179,6 @@ Command handlers are the only publishers of processing Events:
 | `EstablishGuaranteeDischarge` | `GuaranteeDischargeEstablished` |
 | `EstablishAdmissibilityEnvelope` | `AdmissibilityEnvelopeEstablished` |
 | `AcceptDischargeCandidate` | `DischargeCandidateAccepted` |
-| `SupportSpecification` | `SpecificationSupported` |
-| `DefeatSpecification` | `SpecificationDefeated` |
-| `SupersedeSpecification` | `SpecificationSuperseded` |
 | `ProjectNodeTerms` | `NodeTermsProjected` |
 | `ProjectNodeContract` | `NodeContractProjected` |
 | `CaptureEvidence` | `EvidenceCaptured` when capture applies |
@@ -193,14 +187,13 @@ Command handlers are the only publishers of processing Events:
 | `AssessNodeContractRelations` | `NodeContractRelationAssessmentCompleted` |
 | `AssessNodeDischargeCandidates` | `NodeDischargeCandidateAssessmentCompleted` |
 
-The 20 concrete Command kinds therefore map to 20 distinct concrete Event
+The 17 concrete Command kinds therefore map to 17 distinct concrete Event
 kinds. Concrete Events are never rounded into names such as `ContractChanged`,
 `EdgeAdded`, or `RelationAssessed`. Subscriptions may additionally select the
 abstract categories `DomainEvent`, `GraphEvent`, `NodeEvent`, `EvidenceEvent`,
-`ContractEvent`, `RelationEvent`, `ProjectionEvent`, `AssessmentEvent`, and
-`SelectionEvent`. A category match delivers the original concrete Event once;
-it does not emit another abstract Event. One concrete kind may belong to
-several categories.
+`ContractEvent`, `RelationEvent`, `ProjectionEvent`, and `AssessmentEvent`. A
+category match delivers the original concrete Event once; it does not emit
+another abstract Event. One concrete kind may belong to several categories.
 
 The built-in Consumer subscriptions are:
 
@@ -333,15 +326,13 @@ current derived graph semantically while preserving its audit history.
 ### Viewing the current specification set
 
 The current-set projection is automatic, versioned and auditable. Under
-`selection/fitness-v4`, every specification starts as an unselected candidate.
-Typed `GroundedBy` Evidence supplies bounded points; a directly grounded
-supporter can transfer at most four points and ungrounded support cycles remain
-inert. Explicit defeat/replacement Edges act only from selected sources, and
-selected conflict, equivalence, or refinement competitors explain why a
-candidate recedes. Every
-effective or capped contribution and every exclusion is returned in the graph
-view. The selected set itself is a usable output rather than a display-only
-flag:
+`selection/fitness-v5`, every specification starts as an unselected candidate.
+Typed `GroundedBy` Evidence supplies bounded points. Mechanically proved
+conflict, equivalence, and refinement competitors explain why a viable
+candidate recedes; no manually asserted selection relation participates.
+Every effective or capped Evidence contribution and every exclusion is
+returned in the graph view. The selected set itself is a usable output rather
+than a display-only flag:
 
 ```sh
 # The selected specification set as a relationship-preserving graph.
@@ -351,12 +342,10 @@ spec graph show --current
 `spec graph show --current` walks the daemon's bounded pages and rejects a changing
 or incomplete walk instead of silently rendering a partial set. The UI Current-set
 panel reports selected/loaded candidates, candidates without direct Evidence,
-net Counter Evidence, transferred-support-only selections, and any selected
-conflict Edge. These diagnostics show where further accumulation or newly
-derived relationships can change the selected specification graph; they are
-not a completeness percentage for the unreachable conceptual whole.
-The complete calculation and its limits are specified in
-[`docs/selection.md`](docs/selection.md).
+net Counter Evidence, and any selected conflict Edge. These diagnostics show
+where further accumulation or newly derived relationships can change the
+selected specification graph; they are not a completeness percentage for the
+unreachable conceptual whole.
 
 ### Pairing assume-guarantee contracts
 
@@ -385,8 +374,7 @@ A proved `G_source ⇒ A_target` opportunity is first stored as a
 `DischargeCandidate` Assessment, not an Edge. It becomes the existing
 `GuaranteeDischarge` relation only through explicit acceptance, which runs the
 complete pairing validation again. Contract refinement/equivalence and
-composition/quotient/merge are described in
-[`docs/assume-guarantee-contracts.md`](docs/assume-guarantee-contracts.md).
+composition/quotient/merge operate over saturated A/G contracts.
 
 ### Graph view (`ui/`)
 

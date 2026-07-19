@@ -35,9 +35,6 @@ pub enum CommandKind {
     EstablishGuaranteeDischarge,
     EstablishAdmissibilityEnvelope,
     AcceptDischargeCandidate,
-    SupportSpecification,
-    DefeatSpecification,
-    SupersedeSpecification,
     ProjectNodeTerms,
     ProjectNodeContract,
     CaptureEvidence,
@@ -66,9 +63,6 @@ impl CommandKind {
                 EventKind::AdmissibilityEnvelopeEstablished
             }
             CommandKind::AcceptDischargeCandidate => EventKind::DischargeCandidateAccepted,
-            CommandKind::SupportSpecification => EventKind::SpecificationSupported,
-            CommandKind::DefeatSpecification => EventKind::SpecificationDefeated,
-            CommandKind::SupersedeSpecification => EventKind::SpecificationSuperseded,
             CommandKind::ProjectNodeTerms => EventKind::NodeTermsProjected,
             CommandKind::ProjectNodeContract => EventKind::NodeContractProjected,
             CommandKind::CaptureEvidence => EventKind::EvidenceCaptured,
@@ -194,13 +188,6 @@ pub struct DeriveContractInput {
     pub now: String,
 }
 
-pub struct ChangeSpecificationSelectionInput {
-    pub source: String,
-    pub target: String,
-    pub basis_spec_ids: Vec<String>,
-    pub now: String,
-}
-
 #[derive(Clone)]
 pub struct CommandBus {
     sender: mpsc::Sender<Message>,
@@ -251,8 +238,6 @@ pub enum GraphCommandError {
     #[error(transparent)]
     Algebra(#[from] crate::contract_algebra::AlgebraError),
     #[error(transparent)]
-    Selection(#[from] crate::selection::SelectionError),
-    #[error(transparent)]
     Store(#[from] StoreError),
     #[error(transparent)]
     Event(#[from] crate::event_bus::EventBusError),
@@ -302,13 +287,6 @@ enum Message {
             Result<(CommandAck, crate::contract_algebra::DerivationResult), GraphCommandError>,
         >,
     },
-    ChangeSpecificationSelection {
-        command: CommandEnvelope,
-        kind: crate::domain::EdgeKind,
-        input: ChangeSpecificationSelectionInput,
-        parent_span: tracing::Span,
-        reply: oneshot::Sender<Result<(CommandAck, crate::domain::Edge), GraphCommandError>>,
-    },
     Process {
         command: CommandEnvelope,
         parent_span: tracing::Span,
@@ -327,7 +305,6 @@ enum CompletedCommand {
     EstablishContractRelation(CommandAck, crate::domain::Edge),
     AcceptDischargeCandidate(CommandAck, crate::domain::Edge),
     DeriveContract(CommandAck, crate::contract_algebra::DerivationResult),
-    ChangeSpecificationSelection(CommandAck, crate::domain::Edge),
     Processing(CommandAck),
 }
 
@@ -541,73 +518,6 @@ impl CommandBus {
         self.sender
             .send(Message::DeriveContract {
                 command,
-                input,
-                parent_span: tracing::Span::current(),
-                reply,
-            })
-            .await
-            .map_err(|_| GraphCommandError::Closed)?;
-        received
-            .await
-            .map_err(|_| GraphCommandError::ReplyDropped)?
-    }
-
-    pub async fn support_specification(
-        &self,
-        input: ChangeSpecificationSelectionInput,
-    ) -> Result<(CommandAck, crate::domain::Edge), GraphCommandError> {
-        self.change_specification_selection(
-            CommandKind::SupportSpecification,
-            crate::domain::EdgeKind::Supports,
-            input,
-        )
-        .await
-    }
-
-    pub async fn defeat_specification(
-        &self,
-        input: ChangeSpecificationSelectionInput,
-    ) -> Result<(CommandAck, crate::domain::Edge), GraphCommandError> {
-        self.change_specification_selection(
-            CommandKind::DefeatSpecification,
-            crate::domain::EdgeKind::Defeats,
-            input,
-        )
-        .await
-    }
-
-    pub async fn supersede_specification(
-        &self,
-        input: ChangeSpecificationSelectionInput,
-    ) -> Result<(CommandAck, crate::domain::Edge), GraphCommandError> {
-        self.change_specification_selection(
-            CommandKind::SupersedeSpecification,
-            crate::domain::EdgeKind::Supersedes,
-            input,
-        )
-        .await
-    }
-
-    async fn change_specification_selection(
-        &self,
-        command_kind: CommandKind,
-        relation_kind: crate::domain::EdgeKind,
-        input: ChangeSpecificationSelectionInput,
-    ) -> Result<(CommandAck, crate::domain::Edge), GraphCommandError> {
-        let command = CommandEnvelope::new(
-            command_kind,
-            json!({
-                "kind": relation_kind.as_str(),
-                "source": input.source,
-                "target": input.target,
-                "basis_spec_ids": input.basis_spec_ids,
-            }),
-        );
-        let (reply, received) = oneshot::channel();
-        self.sender
-            .send(Message::ChangeSpecificationSelection {
-                command,
-                kind: relation_kind,
                 input,
                 parent_span: tracing::Span::current(),
                 reply,
@@ -1074,71 +984,6 @@ async fn run(
                     }
                     Ok(Err(error)) => {
                         let _ = reply.send(Err(GraphCommandError::Algebra(error)));
-                    }
-                    Err(error) => {
-                        let _ = reply.send(Err(GraphCommandError::Worker(error.to_string())));
-                    }
-                }
-            }
-            Message::ChangeSpecificationSelection {
-                command,
-                kind,
-                input,
-                parent_span,
-                reply,
-            } => {
-                if let Some(CompletedCommand::ChangeSpecificationSelection(ack, edge)) =
-                    completed.get(&command.id)
-                {
-                    let _ = reply.send(Ok((ack.clone(), edge.clone())));
-                    continue;
-                }
-                let graph = graph.clone();
-                let worker_parent = parent_span.clone();
-                let written = tokio::task::spawn_blocking(move || {
-                    let _entered = tracing::info_span!(
-                        parent: &worker_parent,
-                        "spec.command.change_specification_selection",
-                    )
-                    .entered();
-                    crate::selection::append_relation(
-                        &*graph,
-                        kind,
-                        &input.source,
-                        &input.target,
-                        input.basis_spec_ids,
-                        &input.now,
-                    )
-                })
-                .await;
-                match written {
-                    Ok(Ok(edge)) => {
-                        let ack = command_ack(&command);
-                        let request = command_event_request(
-                            &command,
-                            command.kind.event_kind(),
-                            vec![edge.source.clone(), edge.target.clone(), edge.id.clone()],
-                            json!({"edge_id": edge.id}),
-                            parent_span,
-                        );
-                        match events.publish(request).await {
-                            Ok(_) => {
-                                completed.insert(
-                                    command.id,
-                                    CompletedCommand::ChangeSpecificationSelection(
-                                        ack.clone(),
-                                        edge.clone(),
-                                    ),
-                                );
-                                let _ = reply.send(Ok((ack, edge)));
-                            }
-                            Err(error) => {
-                                let _ = reply.send(Err(GraphCommandError::Event(error)));
-                            }
-                        }
-                    }
-                    Ok(Err(error)) => {
-                        let _ = reply.send(Err(GraphCommandError::Selection(error)));
                     }
                     Err(error) => {
                         let _ = reply.send(Err(GraphCommandError::Worker(error.to_string())));
@@ -1804,9 +1649,6 @@ mod tests {
             CommandKind::EstablishGuaranteeDischarge,
             CommandKind::EstablishAdmissibilityEnvelope,
             CommandKind::AcceptDischargeCandidate,
-            CommandKind::SupportSpecification,
-            CommandKind::DefeatSpecification,
-            CommandKind::SupersedeSpecification,
             CommandKind::ProjectNodeTerms,
             CommandKind::ProjectNodeContract,
             CommandKind::CaptureEvidence,
@@ -1821,7 +1663,7 @@ mod tests {
             .map(CommandKind::event_kind)
             .collect();
 
-        assert_eq!(commands.len(), 20);
+        assert_eq!(commands.len(), 17);
         assert_eq!(events.len(), commands.len());
     }
 

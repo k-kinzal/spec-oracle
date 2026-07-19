@@ -128,7 +128,6 @@ pub fn current_derivations() -> Vec<Derivation> {
     vec![
         term_derivation(),
         semantic_edge_derivation(),
-        crate::selection::derivation(),
         crate::pairing::derivation(),
         contract_projection_derivation(),
         contract_relation_derivation(),

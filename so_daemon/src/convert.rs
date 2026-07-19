@@ -119,9 +119,6 @@ fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
         domain::EdgeKind::OccurrenceReliance => pb::EdgeKind::OccurrenceReliance,
         domain::EdgeKind::GuaranteeDischarge => pb::EdgeKind::GuaranteeDischarge,
         domain::EdgeKind::AdmissibilityEnvelope => pb::EdgeKind::AdmissibilityEnvelope,
-        domain::EdgeKind::Supports => pb::EdgeKind::Supports,
-        domain::EdgeKind::Defeats => pb::EdgeKind::Defeats,
-        domain::EdgeKind::Supersedes => pb::EdgeKind::Supersedes,
         domain::EdgeKind::GroundedBy => pb::EdgeKind::GroundedBy,
         domain::EdgeKind::HasAssumption => pb::EdgeKind::HasAssumption,
         domain::EdgeKind::HasGuarantee => pb::EdgeKind::HasGuarantee,
@@ -139,7 +136,6 @@ fn edge_family_to_pb(family: domain::EdgeFamily) -> pb::EdgeFamily {
     match family {
         domain::EdgeFamily::Lexical => pb::EdgeFamily::Lexical,
         domain::EdgeFamily::Semantic => pb::EdgeFamily::Semantic,
-        domain::EdgeFamily::Selection => pb::EdgeFamily::Selection,
         domain::EdgeFamily::Projection => pb::EdgeFamily::Projection,
     }
 }
@@ -154,12 +150,6 @@ fn endpoint_role_to_pb(role: domain::EndpointRole) -> pb::EdgeEndpointRole {
         domain::EndpointRole::Refined => pb::EdgeEndpointRole::Refined,
         domain::EndpointRole::EquivalentPeer => pb::EdgeEndpointRole::EquivalentPeer,
         domain::EndpointRole::ConflictPeer => pb::EdgeEndpointRole::ConflictPeer,
-        domain::EndpointRole::Supporter => pb::EdgeEndpointRole::Supporter,
-        domain::EndpointRole::Supported => pb::EdgeEndpointRole::Supported,
-        domain::EndpointRole::Defeater => pb::EdgeEndpointRole::Defeater,
-        domain::EndpointRole::Defeated => pb::EdgeEndpointRole::Defeated,
-        domain::EndpointRole::Superseder => pb::EdgeEndpointRole::Superseder,
-        domain::EndpointRole::Superseded => pb::EdgeEndpointRole::Superseded,
         domain::EndpointRole::GroundedSpecification => pb::EdgeEndpointRole::GroundedSpecification,
         domain::EndpointRole::Evidence => pb::EdgeEndpointRole::Evidence,
         domain::EndpointRole::ContractSpecification => pb::EdgeEndpointRole::ContractSpecification,
@@ -585,9 +575,6 @@ pub fn node_to_pb_with_selection(n: &domain::Node, selection: &domain::Selection
     let mut node = node_to_pb(n);
     node.selection = Some(pb::SelectionView {
         current: selection.current(),
-        supporting_edge_ids: selection.supporting_edge_ids.clone(),
-        defeating_edge_ids: selection.defeating_edge_ids.clone(),
-        superseding_edge_ids: selection.superseding_edge_ids.clone(),
         policy_version: selection.policy_version.clone(),
         support_score: selection.support_score,
         evidence_score: selection.evidence_score,
@@ -896,21 +883,6 @@ mod tests {
                 EdgeKind::AdmissibilityEnvelope,
                 pb::EdgeKind::AdmissibilityEnvelope,
                 pb::EdgeFamily::Semantic,
-            ),
-            (
-                EdgeKind::Supports,
-                pb::EdgeKind::Supports,
-                pb::EdgeFamily::Selection,
-            ),
-            (
-                EdgeKind::Defeats,
-                pb::EdgeKind::Defeats,
-                pb::EdgeFamily::Selection,
-            ),
-            (
-                EdgeKind::Supersedes,
-                pb::EdgeKind::Supersedes,
-                pb::EdgeFamily::Selection,
             ),
         ] {
             let (source_role, target_role) = kind.endpoint_roles();

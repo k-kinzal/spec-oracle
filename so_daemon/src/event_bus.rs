@@ -36,9 +36,6 @@ pub enum EventKind {
     GuaranteeDischargeEstablished,
     AdmissibilityEnvelopeEstablished,
     DischargeCandidateAccepted,
-    SpecificationSupported,
-    SpecificationDefeated,
-    SpecificationSuperseded,
     NodeTermsProjected,
     NodeContractProjected,
     EvidenceCaptured,
@@ -64,7 +61,6 @@ pub enum EventClass {
     RelationEvent,
     ProjectionEvent,
     AssessmentEvent,
-    SelectionEvent,
 }
 
 impl EventKind {
@@ -113,9 +109,6 @@ impl EventKind {
                     | EventKind::GuaranteeDischargeEstablished
                     | EventKind::AdmissibilityEnvelopeEstablished
                     | EventKind::DischargeCandidateAccepted
-                    | EventKind::SpecificationSupported
-                    | EventKind::SpecificationDefeated
-                    | EventKind::SpecificationSuperseded
                     | EventKind::NodeSemanticRelationAssessmentCompleted
                     | EventKind::NodeContractRelationAssessmentCompleted
                     | EventKind::NodeDischargeCandidateAssessmentCompleted
@@ -129,12 +122,6 @@ impl EventKind {
                 EventKind::NodeSemanticRelationAssessmentCompleted
                     | EventKind::NodeContractRelationAssessmentCompleted
                     | EventKind::NodeDischargeCandidateAssessmentCompleted
-            ),
-            EventClass::SelectionEvent => matches!(
-                self,
-                EventKind::SpecificationSupported
-                    | EventKind::SpecificationDefeated
-                    | EventKind::SpecificationSuperseded
             ),
         }
     }
@@ -919,9 +906,6 @@ mod tests {
 
         assert!(EventKind::OccurrenceRelianceEstablished.is_a(EventClass::ContractEvent));
         assert!(EventKind::OccurrenceRelianceEstablished.is_a(EventClass::RelationEvent));
-
-        assert!(EventKind::SpecificationSupported.is_a(EventClass::SelectionEvent));
-        assert!(EventKind::SpecificationSupported.is_a(EventClass::RelationEvent));
 
         assert!(EventKind::NodeSemanticRelationAssessmentCompleted.is_a(EventClass::NodeEvent));
         assert!(

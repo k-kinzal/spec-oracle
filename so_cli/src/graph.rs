@@ -663,9 +663,6 @@ fn edge_kind(kind: i32) -> (&'static str, bool) {
         pb::EdgeKind::OccurrenceReliance => ("occurrence_reliance", true),
         pb::EdgeKind::GuaranteeDischarge => ("guarantee_discharge", true),
         pb::EdgeKind::AdmissibilityEnvelope => ("admissibility_envelope", true),
-        pb::EdgeKind::Supports => ("supports", true),
-        pb::EdgeKind::Defeats => ("defeats", true),
-        pb::EdgeKind::Supersedes => ("supersedes", true),
         pb::EdgeKind::GroundedBy => ("grounded_by", true),
         pb::EdgeKind::HasAssumption => ("has_assumption", true),
         pb::EdgeKind::HasGuarantee => ("has_guarantee", true),
@@ -684,7 +681,6 @@ fn edge_family(family: i32) -> &'static str {
     match pb::EdgeFamily::try_from(family).unwrap_or(pb::EdgeFamily::Unspecified) {
         pb::EdgeFamily::Lexical => "lexical",
         pb::EdgeFamily::Semantic => "semantic",
-        pb::EdgeFamily::Selection => "selection",
         pb::EdgeFamily::Projection => "projection",
         pb::EdgeFamily::Unspecified => "unspecified",
     }
@@ -699,12 +695,6 @@ fn endpoint_role(role: i32) -> &'static str {
         pb::EdgeEndpointRole::Refined => "refined",
         pb::EdgeEndpointRole::EquivalentPeer => "equivalent_peer",
         pb::EdgeEndpointRole::ConflictPeer => "conflict_peer",
-        pb::EdgeEndpointRole::Supporter => "supporter",
-        pb::EdgeEndpointRole::Supported => "supported",
-        pb::EdgeEndpointRole::Defeater => "defeater",
-        pb::EdgeEndpointRole::Defeated => "defeated",
-        pb::EdgeEndpointRole::Superseder => "superseder",
-        pb::EdgeEndpointRole::Superseded => "superseded",
         pb::EdgeEndpointRole::GroundedSpecification => "grounded_specification",
         pb::EdgeEndpointRole::Evidence => "evidence",
         pb::EdgeEndpointRole::ContractSpecification => "contract_specification",
@@ -799,21 +789,6 @@ mod tests {
                 pb::EdgeFamily::Semantic,
                 pb::EdgeEndpointRole::AdmissibleEnvironment,
                 pb::EdgeEndpointRole::BoundedContract,
-            ),
-            pb::EdgeKind::Supports => (
-                pb::EdgeFamily::Selection,
-                pb::EdgeEndpointRole::Supporter,
-                pb::EdgeEndpointRole::Supported,
-            ),
-            pb::EdgeKind::Defeats => (
-                pb::EdgeFamily::Selection,
-                pb::EdgeEndpointRole::Defeater,
-                pb::EdgeEndpointRole::Defeated,
-            ),
-            pb::EdgeKind::Supersedes => (
-                pb::EdgeFamily::Selection,
-                pb::EdgeEndpointRole::Superseder,
-                pb::EdgeEndpointRole::Superseded,
             ),
             pb::EdgeKind::GroundedBy => (
                 pb::EdgeFamily::Projection,
@@ -945,7 +920,7 @@ mod tests {
         let mut candidate = specification("candidate", "The daemon shall stop.");
         candidate.selection = Some(pb::SelectionView {
             current: false,
-            policy_version: "selection/fitness-v4".into(),
+            policy_version: "selection/fitness-v5".into(),
             support_score: -4,
             evidence_score: -8,
             relation_score: 4,
@@ -965,7 +940,7 @@ mod tests {
         });
         let graph = Graph::from_wire([candidate], [], [], []).unwrap();
         let rendered = graph.render(Some(90));
-        assert!(rendered.contains("Selection fitness (selection/fitness-v4):"));
+        assert!(rendered.contains("Selection fitness (selection/fitness-v5):"));
         assert!(rendered.contains("score=-4 (evidence=-8, relations=+4) excluded"));
         assert!(rendered.contains("specification: The daemon shall stop."));
         assert!(rendered.contains("-8 counter_evidence"));

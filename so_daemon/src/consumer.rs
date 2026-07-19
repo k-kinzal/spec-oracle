@@ -60,9 +60,6 @@ const DISCHARGE_EVENTS: &[EventKind] = &[
     EventKind::GuaranteeDischargeEstablished,
     EventKind::AdmissibilityEnvelopeEstablished,
     EventKind::DischargeCandidateAccepted,
-    EventKind::SpecificationSupported,
-    EventKind::SpecificationDefeated,
-    EventKind::SpecificationSuperseded,
     EventKind::NodeSemanticRelationAssessmentCompleted,
     EventKind::NodeContractRelationAssessmentCompleted,
 ];

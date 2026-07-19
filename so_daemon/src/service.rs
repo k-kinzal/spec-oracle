@@ -554,8 +554,7 @@ fn add_error_to_status(e: AddError) -> Status {
 mod tests {
     use super::*;
     use crate::command_bus::{
-        ChangeSpecificationSelectionInput, CommandBus, EstablishContractRelationInput,
-        GraphCommandError, ReplaceEvidenceRequestsInput,
+        CommandBus, EstablishContractRelationInput, ReplaceEvidenceRequestsInput,
     };
     use crate::consumer::{built_in_consumers, ConsumerRuntime};
     use crate::domain::{
@@ -815,92 +814,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn explicit_selection_relation_changes_the_derived_current_set() {
-        let store = Arc::new(InMemoryNodeStore::new());
-        for id in ["replacement", "retired", "supporter"] {
-            store.add_node(&node(id)).unwrap();
-        }
-        ground(
-            &store,
-            "replacement",
-            Kind::Assertoric,
-            "replacement-policy",
-        );
-        ground(&store, "retired", Kind::Assertoric, "retired-policy");
-        ground(&store, "supporter", Kind::Demonstrative, "supporter-proof");
-        let blobs = Arc::new(NoBlobs);
-        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
-        let service = SpecificationGraphService::new(store, commands.clone());
-
-        let (_, supersedes) = commands
-            .supersede_specification(ChangeSpecificationSelectionInput {
-                source: "replacement".into(),
-                target: "retired".into(),
-                basis_spec_ids: vec![],
-                now: "t1".into(),
-            })
-            .await
-            .unwrap();
-        let (_, supports) = commands
-            .support_specification(ChangeSpecificationSelectionInput {
-                source: "supporter".into(),
-                target: "replacement".into(),
-                basis_spec_ids: vec![],
-                now: "t2".into(),
-            })
-            .await
-            .unwrap();
-        assert_eq!(supersedes.family(), crate::domain::EdgeFamily::Selection);
-        assert_eq!(supports.family(), crate::domain::EdgeFamily::Selection);
-
-        let graph = service
-            .get_graph(Request::new(pb::GetGraphRequest {
-                page_size: 10,
-                page_token: String::new(),
-            }))
-            .await
-            .unwrap()
-            .into_inner();
-        let retired = graph
-            .nodes
-            .iter()
-            .find(|node| node.id == "retired")
-            .unwrap();
-        let retired_view = retired.selection.as_ref().unwrap();
-        assert!(!retired_view.current);
-        assert_eq!(retired_view.support_score, 4);
-        assert_eq!(
-            retired_view.policy_version,
-            crate::selection::FITNESS_POLICY_VERSION
-        );
-        assert_eq!(retired_view.superseding_edge_ids, vec![supersedes.id]);
-        let replacement = graph
-            .nodes
-            .iter()
-            .find(|node| node.id == "replacement")
-            .unwrap();
-        let replacement_view = replacement.selection.as_ref().unwrap();
-        assert!(
-            replacement_view.current,
-            "grounded support raises the viable replacement's fitness"
-        );
-        assert_eq!(replacement_view.evidence_score, 4);
-        assert_eq!(replacement_view.relation_score, 4);
-        assert_eq!(replacement_view.support_score, 8);
-        assert_eq!(replacement_view.supporting_edge_ids, vec![supports.id]);
-        assert_eq!(
-            graph
-                .edges
-                .iter()
-                .filter(|edge| edge.family == pb::EdgeFamily::Selection as i32)
-                .count(),
-            2
-        );
-
-        stop_runtime(commands, commands_task, events, events_task).await;
-    }
-
-    #[tokio::test]
     async fn accumulating_evidence_reselects_the_better_supported_coherent_set() {
         let store = Arc::new(InMemoryNodeStore::new());
         store.add_node(&node("candidate-a")).unwrap();
@@ -994,97 +907,6 @@ mod tests {
             .unwrap();
         assert_eq!(loser.exclusions[0].kind, "contradicted");
         assert_eq!(store.count_edges().unwrap(), edge_count_before + 1);
-
-        stop_runtime(commands, commands_task, events, events_task).await;
-    }
-
-    #[tokio::test]
-    async fn receded_selection_sources_stop_affecting_current_candidates_but_stay_in_ledger() {
-        let store = Arc::new(InMemoryNodeStore::new());
-        for id in ["source", "supported", "defeated", "competitor"] {
-            store.add_node(&node(id)).unwrap();
-        }
-        ground(&store, "source", Kind::Assertoric, "source-proof");
-        ground(&store, "supported", Kind::Circumstantial, "supported-proof");
-        ground(&store, "defeated", Kind::Circumstantial, "defeated-proof");
-        ground(
-            &store,
-            "competitor",
-            Kind::Demonstrative,
-            "competitor-proof",
-        );
-        let supports = Edge::specification_relation(
-            EdgeKind::Supports,
-            "source",
-            "supported",
-            vec![],
-            crate::selection::derivation(),
-            "t",
-        )
-        .unwrap();
-        let defeats = Edge::specification_relation(
-            EdgeKind::Defeats,
-            "source",
-            "defeated",
-            vec![],
-            crate::selection::derivation(),
-            "t",
-        )
-        .unwrap();
-        let conflict = Edge::specification_relation(
-            EdgeKind::HardContradiction,
-            "competitor",
-            "source",
-            vec![],
-            crate::graph_generation::semantic_edge_derivation(),
-            "t",
-        )
-        .unwrap();
-        for edge in [&supports, &defeats, &conflict] {
-            store.append_edge(edge).unwrap();
-        }
-
-        let blobs = Arc::new(NoBlobs);
-        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
-        let service = SpecificationGraphService::new(store.clone(), commands.clone());
-        let graph = service
-            .get_graph(Request::new(pb::GetGraphRequest {
-                page_size: 10,
-                page_token: String::new(),
-            }))
-            .await
-            .unwrap()
-            .into_inner();
-        let selection = |id: &str| {
-            graph
-                .nodes
-                .iter()
-                .find(|node| node.id == id)
-                .unwrap()
-                .selection
-                .as_ref()
-                .unwrap()
-        };
-        assert!(!selection("source").current);
-        assert!(selection("competitor").current);
-        assert!(selection("supported").current);
-        assert_eq!(selection("supported").relation_score, 0);
-        assert!(selection("defeated").current);
-        assert!(selection("defeated")
-            .exclusions
-            .iter()
-            .all(|reason| reason.kind != "defeated"));
-
-        let ledger = service
-            .get_ledger(Request::new(pb::GetLedgerRequest {
-                page_size: 100,
-                page_token: String::new(),
-            }))
-            .await
-            .unwrap()
-            .into_inner();
-        assert!(ledger.edges.iter().any(|edge| edge.id == supports.id));
-        assert!(ledger.edges.iter().any(|edge| edge.id == defeats.id));
 
         stop_runtime(commands, commands_task, events, events_task).await;
     }
@@ -1367,30 +1189,6 @@ mod tests {
                 && edge.derivation.as_ref().unwrap().method
                     == crate::graph_generation::CONTRACT_PROJECTION_METHOD
         }));
-
-        stop_runtime(commands, commands_task, events, events_task).await;
-    }
-
-    #[tokio::test]
-    async fn selection_command_rejects_unknown_endpoints() {
-        let store = Arc::new(InMemoryNodeStore::new());
-        store.add_node(&node("known")).unwrap();
-        let blobs = Arc::new(NoBlobs);
-        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
-        let missing = commands
-            .support_specification(ChangeSpecificationSelectionInput {
-                source: "known".into(),
-                target: "missing".into(),
-                basis_spec_ids: vec![],
-                now: "t2".into(),
-            })
-            .await
-            .unwrap_err();
-        assert!(matches!(
-            missing,
-            GraphCommandError::Selection(crate::selection::SelectionError::MissingNode(ref id))
-                if id == "missing"
-        ));
 
         stop_runtime(commands, commands_task, events, events_task).await;
     }
