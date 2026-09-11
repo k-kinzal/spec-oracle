@@ -40,7 +40,7 @@ uuid = { version = "1", features = ["v4"] }
 inventory = "0.3"
 # ArangoDB driver, blocking mode (capture is synchronous and is run
 # off the async reactor via spawn_blocking).
-arangors = { version = "0.6", default-features = false, features = ["rocksdb", "reqwest_blocking"] }
+arangors = { version = "0.6", default-features = false, features = ["arango3_7", "rocksdb", "reqwest_blocking"] }
 
 # gRPC / protobuf contract between daemon and client.
 tonic = "0.12"
@@ -53,6 +53,10 @@ percent-encoding = "2"
 # CLI parsing (daemon flags + `spec` frontend).
 clap = { version = "4", features = ["derive", "env"] }
 ratatui = { version = "0.29", default-features = false }
+# Standards-based, read-only graph query parsing. The evaluator deliberately
+# supports a bounded openCypher subset shared by every graph view.
+tree-sitter = "0.26.5"
+tree-sitter-cypher = "0.2.6"
 
 # Observability: tracing spans exported as OTLP/HTTP to the shared local OTel stack.
 so-tracing = { path = "so_tracing" }

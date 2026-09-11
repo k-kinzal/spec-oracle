@@ -61,8 +61,8 @@ pub struct Meta {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub evidence_request_generation: String,
     /// Successfully captured evidence. Empty while capture is pending, when no
-    /// evidence was requested, or when a durable rejected Consumer result explains
-    /// why the request could not be interpreted.
+    /// evidence was requested, or when a durable rejected/unavailable Consumer
+    /// result explains why the request could not produce a snapshot.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence: Vec<Evidence>,
     /// Node creation facts (sense ③), self-observed. No adder identity is

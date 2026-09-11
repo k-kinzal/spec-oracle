@@ -80,6 +80,7 @@ main {
 
 .topbar {
   position: absolute;
+  z-index: 5;
   top: 16px;
   left: 16px;
   right: 16px;
@@ -130,7 +131,7 @@ main {
 /* View-specific projections of the loaded Ledger. */
 .view-switcher {
   position: absolute;
-  top: 96px;
+  top: 132px;
   left: 50%;
   z-index: 4;
   transform: translateX(-50%);
@@ -236,6 +237,7 @@ main {
 /* Legend (bottom-left). */
 .legend {
   position: absolute;
+  z-index: 4;
   bottom: 16px;
   left: 16px;
   padding: 12px 14px;
@@ -250,7 +252,7 @@ main {
 .relation-panel {
   position: absolute;
   z-index: 3;
-  top: 144px;
+  top: 180px;
   right: 16px;
   bottom: 16px;
   width: min(430px, calc(100vw - 32px));
@@ -493,6 +495,17 @@ main {
   flex: 0 0 auto;
 }
 
+.context-boundary-swatch {
+  width: 22px;
+  height: 12px;
+  flex: 0 0 auto;
+  border: 1.5px solid #68d7bf;
+  border-radius: 50%;
+  box-shadow:
+    0 0 8px rgba(104, 215, 191, 0.28),
+    inset 0 0 6px rgba(104, 215, 191, 0.12);
+}
+
 /* Selected-node detail (bottom-right). */
 .detail {
   position: absolute;
@@ -524,6 +537,30 @@ main {
 .detail .statement {
   font-size: 14px;
   line-height: 1.45;
+}
+
+.support-context-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 9px;
+  border: 1px solid rgba(104, 215, 191, 0.2);
+  border-radius: 8px;
+  background: rgba(46, 108, 96, 0.12);
+  color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.support-context-detail strong {
+  color: #a7eadc;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.support-context-detail span {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 .fitness-detail {
@@ -600,7 +637,7 @@ main {
 
 .view-empty {
   position: absolute;
-  inset: 144px 462px 16px 16px;
+  inset: 180px 462px 16px 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -654,7 +691,7 @@ main {
   }
 
   .view-empty {
-    inset: 144px 16px calc(42vh + 28px);
+    inset: 180px 16px calc(42vh + 28px);
   }
 
   .legend {

@@ -34,7 +34,7 @@ export default function StatusBar({
       {atHardCap ? (
         <span className="muted">render cap reached</span>
       ) : complete && drawing ? (
-        <span className="muted">Growing 3D graph · 24 fps target</span>
+        <span className="muted">Growing XY graph · 24 fps target</span>
       ) : complete ? (
         <span className="muted">All loaded</span>
       ) : (

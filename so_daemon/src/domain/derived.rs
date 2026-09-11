@@ -43,6 +43,27 @@ pub enum DerivedNode {
         operation: String,
         derivation_version: String,
     },
+    /// One determiner-free, full-fidelity entity identity used by the
+    /// operational specification view.
+    Entity {
+        id: String,
+        full: String,
+        head: String,
+        display: String,
+        derivation_version: String,
+    },
+    /// The complete operational profile of one authored sentence.  Role
+    /// Edges expose its witnesses and engagements as graph topology while
+    /// this canonical JSON preserves conjunction, quantifiers, and anchors.
+    Behavior {
+        id: String,
+        profile_json: String,
+        /// Indexed discovery key for the structured action. It is redundant
+        /// with `profile_json` and therefore excluded from the content id.
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        action_key: String,
+        derivation_version: String,
+    },
 }
 
 impl DerivedNode {
@@ -149,6 +170,57 @@ impl DerivedNode {
         }
     }
 
+    pub fn entity(entity: &so_reason::operational::EntityRef, derivation_version: &str) -> Self {
+        let id = content_id(
+            "entity",
+            &serde_json::to_vec(&(&entity.full, &entity.head, derivation_version))
+                .expect("entity identity serializes"),
+        );
+        Self::Entity {
+            id,
+            full: entity.full.clone(),
+            head: entity.head.clone(),
+            display: entity.display.clone(),
+            derivation_version: derivation_version.to_string(),
+        }
+    }
+
+    pub fn behavior(
+        profile: &so_reason::operational::OperationalProfile,
+        derivation_version: &str,
+    ) -> Self {
+        let profile_json = serde_json::to_string(profile).expect("operational profile serializes");
+        let id = content_id(
+            "behavior",
+            &serde_json::to_vec(&(&profile_json, derivation_version))
+                .expect("behavior identity serializes"),
+        );
+        Self::Behavior {
+            id,
+            profile_json,
+            action_key: profile
+                .claim
+                .as_ref()
+                .map(|claim| claim.action.join("\u{1f}"))
+                .unwrap_or_default(),
+            derivation_version: derivation_version.to_string(),
+        }
+    }
+
+    pub fn operational_profile(&self) -> Option<so_reason::operational::OperationalProfile> {
+        let Self::Behavior { profile_json, .. } = self else {
+            return None;
+        };
+        serde_json::from_str(profile_json).ok()
+    }
+
+    pub fn operational_action_key(&self) -> Option<&str> {
+        let Self::Behavior { action_key, .. } = self else {
+            return None;
+        };
+        (!action_key.is_empty()).then_some(action_key)
+    }
+
     pub fn semantic_contract(&self) -> Option<so_reason::contract::Contract> {
         let Self::Contract {
             assumption_json,
@@ -169,7 +241,9 @@ impl DerivedNode {
             Self::Evidence { id, .. }
             | Self::Assumption { id, .. }
             | Self::Guarantee { id, .. }
-            | Self::Contract { id, .. } => id,
+            | Self::Contract { id, .. }
+            | Self::Entity { id, .. }
+            | Self::Behavior { id, .. } => id,
         }
     }
 
@@ -179,6 +253,8 @@ impl DerivedNode {
             Self::Assumption { .. } => VertexKind::Assumption,
             Self::Guarantee { .. } => VertexKind::Guarantee,
             Self::Contract { .. } => VertexKind::Contract,
+            Self::Entity { .. } => VertexKind::Entity,
+            Self::Behavior { .. } => VertexKind::Behavior,
         }
     }
 }
@@ -238,5 +314,19 @@ mod tests {
             DerivedNode::assumption("⊤", "v1").id(),
             DerivedNode::guarantee("⊤", "", "v1").id()
         );
+    }
+
+    #[test]
+    fn operational_nodes_are_content_addressed() {
+        let parsed =
+            so_lang::parse::parse("an AddSpecification RPC shall submit an AddNode Command.")
+                .unwrap();
+        let profile = so_reason::operational::operational_profile(&parsed.sentences[0]);
+        let behavior = DerivedNode::behavior(&profile, "v1");
+        assert_eq!(behavior.operational_profile().as_ref(), Some(&profile));
+        assert_eq!(behavior.operational_action_key(), Some("submit"));
+        let entity = DerivedNode::entity(&profile.witnesses[0].entity, "v1");
+        assert_eq!(entity.vertex_kind(), VertexKind::Entity);
+        assert_eq!(behavior.vertex_kind(), VertexKind::Behavior);
     }
 }

@@ -5,10 +5,13 @@
 //! Evidence fitness and every semantic-competition reason a candidate was
 //! excluded from the current specification set.
 
-use super::{DerivedNode, Edge};
+use super::{DerivedNode, Edge, Node};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScoreContributionKind {
+    StructuralSupport,
+    RealizationSupport,
+    ConflictPressure,
     ConstitutiveEvidence,
     DemonstrativeEvidence,
     TestimonialEvidence,
@@ -21,6 +24,9 @@ pub enum ScoreContributionKind {
 impl ScoreContributionKind {
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::StructuralSupport => "structural_support",
+            Self::RealizationSupport => "realization_support",
+            Self::ConflictPressure => "conflict_pressure",
             Self::ConstitutiveEvidence => "constitutive_evidence",
             Self::DemonstrativeEvidence => "demonstrative_evidence",
             Self::TestimonialEvidence => "testimonial_evidence",
@@ -40,6 +46,9 @@ pub struct ScoreContribution {
     pub source_node_id: Option<String>,
     pub evidence_node_id: Option<String>,
     pub detail: String,
+    /// Complete Evidence path in source-to-target order. Structural
+    /// contributions leave this empty and continue to use `edge_id`.
+    pub path_edge_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,7 +57,8 @@ pub enum ExclusionKind {
     Counterevidence,
     Contradicted,
     EquivalentDuplicate,
-    RefinementDominated,
+    IncompleteGraph,
+    EvidenceUnavailable,
 }
 
 impl ExclusionKind {
@@ -58,7 +68,26 @@ impl ExclusionKind {
             Self::Counterevidence => "counterevidence",
             Self::Contradicted => "contradicted",
             Self::EquivalentDuplicate => "equivalent_duplicate",
-            Self::RefinementDominated => "refinement_dominated",
+            Self::IncompleteGraph => "incomplete_graph",
+            Self::EvidenceUnavailable => "evidence_unavailable",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum EvaluationState {
+    Current,
+    Receded,
+    #[default]
+    Unknown,
+}
+
+impl EvaluationState {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Current => "current",
+            Self::Receded => "receded",
+            Self::Unknown => "unknown",
         }
     }
 }
@@ -75,9 +104,12 @@ pub struct SelectionExclusion {
 pub struct SelectionView {
     pub policy_version: String,
     pub current: bool,
+    pub evaluation_state: EvaluationState,
     pub support_score: i32,
+    pub structural_score: i32,
     pub evidence_score: i32,
     pub relation_score: i32,
+    pub conflict_pressure: i32,
     pub contributions: Vec<ScoreContribution>,
     pub exclusions: Vec<SelectionExclusion>,
 }
@@ -87,9 +119,12 @@ impl Default for SelectionView {
         Self {
             policy_version: String::new(),
             current: false,
+            evaluation_state: EvaluationState::Unknown,
             support_score: 0,
+            structural_score: 0,
             evidence_score: 0,
             relation_score: 0,
+            conflict_pressure: 0,
             contributions: Vec::new(),
             exclusions: Vec::new(),
         }
@@ -132,12 +167,14 @@ impl SelectionView {
 }
 
 /// The current graph population needed by the pure fitness derivation.
-/// Stores collect the complete mechanically derived semantic-competition
-/// component plus its direct Evidence inputs; policy and weights stay outside
-/// storage.
+/// Stores collect the complete current typed support/conflict component plus
+/// its authored Specifications and direct Evidence inputs. The policy derives
+/// support clauses from these existing Edges without persisting another Edge.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SelectionPopulation {
+    pub nodes: Vec<Node>,
     pub relation_edges: Vec<Edge>,
+    pub operational_nodes: Vec<DerivedNode>,
     pub evidence_edges: Vec<Edge>,
     pub evidence_nodes: Vec<DerivedNode>,
 }

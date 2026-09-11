@@ -118,6 +118,15 @@ pub struct LedgerPage {
     pub total_edges: u64,
 }
 
+pub struct EvidenceGraphPage {
+    pub evidence_nodes: Vec<pb::DerivedNode>,
+    pub edges: Vec<pb::Edge>,
+    pub specification_nodes: Vec<pb::Node>,
+    pub selected_evidence_ids: Vec<String>,
+    pub paths: Vec<pb::GraphPath>,
+    pub next_page_token: String,
+}
+
 /// A connected client for the SpecificationGraph service.
 pub struct Client {
     inner: SpecificationGraphClient<Channel>,
@@ -194,6 +203,53 @@ impl Client {
         .await
     }
 
+    pub async fn add_evidence_relation(
+        &mut self,
+        evidence: &str,
+        target: &str,
+        relation: pb::EvidenceRelationKind,
+        client: &str,
+        client_version: &str,
+    ) -> Result<pb::AddEvidenceRelationResponse, ClientError> {
+        let evidence = resolve_channel(evidence)?;
+        let mut request = Request::new(pb::AddEvidenceRelationRequest {
+            evidence,
+            target: target.to_string(),
+            relation: relation as i32,
+            client: client.to_string(),
+            client_version: client_version.to_string(),
+        });
+        so_tracing::inject_context(request.metadata_mut());
+        Ok(self
+            .inner
+            .add_evidence_relation(request)
+            .await?
+            .into_inner())
+    }
+
+    pub async fn query_evidence_graph(
+        &mut self,
+        query: &str,
+        page_size: u32,
+        page_token: &str,
+    ) -> Result<EvidenceGraphPage, ClientError> {
+        let mut request = Request::new(pb::QueryEvidenceGraphRequest {
+            query: query.to_string(),
+            page_size,
+            page_token: page_token.to_string(),
+        });
+        so_tracing::inject_context(request.metadata_mut());
+        let response = self.inner.query_evidence_graph(request).await?.into_inner();
+        Ok(EvidenceGraphPage {
+            evidence_nodes: response.evidence_nodes,
+            edges: response.edges,
+            specification_nodes: response.specification_nodes,
+            selected_evidence_ids: response.selected_evidence_ids,
+            paths: response.paths,
+            next_page_token: response.next_page_token,
+        })
+    }
+
     /// Start asynchronous reapplication of every registered graph derivation
     /// to the daemon's existing Specification Nodes.
     pub async fn start_graph_rebuild(
@@ -239,6 +295,28 @@ impl Client {
         page_size: u32,
         page_token: &str,
     ) -> Result<GraphPage, ClientError> {
+        self.get_graph_page(page_size, page_token, false).await
+    }
+
+    /// Read one bounded graph page together with the current candidate-pair
+    /// derivation audit records owned by that page.
+    ///
+    /// Normal graph consumers should use [`Client::get_graph`]: assessments
+    /// are not topology or selection input and can greatly outnumber Nodes.
+    pub async fn get_graph_with_relation_assessments(
+        &mut self,
+        page_size: u32,
+        page_token: &str,
+    ) -> Result<GraphPage, ClientError> {
+        self.get_graph_page(page_size, page_token, true).await
+    }
+
+    async fn get_graph_page(
+        &mut self,
+        page_size: u32,
+        page_token: &str,
+        include_relation_assessments: bool,
+    ) -> Result<GraphPage, ClientError> {
         let span = tracing::info_span!(
             "spec.client.get_graph",
             "rpc.system" = "grpc",
@@ -255,6 +333,7 @@ impl Client {
             let mut request = Request::new(pb::GetGraphRequest {
                 page_size,
                 page_token: page_token.to_string(),
+                include_relation_assessments,
             });
             so_tracing::inject_context(request.metadata_mut());
 

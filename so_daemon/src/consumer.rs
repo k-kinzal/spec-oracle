@@ -9,6 +9,7 @@
 
 use serde_json::json;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::command_bus::{CommandBus, CommandEnvelope, CommandKind};
 use crate::event_bus::{EventBus, EventBusError, EventKind, Subscription};
@@ -16,6 +17,8 @@ use crate::store::GraphStore;
 
 const GRAPH_REBUILD_CONSUMER: &str = "graph-rebuild";
 const GRAPH_REBUILD_PAGE_SIZE: usize = 100;
+const GRAPH_REBUILD_RETENTION_HIGH_WATERMARK: usize =
+    crate::event_bus::EVENT_RETENTION_CAPACITY / 2;
 
 #[derive(Clone)]
 pub struct ConsumerDefinition {
@@ -63,20 +66,27 @@ const DISCHARGE_EVENTS: &[EventKind] = &[
     EventKind::NodeSemanticRelationAssessmentCompleted,
     EventKind::NodeContractRelationAssessmentCompleted,
 ];
+const GRAPH_CONSUMER_WORKERS: usize = 8;
+// Contract assessment executes the most expensive candidate AQL and contract
+// comparison work. More workers reduce throughput on the local persistent
+// store by saturating ArangoDB until requests time out and are redelivered.
+// Keep this separately bounded while the projection and semantic stages retain
+// their higher concurrency.
+const CONTRACT_RELATION_WORKERS: usize = 2;
 
 pub fn built_in_consumers() -> Vec<ConsumerDefinition> {
     vec![
         ConsumerDefinition::new(
             "term-projection",
             NODE_EVENTS,
-            1,
+            GRAPH_CONSUMER_WORKERS,
             CommandKind::ProjectNodeTerms,
             "project-node-terms",
         ),
         ConsumerDefinition::new(
             "contract-projection",
             NODE_EVENTS,
-            1,
+            GRAPH_CONSUMER_WORKERS,
             CommandKind::ProjectNodeContract,
             "project-node-contract",
         ),
@@ -97,21 +107,21 @@ pub fn built_in_consumers() -> Vec<ConsumerDefinition> {
         ConsumerDefinition::new(
             "semantic-relation",
             TERM_EVENTS,
-            1,
+            GRAPH_CONSUMER_WORKERS,
             CommandKind::AssessNodeSemanticRelations,
             "assess-node-semantic-relations",
         ),
         ConsumerDefinition::new(
             "contract-relation",
             CONTRACT_EVENTS,
-            1,
+            CONTRACT_RELATION_WORKERS,
             CommandKind::AssessNodeContractRelations,
             "assess-node-contract-relations",
         ),
         ConsumerDefinition::new(
             "discharge-candidate",
             DISCHARGE_EVENTS,
-            1,
+            GRAPH_CONSUMER_WORKERS,
             CommandKind::AssessNodeDischargeCandidates,
             "assess-node-discharge-candidates",
         ),
@@ -199,7 +209,7 @@ async fn run_graph_rebuild_consumer(
             }
         };
 
-        match process_graph_rebuild_page(&delivery.event, &commands, graph.clone()).await {
+        match process_graph_rebuild_page(&delivery.event, &events, &commands, graph.clone()).await {
             Ok(()) => {
                 if let Err(error) = events.ack(&delivery).await {
                     tracing::warn!(
@@ -226,6 +236,7 @@ async fn run_graph_rebuild_consumer(
 
 async fn process_graph_rebuild_page(
     event: &crate::event_bus::EventEnvelope,
+    events: &EventBus,
     commands: &CommandBus,
     graph: Arc<dyn GraphStore + Send + Sync>,
 ) -> Result<(), String> {
@@ -267,6 +278,22 @@ async fn process_graph_rebuild_page(
         }
         kind => return Err(format!("Graph rebuild Consumer cannot process {kind:?}")),
     };
+
+    // A Consumer publishes its result Event before acknowledging the source
+    // Delivery. Keep half of the retention permits available for those
+    // downstream Events so a rebuild producer cannot fill the entire Bus and
+    // create a publish-waits-for-Ack cycle.
+    loop {
+        let retained = events
+            .snapshot()
+            .await
+            .map_err(|error| error.to_string())?
+            .retained_events;
+        if retained < GRAPH_REBUILD_RETENTION_HIGH_WATERMARK {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
 
     let page = tokio::task::spawn_blocking(move || {
         graph.list_nodes(after.as_deref(), GRAPH_REBUILD_PAGE_SIZE)
@@ -328,6 +355,23 @@ async fn run_consumer(definition: ConsumerDefinition, events: EventBus, commands
                 break;
             }
         };
+        if is_redundant_rebuild_discharge_event(
+            &definition,
+            delivery.event.kind,
+            delivery
+                .event
+                .payload
+                .get("rebuild_id")
+                .and_then(serde_json::Value::as_str),
+        ) {
+            // A rebuild projects every Node contract before publishing both
+            // relation-completion Events. Discharge discovery reads authored
+            // contracts and pairing Edges, so those two later Events would
+            // repeat the exact same rebuild work. Incremental relation and
+            // pairing Events remain unchanged.
+            let _ = events.ack(&delivery).await;
+            continue;
+        }
         let Some(node_id) = delivery.event.subject_ids.first().cloned() else {
             let _ = events.ack(&delivery).await;
             continue;
@@ -340,6 +384,7 @@ async fn run_consumer(definition: ConsumerDefinition, events: EventBus, commands
             json!({
                 "node_id": node_id,
                 "source_event_id": delivery.event.id,
+                "rebuild_id": delivery.event.payload.get("rebuild_id"),
             }),
         );
         match commands.process(command).await {
@@ -366,6 +411,20 @@ async fn run_consumer(definition: ConsumerDefinition, events: EventBus, commands
             }
         }
     }
+}
+
+fn is_redundant_rebuild_discharge_event(
+    definition: &ConsumerDefinition,
+    event_kind: EventKind,
+    rebuild_id: Option<&str>,
+) -> bool {
+    definition.command_kind == CommandKind::AssessNodeDischargeCandidates
+        && rebuild_id.is_some_and(|value| !value.is_empty())
+        && matches!(
+            event_kind,
+            EventKind::NodeSemanticRelationAssessmentCompleted
+                | EventKind::NodeContractRelationAssessmentCompleted
+        )
 }
 
 #[cfg(test)]
@@ -401,6 +460,53 @@ mod tests {
         assert!(definitions
             .iter()
             .any(|definition| definition.consumer_id == "term-projection"));
+        assert_eq!(
+            definitions
+                .iter()
+                .find(|definition| definition.consumer_id == "contract-relation")
+                .unwrap()
+                .workers,
+            CONTRACT_RELATION_WORKERS
+        );
+    }
+
+    #[test]
+    fn rebuild_discharge_runs_once_after_contract_projection() {
+        let definitions = built_in_consumers();
+        let discharge = definitions
+            .iter()
+            .find(|definition| definition.consumer_id == "discharge-candidate")
+            .unwrap();
+        let term = definitions
+            .iter()
+            .find(|definition| definition.consumer_id == "term-projection")
+            .unwrap();
+
+        assert!(!is_redundant_rebuild_discharge_event(
+            discharge,
+            EventKind::NodeContractProjected,
+            Some("rebuild-1"),
+        ));
+        assert!(is_redundant_rebuild_discharge_event(
+            discharge,
+            EventKind::NodeSemanticRelationAssessmentCompleted,
+            Some("rebuild-1"),
+        ));
+        assert!(is_redundant_rebuild_discharge_event(
+            discharge,
+            EventKind::NodeContractRelationAssessmentCompleted,
+            Some("rebuild-1"),
+        ));
+        assert!(!is_redundant_rebuild_discharge_event(
+            discharge,
+            EventKind::NodeContractRelationAssessmentCompleted,
+            None,
+        ));
+        assert!(!is_redundant_rebuild_discharge_event(
+            term,
+            EventKind::NodeContractRelationAssessmentCompleted,
+            Some("rebuild-1"),
+        ));
     }
 
     #[tokio::test]
@@ -571,12 +677,28 @@ mod tests {
                     )
                     .unwrap();
                 let current = store.get_node("existing").unwrap().unwrap();
+                let updates: std::collections::BTreeSet<&str> = current
+                    .meta
+                    .updates
+                    .values()
+                    .map(|update| update.source.as_str())
+                    .collect();
+                let bus_idle = events
+                    .snapshot()
+                    .await
+                    .is_ok_and(|snapshot| snapshot.retained_events == 0);
                 if !edges.is_empty()
-                    && current
-                        .meta
-                        .updates
-                        .values()
-                        .any(|update| update.source == "graph-rebuild")
+                    && [
+                        "graph-rebuild",
+                        "term-projection",
+                        "contract-projection",
+                        "semantic-relation",
+                        "contract-relation",
+                        "discharge-candidate",
+                    ]
+                    .into_iter()
+                    .all(|source| updates.contains(source))
+                    && bus_idle
                 {
                     break;
                 }

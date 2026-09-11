@@ -19,7 +19,7 @@ use crate::event_sink::EventTap;
 use crate::identity::{derive_id, new_message_id};
 
 const BUS_MAILBOX_CAPACITY: usize = 1024;
-const EVENT_RETENTION_CAPACITY: usize = 4096;
+pub(crate) const EVENT_RETENTION_CAPACITY: usize = 4096;
 const RETRY_MAX_SECONDS: u64 = 60;
 const DEFAULT_LEASE: Duration = Duration::from_secs(300);
 
@@ -27,6 +27,7 @@ const DEFAULT_LEASE: Duration = Duration::from_secs(300);
 #[serde(rename_all = "PascalCase")]
 pub enum EventKind {
     NodeAdded,
+    EvidenceRelationAdded,
     EvidenceRequestsReplaced,
     GraphRebuildStarted,
     NodeGraphRebuildStarted,
@@ -76,6 +77,7 @@ impl EventKind {
             EventClass::NodeEvent => matches!(
                 self,
                 EventKind::NodeAdded
+                    | EventKind::EvidenceRelationAdded
                     | EventKind::EvidenceRequestsReplaced
                     | EventKind::NodeGraphRebuildStarted
                     | EventKind::NodeTermsProjected
@@ -89,6 +91,7 @@ impl EventKind {
             EventClass::EvidenceEvent => matches!(
                 self,
                 EventKind::EvidenceRequestsReplaced
+                    | EventKind::EvidenceRelationAdded
                     | EventKind::EvidenceCaptured
                     | EventKind::GithubEvidencePinnedToCommit
             ),
@@ -106,6 +109,7 @@ impl EventKind {
             EventClass::RelationEvent => matches!(
                 self,
                 EventKind::OccurrenceRelianceEstablished
+                    | EventKind::EvidenceRelationAdded
                     | EventKind::GuaranteeDischargeEstablished
                     | EventKind::AdmissibilityEnvelopeEstablished
                     | EventKind::DischargeCandidateAccepted

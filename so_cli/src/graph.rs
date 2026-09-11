@@ -29,6 +29,8 @@ enum NodeKind {
     Assumption,
     Guarantee,
     Contract,
+    Entity,
+    Behavior,
 }
 
 #[derive(Debug)]
@@ -38,10 +40,12 @@ struct Node {
     label: String,
     kind: NodeKind,
     current: bool,
+    evaluation_state: String,
     policy_version: String,
     support_score: i32,
+    structural_score: i32,
     evidence_score: i32,
-    relation_score: i32,
+    conflict_pressure: i32,
     contributions: Vec<Contribution>,
     exclusions: Vec<Exclusion>,
 }
@@ -86,6 +90,8 @@ pub(crate) struct Graph {
     assumption_count: usize,
     guarantee_count: usize,
     contract_count: usize,
+    entity_count: usize,
+    behavior_count: usize,
     scope: GraphScope,
 }
 
@@ -111,6 +117,8 @@ impl Graph {
         let mut assumption_count = 0;
         let mut guarantee_count = 0;
         let mut contract_count = 0;
+        let mut entity_count = 0;
+        let mut behavior_count = 0;
 
         for specification in specifications {
             let selection = specification.selection.as_ref();
@@ -121,11 +129,22 @@ impl Graph {
                 label: specification.statement,
                 kind: NodeKind::Specification,
                 current,
+                evaluation_state: selection.map_or_else(
+                    || {
+                        if current {
+                            "current".into()
+                        } else {
+                            "receded".into()
+                        }
+                    },
+                    |view| view.evaluation_state.clone(),
+                ),
                 policy_version: selection
                     .map_or_else(String::new, |view| view.policy_version.clone()),
                 support_score: selection.map_or(0, |view| view.support_score),
+                structural_score: selection.map_or(0, |view| view.structural_score),
                 evidence_score: selection.map_or(0, |view| view.evidence_score),
-                relation_score: selection.map_or(0, |view| view.relation_score),
+                conflict_pressure: selection.map_or(0, |view| view.conflict_pressure),
                 contributions: selection.map_or_else(Vec::new, |view| {
                     view.contributions
                         .iter()
@@ -161,10 +180,12 @@ impl Graph {
                 label: term.form,
                 kind: NodeKind::Term,
                 current: true,
+                evaluation_state: String::new(),
                 policy_version: String::new(),
                 support_score: 0,
+                structural_score: 0,
                 evidence_score: 0,
-                relation_score: 0,
+                conflict_pressure: 0,
                 contributions: Vec::new(),
                 exclusions: Vec::new(),
             };
@@ -202,6 +223,14 @@ impl Graph {
                         format!("{} A/G contract", value.operation),
                     )
                 }
+                Some(pb::derived_node::Value::Entity(value)) => {
+                    entity_count += 1;
+                    (NodeKind::Entity, value.display)
+                }
+                Some(pb::derived_node::Value::Behavior(_)) => {
+                    behavior_count += 1;
+                    (NodeKind::Behavior, "operational behavior".into())
+                }
                 None => return Err(format!("Derived Node {} has no value", derived.id)),
             };
             let node = Node {
@@ -210,10 +239,12 @@ impl Graph {
                 label,
                 kind,
                 current: true,
+                evaluation_state: String::new(),
                 policy_version: String::new(),
                 support_score: 0,
+                structural_score: 0,
                 evidence_score: 0,
-                relation_score: 0,
+                conflict_pressure: 0,
                 contributions: Vec::new(),
                 exclusions: Vec::new(),
             };
@@ -229,6 +260,8 @@ impl Graph {
         let mut assumption_number = 0;
         let mut guarantee_number = 0;
         let mut contract_number = 0;
+        let mut entity_number = 0;
+        let mut behavior_number = 0;
         for node in &mut nodes {
             node.display_id = match node.kind {
                 NodeKind::Specification => {
@@ -254,6 +287,14 @@ impl Graph {
                 NodeKind::Contract => {
                     contract_number += 1;
                     format!("C{contract_number:02}")
+                }
+                NodeKind::Entity => {
+                    entity_number += 1;
+                    format!("N{entity_number:02}")
+                }
+                NodeKind::Behavior => {
+                    behavior_number += 1;
+                    format!("B{behavior_number:02}")
                 }
             };
         }
@@ -309,6 +350,8 @@ impl Graph {
             assumption_count,
             guarantee_count,
             contract_count,
+            entity_count,
+            behavior_count,
             scope: GraphScope::Population,
         })
     }
@@ -326,7 +369,7 @@ impl Graph {
         let current_edge_count = self.edges.iter().filter(|edge| edge.current).count();
         let mut output = match self.scope {
             GraphScope::Population => format!(
-                "Specification graph — {} current / {} candidate specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} contract(s), {} edge(s)\n",
+                "Specification graph — {} current / {} candidate specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} contract(s), {} entity kind(s), {} behavior(s), {} edge(s)\n",
                 self.current_specification_count,
                 self.specification_count,
                 self.term_count,
@@ -334,20 +377,24 @@ impl Graph {
                 self.assumption_count,
                 self.guarantee_count,
                 self.contract_count,
+                self.entity_count,
+                self.behavior_count,
                 self.edges.len()
             ),
             GraphScope::Current => format!(
-                "Current specification graph — {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} contract(s), {} relationship(s)\n",
+                "Current specification graph — {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} contract(s), {} entity kind(s), {} behavior(s), {} relationship(s)\n",
                 self.specification_count,
                 self.term_count,
                 self.evidence_count,
                 self.assumption_count,
                 self.guarantee_count,
                 self.contract_count,
+                self.entity_count,
+                self.behavior_count,
                 self.edges.len()
             ),
             GraphScope::Ledger => format!(
-                "Ledger graph — {} current / {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} contract(s), {} current / {} recorded edge(s)\n",
+                "Ledger graph — {} current / {} specification(s), {} term(s), {} evidence, {} assumption(s), {} guarantee(s), {} contract(s), {} entity kind(s), {} behavior(s), {} current / {} recorded edge(s)\n",
                 self.current_specification_count,
                 self.specification_count,
                 self.term_count,
@@ -355,6 +402,8 @@ impl Graph {
                 self.assumption_count,
                 self.guarantee_count,
                 self.contract_count,
+                self.entity_count,
+                self.behavior_count,
                 current_edge_count,
                 self.edges.len()
             ),
@@ -472,13 +521,28 @@ impl Graph {
             output.push_str(&format!("Selection fitness ({policy}):\n"));
             for node in specifications {
                 output.push_str(&format!(
-                    "  {} {} score={:+} (evidence={:+}, relations={:+}) {}\n",
-                    if node.current { "◆" } else { "◇" },
+                    "  {} {} score={:+} (structural={:+}, evidence={:+}, conflict=-{}) {}\n",
+                    if node.current {
+                        "◆"
+                    } else if node.evaluation_state == "unknown" {
+                        "?"
+                    } else {
+                        "◇"
+                    },
                     node.display_id,
                     node.support_score,
+                    node.structural_score,
                     node.evidence_score,
-                    node.relation_score,
-                    if node.current { "current" } else { "excluded" },
+                    node.conflict_pressure,
+                    if node.evaluation_state.is_empty() {
+                        if node.current {
+                            "current"
+                        } else {
+                            "receded"
+                        }
+                    } else {
+                        node.evaluation_state.as_str()
+                    },
                 ));
                 output.push_str(&format!("      specification: {}\n", node.label));
                 for contribution in &node.contributions {
@@ -599,6 +663,8 @@ fn node_label(node: &Node) -> String {
         NodeKind::Assumption => '△',
         NodeKind::Guarantee => '■',
         NodeKind::Contract => '⬡',
+        NodeKind::Entity => '◉',
+        NodeKind::Behavior => '▣',
     };
     format!(
         "{marker} {} {}",
@@ -664,6 +730,8 @@ fn edge_kind(kind: i32) -> (&'static str, bool) {
         pb::EdgeKind::GuaranteeDischarge => ("guarantee_discharge", true),
         pb::EdgeKind::AdmissibilityEnvelope => ("admissibility_envelope", true),
         pb::EdgeKind::GroundedBy => ("grounded_by", true),
+        pb::EdgeKind::EvidenceAffirms => ("evidence_affirms", true),
+        pb::EdgeKind::EvidenceDenies => ("evidence_denies", true),
         pb::EdgeKind::HasAssumption => ("has_assumption", true),
         pb::EdgeKind::HasGuarantee => ("has_guarantee", true),
         pb::EdgeKind::HasContract => ("has_contract", true),
@@ -673,6 +741,9 @@ fn edge_kind(kind: i32) -> (&'static str, bool) {
         pb::EdgeKind::QuotientDividend => ("quotient_dividend", true),
         pb::EdgeKind::QuotientDivisor => ("quotient_divisor", true),
         pb::EdgeKind::MergeOperand => ("merge_operand", true),
+        pb::EdgeKind::HasBehavior => ("has_behavior", true),
+        pb::EdgeKind::WitnessesEntity => ("witnesses_entity", true),
+        pb::EdgeKind::EngagesEntity => ("engages_entity", true),
         pb::EdgeKind::Unspecified => ("unspecified", false),
     }
 }
@@ -682,6 +753,7 @@ fn edge_family(family: i32) -> &'static str {
         pb::EdgeFamily::Lexical => "lexical",
         pb::EdgeFamily::Semantic => "semantic",
         pb::EdgeFamily::Projection => "projection",
+        pb::EdgeFamily::Epistemic => "epistemic",
         pb::EdgeFamily::Unspecified => "unspecified",
     }
 }
@@ -717,6 +789,18 @@ fn endpoint_role(role: i32) -> &'static str {
         pb::EdgeEndpointRole::QuotientResult => "quotient_result",
         pb::EdgeEndpointRole::MergeOperand => "merge_operand",
         pb::EdgeEndpointRole::MergeResult => "merge_result",
+        pb::EdgeEndpointRole::OperationalSpecification => "operational_specification",
+        pb::EdgeEndpointRole::OperationalBehavior => "operational_behavior",
+        pb::EdgeEndpointRole::WitnessingBehavior => "witnessing_behavior",
+        pb::EdgeEndpointRole::WitnessedEntity => "witnessed_entity",
+        pb::EdgeEndpointRole::EngagingBehavior => "engaging_behavior",
+        pb::EdgeEndpointRole::EngagedEntity => "engaged_entity",
+        pb::EdgeEndpointRole::AffirmingEvidence => "affirming_evidence",
+        pb::EdgeEndpointRole::AffirmedSpecification => "affirmed_specification",
+        pb::EdgeEndpointRole::AffirmedEvidence => "affirmed_evidence",
+        pb::EdgeEndpointRole::DenyingEvidence => "denying_evidence",
+        pb::EdgeEndpointRole::DeniedSpecification => "denied_specification",
+        pb::EdgeEndpointRole::DeniedEvidence => "denied_evidence",
         pb::EdgeEndpointRole::Unspecified => "unspecified",
     }
 }
@@ -795,6 +879,16 @@ mod tests {
                 pb::EdgeEndpointRole::GroundedSpecification,
                 pb::EdgeEndpointRole::Evidence,
             ),
+            pb::EdgeKind::EvidenceAffirms => (
+                pb::EdgeFamily::Epistemic,
+                pb::EdgeEndpointRole::AffirmingEvidence,
+                pb::EdgeEndpointRole::AffirmedEvidence,
+            ),
+            pb::EdgeKind::EvidenceDenies => (
+                pb::EdgeFamily::Epistemic,
+                pb::EdgeEndpointRole::DenyingEvidence,
+                pb::EdgeEndpointRole::DeniedEvidence,
+            ),
             pb::EdgeKind::HasAssumption => (
                 pb::EdgeFamily::Projection,
                 pb::EdgeEndpointRole::ContractSpecification,
@@ -839,6 +933,21 @@ mod tests {
                 pb::EdgeFamily::Projection,
                 pb::EdgeEndpointRole::MergeOperand,
                 pb::EdgeEndpointRole::MergeResult,
+            ),
+            pb::EdgeKind::HasBehavior => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::OperationalSpecification,
+                pb::EdgeEndpointRole::OperationalBehavior,
+            ),
+            pb::EdgeKind::WitnessesEntity => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::WitnessingBehavior,
+                pb::EdgeEndpointRole::WitnessedEntity,
+            ),
+            pb::EdgeKind::EngagesEntity => (
+                pb::EdgeFamily::Projection,
+                pb::EdgeEndpointRole::EngagingBehavior,
+                pb::EdgeEndpointRole::EngagedEntity,
             ),
             pb::EdgeKind::Unspecified => (
                 pb::EdgeFamily::Unspecified,
@@ -920,10 +1029,13 @@ mod tests {
         let mut candidate = specification("candidate", "The daemon shall stop.");
         candidate.selection = Some(pb::SelectionView {
             current: false,
-            policy_version: "selection/fitness-v5".into(),
+            policy_version: "selection/fitness-v6".into(),
             support_score: -4,
+            structural_score: 4,
             evidence_score: -8,
             relation_score: 4,
+            conflict_pressure: 0,
+            evaluation_state: "receded".into(),
             contributions: vec![pb::ScoreContribution {
                 kind: "counter_evidence".into(),
                 points: -8,
@@ -940,8 +1052,8 @@ mod tests {
         });
         let graph = Graph::from_wire([candidate], [], [], []).unwrap();
         let rendered = graph.render(Some(90));
-        assert!(rendered.contains("Selection fitness (selection/fitness-v5):"));
-        assert!(rendered.contains("score=-4 (evidence=-8, relations=+4) excluded"));
+        assert!(rendered.contains("Selection fitness (selection/fitness-v6):"));
+        assert!(rendered.contains("score=-4 (structural=+4, evidence=-8, conflict=-0) receded"));
         assert!(rendered.contains("specification: The daemon shall stop."));
         assert!(rendered.contains("-8 counter_evidence"));
         assert!(rendered.contains("excludes: counterevidence"));

@@ -46,6 +46,12 @@ service SpecificationGraph {
   // installed derivations can append their missing Edges.
   rpc StartGraphRebuild(StartGraphRebuildRequest) returns (StartGraphRebuildResponse);
 
+  // Capture or reuse one Evidence Node and append one manual epistemic Edge
+  // from it to a Specification or another Evidence Node.
+  rpc AddEvidenceRelation(AddEvidenceRelationRequest) returns (AddEvidenceRelationResponse);
+
+  // Extract a bounded Evidence subgraph using a read-only openCypher query.
+  rpc QueryEvidenceGraph(QueryEvidenceGraphRequest) returns (QueryEvidenceGraphResponse);
 }
 
 message AddSpecificationRequest {
@@ -79,6 +85,10 @@ message GetGraphRequest {
   // paging cost is independent of how deep into the graph the cursor sits.
   // Treat it as opaque: do not parse or construct it.
   string page_token = 2;
+  // Candidate-pair assessments are append-only audit records rather than
+  // graph topology. They can greatly outnumber Nodes and Edges, so callers
+  // must opt in when they are specifically inspecting derivation audits.
+  bool include_relation_assessments = 3;
 }
 
 message GetGraphResponse {
@@ -135,6 +145,58 @@ message StartGraphRebuildResponse {
   uint64 total_nodes = 3;
 }
 
+enum EvidenceRelationKind {
+  EVIDENCE_RELATION_KIND_UNSPECIFIED = 0;
+  EVIDENCE_RELATION_KIND_AFFIRMS = 1;
+  EVIDENCE_RELATION_KIND_DENIES = 2;
+}
+
+message AddEvidenceRelationRequest {
+  // Either an existing content-addressed Evidence id or one resolved Evidence
+  // descriptor (JSON or a bare locator). Descriptors are captured by specd.
+  string evidence = 1;
+  // Existing Specification or Evidence id.
+  string target = 2;
+  EvidenceRelationKind relation = 3;
+  string client = 4;
+  string client_version = 5;
+}
+
+message AddEvidenceRelationResponse {
+  DerivedNode evidence_node = 1;
+  Edge edge = 2;
+  bool evidence_node_inserted = 3;
+  bool edge_inserted = 4;
+}
+
+message QueryEvidenceGraphRequest {
+  // A read-only openCypher query whose RETURN item is one named path. The
+  // Evidence scope exposes Evidence and Specification node labels and
+  // GROUNDED_BY, EVIDENCE_AFFIRMS, and EVIDENCE_DENIES relationship types.
+  string query = 1;
+  // Maximum returned paths in this page, independently of path length.
+  uint32 page_size = 2;
+  // Opaque returned-path cursor.
+  string page_token = 3;
+}
+
+message QueryEvidenceGraphResponse {
+  // The exact union of the paths selected by the query in this page.
+  repeated DerivedNode evidence_nodes = 1;
+  repeated Edge edges = 2;
+  repeated Node specification_nodes = 3;
+  repeated string selected_evidence_ids = 4;
+  string next_page_token = 5;
+  repeated GraphPath paths = 6;
+}
+
+message GraphPath {
+  string id = 1;
+  // Ordered from the path's syntactic start to end.
+  repeated string node_ids = 2;
+  repeated string edge_ids = 3;
+}
+
 message TermNode {
   string id = 1;
   string form = 2;
@@ -150,7 +212,21 @@ message DerivedNode {
     AssumptionNode assumption = 3;
     GuaranteeNode guarantee = 4;
     ContractNode contract = 5;
+    EntityNode entity = 6;
+    BehaviorNode behavior = 7;
   }
+}
+
+message EntityNode {
+  string full = 1;
+  string head = 2;
+  string display = 3;
+  string derivation_version = 4;
+}
+
+message BehaviorNode {
+  string profile_json = 1;
+  string derivation_version = 2;
 }
 
 message EvidenceNode {
@@ -191,6 +267,8 @@ enum VertexKind {
   VERTEX_KIND_ASSUMPTION = 4;
   VERTEX_KIND_GUARANTEE = 5;
   VERTEX_KIND_CONTRACT = 6;
+  VERTEX_KIND_ENTITY = 7;
+  VERTEX_KIND_BEHAVIOR = 8;
 }
 
 message TextAnchor {
@@ -280,6 +358,7 @@ enum EdgeFamily {
   reserved 3;
   reserved "EDGE_FAMILY_SELECTION";
   EDGE_FAMILY_PROJECTION = 4;
+  EDGE_FAMILY_EPISTEMIC = 5;
 }
 
 // The role each ordered endpoint plays in its EdgeKind. Symmetric kinds give
@@ -322,6 +401,18 @@ enum EdgeEndpointRole {
   EDGE_ENDPOINT_ROLE_MERGE_OPERAND = 33;
   EDGE_ENDPOINT_ROLE_MERGE_RESULT = 34;
   EDGE_ENDPOINT_ROLE_LEXEME_PEER = 35;
+  EDGE_ENDPOINT_ROLE_OPERATIONAL_SPECIFICATION = 36;
+  EDGE_ENDPOINT_ROLE_OPERATIONAL_BEHAVIOR = 37;
+  EDGE_ENDPOINT_ROLE_WITNESSING_BEHAVIOR = 38;
+  EDGE_ENDPOINT_ROLE_WITNESSED_ENTITY = 39;
+  EDGE_ENDPOINT_ROLE_ENGAGING_BEHAVIOR = 40;
+  EDGE_ENDPOINT_ROLE_ENGAGED_ENTITY = 41;
+  EDGE_ENDPOINT_ROLE_AFFIRMING_EVIDENCE = 42;
+  EDGE_ENDPOINT_ROLE_AFFIRMED_SPECIFICATION = 43;
+  EDGE_ENDPOINT_ROLE_AFFIRMED_EVIDENCE = 44;
+  EDGE_ENDPOINT_ROLE_DENYING_EVIDENCE = 45;
+  EDGE_ENDPOINT_ROLE_DENIED_SPECIFICATION = 46;
+  EDGE_ENDPOINT_ROLE_DENIED_EVIDENCE = 47;
 }
 
 // The kind of relationship an Edge asserts. Its direction is its endpoint-role
@@ -358,6 +449,11 @@ enum EdgeKind {
   // Historical concrete Ledger relation. Current lexical derivation uses
   // MENTIONS_TERM, but append-only rows must remain readable and visible.
   EDGE_KIND_SAME_LEXEME = 31;
+  EDGE_KIND_HAS_BEHAVIOR = 32;
+  EDGE_KIND_WITNESSES_ENTITY = 33;
+  EDGE_KIND_ENGAGES_ENTITY = 34;
+  EDGE_KIND_EVIDENCE_AFFIRMS = 35;
+  EDGE_KIND_EVIDENCE_DENIES = 36;
 }
 
 // ---- domain mirror ---------------------------------------------------------
@@ -391,11 +487,18 @@ message SelectionView {
   string policy_version = 5;
   sint32 support_score = 6;
   sint32 evidence_score = 7;
-  // Compatibility field for pre-v5 clients. v5 has no relationship score and
-  // always returns zero.
+  // Net structural relationship score after conflict pressure.
   sint32 relation_score = 8;
   repeated ScoreContribution contributions = 9;
   repeated SelectionExclusion exclusions = 10;
+  // current, receded, or unknown. Unknown distinguishes incomplete graph or
+  // unavailable Evidence inputs from a low-fitness decision.
+  string evaluation_state = 11;
+  // Positive recursive Specification-to-Specification support before Evidence
+  // and conflicts.
+  sint32 structural_score = 12;
+  // Points removed by typed semantic conflicts.
+  sint32 conflict_pressure = 13;
 }
 
 // One auditable term in the fitness sum. `points` is effective after policy
@@ -407,6 +510,9 @@ message ScoreContribution {
   optional string source_node_id = 4;
   optional string evidence_node_id = 5;
   string detail = 6;
+  // Complete Evidence path in source-to-target order. `edge_id` remains the
+  // terminal Edge for compact consumers and backward compatibility.
+  repeated string path_edge_ids = 7;
 }
 
 // One independently checkable reason a candidate is absent from current set.
@@ -454,7 +560,9 @@ message ContractView {
 
 message Meta {
   // Current successfully captured view, populated asynchronously by the
-  // Evidence Consumer. Complete historical captures also remain in Consumer updates.
+  // Evidence Consumer. Empty after a durable rejected/unavailable result;
+  // the request and failure details remain in evidence_requests and updates.
+  // Complete historical captures also remain in Consumer updates.
   repeated Evidence evidence = 1;
   string created_at = 2;
   string cli = 3;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import {useEffect, useRef} from "react";
 import {
   Box3,
   BufferAttribute,
@@ -22,7 +22,12 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
+import {
+  buildSupportContextBoundaries,
+  supportContextLayoutEdges,
+  type SupportContextModel,
+} from "@/lib/specification-context";
 import {
   DIRECTED_EDGE_KINDS,
   DERIVED_NODE_COLORS,
@@ -38,100 +43,71 @@ const DRAW_INTERVAL = 1000 / DRAW_FPS;
 const NODES_PER_DRAW = 2;
 const EDGES_PER_DRAW = 4;
 const GROWTH_FRAMES = 5;
-const NODE_CAPACITY = 4096;
-const EDGE_CAPACITY = 8192;
+const POSITION_EASING = 0.22;
+const NODE_CAPACITY = 65536;
+const EDGE_CAPACITY = 65536;
+const CONTEXT_SEGMENT_CAPACITY = 65536;
+const CONTEXT_RENDER_LIMIT = 512;
 const CAMERA_HOLD_MS = 5000;
 
-type LayoutNode = {
-  id: string;
-  x: number;
-  y: number;
-  z: number;
-  radius: number;
-  kind: GraphNode["nodeKind"];
+type LayoutPositionMessage = {
+  type: "positions";
+  generation: number;
+  sequence: number;
+  ids: string[];
+  positions: Float32Array;
+  featureCount: number;
+  routeCount: number;
+  iterations: number;
+  objectiveUpdates: number;
+  alpha: number;
+  elapsedMs: number;
+  topologyComplete: boolean;
+  settled: boolean;
 };
 
-type LayoutEdge = {
-  id: string;
-  source: string;
-  target: string;
-  kind: GraphEdge["kind"];
+type LayoutStatusMessage = {
+  type: "status";
+  generation: number;
+  sequence: number;
+  topologyComplete: boolean;
+  settled: boolean;
+  objectiveUpdates: number;
+  alpha: number;
 };
 
-type LayoutMessage =
-  | {
-      type: "positions";
-      generation: number;
-      sequence: number;
-      positions: Float32Array;
-    }
-  | { type: "settled"; generation: number };
-
-const CLUSTER_CENTERS: Record<string, [number, number, number]> = {
-  definition: [-92, -54, -48],
-  description: [0, -82, 12],
-  obligation: [92, -54, 48],
-  prohibition: [-92, 48, 42],
-  recommendation: [0, 82, -44],
-  permission: [92, 48, -20],
-  unknown: [0, 0, 0],
-  term: [0, 0, 0],
-  evidence: [-38, 0, 48],
-  assumption: [0, -34, -44],
-  guarantee: [38, 0, 42],
-};
-
-function stableHash(value: string): number {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
-function initialPosition(node: GraphNode): [number, number, number] {
-  const key = node.nodeKind === "specification" ? node.speechAct : node.nodeKind;
-  const center = CLUSTER_CENTERS[key] ?? CLUSTER_CENTERS.unknown;
-  const hash = stableHash(node.id);
-  const theta = ((hash % 4096) / 4096) * Math.PI * 2;
-  const phi = Math.acos(2 * (((hash >>> 12) % 2048) / 2048) - 1);
-  const radius = 9 + Math.sqrt(((hash >>> 20) % 4096) / 4096) * 31;
-  return [
-    center[0] + Math.sin(phi) * Math.cos(theta) * radius,
-    center[1] + Math.sin(phi) * Math.sin(theta) * radius,
-    center[2] + Math.cos(phi) * radius,
-  ];
-}
-
-function positionNear(
-  node: GraphNode,
-  anchor: [number, number, number],
-): [number, number, number] {
-  const hash = stableHash(node.id);
-  const theta = ((hash % 4096) / 4096) * Math.PI * 2;
-  const z = (((hash >>> 12) % 2048) / 1024) - 1;
-  const radial = Math.sqrt(Math.max(0, 1 - z * z));
-  const distance = 8 + ((hash >>> 22) % 900) / 100;
-  return [
-    anchor[0] + Math.cos(theta) * radial * distance,
-    anchor[1] + Math.sin(theta) * radial * distance,
-    anchor[2] + z * distance,
-  ];
-}
+type LayoutMessage = LayoutPositionMessage | LayoutStatusMessage;
 
 function nodeColor(node: GraphNode): Color {
   if (node.nodeKind === "term") return new Color(TERM_NODE_COLOR);
   if (node.nodeKind !== "specification") {
     return new Color(DERIVED_NODE_COLORS[node.nodeKind]);
   }
-  return new Color(SPEECH_ACT_COLORS[node.speechAct] ?? SPEECH_ACT_COLORS.unknown);
+  const color = new Color(
+    SPEECH_ACT_COLORS[node.speechAct] ?? SPEECH_ACT_COLORS.unknown,
+  );
+  if (node.evaluationState === "receded" || !node.current) {
+    color.multiplyScalar(0.34);
+  } else if (node.evaluationState === "unknown") {
+    color.multiplyScalar(0.62);
+  }
+  return color;
 }
 
 function baseNodeSize(node: GraphNode): number {
   return node.nodeKind === "specification"
+    ? 2.2 + Math.min(Math.max(node.supportScore, 0), 24) * 0.11
+    : 1.8;
+}
+
+function layoutNodeRadius(node: GraphNode): number {
+  return node.nodeKind === "specification"
     ? 4 + Math.min(Math.max(node.supportScore, 0), 24) * 0.24
     : 3;
+}
+
+function easeOutCubic(progress: number): number {
+  return 1 - Math.pow(1 - progress, 3);
 }
 
 function edgeColor(edge: GraphEdge): Color {
@@ -152,70 +128,33 @@ function edgeColor(edge: GraphEdge): Color {
   );
 }
 
-function easeOutCubic(progress: number): number {
-  return 1 - Math.pow(1 - progress, 3);
+function stableHash(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 
-function queueTopology(
-  nodes: GraphNode[],
-  links: GraphEdge[],
-  queued: Set<string>,
-  pending: string[],
-) {
-  const targetIds = new Set(nodes.map((node) => node.id));
-  const adjacent = new Map<string, string[]>();
-  for (const link of links) {
-    if (!targetIds.has(link.source) || !targetIds.has(link.target)) continue;
-    const source = adjacent.get(link.source) ?? [];
-    source.push(link.target);
-    adjacent.set(link.source, source);
-    const target = adjacent.get(link.target) ?? [];
-    target.push(link.source);
-    adjacent.set(link.target, target);
-  }
-
-  const unseen = new Set(
-    nodes.map((node) => node.id).filter((id) => !queued.has(id)),
-  );
-  const enqueueComponent = (seed: string) => {
-    const breadthFirst = [seed];
-    unseen.delete(seed);
-    while (breadthFirst.length > 0) {
-      const id = breadthFirst.shift();
-      if (!id || queued.has(id)) continue;
-      queued.add(id);
-      pending.push(id);
-      for (const neighbor of adjacent.get(id) ?? []) {
-        if (!unseen.delete(neighbor)) continue;
-        breadthFirst.push(neighbor);
-      }
-    }
-  };
-
-  for (const anchor of queued) {
-    for (const neighbor of adjacent.get(anchor) ?? []) {
-      if (unseen.has(neighbor)) enqueueComponent(neighbor);
-    }
-  }
-  const seeds = [...unseen].sort(
-    (left, right) =>
-      (adjacent.get(right)?.length ?? 0) - (adjacent.get(left)?.length ?? 0) ||
-      left.localeCompare(right),
-  );
-  for (const seed of seeds) {
-    if (unseen.has(seed)) enqueueComponent(seed);
-  }
+function supportContextColor(contextId: string) {
+  const hue = 0.34 + ((stableHash(contextId) % 10_000) / 10_000) * 0.42;
+  return new Color().setHSL(hue, 0.66, 0.58);
 }
 
 export default function GraphView({
   nodes,
   links,
+  supportContexts,
   onSelect,
   onDrawProgress,
   withInspector,
+  hideLayoutConnectors,
+  topologyComplete,
 }: {
   nodes: GraphNode[];
   links: GraphEdge[];
+  supportContexts: SupportContextModel;
   onSelect: (node: GraphNode | null) => void;
   onDrawProgress: (
     nodes: number,
@@ -224,6 +163,8 @@ export default function GraphView({
     renderMs: number,
   ) => void;
   withInspector: boolean;
+  hideLayoutConnectors: boolean;
+  topologyComplete: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const tooltip = useRef<HTMLDivElement>(null);
@@ -234,25 +175,34 @@ export default function GraphView({
   const incidentEdges = useRef(new Map<string, string[]>());
   const queuedNodes = useRef(new Set<string>());
   const queuedEdges = useRef(new Set<string>());
-  const pendingNodes = useRef<string[]>([]);
-  const waitingEdges = useRef(new Set<string>());
-  const readyEdges = useRef<string[]>([]);
-  const readyEdgeIds = useRef(new Set<string>());
+  const sentNodes = useRef(new Set<string>());
+  const sentEdges = useRef(new Set<string>());
+  const sentContextEdges = useRef(new Set<string>());
+  const sentTopologyComplete = useRef(false);
+  const drawableNodeCount = useRef(0);
+  const drawableEdgeCount = useRef(0);
   const visibleNodes = useRef<GraphNode[]>([]);
   const visibleEdges = useRef<GraphEdge[]>([]);
   const visibleEdgeIds = useRef(new Set<string>());
   const nodeIndices = useRef(new Map<string, number>());
   const nodeProgress = useRef(new Float32Array(NODE_CAPACITY));
   const edgeProgress = useRef(new Float32Array(EDGE_CAPACITY));
-  const currentPositions = useRef(new Float32Array(NODE_CAPACITY * 3));
+  const positions = useRef(new Float32Array(NODE_CAPACITY * 3));
   const targetPositions = useRef(new Float32Array(NODE_CAPACITY * 3));
-  const latestLayout = useRef<LayoutMessage | null>(null);
-  const appliedLayoutSequence = useRef(-1);
+  const finalPositions = useRef(new Map<string, [number, number, number]>());
+  const pendingNodes = useRef<string[]>([]);
+  const pendingNodeCursor = useRef(0);
+  const waitingEdges = useRef(new Set<string>());
+  const readyEdges = useRef<string[]>([]);
+  const readyEdgeCursor = useRef(0);
+  const readyEdgeIds = useRef(new Set<string>());
   const layoutGeneration = useRef(0);
-  const layoutActive = useRef(false);
+  const layoutReady = useRef(false);
+  const topologyCompleteRef = useRef(topologyComplete);
+  const motionActive = useRef(false);
   const workerRef = useRef<Worker | null>(null);
-  const resetRequested = useRef(false);
   const userControlledUntil = useRef(0);
+  const supportContextsRef = useRef(supportContexts);
 
   onSelectRef.current = onSelect;
   onProgressRef.current = onDrawProgress;
@@ -265,7 +215,7 @@ export default function GraphView({
     scene.background = new Color(0x0f0f10);
 
     const camera = new PerspectiveCamera(47, 1, 0.1, 10000);
-    camera.position.set(180, 110, 340);
+    camera.position.set(0, 0, 420);
 
     const renderer = new WebGLRenderer({
       antialias: true,
@@ -283,22 +233,56 @@ export default function GraphView({
     controls.rotateSpeed = 0.55;
     controls.zoomSpeed = 0.8;
     controls.panSpeed = 0.7;
+    controls.enableRotate = false;
     controls.target.set(0, 0, 0);
 
     const grid = new GridHelper(520, 26, 0x27313d, 0x181c22);
     const gridMaterial = grid.material;
     gridMaterial.transparent = true;
     gridMaterial.opacity = 0.34;
-    grid.position.y = -92;
+    grid.rotation.x = Math.PI / 2;
+    grid.position.z = -2;
     scene.add(grid);
 
-    const nodeGeometry = new IcosahedronGeometry(1, 1);
-    // InstancedMesh enables its instance-color shader path from the
-    // instanceColor attribute itself. Enabling material vertexColors here
-    // would also request a per-vertex geometry color, which this shared
-    // geometry deliberately does not carry and would multiply every instance
-    // down to black.
-    const nodeMaterial = new MeshBasicMaterial({ toneMapped: false });
+    const contextBoundaryPositions = new Float32Array(
+      CONTEXT_SEGMENT_CAPACITY * 6,
+    );
+    const contextBoundaryColors = new Float32Array(
+      CONTEXT_SEGMENT_CAPACITY * 6,
+    );
+    const contextBoundaryGeometry = new BufferGeometry();
+    const contextBoundaryPositionAttribute = new BufferAttribute(
+      contextBoundaryPositions,
+      3,
+    );
+    const contextBoundaryColorAttribute = new BufferAttribute(
+      contextBoundaryColors,
+      3,
+    );
+    contextBoundaryPositionAttribute.setUsage(DynamicDrawUsage);
+    contextBoundaryColorAttribute.setUsage(DynamicDrawUsage);
+    contextBoundaryGeometry.setAttribute(
+      "position",
+      contextBoundaryPositionAttribute,
+    );
+    contextBoundaryGeometry.setAttribute("color", contextBoundaryColorAttribute);
+    contextBoundaryGeometry.setDrawRange(0, 0);
+    const contextBoundaryMaterial = new LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.62,
+      depthWrite: false,
+    });
+    const contextBoundaryLines = new LineSegments(
+      contextBoundaryGeometry,
+      contextBoundaryMaterial,
+    );
+    contextBoundaryLines.frustumCulled = false;
+    contextBoundaryLines.renderOrder = -1;
+    scene.add(contextBoundaryLines);
+
+    const nodeGeometry = new IcosahedronGeometry(1, 0);
+    const nodeMaterial = new MeshBasicMaterial({toneMapped: false});
     const nodeMesh = new InstancedMesh(
       nodeGeometry,
       nodeMaterial,
@@ -337,15 +321,125 @@ export default function GraphView({
 
     const worker = new Worker(
       new URL("../workers/graph-layout.worker.ts", import.meta.url),
-      { type: "module", name: "spec-oracle-3d-layout" },
+      {type: "module", name: "spec-oracle-xy-layout"},
     );
     workerRef.current = worker;
-    worker.postMessage({ type: "reset", generation: layoutGeneration.current });
+    worker.postMessage({type: "reset", generation: layoutGeneration.current});
+    let layoutReceivedAt = 0;
+    let positionUpdateCount = 0;
+    let precompletePositionUpdateCount = 0;
+    let precompleteMaximumResultNodes = 0;
+    let statusUpdateCount = 0;
+    const motionSamples: Array<{
+      sequence: number;
+      nodes: number;
+      objectiveUpdates: number;
+      topologyComplete: boolean;
+      settled: boolean;
+      alpha: number;
+      sharedNodes: number;
+      meanDisplacement: number;
+      maximumDisplacement: number;
+    }> = [];
     worker.onmessage = (event: MessageEvent<LayoutMessage>) => {
       const message = event.data;
       if (message.generation !== layoutGeneration.current) return;
-      if (message.type === "positions") latestLayout.current = message;
-      if (message.type === "settled") layoutActive.current = false;
+      host.dataset.layoutObjectiveUpdates = String(message.objectiveUpdates);
+      host.dataset.layoutAlpha = message.alpha.toFixed(6);
+      if (message.type === "status") {
+        statusUpdateCount += 1;
+        host.dataset.layoutStatusUpdates = String(statusUpdateCount);
+        layoutReady.current = message.topologyComplete && message.settled;
+        host.dataset.layoutState = layoutReady.current ? "settled" : "streaming";
+        host.dataset.layoutTopologyComplete = String(message.topologyComplete);
+        if (layoutReady.current) {
+          layoutReceivedAt = performance.now();
+          renderRequested = true;
+        }
+        return;
+      }
+      positionUpdateCount += 1;
+      if (!message.topologyComplete) {
+        precompletePositionUpdateCount += 1;
+        precompleteMaximumResultNodes = Math.max(
+          precompleteMaximumResultNodes,
+          message.ids.length,
+        );
+      }
+      let displacementSum = 0;
+      let maximumDisplacement = 0;
+      let sharedNodes = 0;
+      for (let index = 0; index < message.ids.length; index += 1) {
+        const previous = finalPositions.current.get(message.ids[index]);
+        if (previous) {
+          const displacement = Math.hypot(
+            message.positions[index * 3] - previous[0],
+            message.positions[index * 3 + 1] - previous[1],
+          );
+          displacementSum += displacement;
+          maximumDisplacement = Math.max(maximumDisplacement, displacement);
+          sharedNodes += 1;
+        }
+        finalPositions.current.set(message.ids[index], [
+          message.positions[index * 3],
+          message.positions[index * 3 + 1],
+          0,
+        ]);
+        const node = targetNodes.current.get(message.ids[index]);
+        if (
+          node &&
+          (!hideLayoutConnectors || node.nodeKind === "specification") &&
+          !queuedNodes.current.has(node.id)
+        ) {
+          queuedNodes.current.add(node.id);
+          pendingNodes.current.push(node.id);
+        }
+      }
+      motionSamples.push({
+        sequence: message.sequence,
+        nodes: message.ids.length,
+        objectiveUpdates: message.objectiveUpdates,
+        topologyComplete: message.topologyComplete,
+        settled: message.settled,
+        alpha: message.alpha,
+        sharedNodes,
+        meanDisplacement:
+          sharedNodes > 0 ? displacementSum / sharedNodes : 0,
+        maximumDisplacement,
+      });
+      if (motionSamples.length > 256) motionSamples.shift();
+      host.dataset.layoutMotionSamples = JSON.stringify(motionSamples);
+      for (let index = 0; index < visibleNodes.current.length; index += 1) {
+        const target = finalPositions.current.get(visibleNodes.current[index].id);
+        if (target) targetPositions.current.set(target, index * 3);
+      }
+      layoutReady.current = message.topologyComplete && message.settled;
+      motionActive.current = true;
+      const receivedAt = performance.now();
+      if (layoutReady.current) layoutReceivedAt = receivedAt;
+      host.dataset.layoutState = layoutReady.current ? "settled" : "streaming";
+      host.dataset.layoutTopologyComplete = String(message.topologyComplete);
+      host.dataset.layoutReceivedAt = receivedAt.toFixed(3);
+      host.dataset.layoutResultBytes = String(message.positions.byteLength);
+      host.dataset.layoutResultNodes = String(message.ids.length);
+      host.dataset.layoutDrawableNodes = String(message.ids.length);
+      host.dataset.layoutDrawableEdges = String(drawableEdgeCount.current);
+      if (!message.settled) delete host.dataset.layoutCompleteFrameMs;
+      host.dataset.layoutFeatures = String(message.featureCount);
+      host.dataset.layoutRoutes = String(message.routeCount);
+      host.dataset.layoutIterations = String(message.iterations);
+      host.dataset.layoutMs = message.elapsedMs.toFixed(1);
+      host.dataset.layoutPositionUpdates = String(positionUpdateCount);
+      host.dataset.layoutPrecompletePositionUpdates = String(
+        precompletePositionUpdateCount,
+      );
+      host.dataset.layoutPrecompleteMaximumResultNodes = String(
+        precompleteMaximumResultNodes,
+      );
+    };
+    worker.onerror = (event) => {
+      host.dataset.layoutError = event.message;
+      console.error("specification layout Worker failed", event);
     };
 
     const dummyMatrix = new Matrix4();
@@ -355,7 +449,6 @@ export default function GraphView({
     const boundsCenter = new Vector3();
     const boundsSize = new Vector3();
     const cameraDirection = new Vector3();
-    const yAxis = new Vector3(0, 1, 0);
     const raycaster = new Raycaster();
     const pointer = new Vector2();
     let animationFrame = 0;
@@ -363,9 +456,9 @@ export default function GraphView({
     let lastReport = lastTick;
     let lastRender = 0;
     let renderRequested = true;
-    let nodeColorsDirty = false;
-    let motionTicksRemaining = 0;
     let hoverCheckAt = 0;
+    let presentedNodeCount = 0;
+    let presentedEdgeCount = 0;
     const frameIntervals: number[] = [];
     const renderDurations: number[] = [];
 
@@ -389,37 +482,11 @@ export default function GraphView({
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(host);
 
-    const reset = () => {
-      visibleNodes.current = [];
-      visibleEdges.current = [];
-      visibleEdgeIds.current.clear();
-      nodeIndices.current.clear();
-      nodeProgress.current.fill(0);
-      edgeProgress.current.fill(0);
-      currentPositions.current.fill(0);
-      targetPositions.current.fill(0);
-      nodeMesh.count = 0;
-      nodeColorsDirty = false;
-      motionTicksRemaining = 0;
-      edgeGeometry.setDrawRange(0, 0);
-      layoutGeneration.current += 1;
-      latestLayout.current = null;
-      appliedLayoutSequence.current = -1;
-      layoutActive.current = false;
-      worker.postMessage({
-        type: "reset",
-        generation: layoutGeneration.current,
-      });
-      controls.target.set(0, 0, 0);
-      camera.position.set(180, 110, 340);
-      renderRequested = true;
-    };
-
     const makeEdgeReady = (edgeId: string) => {
       if (!waitingEdges.current.has(edgeId)) return;
       const edge = targetEdges.current.get(edgeId);
-      if (!edge) return;
       if (
+        !edge ||
         !nodeIndices.current.has(edge.source) ||
         !nodeIndices.current.has(edge.target)
       ) {
@@ -432,66 +499,50 @@ export default function GraphView({
     };
 
     const appendGrowth = () => {
-      const layoutNodes: LayoutNode[] = [];
-      const layoutEdges: LayoutEdge[] = [];
-
+      let changed = false;
+      let nodesChanged = false;
+      let edgesChanged = false;
       for (
         let count = 0;
-        count < NODES_PER_DRAW && pendingNodes.current.length > 0;
+        count < NODES_PER_DRAW &&
+        pendingNodeCursor.current < pendingNodes.current.length;
         count += 1
       ) {
-        const id = pendingNodes.current.shift();
+        const id = pendingNodes.current[pendingNodeCursor.current];
+        pendingNodeCursor.current += 1;
         const node = id ? targetNodes.current.get(id) : undefined;
         if (!id || !node || nodeIndices.current.has(id)) continue;
         if (visibleNodes.current.length >= NODE_CAPACITY) break;
-
         const index = visibleNodes.current.length;
-        let position = initialPosition(node);
-        for (const edgeId of incidentEdges.current.get(id) ?? []) {
-          const edge = targetEdges.current.get(edgeId);
-          if (!edge) continue;
-          const neighborId = edge.source === id ? edge.target : edge.source;
-          const neighborIndex = nodeIndices.current.get(neighborId);
-          if (neighborIndex === undefined) continue;
-          position = positionNear(node, [
-            currentPositions.current[neighborIndex * 3],
-            currentPositions.current[neighborIndex * 3 + 1],
-            currentPositions.current[neighborIndex * 3 + 2],
-          ]);
-          break;
-        }
-
+        const position = finalPositions.current.get(id);
+        if (!position) continue;
         visibleNodes.current.push(node);
         nodeIndices.current.set(id, index);
-        nodeProgress.current[index] = 1 / GROWTH_FRAMES;
-        currentPositions.current.set(position, index * 3);
+        positions.current.set(position, index * 3);
         targetPositions.current.set(position, index * 3);
+        nodeProgress.current[index] = 1 / GROWTH_FRAMES;
         nodeMesh.setColorAt(index, nodeColor(node));
-        nodeColorsDirty = true;
-        layoutNodes.push({
-          id,
-          x: position[0],
-          y: position[1],
-          z: position[2],
-          radius: baseNodeSize(node),
-          kind: node.nodeKind,
-        });
-
+        nodesChanged = true;
+        if (!hideLayoutConnectors || node.nodeKind === "specification") {
+          presentedNodeCount += 1;
+        }
         for (const edgeId of incidentEdges.current.get(id) ?? []) {
           makeEdgeReady(edgeId);
         }
+        changed = true;
       }
 
       for (
         let count = 0;
-        count < EDGES_PER_DRAW && readyEdges.current.length > 0;
+        count < EDGES_PER_DRAW &&
+        readyEdgeCursor.current < readyEdges.current.length;
         count += 1
       ) {
-        const id = readyEdges.current.shift();
+        const id = readyEdges.current[readyEdgeCursor.current];
+        readyEdgeCursor.current += 1;
         if (id) readyEdgeIds.current.delete(id);
         const edge = id ? targetEdges.current.get(id) : undefined;
-        if (!id || !edge) continue;
-        if (visibleEdgeIds.current.has(id)) continue;
+        if (!id || !edge || visibleEdgeIds.current.has(id)) continue;
         if (visibleEdges.current.length >= EDGE_CAPACITY) break;
         if (
           !nodeIndices.current.has(edge.source) ||
@@ -504,75 +555,61 @@ export default function GraphView({
         visibleEdges.current.push(edge);
         visibleEdgeIds.current.add(id);
         edgeProgress.current[index] = 1 / GROWTH_FRAMES;
-        const color = edgeColor(edge);
-        const directed = DIRECTED_EDGE_KINDS.has(edge.kind);
-        const sourceColor = directed ? color.clone().multiplyScalar(0.34) : color;
-        edgeBaseColors.set(sourceColor.toArray(), index * 6);
-        edgeBaseColors.set(color.toArray(), index * 6 + 3);
-        layoutEdges.push({
-          id,
-          source: edge.source,
-          target: edge.target,
-          kind: edge.kind,
-        });
+        const layoutOnlyEdge =
+          hideLayoutConnectors &&
+          (targetNodes.current.get(edge.source)?.nodeKind !== "specification" ||
+            targetNodes.current.get(edge.target)?.nodeKind !== "specification");
+        if (layoutOnlyEdge) {
+          edgeBaseColors.fill(0, index * 6, index * 6 + 6);
+        } else {
+          const color = edgeColor(edge);
+          const directed = DIRECTED_EDGE_KINDS.has(edge.kind);
+          const sourceColor = directed
+            ? color.clone().multiplyScalar(0.34)
+            : color;
+          edgeBaseColors.set(sourceColor.toArray(), index * 6);
+          edgeBaseColors.set(color.toArray(), index * 6 + 3);
+          presentedEdgeCount += 1;
+        }
+        edgesChanged = true;
+        changed = true;
       }
-
-      if (layoutNodes.length > 0 || layoutEdges.length > 0) {
-        layoutActive.current = true;
-        worker.postMessage({
-          type: "append",
-          generation: layoutGeneration.current,
-          nodes: layoutNodes,
-          edges: layoutEdges,
-        });
+      if (nodesChanged) {
+        if (nodeMesh.instanceColor) nodeMesh.instanceColor.needsUpdate = true;
       }
-      return layoutNodes.length > 0 || layoutEdges.length > 0;
-    };
-
-    const applyLayout = () => {
-      const message = latestLayout.current;
-      if (
-        !message ||
-        message.type !== "positions" ||
-        message.sequence === appliedLayoutSequence.current
-      ) {
-        return false;
-      }
-      appliedLayoutSequence.current = message.sequence;
-      const coordinateCount = Math.min(
-        message.positions.length,
-        visibleNodes.current.length * 3,
-      );
-      targetPositions.current.set(
-        message.positions.subarray(0, coordinateCount),
-        0,
-      );
-      return true;
+      if (nodesChanged || edgesChanged) motionActive.current = true;
+      return changed;
     };
 
     const updateBuffers = () => {
       const nodeCount = visibleNodes.current.length;
+      let moving = false;
       bounds.makeEmpty();
-      let growing = false;
       for (let index = 0; index < nodeCount; index += 1) {
         const offset = index * 3;
         for (let axis = 0; axis < 3; axis += 1) {
-          const current = currentPositions.current[offset + axis];
+          const current = positions.current[offset + axis];
           const target = targetPositions.current[offset + axis];
-          currentPositions.current[offset + axis] =
-            current + (target - current) * 0.38;
+          const delta = target - current;
+          if (Math.abs(delta) > 0.02) {
+            positions.current[offset + axis] =
+              current + delta * POSITION_EASING;
+            moving = true;
+          } else {
+            positions.current[offset + axis] = target;
+          }
         }
         if (nodeProgress.current[index] < 1) {
           nodeProgress.current[index] = Math.min(
             1,
             nodeProgress.current[index] + 1 / GROWTH_FRAMES,
           );
-          growing = true;
+          moving = true;
         }
-        const node = visibleNodes.current[index];
         const scale =
-          baseNodeSize(node) * easeOutCubic(nodeProgress.current[index]);
-        dummyPosition.fromArray(currentPositions.current, offset);
+          baseNodeSize(visibleNodes.current[index]) *
+          easeOutCubic(nodeProgress.current[index]);
+        dummyPosition.fromArray(positions.current, offset);
         dummyScale.setScalar(scale);
         dummyMatrix.makeScale(dummyScale.x, dummyScale.y, dummyScale.z);
         dummyMatrix.setPosition(dummyPosition);
@@ -580,24 +617,74 @@ export default function GraphView({
         bounds.expandByPoint(dummyPosition);
       }
       nodeMesh.count = nodeCount;
-      if (nodeCount > 0) {
-        nodeMesh.instanceMatrix.needsUpdate = true;
-        if (nodeColorsDirty && nodeMesh.instanceColor) {
-          nodeMesh.instanceColor.needsUpdate = true;
-          nodeColorsDirty = false;
+      if (nodeCount > 0) nodeMesh.instanceMatrix.needsUpdate = true;
+
+      const contextPositions = new Map<string, {x: number; y: number}>();
+      const renderedContexts = [...supportContextsRef.current.contexts]
+        .sort(
+          (left, right) =>
+            right.totalPoints - left.totalPoints ||
+            right.memberIds.length - left.memberIds.length ||
+            left.id.localeCompare(right.id),
+        )
+        .slice(0, CONTEXT_RENDER_LIMIT);
+      for (const context of renderedContexts) {
+        for (const memberId of context.memberIds) {
+          if (contextPositions.has(memberId)) continue;
+          const memberIndex = nodeIndices.current.get(memberId);
+          if (memberIndex === undefined) continue;
+          contextPositions.set(memberId, {
+            x: positions.current[memberIndex * 3],
+            y: positions.current[memberIndex * 3 + 1],
+          });
         }
       }
+      const boundaries = buildSupportContextBoundaries(
+        renderedContexts,
+        contextPositions,
+      );
+      let contextSegmentCount = 0;
+      for (const boundary of boundaries) {
+        const color = supportContextColor(boundary.contextId);
+        for (
+          let pointIndex = 0;
+          pointIndex < boundary.points.length &&
+          contextSegmentCount < CONTEXT_SEGMENT_CAPACITY;
+          pointIndex += 1
+        ) {
+          const current = boundary.points[pointIndex];
+          const next =
+            boundary.points[(pointIndex + 1) % boundary.points.length];
+          const offset = contextSegmentCount * 6;
+          contextBoundaryPositions.set([current.x, current.y, -0.8], offset);
+          contextBoundaryPositions.set([next.x, next.y, -0.8], offset + 3);
+          contextBoundaryColors.set(color.toArray(), offset);
+          contextBoundaryColors.set(color.toArray(), offset + 3);
+          contextSegmentCount += 1;
+        }
+      }
+      contextBoundaryGeometry.setDrawRange(0, contextSegmentCount * 2);
+      if (contextSegmentCount > 0) {
+        contextBoundaryPositionAttribute.needsUpdate = true;
+        contextBoundaryColorAttribute.needsUpdate = true;
+      }
+      host.dataset.supportContexts = String(boundaries.length);
+      host.dataset.supportContextSegments = String(contextSegmentCount);
+      host.dataset.supportContextNodes = String(
+        supportContextsRef.current.contextualizedNodeCount,
+      );
+      host.dataset.supportContextSharedNodes = String(
+        supportContextsRef.current.sharedFoundationCount,
+      );
 
       const edgeCount = visibleEdges.current.length;
-      let edgeColorsDirty = false;
       for (let index = 0; index < edgeCount; index += 1) {
         if (edgeProgress.current[index] < 1) {
           edgeProgress.current[index] = Math.min(
             1,
             edgeProgress.current[index] + 1 / GROWTH_FRAMES,
           );
-          growing = true;
-          edgeColorsDirty = true;
+          moving = true;
         }
         const edge = visibleEdges.current[index];
         const sourceIndex = nodeIndices.current.get(edge.source);
@@ -605,17 +692,11 @@ export default function GraphView({
         if (sourceIndex === undefined || targetIndex === undefined) continue;
         const positionOffset = index * 6;
         edgePositions.set(
-          currentPositions.current.subarray(
-            sourceIndex * 3,
-            sourceIndex * 3 + 3,
-          ),
+          positions.current.subarray(sourceIndex * 3, sourceIndex * 3 + 3),
           positionOffset,
         );
         edgePositions.set(
-          currentPositions.current.subarray(
-            targetIndex * 3,
-            targetIndex * 3 + 3,
-          ),
+          positions.current.subarray(targetIndex * 3, targetIndex * 3 + 3),
           positionOffset + 3,
         );
         const brightness = easeOutCubic(edgeProgress.current[index]);
@@ -627,12 +708,12 @@ export default function GraphView({
       edgeGeometry.setDrawRange(0, edgeCount * 2);
       if (edgeCount > 0) {
         edgePositionAttribute.needsUpdate = true;
-        if (edgeColorsDirty) edgeColorAttribute.needsUpdate = true;
+        edgeColorAttribute.needsUpdate = true;
       }
-      return growing;
+      return moving;
     };
 
-    const fitCamera = (now: number) => {
+    const fitCamera = (now: number, immediate = false) => {
       if (
         visibleNodes.current.length === 0 ||
         now < userControlledUntil.current ||
@@ -642,26 +723,36 @@ export default function GraphView({
       }
       bounds.getCenter(boundsCenter);
       bounds.getSize(boundsSize);
-      const radius = Math.max(22, boundsSize.length() * 0.5);
+      const halfVertical = boundsSize.y * 0.5;
+      const halfHorizontalInVerticalUnits =
+        (boundsSize.x * 0.5) / Math.max(0.1, camera.aspect);
+      const framingHalfExtent = Math.max(
+        22,
+        halfVertical,
+        halfHorizontalInVerticalUnits,
+      );
       const desiredDistance = Math.max(
         90,
-        (radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.18,
+        (framingHalfExtent / Math.tan((camera.fov * Math.PI) / 360)) * 1.16,
       );
       cameraDirection.copy(camera.position).sub(controls.target).normalize();
-      cameraDirection.applyAxisAngle(yAxis, 0.0018);
+      if (immediate) {
+        controls.target.copy(boundsCenter);
+        camera.position
+          .copy(controls.target)
+          .addScaledVector(cameraDirection, desiredDistance);
+        return;
+      }
       controls.target.lerp(boundsCenter, 0.12);
       const currentDistance = camera.position.distanceTo(controls.target);
       const distance = currentDistance + (desiredDistance - currentDistance) * 0.1;
       camera.position
         .copy(controls.target)
         .addScaledVector(cameraDirection, distance);
-      camera.near = Math.max(0.1, distance - radius * 2.5);
-      camera.far = Math.max(2000, distance + radius * 4);
-      camera.updateProjectionMatrix();
     };
 
-    const report = (now: number) => {
-      if (now - lastReport < 500) return;
+    const report = (now: number, force = false) => {
+      if (!force && now - lastReport < 500) return;
       lastReport = now;
       const average = (values: number[]) =>
         values.length > 0
@@ -669,10 +760,15 @@ export default function GraphView({
           : 0;
       const interval = average(frameIntervals);
       onProgressRef.current(
-        visibleNodes.current.length,
-        visibleEdges.current.length,
+        presentedNodeCount,
+        presentedEdgeCount,
         interval > 0 ? 1000 / interval : 0,
         average(renderDurations),
+      );
+      host.dataset.layoutLoadedNodes = String(drawableNodeCount.current);
+      host.dataset.layoutPresentedNodes = String(presentedNodeCount);
+      host.dataset.layoutBufferedNodes = String(
+        Math.max(0, pendingNodes.current.length - pendingNodeCursor.current),
       );
     };
 
@@ -680,27 +776,25 @@ export default function GraphView({
       const elapsed = now - lastTick;
       if (elapsed >= DRAW_INTERVAL) {
         lastTick = now - (elapsed % DRAW_INTERVAL);
-        if (resetRequested.current) {
-          resetRequested.current = false;
-          reset();
-        }
         const grew = appendGrowth();
-        const moved = applyLayout();
-        if (grew || moved) motionTicksRemaining = 10;
-        const buffersChanged = motionTicksRemaining > 0 || layoutActive.current;
-        const growing = buffersChanged ? updateBuffers() : false;
-        if (motionTicksRemaining > 0) motionTicksRemaining -= 1;
-        if (buffersChanged) fitCamera(now);
+        if (grew) {
+          host.dataset.layoutPresentedNodes = String(presentedNodeCount);
+          host.dataset.layoutBufferedNodes = String(
+            Math.max(0, pendingNodes.current.length - pendingNodeCursor.current),
+          );
+        }
+        const buffersChanged = motionActive.current;
+        const moving = buffersChanged ? updateBuffers() : false;
+        motionActive.current = moving;
+        if (grew || moving) fitCamera(now);
         const controlsMoving = controls.update();
-
         const active =
           grew ||
-          moved ||
-          growing ||
           buffersChanged ||
+          moving ||
           controlsMoving ||
-          pendingNodes.current.length > 0 ||
-          readyEdges.current.length > 0 ||
+          pendingNodeCursor.current < pendingNodes.current.length ||
+          readyEdgeCursor.current < readyEdges.current.length ||
           now < userControlledUntil.current ||
           renderRequested;
         if (active) {
@@ -718,6 +812,39 @@ export default function GraphView({
           renderDurations.push(renderedAt - renderStarted);
           if (renderDurations.length > 48) renderDurations.shift();
           renderRequested = false;
+          if (
+            presentedNodeCount > 0 &&
+            host.dataset.layoutFirstDrawAt === undefined
+          ) {
+            host.dataset.layoutFirstDrawAt = renderedAt.toFixed(3);
+            host.dataset.layoutFirstDrawNodes = String(presentedNodeCount);
+            host.dataset.layoutFirstDrawTopologyComplete = String(
+              topologyCompleteRef.current,
+            );
+          }
+          if (
+            layoutReady.current &&
+            layoutReceivedAt > 0 &&
+            host.dataset.layoutCompleteFrameMs === undefined &&
+            pendingNodeCursor.current >= pendingNodes.current.length &&
+            readyEdgeCursor.current >= readyEdges.current.length &&
+            waitingEdges.current.size === 0 &&
+            !moving &&
+            nodeProgress.current
+              .subarray(0, visibleNodes.current.length)
+              .every((progress) => progress >= 1) &&
+            edgeProgress.current
+              .subarray(0, visibleEdges.current.length)
+              .every((progress) => progress >= 1)
+          ) {
+            host.dataset.layoutState = "complete-frame";
+            host.dataset.layoutCompleteFrameMs = (
+              renderedAt - layoutReceivedAt
+            ).toFixed(3);
+            host.dataset.layoutPresentedNodes = String(presentedNodeCount);
+            host.dataset.layoutPresentedEdges = String(presentedEdgeCount);
+            report(renderedAt, true);
+          }
         }
         report(now);
       }
@@ -747,7 +874,8 @@ export default function GraphView({
       }
       tooltip.current.hidden = false;
       tooltip.current.textContent = node.statement;
-      tooltip.current.style.transform = `translate(${event.clientX + 12}px, ${event.clientY + 12}px)`;
+      tooltip.current.style.transform =
+        `translate(${event.clientX + 12}px, ${event.clientY + 12}px)`;
       renderer.domElement.style.cursor = "pointer";
     };
     const handlePointerMove = (event: PointerEvent) => pick(event, false);
@@ -766,6 +894,8 @@ export default function GraphView({
       renderer.domElement.removeEventListener("click", handleClick);
       nodeGeometry.dispose();
       nodeMaterial.dispose();
+      contextBoundaryGeometry.dispose();
+      contextBoundaryMaterial.dispose();
       edgeGeometry.dispose();
       edgeMaterial.dispose();
       grid.geometry.dispose();
@@ -773,52 +903,112 @@ export default function GraphView({
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, []);
+  }, [hideLayoutConnectors]);
 
   useEffect(() => {
-    const nextNodes = new Map(nodes.map((node) => [node.id, node]));
-    const nextEdges = new Map(links.map((edge) => [edge.id, edge]));
-    const removed =
-      [...queuedNodes.current].some((id) => !nextNodes.has(id)) ||
-      [...queuedEdges.current].some((id) => !nextEdges.has(id));
-
-    targetNodes.current = nextNodes;
-    targetEdges.current = nextEdges;
-    const incidents = new Map<string, string[]>();
+    supportContextsRef.current = supportContexts;
+    const nextNodes = targetNodes.current;
+    const nextEdges = targetEdges.current;
+    for (const node of nodes) nextNodes.set(node.id, node);
     for (const edge of links) {
-      const source = incidents.get(edge.source) ?? [];
+      const known = nextEdges.has(edge.id);
+      nextEdges.set(edge.id, edge);
+      if (known) continue;
+      const source = incidentEdges.current.get(edge.source) ?? [];
       source.push(edge.id);
-      incidents.set(edge.source, source);
-      const target = incidents.get(edge.target) ?? [];
+      incidentEdges.current.set(edge.source, source);
+      const target = incidentEdges.current.get(edge.target) ?? [];
       target.push(edge.id);
-      incidents.set(edge.target, target);
+      incidentEdges.current.set(edge.target, target);
     }
-    incidentEdges.current = incidents;
-
-    if (removed) {
-      queuedNodes.current.clear();
-      queuedEdges.current.clear();
-      pendingNodes.current = [];
-      waitingEdges.current.clear();
-      readyEdges.current = [];
-      readyEdgeIds.current.clear();
-      resetRequested.current = true;
-    }
-
-    queueTopology(nodes, links, queuedNodes.current, pendingNodes.current);
     for (const edge of links) {
-      if (queuedEdges.current.has(edge.id)) continue;
+      const drawable =
+        !hideLayoutConnectors ||
+        (nextNodes.get(edge.source)?.nodeKind === "specification" &&
+          nextNodes.get(edge.target)?.nodeKind === "specification");
+      if (!drawable || queuedEdges.current.has(edge.id)) continue;
       queuedEdges.current.add(edge.id);
-      waitingEdges.current.add(edge.id);
-      const sourceVisible = nodeIndices.current.has(edge.source);
-      const targetVisible = nodeIndices.current.has(edge.target);
-      if (sourceVisible && targetVisible && !resetRequested.current) {
-        waitingEdges.current.delete(edge.id);
+      if (
+        nodeIndices.current.has(edge.source) &&
+        nodeIndices.current.has(edge.target)
+      ) {
         readyEdgeIds.current.add(edge.id);
         readyEdges.current.push(edge.id);
+      } else {
+        waitingEdges.current.add(edge.id);
       }
     }
-  }, [links, nodes]);
+    drawableEdgeCount.current = queuedEdges.current.size;
+    drawableNodeCount.current = [...nextNodes.values()].reduce(
+      (count, node) =>
+        count +
+        Number(!hideLayoutConnectors || node.nodeKind === "specification"),
+      0,
+    );
+    const host = container.current;
+    if (host) host.dataset.layoutLoadedNodes = String(drawableNodeCount.current);
+    topologyCompleteRef.current = topologyComplete;
+    const worker = workerRef.current;
+    if (!worker) return;
+    const appendedNodes = nodes.flatMap((node) => {
+      if (sentNodes.current.has(node.id)) return [];
+      sentNodes.current.add(node.id);
+      return [
+        {
+          id: node.id,
+          nodeKind: node.nodeKind,
+          statement: node.statement,
+          radius: layoutNodeRadius(node),
+          visible:
+            !hideLayoutConnectors || node.nodeKind === "specification",
+        },
+      ];
+    });
+    const appendedEdges = links.flatMap((edge) => {
+      if (sentEdges.current.has(edge.id)) return [];
+      sentEdges.current.add(edge.id);
+      return [
+        {
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          current: edge.current,
+          family: edge.family,
+        },
+      ];
+    });
+    const appendedContextEdges = supportContextLayoutEdges(
+      supportContexts,
+    ).flatMap((edge) => {
+      if (sentContextEdges.current.has(edge.id)) return [];
+      sentContextEdges.current.add(edge.id);
+      return [edge];
+    });
+    const topologyChanged =
+      sentTopologyComplete.current !== topologyComplete;
+    if (
+      appendedNodes.length === 0 &&
+      appendedEdges.length === 0 &&
+      appendedContextEdges.length === 0 &&
+      !topologyChanged
+    ) {
+      return;
+    }
+    sentTopologyComplete.current = topologyComplete;
+    if (host && host.dataset.layoutRequestedAt === undefined) {
+      host.dataset.layoutRequestedAt = performance.now().toFixed(3);
+      host.dataset.layoutState = "streaming";
+      delete host.dataset.layoutError;
+    }
+    worker.postMessage({
+      type: "append",
+      generation: layoutGeneration.current,
+      nodes: appendedNodes,
+      edges: [...appendedEdges, ...appendedContextEdges],
+      topologyComplete,
+    });
+    motionActive.current = true;
+  }, [hideLayoutConnectors, links, nodes, supportContexts, topologyComplete]);
 
   const holdCamera = () => {
     userControlledUntil.current = performance.now() + CAMERA_HOLD_MS;

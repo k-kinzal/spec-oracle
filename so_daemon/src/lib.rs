@@ -23,9 +23,10 @@
 //! graph-established semantic Edge family (refinement, equivalence, and
 //! force-aware conflicts) from `so-reason`'s conservative assessment. Edge
 //! families and endpoint roles keep those semantic relations distinct from
-//! explicit, versioned selection judgments such as support, defeat, and
-//! supersession. The daemon accepts those judgments and derives the first
-//! current-set view from them without rewriting semantic Edges. Proved
+//! manually asserted Evidence affirmation and denial. The daemon accepts only
+//! this narrowly typed manual Evidence path; it does not accept generic manual
+//! Specification-to-Specification selection Edges. The current-set view follows
+//! signed Evidence paths without rewriting semantic Edges. Proved
 //! non-trivial A/G pairing is likewise append-only and never rewrites authored
 //! words or the target Guarantee.
 
@@ -40,8 +41,10 @@ pub mod event_bus;
 pub mod event_sink;
 pub mod evidence;
 pub mod evidence_capture;
+pub mod evidence_graph;
 pub mod github;
 pub mod graph_generation;
+pub mod graph_query;
 pub mod identity;
 pub mod origin;
 pub mod pairing;

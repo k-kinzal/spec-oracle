@@ -238,15 +238,23 @@ pub fn current_formed_contract(
     store: &(dyn GraphStore + Send + Sync),
     node: &Node,
 ) -> Result<Option<FormedContract>, PairingError> {
+    let edges = store.list_pairing_edges(&node.id, &derivation())?;
+    formed_contract_with_pairing_edges(store, node, &edges)
+}
+
+pub(crate) fn formed_contract_with_pairing_edges(
+    store: &(dyn GraphStore + Send + Sync),
+    node: &Node,
+    edges: &[Edge],
+) -> Result<Option<FormedContract>, PairingError> {
     let sentence = parse_current(node)?;
     let Some(base) = formed_contract(&sentence) else {
         return Ok(None);
     };
-    let edges = store.list_pairing_edges(&node.id, &derivation())?;
     if edges.is_empty() {
         return Ok(Some(base));
     }
-    let sources = pairing_sources(store, &sentence, &edges)?;
+    let sources = pairing_sources(store, &sentence, edges)?;
     Ok(Some(validate_aggregate(&base, &sources)?))
 }
 

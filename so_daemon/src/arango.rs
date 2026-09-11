@@ -26,9 +26,10 @@
 //!   * `relation_assessments` holds append-only candidate-pair audit records,
 //!     including Unknown/Independent verdicts that must not become topology.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::time::Duration;
 
-use arangors::client::reqwest::ReqwestClient;
+use arangors::client::{reqwest::ReqwestClient, ClientExt};
 use arangors::index::{Index, IndexSettings};
 use arangors::{ClientError, Connection, Database};
 use serde_json::Value;
@@ -41,7 +42,8 @@ use crate::event_bus::EventEnvelope;
 use crate::event_sink::EventSink;
 
 use crate::store::{
-    DerivedGraphWrite, EdgePage, GraphStore, GraphWrite, NodePage, NodeStore, StoreError,
+    DerivedGraphWrite, EdgePage, EvidenceGraphPage, GraphStore, GraphWrite, NodePage, NodeStore,
+    StoreError,
 };
 
 /// The document collection holding one specification node per document.
@@ -90,8 +92,13 @@ impl ArangoNodeStore {
         ensure_edge_read_projection(&db)?;
         ensure_edge_identities(&db)?;
         ensure_edge_read_index(&db)?;
+        ensure_edge_derivation_index(&db)?;
+        ensure_assessment_read_index(&db)?;
+        ensure_current_assessment_read_index(&db)?;
         ensure_edge_identity_index(&db)?;
         ensure_node_identity_index(&db)?;
+        ensure_term_discovery_index(&db)?;
+        ensure_behavior_action_index(&db)?;
         Ok(ArangoNodeStore { db })
     }
 }
@@ -285,19 +292,36 @@ impl NodeStore for ArangoNodeStore {
              UPDATE node WITH {{ meta: {meta_patch} }} IN {COLLECTION} \
              OPTIONS {{ mergeObjects: true }} RETURN true"
         );
-        let mut vars = HashMap::new();
-        vars.insert("node_id", Value::String(node_id.to_string()));
-        vars.insert("command_id", Value::String(command_id.to_string()));
-        vars.insert("update", serde_json::to_value(update)?);
-        if let Some(evidence) = evidence {
-            vars.insert("evidence", serde_json::to_value(evidence)?);
+        const MAX_WRITE_CONFLICT_ATTEMPTS: usize = 8;
+        for attempt in 0..MAX_WRITE_CONFLICT_ATTEMPTS {
+            let mut vars = HashMap::new();
+            vars.insert("node_id", Value::String(node_id.to_string()));
+            vars.insert("command_id", Value::String(command_id.to_string()));
+            vars.insert("update", serde_json::to_value(update)?);
+            if let Some(evidence) = evidence {
+                vars.insert("evidence", serde_json::to_value(evidence)?);
+            }
+            match self.db.aql_bind_vars::<bool>(&query, vars) {
+                Ok(updated) if updated.is_empty() => {
+                    return Err(StoreError::MissingNode(node_id.to_string()));
+                }
+                Ok(_) => return Ok(()),
+                Err(error) => {
+                    let message = error.to_string();
+                    if !message.contains("write-write conflict") {
+                        return Err(backend(error));
+                    }
+                    if attempt + 1 == MAX_WRITE_CONFLICT_ATTEMPTS {
+                        return Err(StoreError::Backend(format!(
+                            "ArangoDB command update failed after \
+                             {MAX_WRITE_CONFLICT_ATTEMPTS} attempts: {message}"
+                        )));
+                    }
+                    std::thread::sleep(Duration::from_millis(10_u64 << attempt));
+                }
+            }
         }
-        let updated: Vec<bool> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
-        if updated.is_empty() {
-            Err(StoreError::MissingNode(node_id.to_string()))
-        } else {
-            Ok(())
-        }
+        unreachable!("command update retry loop always returns")
     }
 }
 
@@ -343,6 +367,14 @@ impl GraphStore for ArangoNodeStore {
         })
     }
 
+    fn put_derived_node_value(&self, node: &DerivedNode) -> Result<bool, StoreError> {
+        let mut doc = serde_json::to_value(node)?;
+        doc.as_object_mut()
+            .expect("derived node serializes as object")
+            .insert("_key".into(), Value::String(node.id().to_string()));
+        upsert_immutable(&self.db, DERIVED_COLLECTION, node.id(), doc)
+    }
+
     fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError> {
         edge.validate().map_err(StoreError::InvalidEdge)?;
         let from_collection = match edge.source_kind {
@@ -351,7 +383,9 @@ impl GraphStore for ArangoNodeStore {
             VertexKind::Evidence
             | VertexKind::Assumption
             | VertexKind::Guarantee
-            | VertexKind::Contract => DERIVED_COLLECTION,
+            | VertexKind::Contract
+            | VertexKind::Entity
+            | VertexKind::Behavior => DERIVED_COLLECTION,
         };
         let to_collection = match edge.target_kind {
             VertexKind::Specification => COLLECTION,
@@ -359,7 +393,9 @@ impl GraphStore for ArangoNodeStore {
             VertexKind::Evidence
             | VertexKind::Assumption
             | VertexKind::Guarantee
-            | VertexKind::Contract => DERIVED_COLLECTION,
+            | VertexKind::Contract
+            | VertexKind::Entity
+            | VertexKind::Behavior => DERIVED_COLLECTION,
         };
         let identity_key = edge.identity_key();
         let doc = serde_json::json!({
@@ -437,6 +473,77 @@ impl GraphStore for ArangoNodeStore {
         upsert_immutable(&self.db, ASSESSMENT_COLLECTION, &assessment.id, doc)
     }
 
+    fn append_relation_assessments(
+        &self,
+        assessments: &[RelationAssessment],
+    ) -> Result<usize, StoreError> {
+        if assessments.is_empty() {
+            return Ok(0);
+        }
+        let documents = assessments
+            .iter()
+            .map(|assessment| {
+                let mut doc = serde_json::to_value(assessment)?;
+                if let Value::Object(ref mut map) = doc {
+                    map.insert("_key".to_string(), Value::String(assessment.id.clone()));
+                }
+                Ok(doc)
+            })
+            .collect::<Result<Vec<_>, serde_json::Error>>()?;
+
+        let collection = self.db.collection(ASSESSMENT_COLLECTION).map_err(backend)?;
+        let mut url = collection.doc_url().clone();
+        url.set_query(Some("overwriteMode=ignore&returnNew=true&silent=false"));
+        let body = serde_json::to_string(&documents)?;
+        let mut inserted = HashSet::new();
+        const MAX_WRITE_CONFLICT_ATTEMPTS: usize = 8;
+        for attempt in 0..MAX_WRITE_CONFLICT_ATTEMPTS {
+            let response = collection
+                .session()
+                .post(url.clone(), body.clone())
+                .map_err(backend)?;
+            let results: Vec<Value> = serde_json::from_str(response.body())?;
+            if results.len() != documents.len() {
+                return Err(StoreError::Backend(format!(
+                    "ArangoDB returned {} bulk assessment results for {} documents",
+                    results.len(),
+                    documents.len()
+                )));
+            }
+            let mut write_conflict = None;
+            for (index, result) in results.iter().enumerate() {
+                if result.get("new").is_some() {
+                    inserted.insert(index);
+                }
+                if result.get("error").and_then(Value::as_bool) != Some(true) {
+                    continue;
+                }
+                let message = result
+                    .get("errorMessage")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown document error");
+                if message.contains("write-write conflict") {
+                    write_conflict = Some(message.to_string());
+                    continue;
+                }
+                return Err(StoreError::Backend(format!(
+                    "ArangoDB bulk assessment insert failed: {message}"
+                )));
+            }
+            let Some(message) = write_conflict else {
+                return Ok(inserted.len());
+            };
+            if attempt + 1 == MAX_WRITE_CONFLICT_ATTEMPTS {
+                return Err(StoreError::Backend(format!(
+                    "ArangoDB bulk assessment insert failed after \
+                     {MAX_WRITE_CONFLICT_ATTEMPTS} attempts: {message}"
+                )));
+            }
+            std::thread::sleep(Duration::from_millis(10_u64 << attempt));
+        }
+        unreachable!("bulk assessment retry loop always returns")
+    }
+
     fn get_relation_assessment(&self, id: &str) -> Result<Option<RelationAssessment>, StoreError> {
         let query = format!(
             "FOR assessment IN {ASSESSMENT_COLLECTION} \
@@ -456,14 +563,19 @@ impl GraphStore for ArangoNodeStore {
         if owners.is_empty() {
             return Ok(Vec::new());
         }
+        let candidate = crate::graph_generation::candidate_derivation();
         let query = format!(
             "FOR assessment IN {ASSESSMENT_COLLECTION} \
                FILTER assessment.left IN @owners \
-               SORT assessment._key ASC \
+               FILTER assessment.candidate_derivation.method == @candidate_method \
+               FILTER assessment.candidate_derivation.version == @candidate_version \
+               SORT assessment.left ASC, assessment._key ASC \
                RETURN UNSET(assessment, \"_key\", \"_id\", \"_rev\")"
         );
         let mut vars: HashMap<&str, Value> = HashMap::new();
         vars.insert("owners", serde_json::to_value(owners)?);
+        vars.insert("candidate_method", Value::String(candidate.method));
+        vars.insert("candidate_version", Value::String(candidate.version));
         self.db.aql_bind_vars(&query, vars).map_err(backend)
     }
 
@@ -489,6 +601,77 @@ impl GraphStore for ArangoNodeStore {
         let mut vars: HashMap<&str, Value> = HashMap::new();
         vars.insert("ids", serde_json::to_value(ids)?);
         self.db.aql_bind_vars(&query, vars).map_err(backend)
+    }
+
+    fn query_evidence_graph(
+        &self,
+        query: &crate::graph_query::GraphQuery,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<EvidenceGraphPage, StoreError> {
+        // The openCypher evaluator is deliberately storage-independent so the
+        // same query semantics can back Evidence and Specification graph
+        // scopes. This adapter supplies the current Evidence property graph;
+        // it does not pass user query text through to AQL.
+        let node_query = format!(
+            "FOR node IN {DERIVED_COLLECTION} \
+               FILTER node.kind == \"evidence\" \
+               SORT node._key ASC \
+               RETURN UNSET(node, \"_key\", \"_id\", \"_rev\")"
+        );
+        let evidence_nodes: Vec<DerivedNode> = self
+            .db
+            .aql_bind_vars(&node_query, HashMap::new())
+            .map_err(backend)?;
+
+        let current = [
+            derivation_key(&crate::evidence_capture::evidence_derivation()),
+            derivation_key(&crate::evidence_graph::derivation()),
+        ];
+        let edge_query = format!(
+            "FOR e IN {EDGE_COLLECTION} \
+               FILTER e.derivation_key IN @current \
+               FILTER e.kind IN [\"grounded_by\", \"evidence_affirms\", \"evidence_denies\"] \
+               SORT e._key ASC RETURN e.edge"
+        );
+        let mut edge_vars: HashMap<&str, Value> = HashMap::new();
+        edge_vars.insert("current", serde_json::to_value(current)?);
+        let edges: Vec<Edge> = self
+            .db
+            .aql_bind_vars(&edge_query, edge_vars)
+            .map_err(backend)?;
+        let mut specification_ids = std::collections::BTreeSet::new();
+        for edge in &edges {
+            for (id, kind) in [
+                (&edge.source, edge.source_kind),
+                (&edge.target, edge.target_kind),
+            ] {
+                if kind == VertexKind::Specification {
+                    specification_ids.insert(id.clone());
+                }
+            }
+        }
+        let specification_nodes = if specification_ids.is_empty() {
+            Vec::new()
+        } else {
+            let spec_query = format!(
+                "FOR node IN {COLLECTION} FILTER node._key IN @ids \
+                 SORT node._key ASC RETURN UNSET(node, \"_key\", \"_id\", \"_rev\")"
+            );
+            let mut spec_vars: HashMap<&str, Value> = HashMap::new();
+            spec_vars.insert("ids", serde_json::to_value(specification_ids)?);
+            self.db
+                .aql_bind_vars(&spec_query, spec_vars)
+                .map_err(backend)?
+        };
+        Ok(crate::evidence_graph::query_page(
+            query,
+            &evidence_nodes,
+            &specification_nodes,
+            &edges,
+            after,
+            limit,
+        ))
     }
 
     fn list_term_candidates(
@@ -534,6 +717,89 @@ impl GraphStore for ArangoNodeStore {
         let mut vars: HashMap<&str, Value> = HashMap::new();
         vars.insert("term_ids", serde_json::to_value(term_ids)?);
         vars.insert("derivation", serde_json::to_value(term_derivation)?);
+        vars.insert("exclude", Value::String(exclude_node_id.to_string()));
+        vars.insert("fetch", Value::from(fetch as u64));
+        if let Some(after) = after {
+            vars.insert("after", Value::String(after.to_string()));
+        }
+        let mut rows: Vec<Node> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        let next_cursor = if rows.len() > limit {
+            rows.truncate(limit);
+            rows.last().map(|node| node.id.clone())
+        } else {
+            None
+        };
+        Ok(NodePage {
+            nodes: rows,
+            next_cursor,
+        })
+    }
+
+    fn list_relation_candidates(
+        &self,
+        term_ids: &[String],
+        discovery_tokens: &[String],
+        term_derivation: &crate::domain::Derivation,
+        projection_derivation: &crate::domain::Derivation,
+        exclude_node_id: &str,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<NodePage, StoreError> {
+        let fetch = limit.saturating_add(1);
+        let after_filter = if after.is_some() {
+            "FILTER node_id > @after"
+        } else {
+            ""
+        };
+        let query = format!(
+            "LET exact_candidates = ( \
+               FOR term_id IN @term_ids \
+                 FOR vertex, mention IN 1..1 INBOUND \
+                     CONCAT(\"{TERM_COLLECTION}/\", term_id) {EDGE_COLLECTION} \
+                   FILTER mention.edge.kind == \"mentions_term\" \
+                   FILTER mention.edge.derivation == @term_derivation \
+                   FILTER vertex._key != @exclude \
+                   RETURN vertex._key \
+             ) \
+             LET token_candidates = ( \
+               FOR token IN @discovery_tokens \
+                 FOR term IN {TERM_COLLECTION} \
+                   FILTER token IN term.discovery_tokens \
+                   FOR vertex, mention IN 1..1 INBOUND term {EDGE_COLLECTION} \
+                     FILTER mention.edge.kind == \"mentions_term\" \
+                     FILTER mention.edge.derivation == @term_derivation \
+                     FILTER vertex._key != @exclude \
+                     COLLECT node_id = vertex._key INTO matched = token \
+                     FILTER LENGTH(UNIQUE(matched)) >= 2 \
+                     RETURN node_id \
+             ) \
+             LET projection_candidates = ( \
+               FOR projection, own IN 1..1 OUTBOUND \
+                   CONCAT(\"{COLLECTION}/\", @exclude) {EDGE_COLLECTION} \
+                 FILTER own.edge.kind IN [\"has_guarantee\", \"has_contract\"] \
+                 FILTER own.edge.derivation == @projection_derivation \
+                 FOR vertex, peer IN 1..1 INBOUND projection {EDGE_COLLECTION} \
+                   FILTER peer.edge.kind == own.edge.kind \
+                   FILTER peer.edge.derivation == @projection_derivation \
+                   FILTER vertex._key != @exclude \
+                   RETURN vertex._key \
+             ) \
+             FOR node_id IN UNION_DISTINCT(exact_candidates, token_candidates, projection_candidates) \
+               {after_filter} \
+               SORT node_id ASC \
+               LIMIT @fetch \
+               LET node = DOCUMENT(CONCAT(\"{COLLECTION}/\", node_id)) \
+               FILTER node != null \
+               RETURN UNSET(node, \"_key\", \"_id\", \"_rev\")"
+        );
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("term_ids", serde_json::to_value(term_ids)?);
+        vars.insert("discovery_tokens", serde_json::to_value(discovery_tokens)?);
+        vars.insert("term_derivation", serde_json::to_value(term_derivation)?);
+        vars.insert(
+            "projection_derivation",
+            serde_json::to_value(projection_derivation)?,
+        );
         vars.insert("exclude", Value::String(exclude_node_id.to_string()));
         vars.insert("fetch", Value::from(fetch as u64));
         if let Some(after) = after {
@@ -626,61 +892,229 @@ impl GraphStore for ArangoNodeStore {
             node: DerivedNode,
         }
 
+        #[derive(serde::Deserialize)]
+        struct RelationRow {
+            edge: Edge,
+            adjacent: String,
+        }
+
         if node_ids.is_empty() {
             return Ok(SelectionPopulation::default());
         }
 
         let current: Vec<String> = current_derivations.iter().map(derivation_key).collect();
-        let competition_kinds = [
+        let topology_kinds = [
             EdgeKind::Refines,
             EdgeKind::Equivalent,
             EdgeKind::HardContradiction,
             EdgeKind::AdvisoryTension,
             EdgeKind::DescriptiveConflict,
             EdgeKind::EnvelopeConflict,
+            EdgeKind::OccurrenceReliance,
+            EdgeKind::GuaranteeDischarge,
+            EdgeKind::AdmissibilityEnvelope,
+            EdgeKind::HasGuarantee,
+            EdgeKind::HasContract,
+            EdgeKind::ContractRefines,
+            EdgeKind::ContractEquivalent,
+            EdgeKind::CompositionOperand,
+            EdgeKind::QuotientDividend,
+            EdgeKind::QuotientDivisor,
+            EdgeKind::MergeOperand,
+            EdgeKind::HasBehavior,
+            EdgeKind::WitnessesEntity,
+            EdgeKind::EngagesEntity,
         ]
         .map(EdgeKind::as_str);
-        // Walk the whole mechanically derived competition component one
-        // indexed hop at a time. The loop has no arbitrary graph-depth cap and
-        // touches only the closure.
+        // Walk the current typed support/conflict component across
+        // Specification, lexical connector, Guarantee, and Contract vertices.
+        // Operational roles are followed only in their support direction:
+        // Specification -> Behavior -> witnessed Entity -> subject/trigger
+        // Behavior -> Specification. The loop has no arbitrary graph-depth cap
+        // and never follows Evidence.
         let relation_query = format!(
-            "FOR node_id IN @node_ids \
+            "FOR vertex_id IN @vertex_ids \
                FOR adjacent, e IN 1..1 ANY \
-                   CONCAT(\"{COLLECTION}/\", node_id) {EDGE_COLLECTION} \
+                   vertex_id {EDGE_COLLECTION} \
                  FILTER e.derivation_key IN @current \
                  FILTER e.edge.kind IN @relation_kinds \
-                 RETURN DISTINCT e.edge"
+                 FILTER e.edge.kind NOT IN [\"{}\", \"{}\", \"{}\"] \
+                   OR e.edge.kind == \"{}\" \
+                   OR (e.edge.kind == \"{}\" AND e._from == vertex_id) \
+                   OR (e.edge.kind == \"{}\" \
+                       AND e._to == vertex_id \
+                       AND e.edge.source_anchor.role IN [\"operational_subject\", \"operational_trigger\"]) \
+                 RETURN DISTINCT {{ edge: e.edge, adjacent: adjacent._id }}"
+            ,
+            EdgeKind::HasBehavior.as_str(),
+            EdgeKind::WitnessesEntity.as_str(),
+            EdgeKind::EngagesEntity.as_str(),
+            EdgeKind::HasBehavior.as_str(),
+            EdgeKind::WitnessesEntity.as_str(),
+            EdgeKind::EngagesEntity.as_str(),
         );
-        let mut component_ids: std::collections::BTreeSet<String> =
-            node_ids.iter().cloned().collect();
-        let mut frontier: Vec<String> = component_ids.iter().cloned().collect();
+        let mut vertex_ids: std::collections::BTreeSet<String> = node_ids
+            .iter()
+            .map(|id| format!("{COLLECTION}/{id}"))
+            .collect();
+        let mut frontier: Vec<String> = vertex_ids.iter().cloned().collect();
         let mut relations = BTreeMap::new();
         while !frontier.is_empty() {
             let mut vars: HashMap<&str, Value> = HashMap::new();
-            vars.insert("node_ids", serde_json::to_value(&frontier)?);
+            vars.insert("vertex_ids", serde_json::to_value(&frontier)?);
             vars.insert("current", serde_json::to_value(&current)?);
-            vars.insert("relation_kinds", serde_json::to_value(competition_kinds)?);
-            let adjacent: Vec<Edge> = self
+            vars.insert("relation_kinds", serde_json::to_value(topology_kinds)?);
+            let adjacent: Vec<RelationRow> = self
                 .db
                 .aql_bind_vars(&relation_query, vars)
                 .map_err(backend)?;
             let mut next = std::collections::BTreeSet::new();
-            for edge in adjacent {
-                if component_ids.insert(edge.source.clone()) {
-                    next.insert(edge.source.clone());
+            for row in adjacent {
+                if vertex_ids.insert(row.adjacent.clone()) {
+                    next.insert(row.adjacent);
                 }
-                if component_ids.insert(edge.target.clone()) {
-                    next.insert(edge.target.clone());
-                }
-                relations.insert(edge.id.clone(), edge);
+                relations.insert(row.edge.id.clone(), row.edge);
             }
             frontier = next.into_iter().collect();
         }
 
-        let mut scored_ids = component_ids;
+        let derived_prefix = format!("{DERIVED_COLLECTION}/");
+        let mut assessed_operational_ids = std::collections::BTreeSet::new();
+        let mut behaviors_by_action: BTreeMap<String, Vec<DerivedNode>> = BTreeMap::new();
+        loop {
+            let operational_ids: Vec<String> = vertex_ids
+                .iter()
+                .filter_map(|id| id.strip_prefix(&derived_prefix).map(str::to_string))
+                .filter(|id| assessed_operational_ids.insert(id.clone()))
+                .collect();
+            let target_behaviors: Vec<DerivedNode> = self
+                .get_derived_nodes(&operational_ids)?
+                .into_iter()
+                .filter(|node| node.operational_profile().is_some())
+                .collect();
+            if target_behaviors.is_empty() {
+                break;
+            }
+            let missing_action_keys: std::collections::BTreeSet<String> = target_behaviors
+                .iter()
+                .filter_map(DerivedNode::operational_action_key)
+                .filter(|action_key| !behaviors_by_action.contains_key(*action_key))
+                .map(str::to_string)
+                .collect();
+            let behavior_query = format!(
+                "FOR behavior IN {DERIVED_COLLECTION} \
+                   FILTER behavior.kind == \"behavior\" \
+                   FILTER behavior.derivation_version == @version \
+                   FILTER behavior.action_key IN @action_keys \
+                   RETURN behavior._id"
+            );
+            if !missing_action_keys.is_empty() {
+                let mut behavior_vars: HashMap<&str, Value> = HashMap::new();
+                behavior_vars.insert(
+                    "version",
+                    Value::String(so_reason::operational::OPERATIONAL_VERSION.into()),
+                );
+                behavior_vars.insert("action_keys", serde_json::to_value(&missing_action_keys)?);
+                let behavior_ids: Vec<String> = self
+                    .db
+                    .aql_bind_vars(&behavior_query, behavior_vars)
+                    .map_err(backend)?;
+                for action_key in &missing_action_keys {
+                    behaviors_by_action.entry(action_key.clone()).or_default();
+                }
+                for behavior in self.get_derived_nodes(
+                    &behavior_ids
+                        .iter()
+                        .filter_map(|id| id.strip_prefix(&derived_prefix).map(str::to_string))
+                        .collect::<Vec<_>>(),
+                )? {
+                    if let Some(action_key) = behavior.operational_action_key() {
+                        behaviors_by_action
+                            .entry(action_key.to_string())
+                            .or_default()
+                            .push(behavior);
+                    }
+                }
+            }
+
+            let mut realization_frontier = std::collections::BTreeSet::new();
+            for target_behavior in &target_behaviors {
+                let Some(action_key) = target_behavior.operational_action_key() else {
+                    continue;
+                };
+                let Some(target_profile) = target_behavior.operational_profile() else {
+                    continue;
+                };
+                for candidate_behavior in behaviors_by_action.get(action_key).into_iter().flatten()
+                {
+                    if candidate_behavior.id() == target_behavior.id() {
+                        continue;
+                    }
+                    let is_candidate =
+                        candidate_behavior
+                            .operational_profile()
+                            .is_some_and(|candidate_profile| {
+                                so_reason::operational::assess_layered_realization(
+                                    &candidate_profile,
+                                    &target_profile,
+                                )
+                                .is_some()
+                            });
+                    if is_candidate {
+                        let id = format!("{DERIVED_COLLECTION}/{}", candidate_behavior.id());
+                        if vertex_ids.insert(id.clone()) {
+                            realization_frontier.insert(id);
+                        }
+                    }
+                }
+            }
+            frontier = realization_frontier.into_iter().collect();
+            if frontier.is_empty() {
+                break;
+            }
+            while !frontier.is_empty() {
+                let mut vars: HashMap<&str, Value> = HashMap::new();
+                vars.insert("vertex_ids", serde_json::to_value(&frontier)?);
+                vars.insert("current", serde_json::to_value(&current)?);
+                vars.insert("relation_kinds", serde_json::to_value(topology_kinds)?);
+                let adjacent: Vec<RelationRow> = self
+                    .db
+                    .aql_bind_vars(&relation_query, vars)
+                    .map_err(backend)?;
+                let mut next = std::collections::BTreeSet::new();
+                for row in adjacent {
+                    if vertex_ids.insert(row.adjacent.clone()) {
+                        next.insert(row.adjacent);
+                    }
+                    relations.insert(row.edge.id.clone(), row.edge);
+                }
+                frontier = next.into_iter().collect();
+            }
+        }
+
+        let operational_ids: Vec<String> = vertex_ids
+            .iter()
+            .filter_map(|id| id.strip_prefix(&derived_prefix).map(str::to_string))
+            .collect();
+        let operational_nodes: Vec<DerivedNode> = self
+            .get_derived_nodes(&operational_ids)?
+            .into_iter()
+            .filter(|node| {
+                matches!(
+                    node.vertex_kind(),
+                    VertexKind::Entity | VertexKind::Behavior
+                )
+            })
+            .collect();
+
+        let mut scored_ids: std::collections::BTreeSet<String> = node_ids.iter().cloned().collect();
         for edge in relations.values() {
-            scored_ids.insert(edge.source.clone());
-            scored_ids.insert(edge.target.clone());
+            if edge.source_kind == crate::domain::VertexKind::Specification {
+                scored_ids.insert(edge.source.clone());
+            }
+            if edge.target_kind == crate::domain::VertexKind::Specification {
+                scored_ids.insert(edge.target.clone());
+            }
         }
 
         let node_query = format!(
@@ -701,7 +1135,7 @@ impl GraphStore for ArangoNodeStore {
             })
             .collect();
 
-        let evidence_query = format!(
+        let grounding_query = format!(
             "FOR node_id IN @node_ids \
                FOR evidence, e IN 1..1 OUTBOUND \
                    CONCAT(\"{COLLECTION}/\", node_id) {EDGE_COLLECTION} \
@@ -709,22 +1143,86 @@ impl GraphStore for ArangoNodeStore {
                  FILTER e.edge.kind == \"grounded_by\" \
                  RETURN {{ edge: e.edge, node: UNSET(evidence, \"_key\", \"_id\", \"_rev\") }}"
         );
-        let mut evidence_vars: HashMap<&str, Value> = HashMap::new();
-        evidence_vars.insert("node_ids", serde_json::to_value(&scored_ids)?);
-        evidence_vars.insert("current", serde_json::to_value(current)?);
-        let mut evidence_rows: Vec<EvidenceRow> = self
+        let mut grounding_vars: HashMap<&str, Value> = HashMap::new();
+        grounding_vars.insert("node_ids", serde_json::to_value(&scored_ids)?);
+        grounding_vars.insert("current", serde_json::to_value(&current)?);
+        let mut grounding_rows: Vec<EvidenceRow> = self
             .db
-            .aql_bind_vars(&evidence_query, evidence_vars)
+            .aql_bind_vars(&grounding_query, grounding_vars)
             .map_err(backend)?;
-        evidence_rows.retain(|row| {
+        grounding_rows.retain(|row| {
             current_evidence
                 .get(&row.edge.source)
                 .is_none_or(|ids| ids.contains(&row.edge.target))
         });
+        let mut evidence_edges: BTreeMap<String, Edge> = grounding_rows
+            .iter()
+            .map(|row| (row.edge.id.clone(), row.edge.clone()))
+            .collect();
+        let mut evidence_nodes: BTreeMap<String, DerivedNode> = grounding_rows
+            .into_iter()
+            .map(|row| (row.node.id().to_string(), row.node))
+            .collect();
+        let direct_query = format!(
+            "FOR target IN @targets \
+               FOR evidence, e IN 1..1 INBOUND \
+                   CONCAT(\"{COLLECTION}/\", target) {EDGE_COLLECTION} \
+                 FILTER e.derivation_key == @manual \
+                 FILTER e.kind IN [\"evidence_affirms\", \"evidence_denies\"] \
+                 RETURN {{ edge: e.edge, node: UNSET(evidence, \"_key\", \"_id\", \"_rev\") }}"
+        );
+        let mut direct_vars: HashMap<&str, Value> = HashMap::new();
+        direct_vars.insert("targets", serde_json::to_value(&scored_ids)?);
+        direct_vars.insert(
+            "manual",
+            Value::String(derivation_key(&crate::evidence_graph::derivation())),
+        );
+        let direct_rows: Vec<EvidenceRow> = self
+            .db
+            .aql_bind_vars(&direct_query, direct_vars)
+            .map_err(backend)?;
+        for row in direct_rows {
+            evidence_edges.insert(row.edge.id.clone(), row.edge);
+            evidence_nodes.insert(row.node.id().to_string(), row.node);
+        }
+        let mut frontier: std::collections::BTreeSet<String> =
+            evidence_nodes.keys().cloned().collect();
+        let mut visited = frontier.clone();
+        let incoming_query = format!(
+            "FOR target IN @targets \
+               FOR evidence, e IN 1..1 INBOUND \
+                   CONCAT(\"{DERIVED_COLLECTION}/\", target) {EDGE_COLLECTION} \
+                 FILTER e.derivation_key == @manual \
+                 FILTER e.kind IN [\"evidence_affirms\", \"evidence_denies\"] \
+                 RETURN {{ edge: e.edge, node: UNSET(evidence, \"_key\", \"_id\", \"_rev\") }}"
+        );
+        while !frontier.is_empty() {
+            let mut incoming_vars: HashMap<&str, Value> = HashMap::new();
+            incoming_vars.insert("targets", serde_json::to_value(&frontier)?);
+            incoming_vars.insert(
+                "manual",
+                Value::String(derivation_key(&crate::evidence_graph::derivation())),
+            );
+            let rows: Vec<EvidenceRow> = self
+                .db
+                .aql_bind_vars(&incoming_query, incoming_vars)
+                .map_err(backend)?;
+            let mut next = std::collections::BTreeSet::new();
+            for row in rows {
+                if visited.insert(row.edge.source.clone()) {
+                    next.insert(row.edge.source.clone());
+                }
+                evidence_edges.insert(row.edge.id.clone(), row.edge);
+                evidence_nodes.insert(row.node.id().to_string(), row.node);
+            }
+            frontier = next;
+        }
         Ok(SelectionPopulation {
+            nodes: scored_nodes,
             relation_edges: relations.into_values().collect(),
-            evidence_edges: evidence_rows.iter().map(|row| row.edge.clone()).collect(),
-            evidence_nodes: evidence_rows.into_iter().map(|row| row.node).collect(),
+            operational_nodes,
+            evidence_edges: evidence_edges.into_values().collect(),
+            evidence_nodes: evidence_nodes.into_values().collect(),
         })
     }
 
@@ -737,7 +1235,7 @@ impl GraphStore for ArangoNodeStore {
             "FOR source, e IN 1..1 INBOUND \
                  CONCAT(\"{COLLECTION}/\", @target) {EDGE_COLLECTION} \
                FILTER e.derivation_key == @derivation \
-               FILTER e.edge.kind IN [\"occurrence_reliance\", \"guarantee_discharge\", \"admissibility_envelope\"] \
+               FILTER e.kind IN [\"occurrence_reliance\", \"guarantee_discharge\", \"admissibility_envelope\"] \
                SORT e._key ASC \
                RETURN e.edge"
         );
@@ -745,6 +1243,49 @@ impl GraphStore for ArangoNodeStore {
         vars.insert("target", Value::String(target.to_string()));
         vars.insert("derivation", Value::String(derivation_key(derivation)));
         self.db.aql_bind_vars(&query, vars).map_err(backend)
+    }
+
+    fn list_pairing_edges_for_targets(
+        &self,
+        targets: &[String],
+        derivation: &crate::domain::Derivation,
+    ) -> Result<BTreeMap<String, Vec<Edge>>, StoreError> {
+        if targets.is_empty() {
+            return Ok(BTreeMap::new());
+        }
+        let query = format!(
+            "FOR e IN {EDGE_COLLECTION} \
+               FILTER e.derivation_key == @derivation \
+               FILTER e.kind IN [\"occurrence_reliance\", \"guarantee_discharge\", \"admissibility_envelope\"] \
+               FILTER e.edge.target IN @targets \
+               SORT e._key ASC \
+               RETURN e.edge"
+        );
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("targets", serde_json::to_value(targets)?);
+        vars.insert("derivation", Value::String(derivation_key(derivation)));
+        let edges: Vec<Edge> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        let mut grouped: BTreeMap<String, Vec<Edge>> = BTreeMap::new();
+        for edge in edges {
+            grouped.entry(edge.target.clone()).or_default().push(edge);
+        }
+        Ok(grouped)
+    }
+
+    fn has_pairing_edges(
+        &self,
+        derivation: &crate::domain::Derivation,
+    ) -> Result<bool, StoreError> {
+        let query = format!(
+            "FOR e IN {EDGE_COLLECTION} \
+               FILTER e.derivation_key == @derivation \
+               FILTER e.kind IN [\"occurrence_reliance\", \"guarantee_discharge\", \"admissibility_envelope\"] \
+               LIMIT 1 RETURN true"
+        );
+        let mut vars: HashMap<&str, Value> = HashMap::new();
+        vars.insert("derivation", Value::String(derivation_key(derivation)));
+        let rows: Vec<bool> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        Ok(!rows.is_empty())
     }
 
     fn list_edges(
@@ -763,7 +1304,51 @@ impl GraphStore for ArangoNodeStore {
         vars.insert("owners", serde_json::to_value(owners)?);
         let current: Vec<String> = current_derivations.iter().map(derivation_key).collect();
         vars.insert("current", serde_json::to_value(current)?);
-        let edges: Vec<Edge> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        let mut edges: Vec<Edge> = self.db.aql_bind_vars(&query, vars).map_err(backend)?;
+        let mut evidence_frontier: std::collections::BTreeSet<String> = edges
+            .iter()
+            .flat_map(|edge| {
+                [
+                    (edge.source_kind == VertexKind::Evidence).then_some(edge.source.clone()),
+                    (edge.target_kind == VertexKind::Evidence).then_some(edge.target.clone()),
+                ]
+                .into_iter()
+                .flatten()
+            })
+            .collect();
+        let mut seen_evidence = evidence_frontier.clone();
+        let mut edge_ids: std::collections::BTreeSet<String> =
+            edges.iter().map(|edge| edge.id.clone()).collect();
+        let evidence_query = format!(
+            "FOR target IN @targets \
+               FOR source, e IN 1..1 INBOUND \
+                   CONCAT(\"{DERIVED_COLLECTION}/\", target) {EDGE_COLLECTION} \
+                 FILTER e.derivation_key == @manual \
+                 FILTER e.kind IN [\"evidence_affirms\", \"evidence_denies\"] \
+                 RETURN e.edge"
+        );
+        while !evidence_frontier.is_empty() {
+            let mut evidence_vars: HashMap<&str, Value> = HashMap::new();
+            evidence_vars.insert("targets", serde_json::to_value(&evidence_frontier)?);
+            evidence_vars.insert(
+                "manual",
+                Value::String(derivation_key(&crate::evidence_graph::derivation())),
+            );
+            let incoming: Vec<Edge> = self
+                .db
+                .aql_bind_vars(&evidence_query, evidence_vars)
+                .map_err(backend)?;
+            let mut next = std::collections::BTreeSet::new();
+            for edge in incoming {
+                if seen_evidence.insert(edge.source.clone()) {
+                    next.insert(edge.source.clone());
+                }
+                if edge_ids.insert(edge.id.clone()) {
+                    edges.push(edge);
+                }
+            }
+            evidence_frontier = next;
+        }
         let mut contract_basis: std::collections::BTreeSet<String> =
             owners.iter().cloned().collect();
         for edge in &edges {
@@ -772,21 +1357,41 @@ impl GraphStore for ArangoNodeStore {
         let contract_context = if contract_basis.is_empty() {
             Vec::new()
         } else {
-            let context_query = format!(
+            // Keep the two Edge families in separate queries. Combining them
+            // with OR prevents ArangoDB from using the
+            // derivation_key+kind index and makes every graph page rescan the
+            // much larger lexical Edge population.
+            let direct_query = format!(
                 "FOR e IN {EDGE_COLLECTION} \
                    FILTER e.derivation_key IN @current \
-                   FILTER (e.edge.kind == \"has_contract\" AND e.edge.source IN @basis) \
-                     OR (e.edge.kind IN [\"composition_operand\", \"quotient_dividend\", \"quotient_divisor\", \"merge_operand\"] \
-                         AND LENGTH(INTERSECTION(e.edge.basis_spec_ids, @basis)) > 0) \
+                   FILTER e.kind == \"has_contract\" \
+                   FILTER e.edge.source IN @basis \
                    RETURN e.edge"
             );
-            let mut context_vars: HashMap<&str, Value> = HashMap::new();
+            let algebra_query = format!(
+                "FOR e IN {EDGE_COLLECTION} \
+                   FILTER e.derivation_key IN @current \
+                   FILTER e.kind IN [\"composition_operand\", \"quotient_dividend\", \"quotient_divisor\", \"merge_operand\"] \
+                   FILTER LENGTH(INTERSECTION(e.edge.basis_spec_ids, @basis)) > 0 \
+                   RETURN e.edge"
+            );
             let current: Vec<String> = current_derivations.iter().map(derivation_key).collect();
-            context_vars.insert("current", serde_json::to_value(current)?);
-            context_vars.insert("basis", serde_json::to_value(contract_basis)?);
-            self.db
-                .aql_bind_vars(&context_query, context_vars)
-                .map_err(backend)?
+            let mut direct_vars: HashMap<&str, Value> = HashMap::new();
+            direct_vars.insert("current", serde_json::to_value(&current)?);
+            direct_vars.insert("basis", serde_json::to_value(&contract_basis)?);
+            let mut context: Vec<Edge> = self
+                .db
+                .aql_bind_vars(&direct_query, direct_vars)
+                .map_err(backend)?;
+            let mut algebra_vars: HashMap<&str, Value> = HashMap::new();
+            algebra_vars.insert("current", serde_json::to_value(current)?);
+            algebra_vars.insert("basis", serde_json::to_value(contract_basis)?);
+            context.extend(
+                self.db
+                    .aql_bind_vars(&algebra_query, algebra_vars)
+                    .map_err(backend)?,
+            );
+            context
         };
         let source_ids: std::collections::BTreeSet<String> = edges
             .iter()
@@ -1089,6 +1694,40 @@ fn ensure_node_identity_index(db: &Database<ReqwestClient>) -> Result<(), StoreE
         .map_err(backend)
 }
 
+fn ensure_term_discovery_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let index = Index::builder()
+        .name("term_by_discovery_token")
+        .fields(vec!["discovery_tokens[*]".to_string()])
+        .settings(IndexSettings::Persistent {
+            unique: false,
+            sparse: true,
+            deduplicate: true,
+        })
+        .build();
+    db.create_index(TERM_COLLECTION, &index)
+        .map(|_| ())
+        .map_err(backend)
+}
+
+fn ensure_behavior_action_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let index = Index::builder()
+        .name("behavior_by_action")
+        .fields(vec![
+            "kind".to_string(),
+            "derivation_version".to_string(),
+            "action_key".to_string(),
+        ])
+        .settings(IndexSettings::Persistent {
+            unique: false,
+            sparse: true,
+            deduplicate: false,
+        })
+        .build();
+    db.create_index(DERIVED_COLLECTION, &index)
+        .map(|_| ())
+        .map_err(backend)
+}
+
 fn ensure_edge_read_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
     let index = Index::builder()
         .name("edge_current_by_owner")
@@ -1100,6 +1739,59 @@ fn ensure_edge_read_index(db: &Database<ReqwestClient>) -> Result<(), StoreError
         })
         .build();
     db.create_index(EDGE_COLLECTION, &index)
+        .map(|_| ())
+        .map_err(backend)
+}
+
+fn ensure_edge_derivation_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let index = Index::builder()
+        .name("edge_by_derivation_kind_target")
+        .fields(vec![
+            "derivation_key".to_string(),
+            "kind".to_string(),
+            "edge.target".to_string(),
+        ])
+        .settings(IndexSettings::Persistent {
+            unique: false,
+            sparse: false,
+            deduplicate: false,
+        })
+        .build();
+    db.create_index(EDGE_COLLECTION, &index)
+        .map(|_| ())
+        .map_err(backend)
+}
+
+fn ensure_assessment_read_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let index = Index::builder()
+        .name("assessment_by_left")
+        .fields(vec!["left".to_string()])
+        .settings(IndexSettings::Persistent {
+            unique: false,
+            sparse: false,
+            deduplicate: false,
+        })
+        .build();
+    db.create_index(ASSESSMENT_COLLECTION, &index)
+        .map(|_| ())
+        .map_err(backend)
+}
+
+fn ensure_current_assessment_read_index(db: &Database<ReqwestClient>) -> Result<(), StoreError> {
+    let index = Index::builder()
+        .name("assessment_by_left_candidate")
+        .fields(vec![
+            "left".to_string(),
+            "candidate_derivation.method".to_string(),
+            "candidate_derivation.version".to_string(),
+        ])
+        .settings(IndexSettings::Persistent {
+            unique: false,
+            sparse: false,
+            deduplicate: false,
+        })
+        .build();
+    db.create_index(ASSESSMENT_COLLECTION, &index)
         .map(|_| ())
         .map_err(backend)
 }

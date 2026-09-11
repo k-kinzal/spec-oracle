@@ -9,7 +9,7 @@
 //! and unsearched pairs remain absent from topology; their absence says
 //! nothing about whether a relationship exists.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -24,9 +24,11 @@ use crate::domain::{
 use crate::store::{GraphStore, StoreError};
 
 pub const TERM_DERIVATION_METHOD: &str = "so-daemon.graph.term-form";
-pub const GENERATION_VERSION: &str = "spec-graph/term-form-v3";
-pub const CANDIDATE_METHOD: &str = "so-daemon.graph.shared-term-candidates";
-pub const CANDIDATE_VERSION: &str = "spec-graph/shared-term-candidates-v1";
+pub const GENERATION_VERSION: &str = "spec-graph/term-form-v4";
+pub const CANDIDATE_METHOD: &str = "so-daemon.graph.multi-signal-candidates";
+pub const CANDIDATE_VERSION: &str = "spec-graph/multi-signal-candidates-v2";
+pub const LEXICAL_AFFINITY_METHOD: &str = "so-daemon.graph.lexical-affinity";
+pub const LEXICAL_AFFINITY_VERSION: &str = "spec-graph/lexical-affinity-v1";
 pub const SEMANTIC_DERIVATION_METHOD: &str = "so-reason.relate.assess";
 pub const SEMANTIC_DERIVATION_VERSION: &str = so_reason::relate::ASSESS_VERSION;
 pub const SEMANTIC_EDGE_METHOD: &str = "so-daemon.graph.semantic-relations";
@@ -38,11 +40,16 @@ pub const CONTRACT_ASSESSMENT_METHOD: &str = "so-reason.contract.assess";
 pub const CONTRACT_ASSESSMENT_VERSION: &str = "so-reason/contract-assess-v1";
 pub const CONTRACT_RELATION_METHOD: &str = "so-daemon.graph.contract-relations";
 pub const CONTRACT_RELATION_VERSION: &str = "spec-graph/contract-relations-v1";
+pub const COMPOSED_SUPPORT_METHOD: &str = "so-daemon.graph.composed-support";
+pub const COMPOSED_SUPPORT_VERSION: &str = "spec-graph/composed-support-v2";
+pub const OPERATIONAL_PROJECTION_METHOD: &str = "so-daemon.graph.operational-structure";
+pub const OPERATIONAL_PROJECTION_VERSION: &str = "spec-graph/operational-structure-v2";
 pub const DISCHARGE_CANDIDATE_METHOD: &str = "so-daemon.graph.discharge-candidates";
 pub const DISCHARGE_CANDIDATE_VERSION: &str = "spec-graph/discharge-candidates-v1";
-pub const RUN_VERSION: &str = "spec-graph/node-relations-v4";
+pub const RUN_VERSION: &str = "spec-graph/node-relations-v8";
 const PLUGIN_NAME: &str = "graph-generation";
 const CANDIDATE_PAGE_SIZE: usize = 500;
+const CONTRACT_RECONCILIATION_PAGE_SIZE: usize = 10_000;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GenerationReport {
@@ -51,6 +58,8 @@ pub struct GenerationReport {
     pub mention_edges_inserted: usize,
     pub contract_nodes_inserted: usize,
     pub contract_edges_inserted: usize,
+    pub operational_nodes_inserted: usize,
+    pub operational_edges_inserted: usize,
     /// The reconciliation subject has a formed A/G contract.
     pub subject_has_contract: bool,
     /// The subject cannot be interpreted by the current language/reasoner.
@@ -60,7 +69,10 @@ pub struct GenerationReport {
     pub candidates_examined: usize,
     pub candidates_unassessable: usize,
     pub assessments_inserted: usize,
+    pub lexical_edges_inserted: usize,
     pub semantic_edges_inserted: usize,
+    pub compositions_examined: usize,
+    pub composition_proofs_inserted: usize,
     pub verdicts: BTreeMap<String, usize>,
 }
 
@@ -80,8 +92,11 @@ pub fn generation_version() -> &'static str {
 /// semantic proof.
 pub fn reconciliation_version() -> String {
     format!(
-        "{RUN_VERSION};term={GENERATION_VERSION};candidates={CANDIDATE_VERSION};assessment={SEMANTIC_DERIVATION_VERSION};semantic-edge={}",
-        semantic_edge_derivation().version
+        "{RUN_VERSION};term={GENERATION_VERSION};operational={};candidates={CANDIDATE_VERSION};lexical-edge={};assessment={SEMANTIC_DERIVATION_VERSION};semantic-edge={};composed-support={}",
+        operational_projection_derivation().version,
+        lexical_affinity_derivation().version,
+        semantic_edge_derivation().version,
+        composed_support_derivation().version
     )
 }
 
@@ -116,6 +131,15 @@ pub fn candidate_derivation() -> Derivation {
     }
 }
 
+pub fn lexical_affinity_derivation() -> Derivation {
+    Derivation {
+        method: LEXICAL_AFFINITY_METHOD.to_string(),
+        version: format!(
+            "{LEXICAL_AFFINITY_VERSION};term={GENERATION_VERSION};candidates={CANDIDATE_VERSION}"
+        ),
+    }
+}
+
 pub fn contract_projection_derivation() -> Derivation {
     Derivation {
         method: CONTRACT_PROJECTION_METHOD.to_string(),
@@ -123,17 +147,31 @@ pub fn contract_projection_derivation() -> Derivation {
     }
 }
 
+pub fn operational_projection_derivation() -> Derivation {
+    Derivation {
+        method: OPERATIONAL_PROJECTION_METHOD.to_string(),
+        version: format!(
+            "{OPERATIONAL_PROJECTION_VERSION};reason={}",
+            so_reason::operational::OPERATIONAL_VERSION
+        ),
+    }
+}
+
 /// One selected version per Edge-producing method in the current graph view.
 pub fn current_derivations() -> Vec<Derivation> {
     vec![
         term_derivation(),
+        lexical_affinity_derivation(),
         semantic_edge_derivation(),
         crate::pairing::derivation(),
         contract_projection_derivation(),
+        operational_projection_derivation(),
         contract_relation_derivation(),
+        composed_support_derivation(),
         crate::contract_algebra::derivation(),
         crate::pairing::projection_derivation(),
         crate::evidence_capture::evidence_derivation(),
+        crate::evidence_graph::derivation(),
     ]
 }
 
@@ -141,6 +179,16 @@ pub fn contract_relation_derivation() -> Derivation {
     Derivation {
         method: CONTRACT_RELATION_METHOD.to_string(),
         version: format!("{CONTRACT_RELATION_VERSION};reason={CONTRACT_ASSESSMENT_VERSION}"),
+    }
+}
+
+pub fn composed_support_derivation() -> Derivation {
+    Derivation {
+        method: COMPOSED_SUPPORT_METHOD.to_string(),
+        version: format!(
+            "{COMPOSED_SUPPORT_VERSION};algebra={};reason={CONTRACT_ASSESSMENT_VERSION}",
+            crate::contract_algebra::DERIVATION_VERSION
+        ),
     }
 }
 
@@ -169,6 +217,16 @@ pub fn needs_generation(node: &Node) -> bool {
                 .pointer("/term_generation/version")
                 .and_then(Value::as_str)
                 == Some(GENERATION_VERSION)
+            && update
+                .value
+                .pointer("/operational_projection/method")
+                .and_then(Value::as_str)
+                == Some(OPERATIONAL_PROJECTION_METHOD)
+            && update
+                .value
+                .pointer("/operational_projection/version")
+                .and_then(Value::as_str)
+                == Some(operational_projection_derivation().version.as_str())
             && update
                 .value
                 .pointer("/candidate_search/method")
@@ -211,12 +269,7 @@ pub fn generate_and_persist(
         return Ok(GenerationReport::default());
     };
     let occurrences = term_occurrences(added, &sentence);
-    let mut term_ids: Vec<String> = occurrences
-        .iter()
-        .map(|occurrence| occurrence.term.id.clone())
-        .collect();
-    term_ids.sort();
-    term_ids.dedup();
+    let (term_ids, discovery_tokens) = candidate_signals(&occurrences);
     let mut report = GenerationReport {
         terms_seen: occurrences.len(),
         ..GenerationReport::default()
@@ -229,15 +282,18 @@ pub fn generate_and_persist(
         report.terms_inserted += usize::from(write.term_inserted);
         report.mention_edges_inserted += usize::from(write.edge_inserted);
     }
+    persist_operational_projection(added, &sentence, store, recorded_at, &mut report)?;
 
-    // Shared written terms are only a discovery mechanism. Every returned pair
+    // Candidate signals are only a discovery mechanism. Every returned pair
     // still goes through `assess`, and omitted pairs remain explicitly
     // unsearched—not independent and not Unknown.
     let mut cursor: Option<String> = None;
     loop {
-        let page = store.list_term_candidates(
+        let page = store.list_relation_candidates(
             &term_ids,
+            &discovery_tokens,
             &term_derivation(),
+            &contract_projection_derivation(),
             &added.id,
             cursor.as_deref(),
             CANDIDATE_PAGE_SIZE,
@@ -249,6 +305,16 @@ pub fn generate_and_persist(
                 continue;
             };
             report.candidates_examined += 1;
+            if let Some(edge) = lexical_affinity_edge(
+                added,
+                &candidate,
+                &term_ids,
+                &discovery_tokens,
+                &candidate_sentence,
+                recorded_at,
+            ) {
+                report.lexical_edges_inserted += usize::from(store.append_edge(&edge)?);
+            }
             let verdict = assess(&sentence, &candidate_sentence);
             *report
                 .verdicts
@@ -301,6 +367,8 @@ pub fn generate_and_persist(
         }
     }
 
+    let composition = derive_composed_support_for(added, store, recorded_at)?;
+    merge_composition_report(&mut report, composition);
     Ok(report)
 }
 
@@ -323,7 +391,75 @@ pub(crate) fn persist_term_projection_only(
         report.terms_inserted += usize::from(write.term_inserted);
         report.mention_edges_inserted += usize::from(write.edge_inserted);
     }
+    persist_operational_projection(node, &sentence, store, recorded_at, &mut report)?;
     Ok(report)
+}
+
+fn persist_operational_projection(
+    node: &Node,
+    sentence: &so_lang::ast::Sentence,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+    report: &mut GenerationReport,
+) -> Result<(), StoreError> {
+    let profile = so_reason::operational::operational_profile(sentence);
+    if profile.witnesses.is_empty() && profile.engagements.is_empty() {
+        return Ok(());
+    }
+    let derivation = operational_projection_derivation();
+    let behavior = DerivedNode::behavior(&profile, so_reason::operational::OPERATIONAL_VERSION);
+    let behavior_edge = Edge::projection(
+        EdgeKind::HasBehavior,
+        &node.id,
+        behavior.id(),
+        derivation.clone(),
+        recorded_at,
+    )
+    .map_err(StoreError::InvalidEdge)?;
+    let write = store.put_derived_node(&behavior, &behavior_edge)?;
+    report.operational_nodes_inserted += usize::from(write.node_inserted);
+    report.operational_edges_inserted += usize::from(write.edge_inserted);
+
+    let mut roles: BTreeMap<(EdgeKind, so_reason::operational::EntityRef), (String, String)> =
+        BTreeMap::new();
+    for witness in &profile.witnesses {
+        roles
+            .entry((EdgeKind::WitnessesEntity, witness.entity.clone()))
+            .or_insert_with(|| (witness.anchor.clone(), "operational_witness".into()));
+    }
+    for engagement in &profile.engagements {
+        roles
+            .entry((EdgeKind::EngagesEntity, engagement.entity.clone()))
+            .or_insert_with(|| {
+                (
+                    engagement.anchor.clone(),
+                    format!("operational_{:?}", engagement.site).to_lowercase(),
+                )
+            });
+    }
+    for ((kind, entity_ref), (anchor, role)) in roles {
+        let entity = DerivedNode::entity(&entity_ref, so_reason::operational::OPERATIONAL_VERSION);
+        let mut edge = Edge::operational_role(
+            kind,
+            behavior.id(),
+            entity.id(),
+            derivation.clone(),
+            recorded_at,
+        )
+        .map_err(StoreError::InvalidEdge)?;
+        edge.source_anchor = Some(TextAnchor {
+            selector: "/operational".into(),
+            text: anchor,
+            role,
+        });
+        edge.basis_spec_ids = vec![node.id.clone()];
+        edge.id = edge.identity_key();
+        edge.validate().map_err(StoreError::InvalidEdge)?;
+        let write = store.put_derived_node(&entity, &edge)?;
+        report.operational_nodes_inserted += usize::from(write.node_inserted);
+        report.operational_edges_inserted += usize::from(write.edge_inserted);
+    }
+    Ok(())
 }
 
 pub(crate) fn persist_contract_projection_only(
@@ -344,26 +480,50 @@ pub(crate) fn persist_semantic_relations_only(
     store: &(dyn GraphStore + Send + Sync),
     recorded_at: &str,
 ) -> Result<GenerationReport, StoreError> {
+    persist_semantic_relations_work(added, store, recorded_at)
+}
+
+pub(crate) fn rebuild_semantic_relations_only(
+    added: &Node,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+) -> Result<GenerationReport, StoreError> {
+    // Rebuild projection Consumers run concurrently. A Node's term projection
+    // is guaranteed to exist before this function runs for that Node, but term
+    // projections for lexically later Nodes are not. Searching only ids after
+    // `added` can therefore permanently miss every pair: the later endpoint is
+    // absent now, and its later rebuild would skip back over `added`.
+    //
+    // Search both directions during rebuild. Whichever endpoint is projected
+    // second will discover the pair; if both relation tasks observe both
+    // projections, content-derived Assessment and Edge identities make the
+    // duplicate attempt idempotent.
+    persist_semantic_relations_work(added, store, recorded_at)
+}
+
+fn persist_semantic_relations_work(
+    added: &Node,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+) -> Result<GenerationReport, StoreError> {
     let Some(sentence) = parse_current(added) else {
         return Ok(GenerationReport::default());
     };
     let occurrences = term_occurrences(added, &sentence);
-    let mut term_ids: Vec<String> = occurrences
-        .iter()
-        .map(|occurrence| occurrence.term.id.clone())
-        .collect();
-    term_ids.sort();
-    term_ids.dedup();
+    let (term_ids, discovery_tokens) = candidate_signals(&occurrences);
     let mut report = GenerationReport::default();
     let mut cursor = None;
     loop {
-        let page = store.list_term_candidates(
+        let page = store.list_relation_candidates(
             &term_ids,
+            &discovery_tokens,
             &term_derivation(),
+            &contract_projection_derivation(),
             &added.id,
             cursor.as_deref(),
             CANDIDATE_PAGE_SIZE,
         )?;
+        let mut assessments = Vec::new();
         for candidate in page.nodes {
             report.candidates_discovered += 1;
             let Some(candidate_sentence) = parse_current(&candidate) else {
@@ -371,14 +531,23 @@ pub(crate) fn persist_semantic_relations_only(
                 continue;
             };
             report.candidates_examined += 1;
+            if let Some(edge) = lexical_affinity_edge(
+                added,
+                &candidate,
+                &term_ids,
+                &discovery_tokens,
+                &candidate_sentence,
+                recorded_at,
+            ) {
+                report.lexical_edges_inserted += usize::from(store.append_edge(&edge)?);
+            }
             let verdict = assess(&sentence, &candidate_sentence);
             *report
                 .verdicts
                 .entry(verdict_name(verdict).to_string())
                 .or_default() += 1;
             let assessment = relation_assessment(added, &candidate, verdict, recorded_at);
-            report.assessments_inserted +=
-                usize::from(store.append_relation_assessment(&assessment)?);
+            assessments.push(assessment);
             if let (Some(added_formula), Some(candidate_formula)) = (
                 assertion_formula(&sentence),
                 assertion_formula(&candidate_sentence),
@@ -389,13 +558,13 @@ pub(crate) fn persist_semantic_relations_only(
                     assess_formulas(&added_formula, &candidate_formula),
                     recorded_at,
                 );
-                report.assessments_inserted +=
-                    usize::from(store.append_relation_assessment(&formula_assessment)?);
+                assessments.push(formula_assessment);
             }
             if let Some(edge) = semantic_edge(added, &candidate, verdict, recorded_at) {
                 report.semantic_edges_inserted += usize::from(store.append_edge(&edge)?);
             }
         }
+        report.assessments_inserted += append_assessment_batches(store, &assessments)?;
         match page.next_cursor {
             Some(next) => cursor = Some(next),
             None => break,
@@ -413,7 +582,11 @@ pub fn reconcile_contract_relations_for(
     store: &(dyn GraphStore + Send + Sync),
     recorded_at: &str,
 ) -> Result<GenerationReport, StoreError> {
-    reconcile_contract_work(changed, store, recorded_at, true, true)
+    let mut report =
+        reconcile_contract_work(changed, store, recorded_at, true, true, false, false)?;
+    let composition = derive_composed_support_for(changed, store, recorded_at)?;
+    merge_composition_report(&mut report, composition);
+    Ok(report)
 }
 
 pub(crate) fn reconcile_contract_relations_only(
@@ -421,7 +594,27 @@ pub(crate) fn reconcile_contract_relations_only(
     store: &(dyn GraphStore + Send + Sync),
     recorded_at: &str,
 ) -> Result<GenerationReport, StoreError> {
-    reconcile_contract_work(changed, store, recorded_at, true, false)
+    let mut report =
+        reconcile_contract_work(changed, store, recorded_at, true, false, false, false)?;
+    let composition = derive_composed_support_for(changed, store, recorded_at)?;
+    merge_composition_report(&mut report, composition);
+    Ok(report)
+}
+
+pub(crate) fn rebuild_contract_relations_only(
+    changed: &Node,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+) -> Result<GenerationReport, StoreError> {
+    // A rebuild visits every authored Node, so assess each unordered pair from
+    // only one endpoint. The relation assessment and symmetric relation Edge
+    // already canonicalize their endpoints; visiting the reverse direction
+    // can only repeat the same immutable writes and creates avoidable backend
+    // lock contention when both endpoints are processed concurrently.
+    let mut report = reconcile_contract_work(changed, store, recorded_at, true, false, true, true)?;
+    let composition = derive_composed_support_for(changed, store, recorded_at)?;
+    merge_composition_report(&mut report, composition);
+    Ok(report)
 }
 
 pub(crate) fn reconcile_discharge_candidates_only(
@@ -429,7 +622,205 @@ pub(crate) fn reconcile_discharge_candidates_only(
     store: &(dyn GraphStore + Send + Sync),
     recorded_at: &str,
 ) -> Result<GenerationReport, StoreError> {
-    reconcile_contract_work(changed, store, recorded_at, false, true)
+    reconcile_contract_work(changed, store, recorded_at, false, true, false, false)
+}
+
+pub(crate) fn rebuild_discharge_candidates_only(
+    changed: &Node,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+) -> Result<GenerationReport, StoreError> {
+    reconcile_contract_work(changed, store, recorded_at, false, true, true, false)
+}
+
+#[derive(Clone)]
+struct CompositionContract {
+    specification_id: String,
+    contract_node_id: String,
+    contract: so_reason::contract::Contract,
+    force: Option<so_reason::semantics::Force>,
+}
+
+/// Discover every candidate binary contract composition involving the changed
+/// specification. A proved composition is persisted as the existing
+/// algebra shape:
+///
+/// `operand contracts -> composed Contract -> refined target Contract`.
+///
+/// This is deliberately not a `Supports` Edge. The immutable algebra proof is
+/// Ledger topology; selection later interprets its authored basis as one
+/// multi-premise support clause.
+fn derive_composed_support_for(
+    changed: &Node,
+    store: &(dyn GraphStore + Send + Sync),
+    recorded_at: &str,
+) -> Result<GenerationReport, StoreError> {
+    let Some(changed_sentence) = parse_current(changed) else {
+        return Ok(GenerationReport::default());
+    };
+    let occurrences = term_occurrences(changed, &changed_sentence);
+    let (term_ids, discovery_tokens) = candidate_signals(&occurrences);
+    let neighborhood = composition_neighborhood(changed, &term_ids, &discovery_tokens, store)?;
+
+    let mut contracts = Vec::new();
+    for node in neighborhood.into_values() {
+        let Some(sentence) = parse_current(&node) else {
+            continue;
+        };
+        let formed = match contract_for_reconciliation(store, &node)? {
+            ReconciliationContract::Formed(contract) => contract,
+            ReconciliationContract::NoContract | ReconciliationContract::Unassessable => continue,
+        };
+        let semantic = formed.semantic();
+        let derived = DerivedNode::contract(&semantic, "formed", CONTRACT_PROJECTION_VERSION);
+        contracts.push(CompositionContract {
+            specification_id: node.id,
+            contract_node_id: derived.id().to_string(),
+            contract: semantic,
+            force: so_reason::semantics::force(&sentence),
+        });
+    }
+    let contract_ids: Vec<String> = contracts
+        .iter()
+        .map(|entry| entry.contract_node_id.clone())
+        .collect();
+    let persisted: BTreeSet<String> = store
+        .get_derived_nodes(&contract_ids)?
+        .into_iter()
+        .map(|node| node.id().to_string())
+        .collect();
+    contracts.retain(|entry| persisted.contains(&entry.contract_node_id));
+    contracts.sort_by(|left, right| left.specification_id.cmp(&right.specification_id));
+
+    let mut report = GenerationReport::default();
+    let mut persisted_compositions: BTreeMap<(String, String), String> = BTreeMap::new();
+    for target_index in 0..contracts.len() {
+        let target = &contracts[target_index];
+        for left_index in 0..contracts.len() {
+            for right_index in (left_index + 1)..contracts.len() {
+                if target_index == left_index || target_index == right_index {
+                    continue;
+                }
+                let left = &contracts[left_index];
+                let right = &contracts[right_index];
+                let changed_is_target = target.specification_id == changed.id;
+                let changed_is_operand =
+                    left.specification_id == changed.id || right.specification_id == changed.id;
+                if !changed_is_target && !changed_is_operand {
+                    continue;
+                }
+                if !force_can_support(left.force, target.force)
+                    || !force_can_support(right.force, target.force)
+                {
+                    continue;
+                }
+                // Inclusion-minimal binary bases only. If either operand
+                // already proves the target, materializing their composition
+                // would turn a redundant path into apparent multi-source
+                // support.
+                if left.contract.refines(&target.contract)
+                    || right.contract.refines(&target.contract)
+                {
+                    continue;
+                }
+                report.compositions_examined += 1;
+                let composed = left.contract.compose(&right.contract);
+                if !composed.refines(&target.contract) {
+                    continue;
+                }
+
+                let pair = if left.contract_node_id <= right.contract_node_id {
+                    (
+                        left.contract_node_id.clone(),
+                        right.contract_node_id.clone(),
+                    )
+                } else {
+                    (
+                        right.contract_node_id.clone(),
+                        left.contract_node_id.clone(),
+                    )
+                };
+                let result_id = if let Some(id) = persisted_compositions.get(&pair) {
+                    id.clone()
+                } else {
+                    let result = crate::contract_algebra::derive(
+                        store,
+                        &pair.0,
+                        &pair.1,
+                        crate::contract_algebra::Operation::Composition,
+                        vec![],
+                        recorded_at,
+                    )
+                    .map_err(|error| StoreError::Backend(error.to_string()))?;
+                    let id = result.contract.id().to_string();
+                    persisted_compositions.insert(pair, id.clone());
+                    id
+                };
+                let proof = Edge::contract_relation(
+                    EdgeKind::ContractRefines,
+                    &result_id,
+                    &target.contract_node_id,
+                    vec![
+                        left.specification_id.clone(),
+                        right.specification_id.clone(),
+                        target.specification_id.clone(),
+                    ],
+                    composed_support_derivation(),
+                    recorded_at,
+                )
+                .map_err(StoreError::InvalidEdge)?;
+                let inserted = store.append_edge(&proof)?;
+                report.composition_proofs_inserted += usize::from(inserted);
+                report.semantic_edges_inserted += usize::from(inserted);
+            }
+        }
+    }
+    Ok(report)
+}
+
+fn composition_neighborhood(
+    changed: &Node,
+    term_ids: &[String],
+    discovery_tokens: &[String],
+    store: &(dyn GraphStore + Send + Sync),
+) -> Result<BTreeMap<String, Node>, StoreError> {
+    let mut neighborhood = BTreeMap::from([(changed.id.clone(), changed.clone())]);
+    let mut cursor = None;
+    loop {
+        let page = store.list_relation_candidates(
+            term_ids,
+            discovery_tokens,
+            &term_derivation(),
+            &contract_projection_derivation(),
+            &changed.id,
+            cursor.as_deref(),
+            CANDIDATE_PAGE_SIZE,
+        )?;
+        for candidate in page.nodes {
+            neighborhood.insert(candidate.id.clone(), candidate);
+        }
+        match page.next_cursor {
+            Some(next) => cursor = Some(next),
+            None => return Ok(neighborhood),
+        }
+    }
+}
+
+fn force_can_support(
+    concrete: Option<so_reason::semantics::Force>,
+    abstract_: Option<so_reason::semantics::Force>,
+) -> bool {
+    use so_reason::semantics::Force::{Binding, Recommended};
+    matches!(
+        (concrete, abstract_),
+        (Some(Binding), _) | (Some(Recommended), Some(Recommended)) | (None, None)
+    )
+}
+
+fn merge_composition_report(target: &mut GenerationReport, source: GenerationReport) {
+    target.compositions_examined += source.compositions_examined;
+    target.composition_proofs_inserted += source.composition_proofs_inserted;
+    target.semantic_edges_inserted += source.semantic_edges_inserted;
 }
 
 fn reconcile_contract_work(
@@ -438,6 +829,8 @@ fn reconcile_contract_work(
     recorded_at: &str,
     assess_relations: bool,
     assess_discharges: bool,
+    unordered_pair_once: bool,
+    bounded_relation_candidates: bool,
 ) -> Result<GenerationReport, StoreError> {
     let changed_contract = match contract_for_reconciliation(store, changed)? {
         ReconciliationContract::Formed(contract) => contract,
@@ -458,47 +851,241 @@ fn reconcile_contract_work(
         subject_has_contract: true,
         ..GenerationReport::default()
     };
-    let mut cursor = None;
+    let assess_discharges =
+        assess_discharges && store.has_pairing_edges(&crate::pairing::derivation())?;
+    if !assess_relations && !assess_discharges {
+        return Ok(report);
+    }
+    let candidate_signals = if bounded_relation_candidates {
+        let Some(sentence) = parse_current(changed) else {
+            return Ok(report);
+        };
+        let occurrences = term_occurrences(changed, &sentence);
+        Some(candidate_signals(&occurrences))
+    } else {
+        None
+    };
+    // `list_relation_candidates` uses an exclusive keyset cursor. During a
+    // rebuild this skips every reverse endpoint at the database boundary,
+    // avoiding both redundant reasoning and empty pages discarded in Rust.
+    let mut cursor = unordered_pair_once.then(|| changed.id.clone());
     loop {
-        let page = store.list_nodes(cursor.as_deref(), CANDIDATE_PAGE_SIZE)?;
-        for candidate in page.nodes {
-            if candidate.id == changed.id {
-                continue;
-            }
-            let candidate_contract = match contract_for_reconciliation(store, &candidate)? {
-                ReconciliationContract::Formed(contract) => contract,
-                ReconciliationContract::NoContract => continue,
-                ReconciliationContract::Unassessable => {
-                    report.candidates_unassessable += 1;
-                    continue;
-                }
-            };
-            let candidate_contract_node = DerivedNode::contract(
-                &candidate_contract.semantic(),
-                "formed",
-                CONTRACT_PROJECTION_VERSION,
-            );
-            if assess_relations {
-                persist_contract_assessment_and_edge(
-                    changed,
-                    &changed_contract_node,
-                    &candidate,
-                    &candidate_contract_node,
+        let page = if let Some((term_ids, discovery_tokens)) = candidate_signals.as_ref() {
+            store.list_relation_candidates(
+                term_ids,
+                discovery_tokens,
+                &term_derivation(),
+                &contract_projection_derivation(),
+                &changed.id,
+                cursor.as_deref(),
+                CANDIDATE_PAGE_SIZE,
+            )?
+        } else {
+            store.list_nodes(cursor.as_deref(), CONTRACT_RECONCILIATION_PAGE_SIZE)?
+        };
+        let next_cursor = page.next_cursor;
+        let candidates: Vec<Node> = page
+            .nodes
+            .into_iter()
+            .filter(|candidate| {
+                candidate.id != changed.id
+                    && (!unordered_pair_once || candidate.id.as_str() > changed.id.as_str())
+            })
+            .collect();
+        let candidate_ids: Vec<String> = candidates
+            .iter()
+            .map(|candidate| candidate.id.clone())
+            .collect();
+        let pairing_edges =
+            store.list_pairing_edges_for_targets(&candidate_ids, &crate::pairing::derivation())?;
+        let (assessments, relation_edges) = if assess_relations && !assess_discharges {
+            let batch = assess_contract_relation_candidates(
+                store,
+                changed,
+                &changed_contract_node,
+                &candidates,
+                &pairing_edges,
+                recorded_at,
+            )?;
+            report.candidates_unassessable += batch.unassessable;
+            (batch.assessments, batch.edges)
+        } else {
+            let mut assessments = Vec::new();
+            let mut relation_edges = Vec::new();
+            for candidate in candidates {
+                let candidate_pairings = pairing_edges
+                    .get(&candidate.id)
+                    .map(Vec::as_slice)
+                    .unwrap_or_default();
+                let candidate_contract = match contract_for_reconciliation_with_edges(
                     store,
-                    recorded_at,
-                    &mut report,
-                )?;
+                    &candidate,
+                    candidate_pairings,
+                )? {
+                    ReconciliationContract::Formed(contract) => contract,
+                    ReconciliationContract::NoContract => continue,
+                    ReconciliationContract::Unassessable => {
+                        report.candidates_unassessable += 1;
+                        continue;
+                    }
+                };
+                let candidate_contract_node = DerivedNode::contract(
+                    &candidate_contract.semantic(),
+                    "formed",
+                    CONTRACT_PROJECTION_VERSION,
+                );
+                if assess_relations {
+                    let (assessment, edge) = contract_assessment_and_edge(
+                        changed,
+                        &changed_contract_node,
+                        &candidate,
+                        &candidate_contract_node,
+                        recorded_at,
+                    );
+                    assessments.push(assessment);
+                    relation_edges.extend(edge);
+                }
+                if assess_discharges {
+                    persist_discharge_candidates(
+                        changed,
+                        &candidate,
+                        store,
+                        recorded_at,
+                        &mut report,
+                    )?;
+                }
             }
-            if assess_discharges {
-                persist_discharge_candidates(changed, &candidate, store, recorded_at, &mut report)?;
-            }
+            (assessments, relation_edges)
+        };
+        report.assessments_inserted += append_assessment_batches(store, &assessments)?;
+        for edge in relation_edges {
+            report.semantic_edges_inserted += usize::from(store.append_edge(&edge)?);
         }
-        match page.next_cursor {
+        match next_cursor {
             Some(next) => cursor = Some(next),
             None => break,
         }
     }
     Ok(report)
+}
+
+#[derive(Default)]
+struct ContractRelationBatch {
+    assessments: Vec<RelationAssessment>,
+    edges: Vec<Edge>,
+    unassessable: usize,
+}
+
+fn assess_contract_relation_candidates(
+    store: &(dyn GraphStore + Send + Sync),
+    changed: &Node,
+    changed_contract_node: &DerivedNode,
+    candidates: &[Node],
+    pairing_edges: &BTreeMap<String, Vec<Edge>>,
+    recorded_at: &str,
+) -> Result<ContractRelationBatch, StoreError> {
+    const MAX_WORKERS: usize = 8;
+    const MIN_CHUNK_SIZE: usize = 250;
+
+    if candidates.is_empty() {
+        return Ok(ContractRelationBatch::default());
+    }
+    let available = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(1);
+    let workers = available
+        .min(MAX_WORKERS)
+        .min(candidates.len().div_ceil(MIN_CHUNK_SIZE));
+    let chunk_size = candidates.len().div_ceil(workers);
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = candidates
+            .chunks(chunk_size)
+            .map(|chunk| {
+                scope.spawn(move || {
+                    let mut batch = ContractRelationBatch::default();
+                    for candidate in chunk {
+                        let candidate_pairings = pairing_edges
+                            .get(&candidate.id)
+                            .map(Vec::as_slice)
+                            .unwrap_or_default();
+                        let candidate_contract = match contract_for_reconciliation_with_edges(
+                            store,
+                            candidate,
+                            candidate_pairings,
+                        )? {
+                            ReconciliationContract::Formed(contract) => contract,
+                            ReconciliationContract::NoContract => continue,
+                            ReconciliationContract::Unassessable => {
+                                batch.unassessable += 1;
+                                continue;
+                            }
+                        };
+                        let candidate_contract_node = DerivedNode::contract(
+                            &candidate_contract.semantic(),
+                            "formed",
+                            CONTRACT_PROJECTION_VERSION,
+                        );
+                        let (assessment, edge) = contract_assessment_and_edge(
+                            changed,
+                            changed_contract_node,
+                            candidate,
+                            &candidate_contract_node,
+                            recorded_at,
+                        );
+                        batch.assessments.push(assessment);
+                        batch.edges.extend(edge);
+                    }
+                    Ok::<_, StoreError>(batch)
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .try_fold(ContractRelationBatch::default(), |mut merged, handle| {
+                let batch = handle.join().map_err(|_| {
+                    StoreError::Backend("parallel contract-assessment worker panicked".into())
+                })??;
+                merged.assessments.extend(batch.assessments);
+                merged.edges.extend(batch.edges);
+                merged.unassessable += batch.unassessable;
+                Ok(merged)
+            })
+    })
+}
+
+fn append_assessment_batches(
+    store: &(dyn GraphStore + Send + Sync),
+    assessments: &[RelationAssessment],
+) -> Result<usize, StoreError> {
+    const MAX_WORKERS: usize = 8;
+    const MIN_BATCH_SIZE: usize = 500;
+
+    if assessments.len() <= MIN_BATCH_SIZE {
+        return store.append_relation_assessments(assessments);
+    }
+    let available = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(1);
+    let workers = available
+        .min(MAX_WORKERS)
+        .min(assessments.len().div_ceil(MIN_BATCH_SIZE));
+    let chunk_size = assessments.len().div_ceil(workers);
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = assessments
+            .chunks(chunk_size)
+            .map(|chunk| scope.spawn(move || store.append_relation_assessments(chunk)))
+            .collect();
+        handles.into_iter().try_fold(0, |inserted, handle| {
+            handle
+                .join()
+                .map_err(|_| {
+                    StoreError::Backend(
+                        "parallel relation-assessment persistence worker panicked".into(),
+                    )
+                })?
+                .map(|count| inserted + count)
+        })
+    })
 }
 
 enum ReconciliationContract {
@@ -516,6 +1103,19 @@ fn contract_for_reconciliation(
     node: &Node,
 ) -> Result<ReconciliationContract, StoreError> {
     match crate::pairing::current_formed_contract(store, node) {
+        Ok(Some(contract)) => Ok(ReconciliationContract::Formed(contract)),
+        Ok(None) => Ok(ReconciliationContract::NoContract),
+        Err(crate::pairing::PairingError::Store(error)) => Err(error),
+        Err(_) => Ok(ReconciliationContract::Unassessable),
+    }
+}
+
+fn contract_for_reconciliation_with_edges(
+    store: &(dyn GraphStore + Send + Sync),
+    node: &Node,
+    pairing_edges: &[Edge],
+) -> Result<ReconciliationContract, StoreError> {
+    match crate::pairing::formed_contract_with_pairing_edges(store, node, pairing_edges) {
         Ok(Some(contract)) => Ok(ReconciliationContract::Formed(contract)),
         Ok(None) => Ok(ReconciliationContract::NoContract),
         Err(crate::pairing::PairingError::Store(error)) => Err(error),
@@ -692,6 +1292,27 @@ fn persist_contract_assessment_and_edge(
     recorded_at: &str,
     report: &mut GenerationReport,
 ) -> Result<(), StoreError> {
+    let (assessment, edge) = contract_assessment_and_edge(
+        added,
+        added_contract_node,
+        candidate,
+        candidate_contract_node,
+        recorded_at,
+    );
+    report.assessments_inserted += usize::from(store.append_relation_assessment(&assessment)?);
+    if let Some(edge) = edge {
+        report.semantic_edges_inserted += usize::from(store.append_edge(&edge)?);
+    }
+    Ok(())
+}
+
+fn contract_assessment_and_edge(
+    added: &Node,
+    added_contract_node: &DerivedNode,
+    candidate: &Node,
+    candidate_contract_node: &DerivedNode,
+    recorded_at: &str,
+) -> (RelationAssessment, Option<Edge>) {
     let added_contract = added_contract_node
         .semantic_contract()
         .expect("a contract projection contains a semantic contract");
@@ -723,7 +1344,6 @@ fn persist_contract_assessment_and_edge(
         recorded_at,
         &[added_contract_node.id(), candidate_contract_node.id()],
     );
-    report.assessments_inserted += usize::from(store.append_relation_assessment(&assessment)?);
 
     let edge = match relation {
         ContractRelation::Refines => Some(Edge::contract_relation(
@@ -757,11 +1377,8 @@ fn persist_contract_assessment_and_edge(
         ContractRelation::Equivalent => None,
         ContractRelation::Incomparable => None,
     };
-    if let Some(edge) = edge {
-        let edge = edge.expect("contract judgments map to valid contract edges");
-        report.semantic_edges_inserted += usize::from(store.append_edge(&edge)?);
-    }
-    Ok(())
+    let edge = edge.map(|edge| edge.expect("contract judgments map to valid contract edges"));
+    (assessment, edge)
 }
 
 fn persist_discharge_candidates(
@@ -911,6 +1528,45 @@ fn semantic_edge(
     )
 }
 
+fn lexical_affinity_edge(
+    added: &Node,
+    candidate: &Node,
+    added_term_ids: &[String],
+    added_tokens: &[String],
+    candidate_sentence: &so_lang::ast::Sentence,
+    recorded_at: &str,
+) -> Option<Edge> {
+    let candidate_occurrences = term_occurrences(candidate, candidate_sentence);
+    let (candidate_term_ids, candidate_tokens) = candidate_signals(&candidate_occurrences);
+    let exact_term = sorted_intersects(added_term_ids, &candidate_term_ids);
+    let shared_tokens = sorted_intersection_count(added_tokens, &candidate_tokens);
+    if !exact_term && shared_tokens < 2 {
+        return None;
+    }
+    let (source, target) = ordered_ids(&added.id, &candidate.id);
+    Edge::lexical_relation(source, target, lexical_affinity_derivation(), recorded_at).ok()
+}
+
+fn sorted_intersects(left: &[String], right: &[String]) -> bool {
+    sorted_intersection_count(left, right) > 0
+}
+
+fn sorted_intersection_count(left: &[String], right: &[String]) -> usize {
+    let (mut left_index, mut right_index, mut count) = (0, 0, 0);
+    while left_index < left.len() && right_index < right.len() {
+        match left[left_index].cmp(&right[right_index]) {
+            std::cmp::Ordering::Less => left_index += 1,
+            std::cmp::Ordering::Greater => right_index += 1,
+            std::cmp::Ordering::Equal => {
+                count += 1;
+                left_index += 1;
+                right_index += 1;
+            }
+        }
+    }
+    count
+}
+
 fn symmetric_endpoints<'a>(
     kind: EdgeKind,
     a: &'a Node,
@@ -953,12 +1609,14 @@ fn walk_terms(node: &Node, value: &Value, path: &str, found: &mut Vec<TermOccurr
                 if let Ok(np) = serde_json::from_value::<so_lang::ast::Np>(value.clone()) {
                     let mut without_det = np.clone();
                     without_det.det = None;
-                    let form = without_det.render().to_lowercase();
+                    let rendered = without_det.render();
+                    let form = rendered.to_lowercase();
                     let head = np.head.to_lowercase();
                     let term = TermNode {
                         id: stable_id("term", &[&node.lang_version, GENERATION_VERSION, &form]),
                         form,
                         head,
+                        discovery_tokens: normalize_discovery_tokens(&rendered),
                         lang_version: node.lang_version.clone(),
                         derivation_version: GENERATION_VERSION.to_string(),
                     };
@@ -989,6 +1647,84 @@ fn walk_terms(node: &Node, value: &Value, path: &str, found: &mut Vec<TermOccurr
         }
         Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => {}
     }
+}
+
+fn candidate_signals(occurrences: &[TermOccurrence]) -> (Vec<String>, Vec<String>) {
+    let mut term_ids: Vec<String> = occurrences
+        .iter()
+        .map(|occurrence| occurrence.term.id.clone())
+        .collect();
+    term_ids.sort();
+    term_ids.dedup();
+    let mut discovery_tokens: Vec<String> = occurrences
+        .iter()
+        .flat_map(|occurrence| occurrence.term.discovery_tokens.iter().cloned())
+        .collect();
+    discovery_tokens.sort();
+    discovery_tokens.dedup();
+    (term_ids, discovery_tokens)
+}
+
+fn normalize_discovery_tokens(value: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let mut previous_lower_or_digit = false;
+    for character in value.chars() {
+        let boundary = character.is_uppercase() && previous_lower_or_digit && !current.is_empty();
+        if boundary {
+            words.push(std::mem::take(&mut current));
+        }
+        if character.is_alphanumeric() {
+            current.extend(character.to_lowercase());
+            previous_lower_or_digit = character.is_lowercase() || character.is_ascii_digit();
+        } else {
+            if !current.is_empty() {
+                words.push(std::mem::take(&mut current));
+            }
+            previous_lower_or_digit = false;
+        }
+    }
+    if !current.is_empty() {
+        words.push(current);
+    }
+    let mut normalized: Vec<String> = words
+        .into_iter()
+        .map(|word| {
+            if word == "spec" {
+                "specification".to_string()
+            } else {
+                word
+            }
+        })
+        .filter(|word| {
+            word.len() >= 2
+                && !matches!(
+                    word.as_str(),
+                    "a" | "an"
+                        | "the"
+                        | "of"
+                        | "to"
+                        | "in"
+                        | "on"
+                        | "at"
+                        | "by"
+                        | "for"
+                        | "from"
+                        | "with"
+                        | "through"
+                        | "and"
+                        | "or"
+                        | "one"
+                        | "each"
+                        | "every"
+                        | "any"
+                        | "no"
+                )
+        })
+        .collect();
+    normalized.sort();
+    normalized.dedup();
+    normalized
 }
 
 fn grammatical_role(path: &str) -> &'static str {
@@ -1070,6 +1806,69 @@ mod tests {
     }
 
     #[test]
+    fn term_stage_persists_typed_operational_projection() {
+        let store = InMemoryNodeStore::new();
+        let value = node(
+            "s1",
+            "an AddSpecification RPC shall submit an AddNode Command.",
+        );
+        store.add_node(&value).unwrap();
+        let report = persist_term_projection_only(&value, &store, "2026-01-01T00:00:00Z").unwrap();
+        assert_eq!(report.operational_nodes_inserted, 3);
+        assert_eq!(report.operational_edges_inserted, 3);
+
+        let edges = store
+            .list_edges(&["s1".into()], &current_derivations())
+            .unwrap();
+        assert!(edges.iter().any(|edge| edge.kind == EdgeKind::HasBehavior));
+        assert!(edges
+            .iter()
+            .any(|edge| edge.kind == EdgeKind::WitnessesEntity));
+        assert!(edges
+            .iter()
+            .any(|edge| edge.kind == EdgeKind::EngagesEntity));
+        let derived_ids: Vec<String> = edges
+            .iter()
+            .filter(|edge| matches!(edge.target_kind, VertexKind::Behavior | VertexKind::Entity))
+            .map(|edge| edge.target.clone())
+            .collect();
+        let derived = store.get_derived_nodes(&derived_ids).unwrap();
+        assert!(derived
+            .iter()
+            .any(|node| node.vertex_kind() == VertexKind::Behavior));
+        assert!(derived
+            .iter()
+            .any(|node| node.vertex_kind() == VertexKind::Entity));
+    }
+
+    #[test]
+    fn composition_neighborhood_reads_every_candidate_without_a_count_cutoff() {
+        let store = InMemoryNodeStore::new();
+        let values: Vec<Node> = (0..70)
+            .map(|index| node(&format!("candidate-{index:03}"), "The pump shall stop."))
+            .collect();
+        for value in &values {
+            store.add_node(value).unwrap();
+            persist_term_projection_only(value, &store, "2026-01-01T00:00:00Z").unwrap();
+        }
+        let changed = &values[0];
+        let sentence = parse_current(changed).unwrap();
+        let occurrences = term_occurrences(changed, &sentence);
+        let (term_ids, discovery_tokens) = candidate_signals(&occurrences);
+
+        let neighborhood =
+            composition_neighborhood(changed, &term_ids, &discovery_tokens, &store).unwrap();
+        assert_eq!(neighborhood.len(), values.len());
+        assert_eq!(
+            neighborhood.keys().cloned().collect::<BTreeSet<_>>(),
+            values
+                .iter()
+                .map(|value| value.id.clone())
+                .collect::<BTreeSet<_>>()
+        );
+    }
+
+    #[test]
     fn reconciliation_requires_every_pipeline_method_version() {
         let mut current = node("a", "The pump shall stop.");
         current.meta.updates.insert(
@@ -1082,6 +1881,10 @@ mod tests {
                     "term_generation": {
                         "method": TERM_DERIVATION_METHOD,
                         "version": GENERATION_VERSION,
+                    },
+                    "operational_projection": {
+                        "method": OPERATIONAL_PROJECTION_METHOD,
+                        "version": operational_projection_derivation().version,
                     },
                     "candidate_search": {
                         "method": CANDIDATE_METHOD,
@@ -1108,7 +1911,7 @@ mod tests {
     }
 
     #[test]
-    fn stop_command_is_a_shared_term_hub_not_a_spec_to_spec_lexical_edge() {
+    fn stop_command_keeps_its_term_hub_and_a_separate_weak_lexical_fact() {
         let store = InMemoryNodeStore::new();
         let a = node(
             "a",
@@ -1146,11 +1949,18 @@ mod tests {
         assert!(mentions
             .iter()
             .all(|edge| edge.target_kind == VertexKind::Term));
+        let lexical = edges
+            .iter()
+            .filter(|edge| edge.kind == EdgeKind::SameLexeme)
+            .collect::<Vec<_>>();
+        assert_eq!(lexical.len(), 1);
         assert!(!edges.iter().any(|edge| {
             edge.source_kind == VertexKind::Specification
                 && edge.target_kind == VertexKind::Specification
+                && edge.family() == crate::domain::EdgeFamily::Semantic
         }));
         assert_eq!(report.candidates_examined, 1);
+        assert_eq!(report.lexical_edges_inserted, 1);
         assert_eq!(report.verdicts.get("unknown"), Some(&1));
         assert_eq!(
             report.assessments_inserted, 3,
@@ -1162,6 +1972,46 @@ mod tests {
             .unwrap()
             .expect("Unknown is audited outside topology");
         assert_eq!(stored.verdict, AssessmentVerdict::Unknown);
+    }
+
+    #[test]
+    fn candidate_discovery_unions_normalized_lexical_atoms_without_asserting_an_edge() {
+        let store = InMemoryNodeStore::new();
+        let request = node(
+            "request",
+            "The client shall encode the Add input in an Add Specification request message.",
+        );
+        let rpc = node(
+            "rpc",
+            "An AddSpecification RPC shall submit an AddNode Command.",
+        );
+        store.add_node(&request).unwrap();
+        store.add_node(&rpc).unwrap();
+        generate_and_persist(&request, &store, "t1").unwrap();
+        let report = generate_and_persist(&rpc, &store, "t2").unwrap();
+
+        assert_eq!(report.candidates_examined, 1);
+        assert_eq!(report.verdicts.get("unknown"), Some(&1));
+        let specification_relations = store
+            .list_edges(&["request".into(), "rpc".into()], &current_derivations())
+            .unwrap()
+            .into_iter()
+            .filter(|edge| {
+                edge.source_kind == VertexKind::Specification
+                    && edge.target_kind == VertexKind::Specification
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            specification_relations
+                .iter()
+                .all(|edge| edge.kind == EdgeKind::SameLexeme),
+            "multi-signal discovery must not turn lexical affinity into semantic topology"
+        );
+        assert_eq!(report.lexical_edges_inserted, 1);
+        assert_eq!(
+            normalize_discovery_tokens("AddSpecification RPC"),
+            vec!["add", "rpc", "specification"]
+        );
     }
 
     #[test]
@@ -1281,6 +2131,202 @@ mod tests {
     }
 
     #[test]
+    fn two_minimal_contracts_are_composed_into_support_for_one_upper_contract() {
+        let store = InMemoryNodeStore::new();
+        let upper = node(
+            "upper",
+            "The report and the invoice shall be stored in the archive.",
+        );
+        let report = node("report", "The report shall be stored in the archive.");
+        let invoice = node("invoice", "The invoice shall be stored in the archive.");
+        for value in [&upper, &report, &invoice] {
+            store.add_node(value).unwrap();
+        }
+
+        generate_and_persist(&upper, &store, "t1").unwrap();
+        generate_and_persist(&report, &store, "t2").unwrap();
+        let before = store
+            .selection_population(&["upper".into()], &current_derivations())
+            .unwrap();
+        let before_view = crate::selection::derive_views(&["upper".into()], &before);
+        assert_eq!(before_view["upper"].structural_score, 0);
+
+        let generated = generate_and_persist(&invoice, &store, "t3").unwrap();
+        assert_eq!(generated.composition_proofs_inserted, 1);
+        let edges = store
+            .list_edges(
+                &["upper".into(), "report".into(), "invoice".into()],
+                &current_derivations(),
+            )
+            .unwrap();
+        let operands: Vec<&Edge> = edges
+            .iter()
+            .filter(|edge| edge.kind == EdgeKind::CompositionOperand)
+            .collect();
+        assert_eq!(operands.len(), 2);
+        assert_eq!(operands[0].target, operands[1].target);
+        let proof = edges
+            .iter()
+            .find(|edge| {
+                edge.kind == EdgeKind::ContractRefines
+                    && edge.derivation == composed_support_derivation()
+            })
+            .expect("the composed contract refines the authored upper contract");
+        assert_eq!(proof.source, operands[0].target);
+        assert_eq!(proof.basis_spec_ids, vec!["invoice", "report", "upper"]);
+
+        let after = store
+            .selection_population(&["upper".into()], &current_derivations())
+            .unwrap();
+        let after_view = crate::selection::derive_views(&["upper".into()], &after);
+        assert!(after_view["upper"].structural_score > 0);
+        assert!(
+            after_view["upper"]
+                .contributions
+                .iter()
+                .any(|contribution| {
+                    contribution.detail.contains("invoice")
+                        && contribution.detail.contains("report")
+                }),
+            "{:?}",
+            after_view["upper"].contributions
+        );
+
+        let retry = generate_and_persist(&invoice, &store, "t4").unwrap();
+        assert_eq!(retry.composition_proofs_inserted, 0);
+    }
+
+    #[test]
+    fn same_action_discovery_builds_a_recursive_realization_view_without_support_edges() {
+        let store = InMemoryNodeStore::new();
+        let rpc = node(
+            "rpc",
+            "The Add RPC shall accept exactly one constrained-language specification sentence.",
+        );
+        let operation = node(
+            "operation",
+            "The `spec add` operation shall accept exactly one language sentence.",
+        );
+        let system = node(
+            "system",
+            "The system shall accept a constrained natural-language specification through `spec add`.",
+        );
+        for value in [&rpc, &operation, &system] {
+            store.add_node(value).unwrap();
+            generate_and_persist(value, &store, "t").unwrap();
+        }
+
+        let population = store
+            .selection_population(&["system".into()], &current_derivations())
+            .unwrap();
+        assert_eq!(
+            population
+                .nodes
+                .iter()
+                .map(|node| node.id.as_str())
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from(["operation", "rpc", "system"])
+        );
+        let views = crate::selection::derive_views(&["system".into()], &population);
+        assert!(views["system"].contributions.iter().any(|contribution| {
+            contribution.kind == crate::domain::ScoreContributionKind::RealizationSupport
+                && contribution.source_node_id.as_deref() == Some("rpc")
+        }));
+        assert!(
+            population.relation_edges.iter().all(|edge| !matches!(
+                edge.kind,
+                EdgeKind::Refines
+                    | EdgeKind::OccurrenceReliance
+                    | EdgeKind::GuaranteeDischarge
+                    | EdgeKind::AdmissibilityEnvelope
+            )),
+            "the realization relation is derived by the view, not persisted as a support Edge"
+        );
+    }
+
+    #[test]
+    fn entity_role_discovery_builds_cross_action_recursive_support() {
+        let store = InMemoryNodeStore::new();
+        let rpc = node(
+            "rpc",
+            "an AddSpecification RPC shall submit an AddNode Command.",
+        );
+        let command = node(
+            "command",
+            "the AddNode Command shall cause a NodeAdded Event.",
+        );
+        let consumer = node(
+            "consumer",
+            "When a NodeAdded Event is delivered, the term projection Consumer shall submit a ProjectNodeTerms Command.",
+        );
+        for value in [&rpc, &command, &consumer] {
+            store.add_node(value).unwrap();
+            generate_and_persist(value, &store, "t").unwrap();
+        }
+
+        let population = store
+            .selection_population(&["rpc".into()], &current_derivations())
+            .unwrap();
+        assert_eq!(
+            population
+                .nodes
+                .iter()
+                .map(|node| node.id.as_str())
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from(["command", "consumer", "rpc"])
+        );
+
+        let views = crate::selection::derive_views(&["rpc".into()], &population);
+        let roots: BTreeSet<_> = views["rpc"]
+            .contributions
+            .iter()
+            .filter(|contribution| {
+                contribution.kind == crate::domain::ScoreContributionKind::RealizationSupport
+            })
+            .filter_map(|contribution| contribution.source_node_id.as_deref())
+            .collect();
+        assert_eq!(roots, BTreeSet::from(["command", "consumer"]));
+    }
+
+    #[test]
+    fn selection_population_walks_entity_roles_only_in_support_direction() {
+        let store = InMemoryNodeStore::new();
+        let upper = node("upper", "The daemon shall create a report.");
+        let lower = node("lower", "The report shall contain a summary.");
+        let means = node("means", "The renderer shall display a page using a report.");
+        for value in [&upper, &lower, &means] {
+            store.add_node(value).unwrap();
+            generate_and_persist(value, &store, "t").unwrap();
+        }
+
+        let upper_population = store
+            .selection_population(&["upper".into()], &current_derivations())
+            .unwrap();
+        assert_eq!(
+            upper_population
+                .nodes
+                .iter()
+                .map(|node| node.id.as_str())
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from(["lower", "upper"]),
+            "a binding object discovers its subject elaboration but not a Means-only incidence"
+        );
+
+        let lower_population = store
+            .selection_population(&["lower".into()], &current_derivations())
+            .unwrap();
+        assert_eq!(
+            lower_population
+                .nodes
+                .iter()
+                .map(|node| node.id.as_str())
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from(["lower"]),
+            "support traversal must not reverse from an engagement to specifications that witness it"
+        );
+    }
+
+    #[test]
     fn symmetric_verdicts_canonicalize_endpoints_and_unknown_is_not_an_edge() {
         let a = node("z", "The pump shall stop.");
         let b = node("a", "The pump shall stop.");
@@ -1324,5 +2370,103 @@ mod tests {
             assert_eq!(edge.target_role, EndpointRole::ConflictPeer);
             assert!(!edge.kind.directed());
         }
+    }
+
+    #[test]
+    fn rebuild_multi_signal_contract_candidates_are_idempotent() {
+        let store = InMemoryNodeStore::new();
+        let nodes = [
+            node("a", "The pump shall stop."),
+            node("b", "The pump shall stop."),
+            node("c", "The pump shall stop."),
+        ];
+        for value in &nodes {
+            store.add_node(value).unwrap();
+            persist_term_projection_only(value, &store, "t").unwrap();
+        }
+
+        let reports: Vec<GenerationReport> = nodes
+            .iter()
+            .map(|value| rebuild_contract_relations_only(value, &store, "t").unwrap())
+            .collect();
+        assert_eq!(
+            reports
+                .iter()
+                .map(|report| report.assessments_inserted)
+                .collect::<Vec<_>>(),
+            vec![2, 1, 0]
+        );
+        assert_eq!(
+            store
+                .list_relation_assessments(&["a".into(), "b".into(), "c".into()])
+                .unwrap()
+                .len(),
+            3
+        );
+    }
+
+    #[test]
+    fn rebuild_semantic_candidates_cover_pairs_when_projections_arrive_in_order() {
+        let store = InMemoryNodeStore::new();
+        let nodes = [
+            node("a", "The pump shall stop."),
+            node("b", "The pump shall stop."),
+            node("c", "The pump shall stop."),
+        ];
+        for value in &nodes {
+            store.add_node(value).unwrap();
+        }
+
+        let reports: Vec<GenerationReport> = nodes
+            .iter()
+            .map(|value| {
+                persist_term_projection_only(value, &store, "t").unwrap();
+                rebuild_semantic_relations_only(value, &store, "t").unwrap()
+            })
+            .collect();
+        assert_eq!(
+            reports
+                .iter()
+                .map(|report| report.candidates_examined)
+                .collect::<Vec<_>>(),
+            vec![0, 1, 2]
+        );
+        assert_eq!(
+            store
+                .list_relation_assessments(&["a".into(), "b".into(), "c".into()])
+                .unwrap()
+                .len(),
+            6,
+            "each of the three covered pairs has a semantic and formula audit"
+        );
+    }
+
+    #[test]
+    fn discharge_rebuild_short_circuits_without_pairing_edges() {
+        let store = InMemoryNodeStore::new();
+        let value = node("a", "The pump shall stop.");
+        store.add_node(&value).unwrap();
+
+        let report = rebuild_discharge_candidates_only(&value, &store, "t").unwrap();
+        assert!(report.subject_has_contract);
+        assert_eq!(report.assessments_inserted, 0);
+    }
+
+    #[test]
+    fn assessment_batches_remain_idempotent_across_parallel_chunks() {
+        let store = InMemoryNodeStore::new();
+        let left = node("left", "The pump shall stop.");
+        let assessments: Vec<RelationAssessment> = (0..501)
+            .map(|index| {
+                let right = node(&format!("right-{index:03}"), "The pump shall run.");
+                relation_assessment(&left, &right, RelationVerdict::Unknown, "t")
+            })
+            .collect();
+
+        assert_eq!(
+            append_assessment_batches(&store, &assessments).unwrap(),
+            501
+        );
+        assert_eq!(append_assessment_batches(&store, &assessments).unwrap(), 0);
     }
 }

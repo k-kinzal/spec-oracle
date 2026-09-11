@@ -21,16 +21,44 @@ export default function Legend({
   present,
   termPresent,
   edgePresent,
+  supportContextCount,
+  contextualizedNodeCount,
+  sharedFoundationCount,
 }: {
   present: Set<SpeechAct>;
   termPresent: boolean;
   edgePresent: Set<EdgeKind>;
+  supportContextCount: number;
+  contextualizedNodeCount: number;
+  sharedFoundationCount: number;
 }) {
   const rows = SPEECH_ACT_ORDER.filter((a) => present.has(a));
   const edgeRows = EDGE_KIND_ORDER.filter((kind) => edgePresent.has(kind));
-  if (rows.length === 0 && !termPresent && edgeRows.length === 0) return null;
+  if (
+    rows.length === 0 &&
+    !termPresent &&
+    edgeRows.length === 0 &&
+    supportContextCount === 0
+  ) {
+    return null;
+  }
   return (
     <div className="legend panel">
+      {supportContextCount > 0 && (
+        <>
+          <h2>Selection context</h2>
+          <div className="row">
+            <span className="context-boundary-swatch" />
+            <span>
+              {supportContextCount.toLocaleString()} support basins ·{" "}
+              {contextualizedNodeCount.toLocaleString()} specifications
+              {sharedFoundationCount > 0
+                ? ` · ${sharedFoundationCount.toLocaleString()} shared`
+                : ""}
+            </span>
+          </div>
+        </>
+      )}
       <h2>Speech act</h2>
       {rows.map((act) => (
         <div className="row" key={act}>

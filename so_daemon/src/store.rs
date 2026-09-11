@@ -19,7 +19,7 @@
 //! the blob store; the captured bytes themselves are never written into the
 //! graph (`Snapshot::content` is `#[serde(skip)]`).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -29,6 +29,7 @@ use crate::domain::{
     DerivedNode, Edge, EdgeKind, MetaUpdate, Node, RelationAssessment, SelectionPopulation,
     TermNode,
 };
+use crate::graph_query::QueryPath;
 
 /// A bounded, keyset-paginated page of nodes.
 ///
@@ -44,6 +45,17 @@ pub struct NodePage {
 /// A bounded, keyset-paginated page of immutable Ledger Edges.
 pub struct EdgePage {
     pub edges: Vec<Edge>,
+    pub next_cursor: Option<String>,
+}
+
+/// One bounded page of paths selected by a read-only openCypher query over the
+/// Evidence property-graph scope.
+pub struct EvidenceGraphPage {
+    pub evidence_nodes: Vec<DerivedNode>,
+    pub edges: Vec<Edge>,
+    pub specification_nodes: Vec<Node>,
+    pub selected_evidence_ids: Vec<String>,
+    pub paths: Vec<QueryPath>,
     pub next_cursor: Option<String>,
 }
 
@@ -138,6 +150,10 @@ pub trait GraphStore: NodeStore {
         edge: &Edge,
     ) -> Result<DerivedGraphWrite, StoreError>;
 
+    /// Idempotently persist a standalone content-addressed derived value.
+    /// Manual Evidence relations use this before appending their source Edge.
+    fn put_derived_node_value(&self, node: &DerivedNode) -> Result<bool, StoreError>;
+
     /// Idempotently append one graph-established edge. Stable derivation-derived
     /// ids turn retries into no-ops; a changed derivation version creates new
     /// history rather than overwriting old topology.
@@ -161,9 +177,24 @@ pub trait GraphStore: NodeStore {
         assessment: &RelationAssessment,
     ) -> Result<bool, StoreError>;
 
+    /// Idempotently append a bounded batch of audit records. Persistent stores
+    /// override this to avoid one database round trip per assessed pair.
+    fn append_relation_assessments(
+        &self,
+        assessments: &[RelationAssessment],
+    ) -> Result<usize, StoreError> {
+        assessments.iter().try_fold(0, |inserted, assessment| {
+            self.append_relation_assessment(assessment)
+                .map(|value| inserted + usize::from(value))
+        })
+    }
+
     fn get_relation_assessment(&self, id: &str) -> Result<Option<RelationAssessment>, StoreError>;
 
-    /// Audit records canonically owned by the supplied specification ids.
+    /// Audit records from the current candidate-discovery derivation,
+    /// canonically owned by the supplied specification ids. Historical
+    /// assessments remain in the Ledger but do not make a bounded current
+    /// graph page grow without limit.
     fn list_relation_assessments(
         &self,
         owners: &[String],
@@ -172,6 +203,14 @@ pub trait GraphStore: NodeStore {
     fn get_term_nodes(&self, ids: &[String]) -> Result<Vec<TermNode>, StoreError>;
 
     fn get_derived_nodes(&self, ids: &[String]) -> Result<Vec<DerivedNode>, StoreError>;
+
+    /// Extract one keyset-paginated Evidence subgraph.
+    fn query_evidence_graph(
+        &self,
+        query: &crate::graph_query::GraphQuery,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<EvidenceGraphPage, StoreError>;
 
     /// Return a bounded, keyset page of specification Nodes that mention any
     /// supplied term under the selected lexical derivation. This is a
@@ -185,6 +224,24 @@ pub trait GraphStore: NodeStore {
         after: Option<&str>,
         limit: usize,
     ) -> Result<NodePage, StoreError>;
+
+    /// Return a bounded union of independently derived relation-candidate
+    /// signals. Exact shared term forms are one signal; two or more normalized
+    /// lexical atoms are another; a shared semantic Guarantee or Contract
+    /// projection is a third. This method discovers pairs only. Every returned
+    /// pair still requires a reasoner judgment before it can become topology.
+    fn list_relation_candidates(
+        &self,
+        term_ids: &[String],
+        _discovery_tokens: &[String],
+        term_derivation: &crate::domain::Derivation,
+        _projection_derivation: &crate::domain::Derivation,
+        exclude_node_id: &str,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<NodePage, StoreError> {
+        self.list_term_candidates(term_ids, term_derivation, exclude_node_id, after, limit)
+    }
 
     /// Read one bounded page of nodes, ordered by a stable key.
     ///
@@ -202,10 +259,12 @@ pub trait GraphStore: NodeStore {
 
     /// Read the complete current dependency closure for the supplied Nodes:
     /// semantic competitors, incoming explicit selection judgments and
-    /// supporters, their own competitors and selection sources, and the direct
-    /// Evidence needed to evaluate them. Whole-closure selection prevents a
-    /// rejected intermediary or receded relationship from affecting a current
-    /// candidate invisibly.
+    /// supporters, same-action operational candidates, their own competitors
+    /// and selection sources, and the direct Evidence needed to evaluate them.
+    /// Same action is only a bounded discovery key; the selection policy still
+    /// requires a structured realization proof. Whole-closure selection
+    /// prevents a rejected intermediary or receded relationship from affecting
+    /// a current candidate invisibly.
     fn selection_population(
         &self,
         node_ids: &[String],
@@ -220,6 +279,28 @@ pub trait GraphStore: NodeStore {
         target: &str,
         derivation: &crate::domain::Derivation,
     ) -> Result<Vec<Edge>, StoreError>;
+
+    /// Batch form used by whole-graph reconciliation. The default preserves
+    /// compatibility for simple stores; persistent stores issue one query.
+    fn list_pairing_edges_for_targets(
+        &self,
+        targets: &[String],
+        derivation: &crate::domain::Derivation,
+    ) -> Result<BTreeMap<String, Vec<Edge>>, StoreError> {
+        let mut result = BTreeMap::new();
+        for target in targets {
+            let edges = self.list_pairing_edges(target, derivation)?;
+            if !edges.is_empty() {
+                result.insert(target.clone(), edges);
+            }
+        }
+        Ok(result)
+    }
+
+    /// Whether any current pairing exists. Discharge reconciliation has no
+    /// candidates at all when this is false and can avoid an O(N²) scan.
+    fn has_pairing_edges(&self, derivation: &crate::domain::Derivation)
+        -> Result<bool, StoreError>;
 
     /// Current derived Edges owned by a specification page. The current set is
     /// selected independently for each derivation method. Mention Edges are
@@ -509,6 +590,19 @@ impl GraphStore for InMemoryNodeStore {
         })
     }
 
+    fn put_derived_node_value(&self, node: &DerivedNode) -> Result<bool, StoreError> {
+        let mut nodes = self
+            .derived_nodes
+            .lock()
+            .expect("derived node store mutex poisoned");
+        if nodes.contains_key(node.id()) {
+            Ok(false)
+        } else {
+            nodes.insert(node.id().to_string(), node.clone());
+            Ok(true)
+        }
+    }
+
     fn append_edge(&self, edge: &Edge) -> Result<bool, StoreError> {
         edge.validate().map_err(StoreError::InvalidEdge)?;
         insert_edge(
@@ -599,7 +693,11 @@ impl GraphStore for InMemoryNodeStore {
             .lock()
             .expect("assessment store mutex poisoned")
             .values()
-            .filter(|assessment| owners.contains(assessment.left.as_str()))
+            .filter(|assessment| {
+                owners.contains(assessment.left.as_str())
+                    && assessment.candidate_derivation
+                        == crate::graph_generation::candidate_derivation()
+            })
             .cloned()
             .collect())
     }
@@ -615,6 +713,62 @@ impl GraphStore for InMemoryNodeStore {
             .lock()
             .expect("derived node store mutex poisoned");
         Ok(ids.iter().filter_map(|id| nodes.get(id).cloned()).collect())
+    }
+
+    fn query_evidence_graph(
+        &self,
+        query: &crate::graph_query::GraphQuery,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<EvidenceGraphPage, StoreError> {
+        let evidence_edges: Vec<Edge> = self
+            .edges
+            .lock()
+            .expect("edge store mutex poisoned")
+            .by_identity
+            .values()
+            .filter(|edge| {
+                (edge.kind == EdgeKind::GroundedBy
+                    && edge.derivation == crate::evidence_capture::evidence_derivation())
+                    || (matches!(
+                        edge.kind,
+                        EdgeKind::EvidenceAffirms | EdgeKind::EvidenceDenies
+                    ) && edge.derivation == crate::evidence_graph::derivation())
+            })
+            .cloned()
+            .collect();
+        let evidence_nodes: Vec<DerivedNode> = self
+            .derived_nodes
+            .lock()
+            .expect("derived node store mutex poisoned")
+            .values()
+            .filter(|node| matches!(node, DerivedNode::Evidence { .. }))
+            .cloned()
+            .collect();
+        let mut specification_ids = std::collections::BTreeSet::new();
+        for edge in &evidence_edges {
+            for (id, kind) in [
+                (&edge.source, edge.source_kind),
+                (&edge.target, edge.target_kind),
+            ] {
+                if kind == crate::domain::VertexKind::Specification {
+                    specification_ids.insert(id.clone());
+                }
+            }
+        }
+        let nodes = self.nodes.lock().expect("node store mutex poisoned");
+        let specification_nodes: Vec<Node> = specification_ids
+            .iter()
+            .filter_map(|id| nodes.get(id).cloned())
+            .collect();
+        Ok(crate::evidence_graph::query_page(
+            query,
+            &evidence_nodes,
+            &specification_nodes,
+            &evidence_edges,
+            after,
+            limit,
+        ))
     }
 
     fn list_term_candidates(
@@ -642,6 +796,100 @@ impl GraphStore for InMemoryNodeStore {
             })
             .map(|edge| edge.source.clone())
             .collect();
+        let mut ids: Vec<String> = candidate_ids
+            .into_iter()
+            .filter(|id| after.is_none_or(|cursor| id.as_str() > cursor))
+            .take(limit.saturating_add(1))
+            .collect();
+        let next_cursor = if ids.len() > limit {
+            ids.truncate(limit);
+            ids.last().cloned()
+        } else {
+            None
+        };
+        let nodes = self.nodes.lock().expect("node store mutex poisoned");
+        Ok(NodePage {
+            nodes: ids
+                .into_iter()
+                .filter_map(|id| nodes.get(&id).cloned())
+                .collect(),
+            next_cursor,
+        })
+    }
+
+    fn list_relation_candidates(
+        &self,
+        term_ids: &[String],
+        discovery_tokens: &[String],
+        term_derivation: &crate::domain::Derivation,
+        projection_derivation: &crate::domain::Derivation,
+        exclude_node_id: &str,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<NodePage, StoreError> {
+        let exact_terms: std::collections::BTreeSet<&str> =
+            term_ids.iter().map(String::as_str).collect();
+        let sought_tokens: std::collections::BTreeSet<&str> =
+            discovery_tokens.iter().map(String::as_str).collect();
+        let edges = self.edges.lock().expect("edge store mutex poisoned");
+        let terms = self.terms.lock().expect("term store mutex poisoned");
+
+        let mut tokens_by_spec: BTreeMap<String, std::collections::BTreeSet<&str>> =
+            BTreeMap::new();
+        let mut candidate_ids = std::collections::BTreeSet::new();
+        for edge in edges.by_identity.values().filter(|edge| {
+            edge.kind == EdgeKind::MentionsTerm
+                && edge.derivation == *term_derivation
+                && edge.source != exclude_node_id
+        }) {
+            if exact_terms.contains(edge.target.as_str()) {
+                candidate_ids.insert(edge.source.clone());
+            }
+            let Some(term) = terms.get(&edge.target) else {
+                continue;
+            };
+            tokens_by_spec
+                .entry(edge.source.clone())
+                .or_default()
+                .extend(
+                    term.discovery_tokens
+                        .iter()
+                        .map(String::as_str)
+                        .filter(|token| sought_tokens.contains(token)),
+                );
+        }
+        candidate_ids.extend(
+            tokens_by_spec
+                .into_iter()
+                .filter(|(_, tokens)| tokens.len() >= 2)
+                .map(|(id, _)| id),
+        );
+
+        let shared_projections: std::collections::BTreeSet<&str> = edges
+            .by_identity
+            .values()
+            .filter(|edge| {
+                edge.source == exclude_node_id
+                    && edge.derivation == *projection_derivation
+                    && matches!(edge.kind, EdgeKind::HasGuarantee | EdgeKind::HasContract)
+            })
+            .map(|edge| edge.target.as_str())
+            .collect();
+        candidate_ids.extend(
+            edges
+                .by_identity
+                .values()
+                .filter(|edge| {
+                    edge.source != exclude_node_id
+                        && edge.derivation == *projection_derivation
+                        && matches!(edge.kind, EdgeKind::HasGuarantee | EdgeKind::HasContract)
+                        && shared_projections.contains(edge.target.as_str())
+                })
+                .map(|edge| edge.source.clone()),
+        );
+        drop(terms);
+        drop(edges);
+
         let mut ids: Vec<String> = candidate_ids
             .into_iter()
             .filter(|id| after.is_none_or(|cursor| id.as_str() > cursor))
@@ -700,35 +948,129 @@ impl GraphStore for InMemoryNodeStore {
             .values()
             .filter(|edge| current_derivations.contains(&edge.derivation))
             .collect();
-        let mut component_ids: std::collections::BTreeSet<String> =
-            node_ids.iter().cloned().collect();
-        let mut relations = BTreeMap::new();
-        loop {
-            let mut expanded = false;
-            let adjacent: Vec<&Edge> = current
-                .iter()
-                .copied()
-                .filter(|edge| {
-                    edge.kind.family() == crate::domain::EdgeFamily::Semantic
-                        && crate::selection::is_semantic_competition(edge.kind)
-                        && (component_ids.contains(&edge.source)
-                            || component_ids.contains(&edge.target))
-                })
-                .collect();
-            for edge in adjacent {
-                expanded |= component_ids.insert(edge.source.clone());
-                expanded |= component_ids.insert(edge.target.clone());
-                relations.insert(edge.id.clone(), edge.clone());
+        let derived_nodes = self
+            .derived_nodes
+            .lock()
+            .expect("derived node store mutex poisoned");
+        let mut behaviors_by_action: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        let mut operational_profiles = BTreeMap::new();
+        for node in derived_nodes.values() {
+            let DerivedNode::Behavior {
+                id,
+                action_key,
+                derivation_version,
+                ..
+            } = node
+            else {
+                continue;
+            };
+            if derivation_version == so_reason::operational::OPERATIONAL_VERSION
+                && !action_key.is_empty()
+            {
+                behaviors_by_action
+                    .entry(action_key.clone())
+                    .or_default()
+                    .push(id.clone());
+                if let Some(profile) = node.operational_profile() {
+                    operational_profiles.insert(id.clone(), profile);
+                }
             }
-            if !expanded {
+        }
+        let mut vertex_ids: std::collections::BTreeSet<String> = node_ids.iter().cloned().collect();
+        let mut relations = BTreeMap::new();
+        let mut assessed_realization_targets = std::collections::BTreeSet::new();
+        loop {
+            loop {
+                let mut expanded = false;
+                let adjacent: Vec<&Edge> = current
+                    .iter()
+                    .copied()
+                    .filter(|edge| {
+                        (vertex_ids.contains(&edge.source)
+                            && crate::selection::follows_selection_topology(edge, &edge.source))
+                            || (vertex_ids.contains(&edge.target)
+                                && crate::selection::follows_selection_topology(edge, &edge.target))
+                    })
+                    .collect();
+                for edge in adjacent {
+                    expanded |= vertex_ids.insert(edge.source.clone());
+                    expanded |= vertex_ids.insert(edge.target.clone());
+                    relations.insert(edge.id.clone(), edge.clone());
+                }
+                if !expanded {
+                    break;
+                }
+            }
+
+            let target_behaviors: Vec<String> = vertex_ids
+                .iter()
+                .filter(|id| operational_profiles.contains_key(*id))
+                .filter(|id| assessed_realization_targets.insert((*id).clone()))
+                .cloned()
+                .collect();
+            let mut realization_expanded = false;
+            for target_behavior in target_behaviors {
+                let Some(target_profile) = operational_profiles.get(&target_behavior) else {
+                    continue;
+                };
+                let Some(action_key) = derived_nodes
+                    .get(&target_behavior)
+                    .and_then(DerivedNode::operational_action_key)
+                else {
+                    continue;
+                };
+                for candidate_behavior in behaviors_by_action.get(action_key).into_iter().flatten()
+                {
+                    if candidate_behavior != &target_behavior
+                        && operational_profiles.get(candidate_behavior).is_some_and(
+                            |candidate_profile| {
+                                so_reason::operational::assess_layered_realization(
+                                    candidate_profile,
+                                    target_profile,
+                                )
+                                .is_some()
+                            },
+                        )
+                    {
+                        realization_expanded |= vertex_ids.insert(candidate_behavior.clone());
+                    }
+                }
+            }
+            if !realization_expanded {
                 break;
             }
         }
-        let mut scored_ids = component_ids;
+        let nodes = self.nodes.lock().expect("node store mutex poisoned");
+        let mut scored_ids: std::collections::BTreeSet<String> = vertex_ids
+            .iter()
+            .filter(|id| nodes.contains_key(*id))
+            .cloned()
+            .collect();
         for edge in relations.values() {
-            scored_ids.insert(edge.source.clone());
-            scored_ids.insert(edge.target.clone());
+            if edge.source_kind == crate::domain::VertexKind::Specification {
+                scored_ids.insert(edge.source.clone());
+            }
+            if edge.target_kind == crate::domain::VertexKind::Specification {
+                scored_ids.insert(edge.target.clone());
+            }
         }
+        let population_nodes: Vec<Node> = scored_ids
+            .iter()
+            .filter_map(|id| nodes.get(id).cloned())
+            .collect();
+        drop(nodes);
+        let operational_nodes = derived_nodes
+            .values()
+            .filter(|node| {
+                vertex_ids.contains(node.id())
+                    && matches!(
+                        node.vertex_kind(),
+                        crate::domain::VertexKind::Entity | crate::domain::VertexKind::Behavior
+                    )
+            })
+            .cloned()
+            .collect();
+        drop(derived_nodes);
         let current_evidence: BTreeMap<String, std::collections::BTreeSet<String>> = self
             .nodes
             .lock()
@@ -739,22 +1081,61 @@ impl GraphStore for InMemoryNodeStore {
                 crate::selection::current_evidence_node_ids(node).map(|ids| (node.id.clone(), ids))
             })
             .collect();
-        let evidence_edges: Vec<Edge> = current
-            .iter()
-            .copied()
-            .filter(|edge| {
-                edge.kind == EdgeKind::GroundedBy
-                    && scored_ids.contains(edge.source.as_str())
-                    && current_evidence
-                        .get(&edge.source)
-                        .is_none_or(|ids| ids.contains(&edge.target))
-            })
-            .cloned()
-            .collect();
+        let mut evidence_edges = BTreeMap::new();
+        let mut evidence_frontier = std::collections::BTreeSet::new();
+        for edge in current.iter().copied().filter(|edge| {
+            edge.kind == EdgeKind::GroundedBy
+                && scored_ids.contains(edge.source.as_str())
+                && current_evidence
+                    .get(&edge.source)
+                    .is_none_or(|ids| ids.contains(&edge.target))
+        }) {
+            evidence_frontier.insert(edge.target.clone());
+            evidence_edges.insert(edge.id.clone(), edge.clone());
+        }
+        for edge in current.iter().copied().filter(|edge| {
+            edge.target_kind == crate::domain::VertexKind::Specification
+                && scored_ids.contains(edge.target.as_str())
+                && matches!(
+                    edge.kind,
+                    EdgeKind::EvidenceAffirms | EdgeKind::EvidenceDenies
+                )
+        }) {
+            evidence_frontier.insert(edge.source.clone());
+            evidence_edges.insert(edge.id.clone(), edge.clone());
+        }
+        let mut visited_evidence = evidence_frontier.clone();
+        while !evidence_frontier.is_empty() {
+            let mut next = std::collections::BTreeSet::new();
+            for edge in current.iter().copied().filter(|edge| {
+                edge.target_kind == crate::domain::VertexKind::Evidence
+                    && evidence_frontier.contains(&edge.target)
+                    && matches!(
+                        edge.kind,
+                        EdgeKind::EvidenceAffirms | EdgeKind::EvidenceDenies
+                    )
+            }) {
+                if visited_evidence.insert(edge.source.clone()) {
+                    next.insert(edge.source.clone());
+                }
+                evidence_edges.insert(edge.id.clone(), edge.clone());
+            }
+            evidence_frontier = next;
+        }
+        let evidence_edges: Vec<Edge> = evidence_edges.into_values().collect();
         drop(edges);
         let evidence_ids: std::collections::BTreeSet<&str> = evidence_edges
             .iter()
-            .map(|edge| edge.target.as_str())
+            .flat_map(|edge| {
+                [
+                    (edge.source_kind == crate::domain::VertexKind::Evidence)
+                        .then_some(edge.source.as_str()),
+                    (edge.target_kind == crate::domain::VertexKind::Evidence)
+                        .then_some(edge.target.as_str()),
+                ]
+                .into_iter()
+                .flatten()
+            })
             .collect();
         let evidence_nodes = self
             .derived_nodes
@@ -765,7 +1146,9 @@ impl GraphStore for InMemoryNodeStore {
             .cloned()
             .collect();
         Ok(SelectionPopulation {
+            nodes: population_nodes,
             relation_edges: relations.into_values().collect(),
+            operational_nodes,
             evidence_edges,
             evidence_nodes,
         })
@@ -789,6 +1172,19 @@ impl GraphStore for InMemoryNodeStore {
             .collect())
     }
 
+    fn has_pairing_edges(
+        &self,
+        derivation: &crate::domain::Derivation,
+    ) -> Result<bool, StoreError> {
+        Ok(self
+            .edges
+            .lock()
+            .expect("edge store mutex poisoned")
+            .by_identity
+            .values()
+            .any(|edge| edge.derivation == *derivation && edge.kind.is_pairing()))
+    }
+
     fn list_edges(
         &self,
         owners: &[String],
@@ -802,17 +1198,53 @@ impl GraphStore for InMemoryNodeStore {
             .filter(|edge| current_derivations.contains(&edge.derivation))
             .cloned()
             .collect();
-        let edges: Vec<Edge> = current
+        let mut edges: Vec<Edge> = current
             .iter()
             .filter(|edge| owners.contains(edge.page_owner()))
             .cloned()
             .collect();
+        let evidence_context = current.clone();
         let contract_context: Vec<Edge> = current
             .into_iter()
             .filter(|edge| {
                 edge.kind == EdgeKind::HasContract || is_contract_operation_edge(edge.kind)
             })
             .collect();
+        let mut evidence_frontier: std::collections::BTreeSet<String> = edges
+            .iter()
+            .flat_map(|edge| {
+                [
+                    (edge.source_kind == crate::domain::VertexKind::Evidence)
+                        .then_some(edge.source.clone()),
+                    (edge.target_kind == crate::domain::VertexKind::Evidence)
+                        .then_some(edge.target.clone()),
+                ]
+                .into_iter()
+                .flatten()
+            })
+            .collect();
+        let mut seen_evidence = evidence_frontier.clone();
+        let mut evidence_edge_ids: std::collections::BTreeSet<String> =
+            edges.iter().map(|edge| edge.id.clone()).collect();
+        while !evidence_frontier.is_empty() {
+            let mut next = std::collections::BTreeSet::new();
+            for edge in evidence_context.iter().filter(|edge| {
+                edge.target_kind == crate::domain::VertexKind::Evidence
+                    && evidence_frontier.contains(&edge.target)
+                    && matches!(
+                        edge.kind,
+                        EdgeKind::EvidenceAffirms | EdgeKind::EvidenceDenies
+                    )
+            }) {
+                if seen_evidence.insert(edge.source.clone()) {
+                    next.insert(edge.source.clone());
+                }
+                if evidence_edge_ids.insert(edge.id.clone()) {
+                    edges.push(edge.clone());
+                }
+            }
+            evidence_frontier = next;
+        }
         drop(edge_guard);
         let current_evidence: BTreeMap<String, std::collections::BTreeSet<String>> = self
             .nodes
@@ -848,6 +1280,58 @@ fn is_contract_operation_edge(kind: EdgeKind) -> bool {
     )
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ContractOperation {
+    pub(crate) result: String,
+    pub(crate) operands: Vec<String>,
+    pub(crate) proof_edge_ids: Vec<String>,
+}
+
+/// Recover the AND-hyperedges represented by binary contract-operation Edges.
+///
+/// A content-addressed result may be reached by more than one derivation basis.
+/// Those bases are alternative proofs (OR), while the operand Edges belonging
+/// to one basis are jointly required (AND). Grouping only by the result would
+/// incorrectly require the union of every alternative's operands.
+pub(crate) fn contract_operations(edges: &[Edge]) -> Vec<ContractOperation> {
+    let mut grouped: BTreeMap<
+        (String, u8, String, String, Vec<String>),
+        (BTreeSet<String>, BTreeSet<String>),
+    > = BTreeMap::new();
+    for edge in edges
+        .iter()
+        .filter(|edge| is_contract_operation_edge(edge.kind))
+    {
+        let family = match edge.kind {
+            EdgeKind::CompositionOperand => 0,
+            EdgeKind::QuotientDividend | EdgeKind::QuotientDivisor => 1,
+            EdgeKind::MergeOperand => 2,
+            _ => unreachable!("filtered to contract operation Edges"),
+        };
+        let entry = grouped
+            .entry((
+                edge.target.clone(),
+                family,
+                edge.derivation.method.clone(),
+                edge.derivation.version.clone(),
+                edge.basis_spec_ids.clone(),
+            ))
+            .or_default();
+        entry.0.insert(edge.source.clone());
+        entry.1.insert(edge.id.clone());
+    }
+    grouped
+        .into_iter()
+        .map(
+            |((result, _, _, _, _), (operands, proof_edge_ids))| ContractOperation {
+                result,
+                operands: operands.into_iter().collect(),
+                proof_edge_ids: proof_edge_ids.into_iter().collect(),
+            },
+        )
+        .collect()
+}
+
 /// Select the active content-addressed contract subgraph. A changed paired
 /// assumption selects a new HasContract target; semantic edges about the old
 /// target remain Ledger facts but recede from the current graph. Explicit
@@ -865,25 +1349,17 @@ pub(crate) fn select_current_contract_graph(visible: Vec<Edge>, context: &[Edge]
         .filter(|edge| edge.kind == EdgeKind::HasContract)
         .map(|edge| edge.target.clone())
         .collect();
+    let operations = contract_operations(context);
 
     loop {
         let mut changed = false;
-        let mut by_result: BTreeMap<&str, Vec<&Edge>> = BTreeMap::new();
-        for edge in context
-            .iter()
-            .filter(|edge| is_contract_operation_edge(edge.kind))
-        {
-            by_result
-                .entry(edge.target.as_str())
-                .or_default()
-                .push(edge);
-        }
-        for (result, operands) in by_result {
-            if operands
+        for operation in &operations {
+            if operation
+                .operands
                 .iter()
-                .all(|edge| active.contains(edge.source.as_str()))
+                .all(|operand| active.contains(operand.as_str()))
             {
-                changed |= active.insert(result.to_string());
+                changed |= active.insert(operation.result.clone());
             }
         }
         if !changed {
@@ -1167,6 +1643,60 @@ mod tests {
     }
 
     #[test]
+    fn current_contract_graph_treats_operation_bases_as_alternative_proofs() {
+        let derivation = crate::domain::Derivation {
+            method: "contract-operation-test".into(),
+            version: "v1".into(),
+        };
+        let mut edges = vec![
+            Edge::projection(
+                EdgeKind::HasContract,
+                "spec-a",
+                "contract-a",
+                derivation.clone(),
+                "t",
+            )
+            .unwrap(),
+            Edge::projection(
+                EdgeKind::HasContract,
+                "spec-b",
+                "contract-b",
+                derivation.clone(),
+                "t",
+            )
+            .unwrap(),
+        ];
+        for (operand, basis) in [
+            ("contract-a", vec!["spec-a".into(), "spec-b".into()]),
+            ("contract-b", vec!["spec-a".into(), "spec-b".into()]),
+            ("contract-c", vec!["spec-c".into(), "spec-d".into()]),
+            ("contract-d", vec!["spec-c".into(), "spec-d".into()]),
+        ] {
+            edges.push(
+                Edge::contract_relation(
+                    EdgeKind::CompositionOperand,
+                    operand,
+                    "shared-result",
+                    basis,
+                    derivation.clone(),
+                    "t",
+                )
+                .unwrap(),
+            );
+        }
+
+        let current = select_current_contract_graph(edges.clone(), &edges);
+        let active_operation_edges: Vec<&Edge> = current
+            .iter()
+            .filter(|edge| edge.kind == EdgeKind::CompositionOperand)
+            .collect();
+        assert_eq!(active_operation_edges.len(), 2);
+        assert!(active_operation_edges
+            .iter()
+            .all(|edge| matches!(edge.source.as_str(), "contract-a" | "contract-b")));
+    }
+
+    #[test]
     fn graph_structure_is_idempotent_and_page_edges_are_queryable() {
         let store = InMemoryNodeStore::new();
         store.add_node(&node_with_id("a")).unwrap();
@@ -1174,6 +1704,7 @@ mod tests {
             id: "term-stop".into(),
             form: "stop command".into(),
             head: "command".into(),
+            discovery_tokens: vec!["command".into(), "stop".into()],
             lang_version: "v".into(),
             derivation_version: "g1".into(),
         };
@@ -1237,6 +1768,7 @@ mod tests {
                 id: target.into(),
                 form: target.into(),
                 head: target.into(),
+                discovery_tokens: vec![target.into()],
                 lang_version: "v".into(),
                 derivation_version: "v1".into(),
             };

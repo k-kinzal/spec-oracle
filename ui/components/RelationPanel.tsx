@@ -37,6 +37,11 @@ function endpointRoles(edge: GraphEdge): {
     grounded_by: "grounded specification is grounded by evidence",
     has_assumption: "contract specification has assumption",
     has_guarantee: "contract specification has guarantee",
+    has_behavior: "specification has operational behavior",
+    witnesses_entity: "behavior witnesses entity instances",
+    engages_entity: "behavior engages entity kind",
+    evidence_affirms: "affirming evidence affirms its target",
+    evidence_denies: "denying evidence denies its target",
     unspecified: "unspecified relationship",
   };
   return {
@@ -118,13 +123,13 @@ export default function RelationPanel({
               onClick={() => onSelect(node)}
             >
               <span>
-                {node.current ? "◆" : "◇"} {node.statement}
+                {node.current ? "◆" : node.evaluationState === "unknown" ? "?" : "◇"} {node.statement}
               </span>
               <small>
                 fitness {node.supportScore >= 0 ? "+" : ""}
-                {node.supportScore} · Evidence {node.evidenceScore >= 0 ? "+" : ""}
-                {node.evidenceScore} · relations {node.relationScore >= 0 ? "+" : ""}
-                {node.relationScore}
+                {node.supportScore} · structural {node.structuralScore ?? 0} · Evidence{" "}
+                {node.evidenceScore >= 0 ? "+" : ""}{node.evidenceScore} · conflict -
+                {node.conflictPressure ?? 0}
                 {node.exclusions.length > 0
                   ? ` · ${node.exclusions.map((reason) => reason.kind).join(", ")}`
                   : " · current"}

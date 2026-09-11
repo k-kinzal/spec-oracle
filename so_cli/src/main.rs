@@ -39,6 +39,78 @@ enum Command {
     Add(AddArgs),
     /// Inspect or rebuild the specification graph.
     Graph(GraphArgs),
+    /// Add and query manual Evidence judgments.
+    Evidence(EvidenceArgs),
+}
+
+#[derive(clap::Args)]
+struct EvidenceArgs {
+    #[command(subcommand)]
+    command: EvidenceCommand,
+}
+
+#[derive(Subcommand)]
+enum EvidenceCommand {
+    /// Capture or reuse Evidence and affirm or deny a target.
+    Add(EvidenceAddArgs),
+    /// Extract an Evidence subgraph with the Evidence query language.
+    Graph(EvidenceGraphArgs),
+}
+
+#[derive(clap::Args)]
+struct EvidenceAddArgs {
+    /// Existing Evidence id, JSON descriptor, bare locator, @file, or stdin (-).
+    evidence: String,
+
+    /// Affirm this Specification or Evidence id.
+    #[arg(
+        long,
+        value_name = "TARGET_ID",
+        conflicts_with = "denies",
+        required_unless_present = "denies"
+    )]
+    affirms: Option<String>,
+
+    /// Deny this Specification or Evidence id.
+    #[arg(
+        long,
+        value_name = "TARGET_ID",
+        conflicts_with = "affirms",
+        required_unless_present = "affirms"
+    )]
+    denies: Option<String>,
+
+    #[arg(
+        long = "server",
+        env = "SPEC_ORACLE_SERVER",
+        default_value = "http://127.0.0.1:50051",
+        value_name = "URL"
+    )]
+    server: String,
+
+    #[arg(long)]
+    json: bool,
+}
+
+#[derive(clap::Args)]
+struct EvidenceGraphArgs {
+    /// Read-only openCypher returning one named path, e.g.
+    /// "MATCH p=(a:Evidence)-[:EVIDENCE_DENIES]->(b:Evidence) RETURN p".
+    query: String,
+
+    #[arg(
+        long = "server",
+        env = "SPEC_ORACLE_SERVER",
+        default_value = "http://127.0.0.1:50051",
+        value_name = "URL"
+    )]
+    server: String,
+
+    #[arg(long, value_name = "COLUMNS", value_parser = clap::value_parser!(u16).range(40..))]
+    width: Option<u16>,
+
+    #[arg(long)]
+    json: bool,
 }
 
 #[derive(clap::Args)]
@@ -146,7 +218,212 @@ fn main() -> ExitCode {
         Command::Graph(GraphArgs {
             command: GraphCommand::Rebuild(args),
         }) => run_graph_rebuild(args),
+        Command::Evidence(EvidenceArgs {
+            command: EvidenceCommand::Add(args),
+        }) => run_evidence_add(args),
+        Command::Evidence(EvidenceArgs {
+            command: EvidenceCommand::Graph(args),
+        }) => run_evidence_graph(args),
     }
+}
+
+fn run_evidence_add(args: EvidenceAddArgs) -> ExitCode {
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("error: failed to start async runtime: {error}");
+            return ExitCode::from(EXIT_RUNTIME);
+        }
+    };
+    let (target, relation) = match (args.affirms, args.denies) {
+        (Some(target), None) => (target, pb::EvidenceRelationKind::Affirms),
+        (None, Some(target)) => (target, pb::EvidenceRelationKind::Denies),
+        _ => {
+            eprintln!("error: exactly one of --affirms or --denies is required");
+            return ExitCode::from(EXIT_USAGE);
+        }
+    };
+    let result = runtime.block_on(async {
+        let mut client = Client::connect(args.server).await?;
+        client
+            .add_evidence_relation(
+                &args.evidence,
+                &target,
+                relation,
+                "spec",
+                env!("CARGO_PKG_VERSION"),
+            )
+            .await
+    });
+    match result {
+        Ok(response) => {
+            let Some(evidence_node) = response.evidence_node else {
+                eprintln!("error: daemon response contained no Evidence Node");
+                return ExitCode::from(EXIT_RUNTIME);
+            };
+            let Some(edge) = response.edge else {
+                eprintln!("error: daemon response contained no Evidence Edge");
+                return ExitCode::from(EXIT_RUNTIME);
+            };
+            if args.json {
+                let evidence = evidence_node.value.as_ref().and_then(|value| match value {
+                    pb::derived_node::Value::Evidence(node) => node.evidence.as_ref(),
+                    _ => None,
+                });
+                let value = serde_json::json!({
+                    "evidence_node": {
+                        "id": evidence_node.id,
+                        "evidence": evidence.map(evidence_to_json),
+                    },
+                    "edge": edge_to_json(&edge),
+                    "evidence_node_inserted": response.evidence_node_inserted,
+                    "edge_inserted": response.edge_inserted,
+                });
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&value)
+                        .expect("Evidence response JSON is serializable")
+                );
+            } else {
+                println!(
+                    "{} {} {}",
+                    evidence_node.id,
+                    edge_kind_to_str(edge.kind),
+                    edge.target
+                );
+            }
+            ExitCode::SUCCESS
+        }
+        Err(error) => client_error_exit(error),
+    }
+}
+
+fn run_evidence_graph(args: EvidenceGraphArgs) -> ExitCode {
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("error: failed to start async runtime: {error}");
+            return ExitCode::from(EXIT_RUNTIME);
+        }
+    };
+    let result = runtime.block_on(read_evidence_graph(args.server, &args.query));
+    match result {
+        Ok((specifications, evidence, edges, selected, paths)) => {
+            if args.json {
+                let value = serde_json::json!({
+                    "query": args.query,
+                    "selected_evidence_ids": selected,
+                    "paths": paths.values().map(|path| serde_json::json!({
+                        "id": path.id,
+                        "node_ids": path.node_ids,
+                        "edge_ids": path.edge_ids,
+                    })).collect::<Vec<_>>(),
+                    "evidence_nodes": evidence.values().filter_map(|node| {
+                        let value = node.value.as_ref()?;
+                        let pb::derived_node::Value::Evidence(evidence_node) = value else {
+                            return None;
+                        };
+                        Some(serde_json::json!({
+                            "id": node.id,
+                            "evidence": evidence_node.evidence.as_ref().map(evidence_to_json),
+                        }))
+                    }).collect::<Vec<_>>(),
+                    "specification_nodes": specifications.values().map(node_to_json).collect::<Vec<_>>(),
+                    "edges": edges.values().map(edge_to_json).collect::<Vec<_>>(),
+                });
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&value)
+                        .expect("Evidence graph JSON is serializable")
+                );
+                ExitCode::SUCCESS
+            } else {
+                match graph::Graph::from_wire(
+                    specifications.into_values(),
+                    std::iter::empty(),
+                    evidence.into_values(),
+                    edges.into_values(),
+                ) {
+                    Ok(graph) => {
+                        print!("{}", graph.render(args.width));
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        ExitCode::from(EXIT_RUNTIME)
+                    }
+                }
+            }
+        }
+        Err(error) => client_error_exit(error),
+    }
+}
+
+async fn read_evidence_graph(
+    server: String,
+    query: &str,
+) -> Result<
+    (
+        BTreeMap<String, pb::Node>,
+        BTreeMap<String, pb::DerivedNode>,
+        BTreeMap<String, pb::Edge>,
+        BTreeSet<String>,
+        BTreeMap<String, pb::GraphPath>,
+    ),
+    so_client::ClientError,
+> {
+    const PAGE_SIZE: u32 = 100;
+    let mut client = Client::connect(server).await?;
+    let mut specifications = BTreeMap::new();
+    let mut evidence = BTreeMap::new();
+    let mut edges = BTreeMap::new();
+    let mut selected = BTreeSet::new();
+    let mut paths = BTreeMap::new();
+    let mut token = String::new();
+    let mut seen = BTreeSet::new();
+    loop {
+        let page = client
+            .query_evidence_graph(query, PAGE_SIZE, &token)
+            .await?;
+        for node in page.specification_nodes {
+            specifications.insert(node.id.clone(), node);
+        }
+        for node in page.evidence_nodes {
+            evidence.insert(node.id.clone(), node);
+        }
+        for edge in page.edges {
+            edges.insert(edge.id.clone(), edge);
+        }
+        selected.extend(page.selected_evidence_ids);
+        for path in page.paths {
+            paths.insert(path.id.clone(), path);
+        }
+        if page.next_page_token.is_empty() {
+            break;
+        }
+        if !seen.insert(page.next_page_token.clone()) {
+            return Err(so_client::ClientError::InvalidGraphResponse(
+                "daemon repeated an Evidence graph page token".into(),
+            ));
+        }
+        token = page.next_page_token;
+    }
+    Ok((specifications, evidence, edges, selected, paths))
+}
+
+fn client_error_exit(error: so_client::ClientError) -> ExitCode {
+    eprintln!("error: {error}");
+    ExitCode::from(if error.is_bad_input() {
+        EXIT_USAGE
+    } else {
+        EXIT_RUNTIME
+    })
 }
 
 fn run_add(args: AddArgs) -> ExitCode {
@@ -672,6 +949,67 @@ fn origin_to_json(origin: &pb::Origin) -> Option<serde_json::Value> {
     }
 }
 
+fn edge_to_json(edge: &pb::Edge) -> serde_json::Value {
+    serde_json::json!({
+        "id": edge.id,
+        "source": edge.source,
+        "source_kind": vertex_kind_to_str(edge.source_kind),
+        "source_role": endpoint_role_to_str(edge.source_role),
+        "target": edge.target,
+        "target_kind": vertex_kind_to_str(edge.target_kind),
+        "target_role": endpoint_role_to_str(edge.target_role),
+        "kind": edge_kind_to_str(edge.kind),
+        "family": edge_family_to_str(edge.family),
+        "recorded_at": edge.recorded_at,
+        "current": edge.current,
+    })
+}
+
+fn edge_kind_to_str(kind: i32) -> &'static str {
+    match pb::EdgeKind::try_from(kind).unwrap_or(pb::EdgeKind::Unspecified) {
+        pb::EdgeKind::EvidenceAffirms => "evidence_affirms",
+        pb::EdgeKind::EvidenceDenies => "evidence_denies",
+        pb::EdgeKind::GroundedBy => "grounded_by",
+        _ => "other",
+    }
+}
+
+fn edge_family_to_str(family: i32) -> &'static str {
+    match pb::EdgeFamily::try_from(family).unwrap_or(pb::EdgeFamily::Unspecified) {
+        pb::EdgeFamily::Epistemic => "epistemic",
+        pb::EdgeFamily::Projection => "projection",
+        pb::EdgeFamily::Lexical => "lexical",
+        pb::EdgeFamily::Semantic => "semantic",
+        pb::EdgeFamily::Unspecified => "unspecified",
+    }
+}
+
+fn vertex_kind_to_str(kind: i32) -> &'static str {
+    match pb::VertexKind::try_from(kind).unwrap_or(pb::VertexKind::Unspecified) {
+        pb::VertexKind::Specification => "specification",
+        pb::VertexKind::Evidence => "evidence",
+        pb::VertexKind::Term => "term",
+        pb::VertexKind::Assumption => "assumption",
+        pb::VertexKind::Guarantee => "guarantee",
+        pb::VertexKind::Contract => "contract",
+        pb::VertexKind::Entity => "entity",
+        pb::VertexKind::Behavior => "behavior",
+        pb::VertexKind::Unspecified => "unspecified",
+    }
+}
+
+fn endpoint_role_to_str(role: i32) -> &'static str {
+    match pb::EdgeEndpointRole::try_from(role).unwrap_or(pb::EdgeEndpointRole::Unspecified) {
+        pb::EdgeEndpointRole::AffirmingEvidence => "affirming_evidence",
+        pb::EdgeEndpointRole::AffirmedSpecification => "affirmed_specification",
+        pb::EdgeEndpointRole::AffirmedEvidence => "affirmed_evidence",
+        pb::EdgeEndpointRole::DenyingEvidence => "denying_evidence",
+        pb::EdgeEndpointRole::DeniedSpecification => "denied_specification",
+        pb::EdgeEndpointRole::DeniedEvidence => "denied_evidence",
+        _ => "other",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -686,6 +1024,7 @@ mod tests {
                 command: GraphCommand::Rebuild(_),
             }) => panic!("expected graph show command"),
             Command::Add(_) => panic!("expected graph command"),
+            Command::Evidence(_) => panic!("expected graph command"),
         }
     }
 
@@ -702,6 +1041,54 @@ mod tests {
     #[test]
     fn graph_requires_an_explicit_subcommand() {
         assert!(Cli::try_parse_from(["spec", "graph"]).is_err());
+    }
+
+    #[test]
+    fn evidence_add_requires_one_polarity_and_evidence_graph_accepts_a_query() {
+        let cli = Cli::try_parse_from([
+            "spec",
+            "evidence",
+            "add",
+            "evidence-source",
+            "--denies",
+            "evidence-old",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Evidence(EvidenceArgs {
+                command: EvidenceCommand::Add(args),
+            }) => {
+                assert_eq!(args.evidence, "evidence-source");
+                assert_eq!(args.denies.as_deref(), Some("evidence-old"));
+                assert!(args.affirms.is_none());
+            }
+            _ => panic!("expected evidence add"),
+        }
+        assert!(Cli::try_parse_from([
+            "spec",
+            "evidence",
+            "add",
+            "evidence-source",
+            "--affirms",
+            "spec-a",
+            "--denies",
+            "spec-b",
+        ])
+        .is_err());
+
+        let cli = Cli::try_parse_from([
+            "spec",
+            "evidence",
+            "graph",
+            "MATCH p=(a:Evidence)-[:EVIDENCE_DENIES]->(b:Evidence) RETURN p",
+        ])
+        .unwrap();
+        assert!(matches!(
+            cli.command,
+            Command::Evidence(EvidenceArgs {
+                command: EvidenceCommand::Graph(EvidenceGraphArgs { .. })
+            })
+        ));
     }
 
     #[test]

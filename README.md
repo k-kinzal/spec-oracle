@@ -39,15 +39,32 @@ Consumer appends the captured view and materializes shared Evidence Nodes.
 > distinct authored roles. Only structurally proved, well-formed aggregates are
 > admitted; the paired Assumption supersedes `⊤` in the current projection
 > while every prior projection remains in the append-only Ledger. Every Edge
-> belongs to a lexical, semantic, or projection family, carries explicit
-> endpoint roles, and is produced by a registered mechanical derivation. Its
+> belongs to a lexical, semantic, projection, or epistemic family and carries
+> explicit endpoint roles. Lexical, semantic, and projection Edges are produced
+> by registered mechanical derivations; the only manual Edges are narrowly
+> typed Evidence judgments. Its
 > `source` and `target` are the ordered arguments of that typed relation, not a
-> universal support-flow direction. There is no manual Edge-addition path.
-> The `selection/fitness-v5` current-set policy derives bounded fitness from
-> captured Evidence and uses mechanically proved conflict, equivalence, and
-> refinement relationships to select a coherent subset. Admission creates a
-> candidate, not automatic authority. All candidates and relationships remain
-> in the Ledger.
+> universal support-flow direction. There is no generic manual Edge-addition
+> path and no manual Specification-to-Specification selection Edge.
+> The `selection/fitness-v15` current-set policy keeps decaying external
+> Evidence separate from recursive Specification support. Logical support uses
+> proved refinement and composition. Realization support is discovered from
+> persisted `Specification → Behavior → Entity` projections by comparing
+> grammatical action, actor, object, means, scope, and direction. An explicit
+> means anchors a lower-layer→upper-layer relation; compatible object
+> refinements may extend that anchored path toward still lower layers. An
+> affirmative binding object's exact Entity may also be elaborated by a
+> lower-layer specification that makes that Entity its responsible subject, or
+> continued by one that makes it an explicit trigger. This typed
+> `WitnessesEntity ← Entity → EngagesEntity` composition is directed from the
+> elaborating/continuing specification toward the binding specification and
+> recursively composes across different actions. Means and state/scope guard
+> incidence remain discovery facts only. Shared words, untyped Entity
+> incidence, or object similarity alone never become support.
+> Negative, permissive, advisory, and alternative-object claims do not enter
+> this realization judgment. Admission creates a candidate, not automatic
+> authority. All candidates and relationships remain in the Ledger, and there
+> is no manual Specification-to-Specification support-Edge path.
 
 ## Architecture
 
@@ -58,7 +75,7 @@ they do not depend on each other.
 | Crate        | Kind                 | Role                                                                                     |
 | ------------ | -------------------- | ---------------------------------------------------------------------------------------- |
 | `so-lang`    | lib                  | The constrained natural-language grammar and its *total* parser. No meaning interpretation or cross-specification reasoning lives here. |
-| `so-reason`  | lib                  | Pure derived interpretations and structural reasoning over `so-lang` parse trees: speech acts, formulas, semantic A/G contracts and their formation, and conservative judgments. |
+| `so-reason`  | lib                  | Pure derived interpretations and structural reasoning over `so-lang` parse trees: speech acts, formulas, semantic A/G contracts and their formation, operational Behavior/Entity profiles, and conservative judgments. |
 | `so-protocol` | lib                 | Generated `spec_oracle.v1` protobuf messages and tonic gRPC stubs only.                  |
 | `so-daemon`  | lib + `specd`        | Domain model, evidence capture, persistence, domain/protobuf conversion, and gRPC service. |
 | `so-client`  | lib                  | A thin gRPC client; resolves the caller's `@file`/`-`(stdin) input channels.              |
@@ -170,6 +187,7 @@ Command handlers are the only publishers of processing Events:
 | Command | Fresh Event |
 | --- | --- |
 | `AddNode` | `NodeAdded` |
+| `AddEvidenceRelation` | `EvidenceRelationAdded` |
 | `ReplaceEvidenceRequests` | `EvidenceRequestsReplaced` |
 | `StartGraphRebuild` | `GraphRebuildStarted` |
 | `BeginNodeGraphRebuild` | `NodeGraphRebuildStarted` |
@@ -187,7 +205,7 @@ Command handlers are the only publishers of processing Events:
 | `AssessNodeContractRelations` | `NodeContractRelationAssessmentCompleted` |
 | `AssessNodeDischargeCandidates` | `NodeDischargeCandidateAssessmentCompleted` |
 
-The 17 concrete Command kinds therefore map to 17 distinct concrete Event
+The 18 concrete Command kinds therefore map to 18 distinct concrete Event
 kinds. Concrete Events are never rounded into names such as `ContractChanged`,
 `EdgeAdded`, or `RelationAssessed`. Subscriptions may additionally select the
 abstract categories `DomainEvent`, `GraphEvent`, `NodeEvent`, `EvidenceEvent`,
@@ -326,13 +344,51 @@ current derived graph semantically while preserving its audit history.
 ### Viewing the current specification set
 
 The current-set projection is automatic, versioned and auditable. Under
-`selection/fitness-v5`, every specification starts as an unselected candidate.
-Typed `GroundedBy` Evidence supplies bounded points. Mechanically proved
-conflict, equivalence, and refinement competitors explain why a viable
-candidate recedes; no manually asserted selection relation participates.
-Every effective or capped Evidence contribution and every exclusion is
-returned in the graph view. The selected set itself is a usable output rather
-than a display-only flag:
+`selection/fitness-v15`, every specification starts as an unselected candidate.
+Typed `GroundedBy` Evidence supplies bounded, time-decaying external points.
+Manual `EvidenceAffirms` and `EvidenceDenies` Edges supply the same bounded
+external points with explicit polarity. An Evidence judgment may target another
+Evidence Node: each denial flips the sign of the downstream path, so newer
+Evidence can cancel obsolete or mistaken Evidence without deleting it. Cycles
+remain finite and deterministic because the policy retains one shortest path
+per Evidence and polarity; effective paths accompany their score contribution.
+Independently, proved logical paths and derived realization paths recursively
+supply structural points. A realization path starts from an explicit means
+written in an upper-layer binding specification and discovers the compatible
+lower-layer behavior that implements it. The view may then extend the path
+toward more concrete behaviors through actor-domain and object refinement.
+It may also compose an affirmative binding object with specifications that
+govern the exact same Entity as their subject or react to it as a trigger.
+Subject/trigger roles make this a constitutive path rather than lexical
+similarity; Means and state/scope guards do not establish it. These judgments
+use the persisted operational projection but are not persisted as manual or
+synthetic support Edges. Shared words, Terms, untyped Entity incidence, and
+unanchored object similarity alone never become support.
+
+Population retrieval follows operational roles only in the inbound support
+direction: from a binding object's witness to subject/trigger engagements that
+can support it. It does not walk back from an engagement to specifications
+that witness the same Entity, and it does not expand through Means or guard
+incidence. Same-action Behaviors enter the closure only after `so-reason`
+recognizes a layered-realization candidate. This preserves complete recursive
+support without loading an undirected Entity component for each requested
+view.
+
+Contract support is evaluated directly over the persisted Contract/Proof
+subgraph as a least fixed point. A current `HasContract` projection is a root;
+each refinement is an alternative proof (OR), while all operand Edges belonging
+to one content-addressed composition, quotient, or merge derivation are jointly
+required (AND). Different derivation bases that happen to produce the same
+Contract remain separate alternatives. The evaluator has no candidate-count,
+proof-count, recursion-depth, iteration-count, or conflict-component cutoff.
+Storage and RPC page sizes only batch a complete cursor traversal and therefore
+do not change the resulting specification graph.
+
+Mechanically proved conflicts subtract pressure, while equivalence and the
+maximum-weight consistency selection explain why a viable candidate recedes;
+no manually asserted selection relation participates. Every effective or
+capped contribution and every exclusion is returned in the graph view. The
+selected set itself is a usable output rather than a display-only flag:
 
 ```sh
 # The selected specification set as a relationship-preserving graph.
@@ -419,6 +475,62 @@ the client's own streams); the resulting text is persisted verbatim on the
 Node, then interpreted and captured by the daemon's Evidence Consumer. A successful
 capture also creates or reuses a content-addressed Evidence Node and connects it
 with a `grounded_by` projection Edge.
+
+Manual Evidence judgments capture a new descriptor or reuse an existing
+`evidence-…` id. The target may be a Specification or another Evidence Node;
+there is intentionally no corresponding generic Edge command:
+
+```sh
+# New Evidence affirms a specification.
+spec evidence add \
+  '{"kind":"testimonial","locator":"docs/releases/2026-07.md"}' \
+  --affirms spec-0123
+
+# A correction denies an older Evidence Node.
+spec evidence add docs/releases/correction.md \
+  --denies evidence-0456
+```
+
+`spec evidence graph QUERY` executes a read-only
+[openCypher](https://opencypher.org/) path query over the Evidence property-graph
+scope and renders the exact union of the returned paths. It does not perform
+text search and does not add incident neighbors that were not selected by the
+query.
+
+```sh
+# Every manual relationship between two Evidence Nodes.
+spec evidence graph \
+  'MATCH p=(a:Evidence)-[:EVIDENCE_AFFIRMS|EVIDENCE_DENIES]->(b:Evidence) RETURN p'
+
+# A correction that denies old Evidence which affirmed a Specification.
+spec evidence graph \
+  "MATCH p=(new:Evidence)-[:EVIDENCE_DENIES]->(old:Evidence)-[:EVIDENCE_AFFIRMS]->(s:Specification) WHERE new.kind = 'testimonial' RETURN p"
+
+# Select one Evidence neighborhood by stable identity.
+spec evidence graph \
+  "MATCH p=(e:Evidence)-[r]-(target) WHERE e.id = 'evidence-0456' RETURN p" \
+  --json
+```
+
+The Evidence scope exposes these property-graph names:
+
+| Element | openCypher name | Queryable properties |
+|---|---|---|
+| Node | `Evidence` | `id`, `kind`, `locator`, `hash`, `bytes`, `captured_at`, `author` |
+| Node | `Specification` | `id`, `statement`, `lang_version`, `created_at` |
+| Relationship | `GROUNDED_BY` | `id`, `kind`, `recorded_at`, `source`, `target` |
+| Relationship | `EVIDENCE_AFFIRMS` | `id`, `kind`, `recorded_at`, `source`, `target` |
+| Relationship | `EVIDENCE_DENIES` | `id`, `kind`, `recorded_at`, `source`, `target` |
+
+The shared graph-query layer supports one named path in `MATCH`, node labels,
+relationship types (including `|` alternatives), incoming/outgoing/undirected
+relationships, multiple explicit hops, inline literal property maps, `WHERE`
+comparisons with `AND`/`OR`, `CONTAINS`, `STARTS WITH`, `ENDS WITH`, `RETURN`
+of that path, and `LIMIT`. Mutation clauses, arbitrary expressions,
+variable-length paths, multiple path patterns, and returning scalars are
+rejected. This bounded read-only subset is deliberately storage-independent so
+the same parser and evaluator can be reused by `spec graph` views without
+exposing ArangoDB AQL.
 
 `kind` records the *epistemic kind* of the grounding, one of: `constitutive`,
 `demonstrative`, `testimonial`, `assertoric`, `circumstantial`, `counter`,

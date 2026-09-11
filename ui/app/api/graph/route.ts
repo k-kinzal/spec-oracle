@@ -13,6 +13,7 @@ import type {
   GraphEdge,
   GraphNode,
   SpeechAct,
+  TextAnchor,
 } from "@/lib/types";
 
 // This route talks gRPC over a raw socket, so it must run on the Node runtime,
@@ -80,6 +81,11 @@ const EDGE_KINDS: Record<string, EdgeKind> = {
   EDGE_KIND_GROUNDED_BY: "grounded_by",
   EDGE_KIND_HAS_ASSUMPTION: "has_assumption",
   EDGE_KIND_HAS_GUARANTEE: "has_guarantee",
+  EDGE_KIND_HAS_BEHAVIOR: "has_behavior",
+  EDGE_KIND_WITNESSES_ENTITY: "witnesses_entity",
+  EDGE_KIND_ENGAGES_ENTITY: "engages_entity",
+  EDGE_KIND_EVIDENCE_AFFIRMS: "evidence_affirms",
+  EDGE_KIND_EVIDENCE_DENIES: "evidence_denies",
 };
 
 const EDGE_FAMILIES: Record<string, EdgeFamily> = {
@@ -87,6 +93,7 @@ const EDGE_FAMILIES: Record<string, EdgeFamily> = {
   EDGE_FAMILY_SEMANTIC: "semantic",
   EDGE_FAMILY_SELECTION: "selection",
   EDGE_FAMILY_PROJECTION: "projection",
+  EDGE_FAMILY_EPISTEMIC: "epistemic",
 };
 
 const ENDPOINT_ROLES: Record<string, EndpointRole> = {
@@ -113,6 +120,18 @@ const ENDPOINT_ROLES: Record<string, EndpointRole> = {
   EDGE_ENDPOINT_ROLE_DISCHARGED_CONTRACT: "discharged_contract",
   EDGE_ENDPOINT_ROLE_ADMISSIBLE_ENVIRONMENT: "admissible_environment",
   EDGE_ENDPOINT_ROLE_BOUNDED_CONTRACT: "bounded_contract",
+  EDGE_ENDPOINT_ROLE_OPERATIONAL_SPECIFICATION: "operational_specification",
+  EDGE_ENDPOINT_ROLE_OPERATIONAL_BEHAVIOR: "operational_behavior",
+  EDGE_ENDPOINT_ROLE_WITNESSING_BEHAVIOR: "witnessing_behavior",
+  EDGE_ENDPOINT_ROLE_WITNESSED_ENTITY: "witnessed_entity",
+  EDGE_ENDPOINT_ROLE_ENGAGING_BEHAVIOR: "engaging_behavior",
+  EDGE_ENDPOINT_ROLE_ENGAGED_ENTITY: "engaged_entity",
+  EDGE_ENDPOINT_ROLE_AFFIRMING_EVIDENCE: "affirming_evidence",
+  EDGE_ENDPOINT_ROLE_AFFIRMED_SPECIFICATION: "affirmed_specification",
+  EDGE_ENDPOINT_ROLE_AFFIRMED_EVIDENCE: "affirmed_evidence",
+  EDGE_ENDPOINT_ROLE_DENYING_EVIDENCE: "denying_evidence",
+  EDGE_ENDPOINT_ROLE_DENIED_SPECIFICATION: "denied_specification",
+  EDGE_ENDPOINT_ROLE_DENIED_EVIDENCE: "denied_evidence",
 };
 
 function toNode(raw: unknown): GraphNode {
@@ -126,14 +145,18 @@ function toNode(raw: unknown): GraphNode {
       supporting_edge_ids?: unknown[];
       policy_version?: string;
       support_score?: number;
+      structural_score?: number;
       evidence_score?: number;
       relation_score?: number;
+      conflict_pressure?: number;
+      evaluation_state?: string;
       contributions?: Array<{
         kind?: string;
         points?: number;
         edge_id?: string;
         source_node_id?: string | null;
         evidence_node_id?: string | null;
+        path_edge_ids?: string[];
         detail?: string;
       }>;
       exclusions?: Array<{
@@ -154,16 +177,25 @@ function toNode(raw: unknown): GraphNode {
     evidenceCount: n.meta?.evidence?.length ?? 0,
     evidenceRequestCount: n.meta?.evidence_requests?.length ?? 0,
     current: n.selection?.current ?? true,
+    evaluationState:
+      n.selection?.evaluation_state === "unknown"
+        ? "unknown"
+        : n.selection?.evaluation_state === "receded"
+          ? "receded"
+          : "current",
     policyVersion: n.selection?.policy_version ?? "",
     supportScore: n.selection?.support_score ?? 0,
+    structuralScore: n.selection?.structural_score ?? 0,
     evidenceScore: n.selection?.evidence_score ?? 0,
     relationScore: n.selection?.relation_score ?? 0,
+    conflictPressure: n.selection?.conflict_pressure ?? 0,
     contributions: (n.selection?.contributions ?? []).map((contribution) => ({
       kind: contribution.kind ?? "unknown",
       points: contribution.points ?? 0,
       edgeId: contribution.edge_id ?? "",
       sourceNodeId: contribution.source_node_id ?? null,
       evidenceNodeId: contribution.evidence_node_id ?? null,
+      pathEdgeIds: contribution.path_edge_ids ?? [],
       detail: contribution.detail ?? "",
     })),
     exclusions: (n.selection?.exclusions ?? []).map((exclusion) => ({
@@ -197,10 +229,12 @@ function toTermNode(raw: unknown): GraphNode {
 function toDerivedNode(raw: unknown): GraphNode {
   const node = raw as {
     id?: string;
-    value?: "evidence" | "assumption" | "guarantee";
+    value?: "evidence" | "assumption" | "guarantee" | "contract" | "entity" | "behavior";
     evidence?: { evidence?: { snapshot?: { content_hash?: string } | null } | null };
     assumption?: { expression?: string };
     guarantee?: { expression?: string };
+    contract?: { operation?: string };
+    entity?: { display?: string; full?: string };
   };
   const nodeKind = node.value ?? "evidence";
   const statement =
@@ -208,7 +242,13 @@ function toDerivedNode(raw: unknown): GraphNode {
       ? node.assumption?.expression ?? ""
       : nodeKind === "guarantee"
         ? node.guarantee?.expression ?? ""
-        : `Evidence ${node.evidence?.evidence?.snapshot?.content_hash ?? ""}`.trim();
+        : nodeKind === "contract"
+          ? `${node.contract?.operation ?? "formed"} A/G contract`
+          : nodeKind === "entity"
+            ? node.entity?.display ?? node.entity?.full ?? ""
+            : nodeKind === "behavior"
+              ? "Operational behavior"
+              : `Evidence ${node.evidence?.evidence?.snapshot?.content_hash ?? ""}`.trim();
   return {
     id: node.id ?? "",
     nodeKind,
@@ -235,6 +275,16 @@ function toEdge(raw: unknown): GraphEdge {
     family?: string;
     source_role?: string;
     target_role?: string;
+    source_anchor?: {
+      selector?: string;
+      text?: string;
+      role?: string;
+    } | null;
+    target_anchor?: {
+      selector?: string;
+      text?: string;
+      role?: string;
+    } | null;
     relied_spec_id?: string | null;
     current?: boolean;
     derivation?: { method?: string; version?: string } | null;
@@ -247,9 +297,25 @@ function toEdge(raw: unknown): GraphEdge {
     family: EDGE_FAMILIES[e.family ?? ""] ?? "unspecified",
     sourceRole: ENDPOINT_ROLES[e.source_role ?? ""] ?? "unspecified",
     targetRole: ENDPOINT_ROLES[e.target_role ?? ""] ?? "unspecified",
+    sourceAnchor: toTextAnchor(e.source_anchor),
+    targetAnchor: toTextAnchor(e.target_anchor),
     reliedSpecId: e.relied_spec_id ?? null,
     current: e.current ?? true,
     derivationMethod: e.derivation?.method ?? "",
     derivationVersion: e.derivation?.version ?? "",
+  };
+}
+
+function toTextAnchor(
+  anchor:
+    | { selector?: string; text?: string; role?: string }
+    | null
+    | undefined,
+): TextAnchor | null {
+  if (!anchor) return null;
+  return {
+    selector: anchor.selector ?? "",
+    text: anchor.text ?? "",
+    role: anchor.role ?? "",
   };
 }

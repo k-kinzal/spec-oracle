@@ -80,10 +80,10 @@ pub fn capture(
         }
     };
 
+    let request_count = inputs.len();
     let enrichers = origin::registered_enrichers();
-    let mut captured = Vec::with_capacity(inputs.len());
-    let mut evidence_nodes_inserted = 0_usize;
-    let mut evidence_edges_inserted = 0_usize;
+    let mut captured = Vec::with_capacity(request_count);
+    let mut unavailable = Vec::new();
     for (index, input) in inputs.into_iter().enumerate() {
         let span = tracing::info_span!(
             "spec.consumer.evidence.capture",
@@ -93,7 +93,31 @@ pub fn capture(
             "spec.snapshot.hash" = tracing::field::Empty,
         );
         let _entered = span.enter();
-        let capture = snapshot::capture(&input.locator, now).map_err(|error| error.to_string())?;
+        let capture = match snapshot::capture(&input.locator, now) {
+            Ok(capture) => capture,
+            Err(error) => {
+                let Some(reason) = durable_unavailability_reason(&error) else {
+                    return Err(error.to_string());
+                };
+                tracing::warn!(
+                    "spec.evidence.index" = index as u64,
+                    "spec.evidence.kind" = input.kind.as_str(),
+                    "spec.evidence.locator" = %input.locator.render(),
+                    "evidence.unavailable.reason" = reason,
+                    "error.message" = %error,
+                    "Evidence locator was unavailable at capture time"
+                );
+                unavailable.push(json!({
+                    "request_index": index,
+                    "kind": input.kind.as_str(),
+                    "locator": input.locator.render(),
+                    "status": "unavailable",
+                    "reason": reason,
+                    "error": error.to_string(),
+                }));
+                continue;
+            }
+        };
         tracing::Span::current().record("spec.snapshot.bytes", capture.snapshot.bytes as u64);
         tracing::Span::current()
             .record("spec.snapshot.hash", capture.snapshot.content_hash.as_str());
@@ -112,6 +136,12 @@ pub fn capture(
             snapshot: capture.snapshot,
             origin: final_origin,
         };
+        captured.push(evidence);
+    }
+
+    let mut evidence_nodes_inserted = 0_usize;
+    let mut evidence_edges_inserted = 0_usize;
+    for evidence in &captured {
         let evidence_node = DerivedNode::evidence(evidence.clone());
         let edge = Edge::projection(
             EdgeKind::GroundedBy,
@@ -126,14 +156,23 @@ pub fn capture(
             .map_err(|error| error.to_string())?;
         evidence_nodes_inserted += usize::from(write.node_inserted);
         evidence_edges_inserted += usize::from(write.edge_inserted);
-        captured.push(evidence);
     }
 
+    let status = if unavailable.is_empty() {
+        "captured"
+    } else if captured.is_empty() {
+        "unavailable"
+    } else {
+        "partial"
+    };
     let value = json!({
         "version": CAPTURE_VERSION,
         "request_fingerprint": request_fingerprint,
-        "status": "captured",
+        "status": status,
+        "request_count": request_count,
         "evidence_count": captured.len(),
+        "unavailable_count": unavailable.len(),
+        "unavailable": unavailable,
         "evidence_nodes_inserted": evidence_nodes_inserted,
         "evidence_edges_inserted": evidence_edges_inserted,
         // Preserve the complete capture in this versioned append-only
@@ -144,8 +183,23 @@ pub fn capture(
     Ok(EvidenceCaptureRecord {
         metadata: value,
         evidence: captured,
-        captured: true,
+        captured: status != "unavailable",
     })
+}
+
+fn durable_unavailability_reason(error: &snapshot::SnapshotError) -> Option<&'static str> {
+    match error {
+        snapshot::SnapshotError::NotFound(_) => Some("file_not_found"),
+        snapshot::SnapshotError::Read { source, .. }
+            if source.kind() == std::io::ErrorKind::NotFound =>
+        {
+            Some("file_not_found")
+        }
+        snapshot::SnapshotError::LineOutOfRange { .. } => Some("line_out_of_range"),
+        snapshot::SnapshotError::Read { .. }
+        | snapshot::SnapshotError::Fetch { .. }
+        | snapshot::SnapshotError::Body { .. } => None,
+    }
 }
 
 fn request_fingerprint(node: &Node) -> String {
@@ -251,6 +305,86 @@ mod tests {
             .contains("invalid evidence JSON"));
         assert!(capture.evidence.is_empty());
         assert!(!capture.captured);
+    }
+
+    #[test]
+    fn missing_file_is_a_durable_unavailable_result() {
+        let graph = crate::store::InMemoryNodeStore::new();
+        let temp = tempfile::tempdir().unwrap();
+        let blobs = crate::store::FileBlobStore::open(temp.path()).unwrap();
+        let missing = temp.path().join("removed.md");
+        let request = json!({
+            "kind": "constitutive",
+            "locator": missing.to_string_lossy(),
+        })
+        .to_string();
+
+        let capture = capture(&node(vec![request]), &graph, &blobs, "t").unwrap();
+
+        assert!(!capture.captured);
+        assert!(capture.evidence.is_empty());
+        assert_eq!(capture.metadata["status"], "unavailable");
+        assert_eq!(capture.metadata["request_count"], 1);
+        assert_eq!(capture.metadata["evidence_count"], 0);
+        assert_eq!(capture.metadata["unavailable_count"], 1);
+        assert_eq!(
+            capture.metadata["unavailable"][0]["reason"],
+            "file_not_found"
+        );
+        assert_eq!(
+            capture.metadata["unavailable"][0]["locator"],
+            missing.to_string_lossy().as_ref()
+        );
+    }
+
+    #[test]
+    fn capture_keeps_available_requests_when_another_is_unavailable() {
+        let graph = crate::store::InMemoryNodeStore::new();
+        let temp = tempfile::tempdir().unwrap();
+        let blobs = crate::store::FileBlobStore::open(temp.path()).unwrap();
+        let available = temp.path().join("available.txt");
+        let missing = temp.path().join("removed.txt");
+        std::fs::write(&available, "captured bytes").unwrap();
+        let requests = [available, missing]
+            .into_iter()
+            .map(|path| {
+                json!({
+                    "kind": "assertoric",
+                    "locator": path.to_string_lossy(),
+                })
+                .to_string()
+            })
+            .collect();
+
+        let capture = capture(&node(requests), &graph, &blobs, "t").unwrap();
+
+        assert!(capture.captured);
+        assert_eq!(capture.evidence.len(), 1);
+        assert_eq!(capture.metadata["status"], "partial");
+        assert_eq!(capture.metadata["request_count"], 2);
+        assert_eq!(capture.metadata["evidence_count"], 1);
+        assert_eq!(capture.metadata["unavailable_count"], 1);
+        let edges = graph
+            .list_edges(&["n1".into()], &[evidence_derivation()])
+            .unwrap();
+        assert_eq!(edges.len(), 1);
+    }
+
+    #[test]
+    fn transient_snapshot_failures_remain_retryable() {
+        let read_error = snapshot::SnapshotError::Read {
+            path: "restricted".into(),
+            source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied"),
+        };
+        assert_eq!(durable_unavailability_reason(&read_error), None);
+        let disappeared = snapshot::SnapshotError::Read {
+            path: "removed".into(),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "gone"),
+        };
+        assert_eq!(
+            durable_unavailability_reason(&disappeared),
+            Some("file_not_found")
+        );
     }
 
     #[test]

@@ -7,6 +7,8 @@
 //! (defaulting to `root` / empty), and the database from `ARANGODB_DB`
 //! (defaulting to `spec_oracle_test`).
 
+use std::sync::{Arc, Barrier};
+
 use so_daemon::arango::{ArangoConfig, ArangoNodeStore};
 use so_daemon::domain::{
     Anchor, AssessmentVerdict, DerivedNode, Edge, EdgeKind, Evidence, Kind, Locator, Meta,
@@ -14,6 +16,8 @@ use so_daemon::domain::{
 };
 use so_daemon::event_bus::{EventEnvelope, EventKind};
 use so_daemon::event_sink::EventSink;
+use so_daemon::graph_generation;
+use so_daemon::graph_query::GraphQuery;
 use so_daemon::store::{GraphStore, NodeStore};
 
 fn sample_node(id: &str) -> Node {
@@ -52,6 +56,108 @@ fn captured_evidence() -> Evidence {
         },
         origin: Origin::default(),
     }
+}
+
+#[test]
+fn arango_evidence_query_runs_when_available() {
+    let url = match std::env::var("ARANGODB_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            eprintln!("skipping arango_evidence_query_runs_when_available: ARANGODB_URL not set");
+            return;
+        }
+    };
+    let username = std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
+    let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
+    let database = std::env::var("ARANGODB_DB").unwrap_or_else(|_| "spec_oracle_test".to_string());
+    let store = ArangoNodeStore::connect(&ArangoConfig {
+        url: &url,
+        database: &database,
+        username: &username,
+        password: &password,
+    })
+    .expect("connect to ArangoDB");
+    let suffix = uuid::Uuid::new_v4();
+    let target = sample_node(&format!("evidence-query-target-{suffix}"));
+    store.add_node(&target).expect("persist Evidence target");
+    let mut value = captured_evidence();
+    value.locator = Locator::File {
+        path: format!("query-language-{suffix}.md"),
+        line: Some(1),
+        col: None,
+    };
+    value.snapshot.content_hash = format!("hash-{suffix}");
+    let evidence = DerivedNode::evidence(value);
+    store
+        .put_derived_node_value(&evidence)
+        .expect("persist standalone Evidence");
+    let edge = Edge::evidence_relation(
+        EdgeKind::EvidenceAffirms,
+        evidence.id(),
+        &target.id,
+        so_daemon::domain::VertexKind::Specification,
+        so_daemon::evidence_graph::derivation(),
+        "2026-07-25T00:00:00Z",
+    )
+    .unwrap();
+    store
+        .append_edge(&edge)
+        .expect("append Evidence affirmation");
+
+    let query = GraphQuery::parse(&format!(
+        "MATCH p=(e:Evidence)-[:EVIDENCE_AFFIRMS]->(s:Specification) \
+         WHERE s.id = '{}' RETURN p",
+        target.id
+    ))
+    .unwrap();
+    query
+        .validate(&so_daemon::evidence_graph::query_schema())
+        .unwrap();
+    let page = store
+        .query_evidence_graph(&query, None, 10)
+        .expect("query Evidence graph");
+    assert_eq!(page.selected_evidence_ids, vec![evidence.id().to_string()]);
+    assert!(page.edges.iter().any(|candidate| candidate.id == edge.id));
+    assert!(page
+        .specification_nodes
+        .iter()
+        .any(|candidate| candidate.id == target.id));
+}
+
+#[test]
+fn arango_multi_signal_candidate_query_runs_when_available() {
+    let url = match std::env::var("ARANGODB_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            eprintln!(
+                "skipping arango_multi_signal_candidate_query_runs_when_available: ARANGODB_URL not set"
+            );
+            return;
+        }
+    };
+    let username = std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
+    let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
+    let database = std::env::var("ARANGODB_DB").unwrap_or_else(|_| "spec_oracle_test".to_string());
+    let store = ArangoNodeStore::connect(&ArangoConfig {
+        url: &url,
+        database: &database,
+        username: &username,
+        password: &password,
+    })
+    .expect("connect to ArangoDB");
+    let suffix = uuid::Uuid::new_v4();
+    let mut request = sample_node(&format!("candidate-request-{suffix}"));
+    request.statement =
+        "The client shall encode the Add input in an Add Specification request message.".into();
+    let mut rpc = sample_node(&format!("candidate-rpc-{suffix}"));
+    rpc.statement = "An AddSpecification RPC shall submit an AddNode Command.".into();
+    store.add_node(&request).expect("persist request candidate");
+    store.add_node(&rpc).expect("persist RPC candidate");
+    graph_generation::generate_and_persist(&request, &store, "2026-07-24T00:00:00Z")
+        .expect("project request candidate");
+    let report = graph_generation::generate_and_persist(&rpc, &store, "2026-07-24T00:00:01Z")
+        .expect("discover RPC candidate relations");
+    assert!(report.candidates_examined >= 1);
 }
 
 #[test]
@@ -102,6 +208,182 @@ fn arango_event_sink_duplicate_id_is_idempotent_when_available() {
             .map(|stored| stored.id),
         Some(event.id)
     );
+}
+
+#[test]
+fn arango_relation_assessment_bulk_is_idempotent_when_available() {
+    let url = match std::env::var("ARANGODB_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            eprintln!(
+                "skipping arango_relation_assessment_bulk_is_idempotent_when_available: ARANGODB_URL not set"
+            );
+            return;
+        }
+    };
+    let username = std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
+    let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
+    let database = std::env::var("ARANGODB_DB").unwrap_or_else(|_| "spec_oracle_test".to_string());
+    let store = ArangoNodeStore::connect(&ArangoConfig {
+        url: &url,
+        database: &database,
+        username: &username,
+        password: &password,
+    })
+    .expect("connect to ArangoDB");
+    let existing = RelationAssessment {
+        id: format!("test-assessment-batch-existing-{}", uuid::Uuid::new_v4()),
+        left: "candidate-a".into(),
+        right: "candidate-b".into(),
+        candidate_derivation: so_daemon::graph_generation::candidate_derivation(),
+        semantic_derivation: so_daemon::graph_generation::semantic_derivation(),
+        verdict: AssessmentVerdict::Unknown,
+        recorded_at: "2026-07-12T00:00:00Z".into(),
+    };
+    let new = RelationAssessment {
+        id: format!("test-assessment-batch-new-{}", uuid::Uuid::new_v4()),
+        left: "candidate-a".into(),
+        right: "candidate-c".into(),
+        candidate_derivation: so_daemon::graph_generation::candidate_derivation(),
+        semantic_derivation: so_daemon::graph_generation::semantic_derivation(),
+        verdict: AssessmentVerdict::Unknown,
+        recorded_at: "2026-07-12T00:00:01Z".into(),
+    };
+    assert!(store
+        .append_relation_assessment(&existing)
+        .expect("append existing assessment"));
+    assert_eq!(
+        store
+            .append_relation_assessments(&[existing.clone(), new.clone()])
+            .expect("bulk append one existing and one new assessment"),
+        1
+    );
+    assert_eq!(
+        store
+            .append_relation_assessments(&[existing, new])
+            .expect("bulk assessment append is idempotent"),
+        0
+    );
+}
+
+#[test]
+fn arango_command_update_merges_nested_meta_when_available() {
+    let url = match std::env::var("ARANGODB_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            eprintln!(
+                "skipping arango_command_update_merges_nested_meta_when_available: ARANGODB_URL not set"
+            );
+            return;
+        }
+    };
+    let username = std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
+    let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
+    let database = std::env::var("ARANGODB_DB").unwrap_or_else(|_| "spec_oracle_test".to_string());
+    let store = ArangoNodeStore::connect(&ArangoConfig {
+        url: &url,
+        database: &database,
+        username: &username,
+        password: &password,
+    })
+    .expect("connect to ArangoDB");
+    let node = sample_node(&format!(
+        "test-node-command-update-{}",
+        uuid::Uuid::new_v4()
+    ));
+    store.add_node(&node).expect("add node");
+    let first = MetaUpdate {
+        source: "first-stage".to_string(),
+        applied_at: "2026-07-23T00:00:00Z".to_string(),
+        value: serde_json::json!({"stage": 1}),
+    };
+    let second = MetaUpdate {
+        source: "second-stage".to_string(),
+        applied_at: "2026-07-23T00:00:01Z".to_string(),
+        value: serde_json::json!({"stage": 2}),
+    };
+
+    store
+        .apply_command_update(&node.id, "command-one", &first, None)
+        .expect("apply first command update");
+    store
+        .apply_command_update(
+            &node.id,
+            "command-two",
+            &second,
+            Some(&[captured_evidence()]),
+        )
+        .expect("apply second command update");
+    store
+        .apply_command_update(&node.id, "command-one", &first, None)
+        .expect("reapply first command update");
+
+    let updated = store.get_node(&node.id).unwrap().unwrap();
+    assert_eq!(updated.meta.updates["command-one"], first);
+    assert_eq!(updated.meta.updates["command-two"], second);
+    assert_eq!(updated.meta.evidence.len(), 1);
+    assert_eq!(updated.meta.evidence[0].snapshot.content_hash, "deadbeef");
+}
+
+#[test]
+fn arango_concurrent_command_updates_preserve_every_key_when_available() {
+    let url = match std::env::var("ARANGODB_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            eprintln!(
+                "skipping arango_concurrent_command_updates_preserve_every_key_when_available: ARANGODB_URL not set"
+            );
+            return;
+        }
+    };
+    let username = std::env::var("ARANGODB_USER").unwrap_or_else(|_| "root".to_string());
+    let password = std::env::var("ARANGODB_PASSWORD").unwrap_or_default();
+    let database = std::env::var("ARANGODB_DB").unwrap_or_else(|_| "spec_oracle_test".to_string());
+    let store = Arc::new(
+        ArangoNodeStore::connect(&ArangoConfig {
+            url: &url,
+            database: &database,
+            username: &username,
+            password: &password,
+        })
+        .expect("connect to ArangoDB"),
+    );
+    let node = sample_node(&format!(
+        "test-node-concurrent-command-update-{}",
+        uuid::Uuid::new_v4()
+    ));
+    store.add_node(&node).expect("add node");
+    let barrier = Arc::new(Barrier::new(8));
+    let mut handles = Vec::new();
+    for index in 0..8 {
+        let store = store.clone();
+        let barrier = barrier.clone();
+        let node_id = node.id.clone();
+        handles.push(std::thread::spawn(move || {
+            let command_id = format!("concurrent-command-{index}");
+            let update = MetaUpdate {
+                source: format!("concurrent-stage-{index}"),
+                applied_at: format!("2026-07-23T00:00:{index:02}Z"),
+                value: serde_json::json!({"stage": index}),
+            };
+            barrier.wait();
+            store
+                .apply_command_update(&node_id, &command_id, &update, None)
+                .expect("apply concurrent command update");
+        }));
+    }
+    for handle in handles {
+        handle.join().expect("concurrent update thread");
+    }
+
+    let updated = store.get_node(&node.id).unwrap().unwrap();
+    for index in 0..8 {
+        let command_id = format!("concurrent-command-{index}");
+        assert_eq!(
+            updated.meta.updates[&command_id].source,
+            format!("concurrent-stage-{index}")
+        );
+    }
 }
 
 #[test]
@@ -173,9 +455,8 @@ fn arango_round_trip_when_available() {
         store
             .get_relation_assessment(&assessment.id)
             .expect("get assessment"),
-        Some(assessment)
+        Some(assessment.clone())
     );
-
     // Nodes are immutable and this integration database intentionally persists
     // across runs. A fresh id prevents a prior run's asynchronous Consumer facts
     // from changing the initial-state assertions below.
@@ -208,7 +489,7 @@ fn arango_round_trip_when_available() {
         .apply_command_update(&node.id, "test-command", &update, Some(&evidence))
         .expect("apply_command_update");
     let updated = store.get_node(&node.id).unwrap().unwrap();
-    assert_eq!(updated.meta.updates["test-delivery"], update);
+    assert_eq!(updated.meta.updates["test-command"], update);
     assert_eq!(updated.meta.evidence.len(), 1);
     assert_eq!(updated.meta.evidence[0].snapshot.content_hash, "deadbeef");
     // Snapshot bytes stay in the blob store; only metadata is in ArangoDB.

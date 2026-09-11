@@ -1,11 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import dynamic from "next/dynamic";
 import Legend from "@/components/Legend";
 import RelationPanel from "@/components/RelationPanel";
 import StatusBar from "@/components/StatusBar";
 import ViewSwitcher from "@/components/ViewSwitcher";
+import {deriveSupportContexts} from "@/lib/specification-context";
+import {isCompleteDefaultTopology} from "@/lib/specification-proximity";
 import {
   CONFLICT_EDGE_KINDS,
   PAIRING_EDGE_KINDS,
@@ -22,29 +31,30 @@ import {
   type SpeechAct,
 } from "@/lib/types";
 
-// The Three.js/WebGL renderer and its 3D layout Worker are browser-only.
+// The Three.js/WebGL renderer and its planar layout Worker are browser-only.
 const GraphView = dynamic(() => import("@/components/GraphView"), {
   ssr: false,
 });
 
 // --- Scale discipline -------------------------------------------------------
 // Fetching and drawing are deliberately separate. The browser receives the
-// candidate set in small pages, while the canvas grows a bounded connected
-// overview on its own fixed rendering cadence.
+// candidate set in small pages, while the canvas grows on its own fixed
+// rendering cadence. Diagnostic views stay bounded; the default proximity
+// landscape retains every loaded specification.
 const PAGE_SIZE = 100;
 const LEDGER_BATCH_EDGES = 4000;
 const RENDER_CAP = 50000;
 const OVERVIEW_NODE_LIMIT = 1200;
 const OVERVIEW_EDGE_LIMIT = 1800;
-const TERM_HUB_LIMIT = 36;
+const TERM_NEIGHBORHOOD_LIMIT = 80;
 const TERM_NEIGHBOR_LIMIT = 10;
 const UNCONNECTED_SAMPLE_LIMIT = 320;
 
 const VIEW_COPY: Record<GraphViewMode, { title: string; description: string }> = {
   all: {
-    title: "Largest connected candidate neighborhood",
+    title: "Support-context landscape",
     description:
-      "The largest connected semantic and shared-term neighborhood; all candidates remain loaded for the diagnostic views.",
+      "Current structural and realization support forms explicit, overlapping context boundaries; ungrounded proximity remains outside them.",
   },
   semantic: {
     title: "Meaning relations",
@@ -96,12 +106,17 @@ const VIEW_COPY: Record<GraphViewMode, { title: string; description: string }> =
 type LoadState = {
   nodes: Map<string, GraphNode>;
   edges: Map<string, GraphEdge>;
+  specificationCount: number;
   nextToken: string;
   total: number;
   reachedEnd: boolean;
 };
 
 type VisibleGraph = { nodes: GraphNode[]; edges: GraphEdge[] };
+
+function isTopAssumption(node: GraphNode | undefined): boolean {
+  return node?.nodeKind === "assumption" && node.statement.trim() === "⊤";
+}
 
 function boundedTopology(
   pool: GraphNode[],
@@ -130,13 +145,120 @@ function boundedTopology(
   };
 }
 
+function proximityTermNeighborhoods(
+  pool: GraphNode[],
+  lexicalEdges: GraphEdge[],
+): GraphEdge[] {
+  const byId = new Map(pool.map((node) => [node.id, node]));
+  const byTerm = new Map<string, Map<string, GraphEdge>>();
+
+  for (const edge of lexicalEdges) {
+    const source = byId.get(edge.source);
+    const target = byId.get(edge.target);
+    const termId =
+      source?.nodeKind === "term"
+        ? source.id
+        : target?.nodeKind === "term"
+          ? target.id
+          : null;
+    if (!termId) continue;
+    const specificationId =
+      source?.nodeKind === "specification"
+        ? source.id
+        : target?.nodeKind === "specification"
+          ? target.id
+          : null;
+    if (!specificationId) continue;
+    const incident = byTerm.get(termId) ?? new Map<string, GraphEdge>();
+    const previous = incident.get(specificationId);
+    if (!previous || edge.id.localeCompare(previous.id) < 0) {
+      incident.set(specificationId, edge);
+    }
+    byTerm.set(termId, incident);
+  }
+
+  const candidates = [...byTerm.entries()]
+    .map(([termId, incident]) => ({
+      termId,
+      edges: [...incident.values()].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      ),
+    }))
+    // A term occurring in only one specification is a useful visible satellite
+    // but cannot express proximity between specifications.
+    .filter((candidate) => candidate.edges.length > 1);
+  const coveredSpecifications = new Set<string>();
+  const selected: GraphEdge[] = [];
+
+  for (
+    let count = 0;
+    count < TERM_NEIGHBORHOOD_LIMIT && candidates.length > 0;
+    count += 1
+  ) {
+    let bestIndex = 0;
+    let bestScore = Number.NEGATIVE_INFINITY;
+    for (let index = 0; index < candidates.length; index += 1) {
+      const candidate = candidates[index];
+      const unseen = candidate.edges.filter((edge) => {
+        const specificationId = byId.get(edge.source)?.nodeKind === "specification"
+          ? edge.source
+          : edge.target;
+        return !coveredSpecifications.has(specificationId);
+      }).length;
+      // Marginal coverage keeps independent topology regions in the default
+      // view. Total degree only breaks ties, so one huge vocabulary hub cannot
+      // consume the complete bounded overview.
+      const score =
+        Math.min(unseen, TERM_NEIGHBOR_LIMIT) * 1000 +
+        Math.min(candidate.edges.length, TERM_NEIGHBOR_LIMIT) * 10 +
+        Math.log2(candidate.edges.length + 1);
+      if (
+        score > bestScore ||
+        (score === bestScore &&
+          candidate.termId.localeCompare(candidates[bestIndex].termId) < 0)
+      ) {
+        bestIndex = index;
+        bestScore = score;
+      }
+    }
+
+    const [candidate] = candidates.splice(bestIndex, 1);
+    const sample = [...candidate.edges]
+      .sort((left, right) => {
+        const leftSpecification =
+          byId.get(left.source)?.nodeKind === "specification"
+            ? left.source
+            : left.target;
+        const rightSpecification =
+          byId.get(right.source)?.nodeKind === "specification"
+            ? right.source
+            : right.target;
+        return (
+          Number(coveredSpecifications.has(leftSpecification)) -
+            Number(coveredSpecifications.has(rightSpecification)) ||
+          left.id.localeCompare(right.id)
+        );
+      })
+      .slice(0, TERM_NEIGHBOR_LIMIT);
+    selected.push(...sample);
+    for (const edge of sample) {
+      coveredSpecifications.add(
+        byId.get(edge.source)?.nodeKind === "specification"
+          ? edge.source
+          : edge.target,
+      );
+    }
+  }
+
+  return selected;
+}
+
 function strongestTermNeighborhoods(
   pool: GraphNode[],
   lexicalEdges: GraphEdge[],
 ): GraphEdge[] {
   const byId = new Map(pool.map((node) => [node.id, node]));
   const byTerm = new Map<string, GraphEdge[]>();
-
   for (const edge of lexicalEdges) {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
@@ -151,13 +273,12 @@ function strongestTermNeighborhoods(
     incident.push(edge);
     byTerm.set(termId, incident);
   }
-
   return [...byTerm.entries()]
     .sort(
       ([leftId, left], [rightId, right]) =>
         right.length - left.length || leftId.localeCompare(rightId),
     )
-    .slice(0, TERM_HUB_LIMIT)
+    .slice(0, TERM_NEIGHBORHOOD_LIMIT)
     .flatMap(([, incident]) => incident.slice(0, TERM_NEIGHBOR_LIMIT));
 }
 
@@ -194,56 +315,36 @@ function representativeSpecifications(
   return result;
 }
 
-function largestConnectedComponent(graph: VisibleGraph): VisibleGraph {
-  if (graph.nodes.length === 0) return graph;
-  const adjacent = new Map(graph.nodes.map((node) => [node.id, new Set<string>()]));
-  for (const edge of graph.edges) {
-    adjacent.get(edge.source)?.add(edge.target);
-    adjacent.get(edge.target)?.add(edge.source);
-  }
-
-  const unvisited = new Set(graph.nodes.map((node) => node.id));
-  let largest = new Set<string>();
-  while (unvisited.size > 0) {
-    const first = unvisited.values().next().value as string | undefined;
-    if (!first) break;
-    const component = new Set<string>();
-    const queue = [first];
-    unvisited.delete(first);
-    while (queue.length > 0) {
-      const id = queue.shift();
-      if (!id) continue;
-      component.add(id);
-      for (const neighbor of adjacent.get(id) ?? []) {
-        if (!unvisited.delete(neighbor)) continue;
-        queue.push(neighbor);
-      }
-    }
-    if (component.size > largest.size) largest = component;
-  }
-
-  return {
-    nodes: graph.nodes.filter((node) => largest.has(node.id)),
-    edges: graph.edges.filter(
-      (edge) => largest.has(edge.source) && largest.has(edge.target),
-    ),
-  };
-}
-
-function overviewCandidates(pool: GraphNode[], candidateEdges: GraphEdge[]): GraphEdge[] {
-  const backbone = candidateEdges.filter(
+function overviewCandidates(
+  pool: GraphNode[],
+  candidateEdges: GraphEdge[],
+  includeTopAssumption = false,
+): GraphEdge[] {
+  const byId = new Map(pool.map((node) => [node.id, node]));
+  // Top is a real, auditable contract assumption but the logical identity
+  // carries no contextual information. Letting every unconditional
+  // specification share it turns the proximity landscape into one artificial
+  // hub. Contracts and Ledger views may opt back in for inspection.
+  const proximityEdges = includeTopAssumption
+    ? candidateEdges
+    : candidateEdges.filter(
+        (edge) =>
+          !isTopAssumption(byId.get(edge.source)) &&
+          !isTopAssumption(byId.get(edge.target)),
+      );
+  const backbone = proximityEdges.filter(
     (edge) => edge.family === "semantic" || edge.family === "selection",
   );
-  const lexical = strongestTermNeighborhoods(
+  const lexical = proximityTermNeighborhoods(
     pool,
-    candidateEdges.filter((edge) => edge.family === "lexical"),
+    proximityEdges.filter((edge) => edge.family === "lexical"),
   );
   const connected = new Set<string>();
   for (const edge of [...backbone, ...lexical]) {
     connected.add(edge.source);
     connected.add(edge.target);
   }
-  const projections = candidateEdges
+  const projections = proximityEdges
     .filter(
       (edge) =>
         edge.family === "projection" &&
@@ -253,91 +354,15 @@ function overviewCandidates(pool: GraphNode[], candidateEdges: GraphEdge[]): Gra
   return [...backbone, ...lexical, ...projections];
 }
 
-function candidateOverview(pool: GraphNode[], candidateEdges: GraphEdge[]): VisibleGraph {
-  return largestConnectedComponent(
-    boundedTopology(pool, overviewCandidates(pool, candidateEdges)),
-  );
-}
-
-// Once a node has appeared in the overview, keep it there. Later acquisition
-// pages may extend the connected neighborhood, but they must not replace the
-// viewer's existing spatial landmarks with a newly ranked graph.
-function extendCandidateOverview(
-  previous: VisibleGraph,
+function candidateOverview(
   pool: GraphNode[],
   candidateEdges: GraphEdge[],
+  includeTopAssumption = false,
 ): VisibleGraph {
-  if (previous.nodes.length === 0) return candidateOverview(pool, candidateEdges);
-
-  const byId = new Map(pool.map((node) => [node.id, node]));
-  const edgeById = new Map(candidateEdges.map((edge) => [edge.id, edge]));
-  const selectedIds = new Set(
-    previous.nodes.filter((node) => byId.has(node.id)).map((node) => node.id),
+  return boundedTopology(
+    pool,
+    overviewCandidates(pool, candidateEdges, includeTopAssumption),
   );
-  const selectedEdgeIds = new Set(
-    previous.edges.filter((edge) => edgeById.has(edge.id)).map((edge) => edge.id),
-  );
-  const nextNodeIds = previous.nodes
-    .map((node) => node.id)
-    .filter((id) => selectedIds.has(id));
-  const nextEdgeIds = previous.edges
-    .map((edge) => edge.id)
-    .filter((id) => selectedEdgeIds.has(id));
-  const candidates = overviewCandidates(pool, candidateEdges);
-  let changed = false;
-
-  // First retain every newly discovered relationship between visible nodes.
-  for (const edge of candidates) {
-    if (nextEdgeIds.length >= OVERVIEW_EDGE_LIMIT) break;
-    if (selectedEdgeIds.has(edge.id)) continue;
-    if (!selectedIds.has(edge.source) || !selectedIds.has(edge.target)) continue;
-    selectedEdgeIds.add(edge.id);
-    nextEdgeIds.push(edge.id);
-    changed = true;
-  }
-
-  // Then grow only from the existing component. Repeating the pass allows a
-  // newly attached node to become an anchor for another node in the same page.
-  let extended = true;
-  while (
-    extended &&
-    nextNodeIds.length < OVERVIEW_NODE_LIMIT &&
-    nextEdgeIds.length < OVERVIEW_EDGE_LIMIT
-  ) {
-    extended = false;
-    for (const edge of candidates) {
-      if (
-        nextNodeIds.length >= OVERVIEW_NODE_LIMIT ||
-        nextEdgeIds.length >= OVERVIEW_EDGE_LIMIT
-      ) {
-        break;
-      }
-      if (selectedEdgeIds.has(edge.id)) continue;
-      const sourceSelected = selectedIds.has(edge.source);
-      const targetSelected = selectedIds.has(edge.target);
-      if (sourceSelected === targetSelected) continue;
-      const newId = sourceSelected ? edge.target : edge.source;
-      if (!byId.has(newId)) continue;
-      selectedIds.add(newId);
-      nextNodeIds.push(newId);
-      selectedEdgeIds.add(edge.id);
-      nextEdgeIds.push(edge.id);
-      extended = true;
-      changed = true;
-    }
-  }
-
-  if (!changed) return previous;
-  return {
-    nodes: nextNodeIds.flatMap((id) => {
-      const node = byId.get(id);
-      return node ? [node] : [];
-    }),
-    edges: nextEdgeIds.flatMap((id) => {
-      const edge = edgeById.get(id);
-      return edge ? [edge] : [];
-    }),
-  };
 }
 
 export default function Page() {
@@ -349,32 +374,45 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const [view, setView] = useState<GraphViewMode>("all");
+  const viewRef = useRef<GraphViewMode>("all");
   const [ledgerNodes, setLedgerNodes] = useState<GraphNode[]>([]);
   const [ledgerEdges, setLedgerEdges] = useState<GraphEdge[]>([]);
   const [ledgerTotal, setLedgerTotal] = useState(0);
   const [ledgerReachedEnd, setLedgerReachedEnd] = useState(false);
   const [ledgerLoading, setLedgerLoading] = useState(false);
-  const [overviewGraph, setOverviewGraph] = useState<VisibleGraph>({
+  const [overviewAppend, setOverviewAppend] = useState<VisibleGraph>({
     nodes: [],
     edges: [],
   });
+  const [overviewSpecificationCount, setOverviewSpecificationCount] = useState(0);
+  const [overviewEdgeCount, setOverviewEdgeCount] = useState(0);
+  const [overviewSpeechActs, setOverviewSpeechActs] = useState<Set<SpeechAct>>(
+    () => new Set(),
+  );
+  const [overviewEdgeKinds, setOverviewEdgeKinds] = useState<Set<EdgeKind>>(
+    () => new Set(),
+  );
   const [drawProgress, setDrawProgress] = useState({
     nodes: 0,
     edges: 0,
     actualFps: 0,
     renderMs: 0,
   });
+  const [acquisitionPage, setAcquisitionPage] = useState(0);
 
   // Acquisition may advance as fast as the service responds; GraphView reveals
   // the resulting topology on its own 24 fps cadence.
   const acc = useRef<LoadState>({
     nodes: new Map(),
     edges: new Map(),
+    specificationCount: 0,
     nextToken: "",
     total: 0,
     reachedEnd: false,
   });
   const inFlight = useRef(false);
+  const overviewWaitingEdges = useRef(new Map<string, GraphEdge>());
+  const overviewDrawableEdges = useRef(new Set<string>());
   const ledgerAcc = useRef({
     nodes: new Map<string, GraphNode>(),
     edges: new Map<string, GraphEdge>(),
@@ -384,38 +422,88 @@ export default function Page() {
   });
   const ledgerInFlight = useRef(false);
 
-  const publishGraph = useCallback(() => {
+  const publishGraph = useCallback((
+    appendedNodes: GraphNode[],
+    appendedEdges: GraphEdge[],
+  ) => {
     const accumulated = acc.current;
-    const nextNodes = Array.from(accumulated.nodes.values()).slice(0, RENDER_CAP);
-    const visible = new Set(nextNodes.map((node) => node.id));
-    setNodes(nextNodes);
-    const nextEdges = Array.from(accumulated.edges.values()).filter(
-      (edge) =>
-        visible.has(edge.source) &&
-        visible.has(edge.target) &&
-        (!edge.reliedSpecId || visible.has(edge.reliedSpecId)),
-    );
-    setEdges(nextEdges);
-    setOverviewGraph((previous) =>
-      extendCandidateOverview(previous, nextNodes, nextEdges),
-    );
+    // This state is a durable acquisition buffer, not the presentation batch.
+    // Functional append prevents React from coalescing two fast page responses
+    // into one replacement and losing the earlier page. GraphView remembers
+    // the IDs it has already sent to the Worker and consumes only new entries.
+    setOverviewAppend((current) => ({
+      nodes: [...current.nodes, ...appendedNodes],
+      edges: [...current.edges, ...appendedEdges],
+    }));
+    setOverviewSpecificationCount(accumulated.specificationCount);
+    if (appendedNodes.some((node) => node.nodeKind === "specification")) {
+      setOverviewSpeechActs((current) => {
+        const next = new Set(current);
+        for (const node of appendedNodes) {
+          if (node.nodeKind === "specification") next.add(node.speechAct);
+        }
+        return next.size === current.size ? current : next;
+      });
+    }
+    for (const edge of appendedEdges) {
+      overviewWaitingEdges.current.set(edge.id, edge);
+    }
+    const addedEdgeKinds: EdgeKind[] = [];
+    for (const [edgeId, edge] of overviewWaitingEdges.current) {
+      const source = accumulated.nodes.get(edge.source);
+      const target = accumulated.nodes.get(edge.target);
+      if (!source || !target) continue;
+      overviewWaitingEdges.current.delete(edgeId);
+      if (
+        source.nodeKind !== "specification" ||
+        target.nodeKind !== "specification"
+      ) {
+        continue;
+      }
+      overviewDrawableEdges.current.add(edgeId);
+      addedEdgeKinds.push(edge.kind);
+    }
+    setOverviewEdgeCount(overviewDrawableEdges.current.size);
+    if (addedEdgeKinds.length > 0) {
+      setOverviewEdgeKinds((current) => {
+        const next = new Set(current);
+        for (const kind of addedEdgeKinds) next.add(kind);
+        return next.size === current.size ? current : next;
+      });
+    }
+    // Diagnostic projections are unrelated to the default presentation
+    // clock. Keep them out of React entirely until the user opens one; while a
+    // diagnostic is open, append only its page delta at transition priority.
+    if (viewRef.current !== "all") {
+      startTransition(() => {
+        if (appendedNodes.length > 0) {
+          setNodes((current) => [...current, ...appendedNodes]);
+        }
+        if (appendedEdges.length > 0) {
+          setEdges((current) => [...current, ...appendedEdges]);
+        }
+      });
+    }
     setTotal(accumulated.total);
     setReachedEnd(accumulated.reachedEnd);
   }, []);
 
-  // Fetch exactly one page per request. The continuation effect starts the next
-  // request immediately; it never waits for the drawing queue to catch up.
+  // Fetch exactly one page per request and publish it immediately. The explicit
+  // page counter advances continuation even if a page only repeats connector
+  // Nodes and therefore does not change the accumulated Node count.
   const loadBatch = useCallback(async () => {
     if (inFlight.current) return;
     if (acc.current.reachedEnd) return;
-    if (acc.current.nodes.size >= RENDER_CAP) return;
+    const loadedSpecifications = () => acc.current.specificationCount;
+    if (loadedSpecifications() >= RENDER_CAP) return;
     inFlight.current = true;
     setLoading(true);
     setError(null);
 
     try {
-      const params = new URLSearchParams({ pageSize: String(PAGE_SIZE) });
-      if (acc.current.nextToken) params.set("pageToken", acc.current.nextToken);
+      const requestedToken = acc.current.nextToken;
+      const params = new URLSearchParams({pageSize: String(PAGE_SIZE)});
+      if (requestedToken) params.set("pageToken", requestedToken);
       const res = await fetch(`/api/graph?${params.toString()}`, {
         cache: "no-store",
       });
@@ -426,12 +514,43 @@ export default function Page() {
         throw new Error(body.error ?? `graph request failed (${res.status})`);
       }
       const page = (await res.json()) as GraphPage;
-      for (const n of page.nodes) acc.current.nodes.set(n.id, n);
-      for (const e of page.edges) acc.current.edges.set(e.id, e);
+      const appendedNodes: GraphNode[] = [];
+      const appendedEdges: GraphEdge[] = [];
+      for (const node of page.nodes) {
+        if (acc.current.nodes.has(node.id)) continue;
+        if (
+          node.nodeKind === "specification" &&
+          acc.current.specificationCount >= RENDER_CAP
+        ) {
+          continue;
+        }
+        acc.current.nodes.set(node.id, node);
+        appendedNodes.push(node);
+        if (node.nodeKind === "specification") {
+          acc.current.specificationCount += 1;
+        }
+      }
+      for (const edge of page.edges) {
+        if (acc.current.edges.has(edge.id)) continue;
+        acc.current.edges.set(edge.id, edge);
+        appendedEdges.push(edge);
+      }
       acc.current.total = page.totalNodes;
       acc.current.nextToken = page.nextPageToken;
-      if (!page.nextPageToken) acc.current.reachedEnd = true;
-      publishGraph();
+      if (page.nextPageToken === requestedToken && page.nextPageToken) {
+        throw new Error("graph pagination returned the same continuation token");
+      }
+      if (!page.nextPageToken) {
+        const specificationCount = loadedSpecifications();
+        if (specificationCount < page.totalNodes) {
+          throw new Error(
+            `graph pagination ended at ${specificationCount} of ${page.totalNodes} Specifications`,
+          );
+        }
+        acc.current.reachedEnd = true;
+      }
+      publishGraph(appendedNodes, appendedEdges);
+      setAcquisitionPage((pageNumber) => pageNumber + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "failed to load the graph");
     } finally {
@@ -493,12 +612,17 @@ export default function Page() {
 
   // Continue automatically without coupling acquisition to drawing progress.
   useEffect(() => {
-    if (error || reachedEnd || nodes.length >= RENDER_CAP || inFlight.current) {
+    if (
+      error ||
+      reachedEnd ||
+      acc.current.specificationCount >= RENDER_CAP ||
+      inFlight.current
+    ) {
       return;
     }
     const timer = window.setTimeout(() => void loadBatch(), 0);
     return () => window.clearTimeout(timer);
-  }, [error, loadBatch, loading, nodes.length, reachedEnd]);
+  }, [acquisitionPage, error, loadBatch, loading, reachedEnd]);
 
   useEffect(() => {
     if (
@@ -514,27 +638,41 @@ export default function Page() {
     return () => window.clearTimeout(timer);
   }, [error, ledgerEdges.length, ledgerLoading, ledgerReachedEnd, loadLedger, view]);
 
+  const diagnosticsActive = view !== "all";
   const specifications = useMemo(
-    () => nodes.filter((node) => node.nodeKind === "specification"),
-    [nodes],
+    () =>
+      diagnosticsActive
+        ? nodes.filter((node) => node.nodeKind === "specification")
+        : [],
+    [diagnosticsActive, nodes],
   );
   const semanticEdges = useMemo(
-    () => edges.filter((edge) => edge.family === "semantic"),
-    [edges],
+    () =>
+      diagnosticsActive
+        ? edges.filter((edge) => edge.family === "semantic")
+        : [],
+    [diagnosticsActive, edges],
   );
   const vocabularyEdges = useMemo(
-    () => edges.filter((edge) => edge.family === "lexical"),
-    [edges],
+    () =>
+      diagnosticsActive
+        ? edges.filter((edge) => edge.family === "lexical")
+        : [],
+    [diagnosticsActive, edges],
   );
   const selectionEdges = useMemo(
-    () => edges.filter((edge) => edge.family === "selection"),
-    [edges],
+    () =>
+      diagnosticsActive
+        ? edges.filter((edge) => edge.family === "selection")
+        : [],
+    [diagnosticsActive, edges],
   );
   const pairingEdges = useMemo(
     () => semanticEdges.filter((edge) => PAIRING_EDGE_KINDS.has(edge.kind)),
     [semanticEdges],
   );
   const contractEdges = useMemo(() => {
+    if (!diagnosticsActive) return [];
     const targets = new Set(pairingEdges.map((edge) => edge.target));
     const projections = edges.filter(
       (edge) =>
@@ -542,7 +680,7 @@ export default function Page() {
         (edge.kind === "has_assumption" || edge.kind === "has_guarantee"),
     );
     return [...pairingEdges, ...projections];
-  }, [edges, pairingEdges]);
+  }, [diagnosticsActive, edges, pairingEdges]);
   const refinementEdges = useMemo(
     () => semanticEdges.filter((edge) => edge.kind === "refines"),
     [semanticEdges],
@@ -567,7 +705,7 @@ export default function Page() {
   const viewGraph = useMemo(() => {
     switch (view) {
       case "all":
-        return overviewGraph;
+        return {nodes: [] as GraphNode[], edges: [] as GraphEdge[]};
       case "semantic":
         return boundedTopology(nodes, semanticEdges);
       case "vocabulary":
@@ -605,6 +743,7 @@ export default function Page() {
         return candidateOverview(
           [...new Map([...nodes, ...ledgerNodes].map((node) => [node.id, node])).values()],
           ledgerEdges,
+          true,
         );
       case "current":
         {
@@ -634,7 +773,6 @@ export default function Page() {
     edges,
     isolatedNodes,
     nodes,
-    overviewGraph,
     refinementEdges,
     semanticEdges,
     selectionEdges,
@@ -646,21 +784,52 @@ export default function Page() {
     vocabularyEdges,
   ]);
 
-  const present = useMemo(() => {
+  const diagnosticPresent = useMemo(() => {
     const s = new Set<SpeechAct>();
     for (const n of viewGraph.nodes) {
       if (n.nodeKind === "specification") s.add(n.speechAct);
     }
     return s;
   }, [viewGraph.nodes]);
-  const loadedSpecifications = specifications.length;
-  const presentEdges = useMemo(
-    () => new Set<EdgeKind>(viewGraph.edges.map((edge) => edge.kind)),
-    [viewGraph.edges],
+  const present = view === "all" ? overviewSpeechActs : diagnosticPresent;
+  const loadedSpecifications =
+    view === "all" ? overviewSpecificationCount : specifications.length;
+  const connectorsAreLayoutOnly = view === "all";
+  const viewNodeKinds = useMemo(
+    () =>
+      connectorsAreLayoutOnly
+        ? new Map<string, GraphNode["nodeKind"]>()
+        : new Map(viewGraph.nodes.map((node) => [node.id, node.nodeKind])),
+    [connectorsAreLayoutOnly, viewGraph.nodes],
   );
+  const isPresentedEdge = useCallback(
+    (edge: GraphEdge) =>
+      !connectorsAreLayoutOnly ||
+      (viewNodeKinds.get(edge.source) === "specification" &&
+        viewNodeKinds.get(edge.target) === "specification"),
+    [connectorsAreLayoutOnly, viewNodeKinds],
+  );
+  const presentedNodeTotal = connectorsAreLayoutOnly
+    ? overviewSpecificationCount
+    : viewGraph.nodes.length;
+  const presentedEdgeTotal = connectorsAreLayoutOnly
+    ? overviewEdgeCount
+    : viewGraph.edges.length;
+  const diagnosticPresentEdges = useMemo(
+    () =>
+      new Set<EdgeKind>(
+        viewGraph.edges
+          .filter(isPresentedEdge)
+          .map((edge) => edge.kind),
+      ),
+    [isPresentedEdge, viewGraph.edges],
+  );
+  const presentEdges = connectorsAreLayoutOnly
+    ? overviewEdgeKinds
+    : diagnosticPresentEdges;
   const viewCounts = useMemo<Record<GraphViewMode, number | null>>(
     () => ({
-      all: specifications.length,
+      all: overviewSpecificationCount,
       semantic: semanticEdges.length,
       vocabulary: vocabularyEdges.length,
       refinement: refinementEdges.length,
@@ -683,6 +852,7 @@ export default function Page() {
       pairingEdges.length,
       ledgerEdges.length,
       ledgerTotal,
+      overviewSpecificationCount,
       vocabularyEdges.length,
     ],
   );
@@ -713,14 +883,33 @@ export default function Page() {
   const complete = showingLedger ? ledgerReachedEnd : reachedEnd;
   const atHardCap = showingLedger
     ? ledgerEdges.length >= RENDER_CAP && !ledgerReachedEnd
-    : nodes.length >= RENDER_CAP && !reachedEnd;
+    : overviewSpecificationCount >= RENDER_CAP && !reachedEnd;
   const copy = VIEW_COPY[view];
+  const topologyReady =
+    complete &&
+    (!connectorsAreLayoutOnly ||
+      isCompleteDefaultTopology(complete, presentedNodeTotal, total));
 
   const changeView = useCallback((next: GraphViewMode) => {
     setSelected(null);
-    setDrawProgress({ nodes: 0, edges: 0, actualFps: 0, renderMs: 0 });
+    setDrawProgress({
+      nodes: 0,
+      edges: 0,
+      actualFps: 0,
+      renderMs: 0,
+    });
+    if (next === "all" && view !== "all") {
+      setOverviewAppend({
+        nodes: Array.from(acc.current.nodes.values()),
+        edges: Array.from(acc.current.edges.values()),
+      });
+    } else if (next !== "all" && view === "all") {
+      setNodes(Array.from(acc.current.nodes.values()));
+      setEdges(Array.from(acc.current.edges.values()));
+    }
+    viewRef.current = next;
     setView(next);
-  }, []);
+  }, [view]);
   const updateDrawProgress = useCallback(
     (
       drawnNodes: number,
@@ -747,19 +936,37 @@ export default function Page() {
     [],
   );
   const drawing =
-    drawProgress.nodes < viewGraph.nodes.length ||
-    drawProgress.edges < viewGraph.edges.length;
+    drawProgress.nodes < presentedNodeTotal ||
+    drawProgress.edges < presentedEdgeTotal;
+  const graphViewNodes = view === "all" ? overviewAppend.nodes : viewGraph.nodes;
+  const graphViewEdges = view === "all" ? overviewAppend.edges : viewGraph.edges;
+  const supportContexts = useMemo(
+    () => deriveSupportContexts(graphViewNodes),
+    [graphViewNodes],
+  );
+  const selectedSupportContexts = useMemo(() => {
+    if (!selected) return [];
+    const contextIds = new Set(
+      supportContexts.membership.get(selected.id) ?? [],
+    );
+    return supportContexts.contexts.filter((context) =>
+      contextIds.has(context.id),
+    );
+  }, [selected, supportContexts]);
 
   return (
     <main className="stage">
-      {viewGraph.nodes.length > 0 && (
+      {graphViewNodes.length > 0 && (
         <GraphView
           key={view}
-          nodes={viewGraph.nodes}
-          links={viewGraph.edges}
+          nodes={graphViewNodes}
+          links={graphViewEdges}
+          supportContexts={supportContexts}
           onSelect={setSelected}
           onDrawProgress={updateDrawProgress}
           withInspector={view !== "all"}
+          hideLayoutConnectors={connectorsAreLayoutOnly}
+          topologyComplete={topologyReady}
         />
       )}
 
@@ -770,11 +977,14 @@ export default function Page() {
             <strong>{copy.title}</strong> · {copy.description}
             <span className="scope">
               Drawing {drawProgress.nodes.toLocaleString()} of{" "}
-              {viewGraph.nodes.length.toLocaleString()} nodes ·{" "}
+              {presentedNodeTotal.toLocaleString()} visible nodes ·{" "}
               {drawProgress.edges.toLocaleString()} of{" "}
-              {viewGraph.edges.length.toLocaleString()} edges · 3D · target 24 fps
+              {presentedEdgeTotal.toLocaleString()} visible edges · XY · target 24 fps
               {drawProgress.actualFps > 0
                 ? ` · actual ${drawProgress.actualFps.toFixed(1)} fps · submit ${drawProgress.renderMs.toFixed(1)} ms`
+                : ""}
+              {supportContexts.contexts.length > 0
+                ? ` · ${supportContexts.contexts.length.toLocaleString()} support contexts · ${supportContexts.contextualizedNodeCount.toLocaleString()} contextualized`
                 : ""}
             </span>
           </p>
@@ -794,8 +1004,14 @@ export default function Page() {
 
       <Legend
         present={present}
-        termPresent={viewGraph.nodes.some((node) => node.nodeKind === "term")}
+        termPresent={
+          !connectorsAreLayoutOnly &&
+          viewGraph.nodes.some((node) => node.nodeKind === "term")
+        }
         edgePresent={presentEdges}
+        supportContextCount={supportContexts.contexts.length}
+        contextualizedNodeCount={supportContexts.contextualizedNodeCount}
+        sharedFoundationCount={supportContexts.sharedFoundationCount}
       />
 
       <RelationPanel
@@ -835,10 +1051,31 @@ export default function Page() {
             {selected.nodeKind === "term"
               ? "Written term form · lexical connector"
               : selected.nodeKind === "specification"
-                ? `${SPEECH_ACT_LABELS[selected.speechAct]} · ${selected.current ? "current" : "non-current"} · fitness ${selected.supportScore >= 0 ? "+" : ""}${selected.supportScore} (${selected.evidenceScore >= 0 ? "+" : ""}${selected.evidenceScore} Evidence, ${selected.relationScore >= 0 ? "+" : ""}${selected.relationScore} relations) · ${selected.policyVersion || "policy unavailable"}`
+                ? `${SPEECH_ACT_LABELS[selected.speechAct]} · ${selected.evaluationState ?? (selected.current ? "current" : "receded")} · fitness ${selected.supportScore >= 0 ? "+" : ""}${selected.supportScore} (${selected.structuralScore ?? 0} structural, ${selected.evidenceScore >= 0 ? "+" : ""}${selected.evidenceScore} Evidence, -${selected.conflictPressure ?? 0} conflict) · ${selected.policyVersion || "policy unavailable"}`
                 : `${selected.nodeKind[0].toUpperCase()}${selected.nodeKind.slice(1)} node · shared content-addressed projection`}
           </div>
           <div className="statement">{selected.statement}</div>
+          {selectedSupportContexts.length > 0 && (
+            <div className="support-context-detail">
+              <strong>
+                {selectedSupportContexts.length === 1
+                  ? "Support context"
+                  : `${selectedSupportContexts.length} overlapping support contexts`}
+              </strong>
+              {selectedSupportContexts.slice(0, 4).map((context) => (
+                <div key={context.id}>
+                  <span>{context.memberIds.length} specifications</span>
+                  {context.anchorIds.includes(selected.id)
+                    ? " · anchor"
+                    : " · supports"}{" "}
+                  “{context.anchorStatement}”
+                </div>
+              ))}
+              {selectedSupportContexts.length > 4 && (
+                <div>+{selectedSupportContexts.length - 4} more contexts</div>
+              )}
+            </div>
+          )}
           {selected.nodeKind === "specification" && (
             <div className="fitness-detail">
               {selected.contributions.map((contribution) => (
@@ -862,8 +1099,9 @@ export default function Page() {
       )}
 
       {!loading &&
-        nodes.length > 0 &&
+        overviewSpecificationCount > 0 &&
         viewGraph.nodes.length === 0 &&
+        view !== "all" &&
         !error && (
           <div className="view-empty">
             <div className="panel">
@@ -873,7 +1111,7 @@ export default function Page() {
           </div>
         )}
 
-      {!loading && nodes.length === 0 && !error && (
+      {!loading && overviewSpecificationCount === 0 && !error && (
         <div className="overlay">
           <div className="panel">
             <h2>No nodes yet</h2>

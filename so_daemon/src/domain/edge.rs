@@ -19,6 +19,8 @@ pub enum VertexKind {
     Assumption,
     Guarantee,
     Contract,
+    Entity,
+    Behavior,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,6 +32,8 @@ pub enum EdgeFamily {
     Semantic,
     /// A deterministic projection from an authored sentence or its grounding.
     Projection,
+    /// A manually asserted epistemic judgment whose source is Evidence.
+    Epistemic,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,7 +44,7 @@ pub enum EndpointRole {
     Unspecified,
     Mentioner,
     MentionedTerm,
-    /// Either specification in the historical symmetric same-lexeme relation.
+    /// Either specification in a symmetric lexical-affinity relation.
     LexemePeer,
     Refiner,
     Refined,
@@ -68,16 +72,28 @@ pub enum EndpointRole {
     QuotientResult,
     MergeOperand,
     MergeResult,
+    OperationalSpecification,
+    OperationalBehavior,
+    WitnessingBehavior,
+    WitnessedEntity,
+    EngagingBehavior,
+    EngagedEntity,
+    AffirmingEvidence,
+    AffirmedSpecification,
+    AffirmedEvidence,
+    DenyingEvidence,
+    DeniedSpecification,
+    DeniedEvidence,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EdgeKind {
     /// A specification contains one occurrence of a normalized term form.
     MentionsTerm,
-    /// Historical symmetric lexical relation between specifications that share
-    /// a normalized lexeme. Retained because the append-only Ledger may contain
-    /// this concrete Edge even though current producers use `MentionsTerm`.
+    /// Symmetric lexical relation between specifications that share an exact
+    /// term form or at least two normalized lexical atoms. This records wording
+    /// affinity only; it does not claim referent identity or semantic entailment.
     SameLexeme,
     /// The source specification is the concrete refinement of the target.
     Refines,
@@ -100,6 +116,10 @@ pub enum EdgeKind {
     AdmissibilityEnvelope,
     /// The target Evidence vertex grounds the source specification.
     GroundedBy,
+    /// The source Evidence affirms the target Specification or Evidence.
+    EvidenceAffirms,
+    /// The source Evidence denies the target Specification or Evidence.
+    EvidenceDenies,
     /// The target is the assumption side of the source specification's contract.
     HasAssumption,
     /// The target is the guarantee side of the source specification's contract.
@@ -118,6 +138,14 @@ pub enum EdgeKind {
     QuotientDivisor,
     /// An operand used to derive a viewpoint merge.
     MergeOperand,
+    /// The target is the operational Behavior projection of the source
+    /// authored specification.
+    HasBehavior,
+    /// The source Behavior necessarily involves at least one instance of the
+    /// target Entity under an affirmative binding claim.
+    WitnessesEntity,
+    /// The source Behavior governs or reacts to the target Entity.
+    EngagesEntity,
 }
 
 impl EdgeKind {
@@ -135,6 +163,8 @@ impl EdgeKind {
             Self::GuaranteeDischarge => "guarantee_discharge",
             Self::AdmissibilityEnvelope => "admissibility_envelope",
             Self::GroundedBy => "grounded_by",
+            Self::EvidenceAffirms => "evidence_affirms",
+            Self::EvidenceDenies => "evidence_denies",
             Self::HasAssumption => "has_assumption",
             Self::HasGuarantee => "has_guarantee",
             Self::HasContract => "has_contract",
@@ -144,6 +174,9 @@ impl EdgeKind {
             Self::QuotientDividend => "quotient_dividend",
             Self::QuotientDivisor => "quotient_divisor",
             Self::MergeOperand => "merge_operand",
+            Self::HasBehavior => "has_behavior",
+            Self::WitnessesEntity => "witnesses_entity",
+            Self::EngagesEntity => "engages_entity",
         }
     }
 
@@ -166,7 +199,11 @@ impl EdgeKind {
             | Self::CompositionOperand
             | Self::QuotientDividend
             | Self::QuotientDivisor
-            | Self::MergeOperand => EdgeFamily::Projection,
+            | Self::MergeOperand
+            | Self::HasBehavior
+            | Self::WitnessesEntity
+            | Self::EngagesEntity => EdgeFamily::Projection,
+            Self::EvidenceAffirms | Self::EvidenceDenies => EdgeFamily::Epistemic,
             Self::ContractRefines | Self::ContractEquivalent => EdgeFamily::Semantic,
         }
     }
@@ -194,6 +231,11 @@ impl EdgeKind {
                 EndpointRole::BoundedContract,
             ),
             Self::GroundedBy => (EndpointRole::GroundedSpecification, EndpointRole::Evidence),
+            Self::EvidenceAffirms => (
+                EndpointRole::AffirmingEvidence,
+                EndpointRole::AffirmedEvidence,
+            ),
+            Self::EvidenceDenies => (EndpointRole::DenyingEvidence, EndpointRole::DeniedEvidence),
             Self::HasAssumption => (
                 EndpointRole::ContractSpecification,
                 EndpointRole::Assumption,
@@ -214,6 +256,15 @@ impl EdgeKind {
             }
             Self::QuotientDivisor => (EndpointRole::QuotientDivisor, EndpointRole::QuotientResult),
             Self::MergeOperand => (EndpointRole::MergeOperand, EndpointRole::MergeResult),
+            Self::HasBehavior => (
+                EndpointRole::OperationalSpecification,
+                EndpointRole::OperationalBehavior,
+            ),
+            Self::WitnessesEntity => (
+                EndpointRole::WitnessingBehavior,
+                EndpointRole::WitnessedEntity,
+            ),
+            Self::EngagesEntity => (EndpointRole::EngagingBehavior, EndpointRole::EngagedEntity),
         }
     }
 
@@ -227,6 +278,8 @@ impl EdgeKind {
                 | Self::GuaranteeDischarge
                 | Self::AdmissibilityEnvelope
                 | Self::GroundedBy
+                | Self::EvidenceAffirms
+                | Self::EvidenceDenies
                 | Self::HasAssumption
                 | Self::HasGuarantee
                 | Self::HasContract
@@ -235,6 +288,9 @@ impl EdgeKind {
                 | Self::QuotientDividend
                 | Self::QuotientDivisor
                 | Self::MergeOperand
+                | Self::HasBehavior
+                | Self::WitnessesEntity
+                | Self::EngagesEntity
         )
     }
 }
@@ -310,6 +366,7 @@ impl Edge {
             EdgeKind::HasAssumption => VertexKind::Assumption,
             EdgeKind::HasGuarantee => VertexKind::Guarantee,
             EdgeKind::HasContract => VertexKind::Contract,
+            EdgeKind::HasBehavior => VertexKind::Behavior,
             _ => return Err("projection construction requires a projection EdgeKind".into()),
         };
         let (source_role, target_role) = kind.endpoint_roles();
@@ -320,6 +377,142 @@ impl Edge {
             source_role,
             target: target.to_string(),
             target_kind,
+            target_role,
+            kind,
+            source_anchor: None,
+            target_anchor: None,
+            relied_spec_id: None,
+            basis_spec_ids: Vec::new(),
+            derivation,
+            recorded_at: recorded_at.to_string(),
+        };
+        edge.id = edge.identity_key();
+        edge.validate()?;
+        Ok(edge)
+    }
+
+    /// Build a deterministic operational Behavior-to-Entity role projection.
+    pub fn operational_role(
+        kind: EdgeKind,
+        behavior: &str,
+        entity: &str,
+        derivation: Derivation,
+        recorded_at: &str,
+    ) -> Result<Self, String> {
+        if !matches!(kind, EdgeKind::WitnessesEntity | EdgeKind::EngagesEntity) {
+            return Err(
+                "operational role construction requires an operational role EdgeKind".into(),
+            );
+        }
+        let (source_role, target_role) = kind.endpoint_roles();
+        let mut edge = Self {
+            id: String::new(),
+            source: behavior.to_string(),
+            source_kind: VertexKind::Behavior,
+            source_role,
+            target: entity.to_string(),
+            target_kind: VertexKind::Entity,
+            target_role,
+            kind,
+            source_anchor: None,
+            target_anchor: None,
+            relied_spec_id: None,
+            basis_spec_ids: Vec::new(),
+            derivation,
+            recorded_at: recorded_at.to_string(),
+        };
+        edge.id = edge.identity_key();
+        edge.validate()?;
+        Ok(edge)
+    }
+
+    /// Build a manually asserted Evidence judgment. Evidence is always the
+    /// source; the target may be an authored Specification or another Evidence
+    /// value. Target-specific endpoint roles keep those two claims explicit.
+    pub fn evidence_relation(
+        kind: EdgeKind,
+        evidence: &str,
+        target: &str,
+        target_kind: VertexKind,
+        derivation: Derivation,
+        recorded_at: &str,
+    ) -> Result<Self, String> {
+        if !matches!(kind, EdgeKind::EvidenceAffirms | EdgeKind::EvidenceDenies) {
+            return Err("evidence relation requires an Evidence judgment EdgeKind".into());
+        }
+        if !matches!(
+            target_kind,
+            VertexKind::Specification | VertexKind::Evidence
+        ) {
+            return Err("Evidence may affirm or deny only Specification or Evidence".into());
+        }
+        if target_kind == VertexKind::Evidence && evidence == target {
+            return Err("Evidence cannot affirm or deny itself".into());
+        }
+        let (source_role, target_role) = match (kind, target_kind) {
+            (EdgeKind::EvidenceAffirms, VertexKind::Specification) => (
+                EndpointRole::AffirmingEvidence,
+                EndpointRole::AffirmedSpecification,
+            ),
+            (EdgeKind::EvidenceAffirms, VertexKind::Evidence) => (
+                EndpointRole::AffirmingEvidence,
+                EndpointRole::AffirmedEvidence,
+            ),
+            (EdgeKind::EvidenceDenies, VertexKind::Specification) => (
+                EndpointRole::DenyingEvidence,
+                EndpointRole::DeniedSpecification,
+            ),
+            (EdgeKind::EvidenceDenies, VertexKind::Evidence) => {
+                (EndpointRole::DenyingEvidence, EndpointRole::DeniedEvidence)
+            }
+            _ => unreachable!("target kind checked above"),
+        };
+        let mut edge = Self {
+            id: String::new(),
+            source: evidence.to_string(),
+            source_kind: VertexKind::Evidence,
+            source_role,
+            target: target.to_string(),
+            target_kind,
+            target_role,
+            kind,
+            source_anchor: None,
+            target_anchor: None,
+            relied_spec_id: None,
+            basis_spec_ids: Vec::new(),
+            derivation,
+            recorded_at: recorded_at.to_string(),
+        };
+        edge.id = edge.identity_key();
+        edge.validate()?;
+        Ok(edge)
+    }
+
+    /// Build a symmetric specification-to-specification lexical fact. This
+    /// records only shared normalized wording; it is never a semantic claim.
+    pub fn lexical_relation(
+        source: &str,
+        target: &str,
+        derivation: Derivation,
+        recorded_at: &str,
+    ) -> Result<Self, String> {
+        if source == target {
+            return Err("a lexical relation cannot connect a specification to itself".into());
+        }
+        let (source, target) = if source <= target {
+            (source, target)
+        } else {
+            (target, source)
+        };
+        let kind = EdgeKind::SameLexeme;
+        let (source_role, target_role) = kind.endpoint_roles();
+        let mut edge = Self {
+            id: String::new(),
+            source: source.to_string(),
+            source_kind: VertexKind::Specification,
+            source_role,
+            target: target.to_string(),
+            target_kind: VertexKind::Specification,
             target_role,
             kind,
             source_anchor: None,
@@ -553,7 +746,17 @@ impl Edge {
     /// with the typed relationship it claims. Historical rows without roles
     /// remain deserializable, but no current producer may append another one.
     pub fn validate(&self) -> Result<(), String> {
-        let expected_roles = self.kind.endpoint_roles();
+        let expected_roles = match (self.kind, self.target_kind) {
+            (EdgeKind::EvidenceAffirms, VertexKind::Specification) => (
+                EndpointRole::AffirmingEvidence,
+                EndpointRole::AffirmedSpecification,
+            ),
+            (EdgeKind::EvidenceDenies, VertexKind::Specification) => (
+                EndpointRole::DenyingEvidence,
+                EndpointRole::DeniedSpecification,
+            ),
+            _ => self.kind.endpoint_roles(),
+        };
         let actual_roles = (self.source_role, self.target_role);
         if actual_roles != expected_roles {
             return Err(format!(
@@ -567,9 +770,25 @@ impl Edge {
         let expected_vertices = match self.kind {
             EdgeKind::MentionsTerm => (VertexKind::Specification, VertexKind::Term),
             EdgeKind::GroundedBy => (VertexKind::Specification, VertexKind::Evidence),
+            EdgeKind::EvidenceAffirms | EdgeKind::EvidenceDenies => {
+                if !matches!(
+                    self.target_kind,
+                    VertexKind::Specification | VertexKind::Evidence
+                ) {
+                    return Err(format!(
+                        "{} requires a Specification or Evidence target",
+                        self.kind.as_str()
+                    ));
+                }
+                (VertexKind::Evidence, self.target_kind)
+            }
             EdgeKind::HasAssumption => (VertexKind::Specification, VertexKind::Assumption),
             EdgeKind::HasGuarantee => (VertexKind::Specification, VertexKind::Guarantee),
             EdgeKind::HasContract => (VertexKind::Specification, VertexKind::Contract),
+            EdgeKind::HasBehavior => (VertexKind::Specification, VertexKind::Behavior),
+            EdgeKind::WitnessesEntity | EdgeKind::EngagesEntity => {
+                (VertexKind::Behavior, VertexKind::Entity)
+            }
             EdgeKind::ContractRefines
             | EdgeKind::ContractEquivalent
             | EdgeKind::CompositionOperand
@@ -594,6 +813,13 @@ impl Edge {
                 self.kind.as_str()
             ));
         }
+        if matches!(
+            self.kind,
+            EdgeKind::EvidenceAffirms | EdgeKind::EvidenceDenies
+        ) && self.source == self.target
+        {
+            return Err("Evidence cannot affirm or deny itself".into());
+        }
         if self.kind.is_pairing() != self.relied_spec_id.is_some() {
             return Err(format!(
                 "{} {} an explicit relied specification",
@@ -615,7 +841,14 @@ impl Edge {
     /// independently of its typed argument order, so a complete Node-page walk
     /// returns every Edge exactly once even when endpoints span pages.
     pub fn page_owner(&self) -> &str {
-        if self.source_kind == VertexKind::Contract {
+        if self.source_kind == VertexKind::Evidence && self.target_kind == VertexKind::Specification
+        {
+            return &self.target;
+        }
+        if matches!(
+            self.source_kind,
+            VertexKind::Contract | VertexKind::Behavior
+        ) {
             return self
                 .basis_spec_ids
                 .iter()
@@ -724,6 +957,55 @@ mod tests {
         for kind in ["supports", "defeats", "supersedes"] {
             assert!(serde_json::from_value::<EdgeKind>(kind.into()).is_err());
         }
+    }
+
+    #[test]
+    fn evidence_judgments_are_directed_and_target_typed() {
+        let derivation = Derivation {
+            method: "manual-evidence".into(),
+            version: "1".into(),
+        };
+        let specification = Edge::evidence_relation(
+            EdgeKind::EvidenceAffirms,
+            "evidence-a",
+            "spec-a",
+            VertexKind::Specification,
+            derivation.clone(),
+            "t",
+        )
+        .unwrap();
+        assert_eq!(specification.family(), EdgeFamily::Epistemic);
+        assert_eq!(
+            (specification.source_role, specification.target_role),
+            (
+                EndpointRole::AffirmingEvidence,
+                EndpointRole::AffirmedSpecification
+            )
+        );
+        assert_eq!(specification.page_owner(), "spec-a");
+
+        let evidence = Edge::evidence_relation(
+            EdgeKind::EvidenceDenies,
+            "evidence-b",
+            "evidence-a",
+            VertexKind::Evidence,
+            derivation,
+            "t",
+        )
+        .unwrap();
+        assert_eq!(
+            (evidence.source_role, evidence.target_role),
+            (EndpointRole::DenyingEvidence, EndpointRole::DeniedEvidence)
+        );
+        assert!(Edge::evidence_relation(
+            EdgeKind::EvidenceDenies,
+            "evidence-a",
+            "evidence-a",
+            VertexKind::Evidence,
+            Derivation::default(),
+            "t",
+        )
+        .is_err());
     }
 
     #[test]

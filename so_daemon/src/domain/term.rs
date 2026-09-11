@@ -14,6 +14,14 @@ pub struct TermNode {
     /// Determiner-free, canonical, lower-cased noun phrase.
     pub form: String,
     pub head: String,
+    /// Normalized lexical atoms used only for relation-candidate discovery.
+    ///
+    /// These atoms do not assert referent identity and do not become graph
+    /// vertices. Requiring multiple shared atoms lets discovery bridge surface
+    /// variants such as `AddSpecification` and `Add Specification` without
+    /// turning that heuristic into a semantic Edge.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub discovery_tokens: Vec<String>,
     pub lang_version: String,
     pub derivation_version: String,
 }

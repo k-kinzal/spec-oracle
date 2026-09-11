@@ -33,6 +33,8 @@ url.workspace = true
 percent-encoding.workspace = true
 clap.workspace = true
 tracing.workspace = true
+tree-sitter.workspace = true
+tree-sitter-cypher.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

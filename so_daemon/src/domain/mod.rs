@@ -20,7 +20,7 @@ pub use locator::{Kind, Locator};
 pub use node::{Evidence, Meta, MetaUpdate, Node};
 pub use origin::Origin;
 pub use selection::{
-    ExclusionKind, ScoreContribution, ScoreContributionKind, SelectionExclusion,
+    EvaluationState, ExclusionKind, ScoreContribution, ScoreContributionKind, SelectionExclusion,
     SelectionPopulation, SelectionView,
 };
 pub use snapshot::{Anchor, Snapshot};

@@ -59,12 +59,14 @@ declare module "d3-force-3d" {
   export interface Simulation<NodeDatum extends SimulationNodeDatum> {
     stop(): this;
     restart(): this;
+    tick(iterations?: number): this;
     nodes(nodes: NodeDatum[]): this;
     alpha(): number;
     alpha(value: number): this;
     alphaMin(value: number): this;
     alphaDecay(value: number): this;
     velocityDecay(value: number): this;
+    randomSource(source: () => number): this;
     force(name: string, force: Force<NodeDatum>): this;
     on(type: "tick" | "end", listener: () => void): this;
   }
@@ -89,10 +91,10 @@ declare module "d3-force-3d" {
     z?: number,
   ): ForceCenter<NodeDatum>;
   export function forceX<NodeDatum extends SimulationNodeDatum>(
-    x?: number,
+    x?: number | ((node: NodeDatum) => number),
   ): ForcePosition<NodeDatum>;
   export function forceY<NodeDatum extends SimulationNodeDatum>(
-    y?: number,
+    y?: number | ((node: NodeDatum) => number),
   ): ForcePosition<NodeDatum>;
   export function forceZ<NodeDatum extends SimulationNodeDatum>(
     z?: number,

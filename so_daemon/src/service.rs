@@ -20,16 +20,22 @@ use so_protocol::pb;
 use so_protocol::pb::specification_graph_server::SpecificationGraph;
 
 use crate::add::AddError;
-use crate::command_bus::{AddNodeInput, CommandBus, CommandBusError, StartGraphRebuildInput};
+use crate::command_bus::{
+    AddEvidenceRelationInput, AddNodeInput, CommandBus, CommandBusError, GraphCommandError,
+    StartGraphRebuildInput,
+};
 use crate::convert;
 use crate::store::{EdgePage, GraphStore, NodePage, StoreError};
 
 /// Page size used when the request leaves `page_size` at 0.
 const DEFAULT_PAGE_SIZE: u32 = 100;
 /// Hard cap on a page: the server never returns more nodes than this in one
-/// response, whatever the caller asks for. This is the backstop that keeps a
-/// graph read bounded no matter how large the graph grows.
-const MAX_PAGE_SIZE: u32 = 1000;
+/// response, whatever the caller asks for. A graph page also carries the
+/// current relation-assessment audit rows owned by its specifications, whose
+/// count is not bounded by Node count. At 1,000 Nodes a mature Ledger can
+/// exceed tonic's 64 MiB message limit, so the backstop stays at 100 and
+/// clients follow continuation tokens without data loss.
+const MAX_PAGE_SIZE: u32 = 100;
 
 type GraphReadResult = (
     NodePage,
@@ -99,6 +105,42 @@ impl SpecificationGraph for SpecificationGraphService {
         );
         so_tracing::set_span_parent_from_metadata(&span, request.metadata());
         async move { self.add_specification_inner(request).await }
+            .instrument(span)
+            .await
+    }
+
+    async fn add_evidence_relation(
+        &self,
+        request: Request<pb::AddEvidenceRelationRequest>,
+    ) -> Result<Response<pb::AddEvidenceRelationResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.add_evidence_relation",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "AddEvidenceRelation",
+            "evidence.target" = tracing::field::Empty,
+            "evidence.relation" = tracing::field::Empty,
+            "edge.id" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move { self.add_evidence_relation_inner(request).await }
+            .instrument(span)
+            .await
+    }
+
+    async fn query_evidence_graph(
+        &self,
+        request: Request<pb::QueryEvidenceGraphRequest>,
+    ) -> Result<Response<pb::QueryEvidenceGraphResponse>, Status> {
+        let span = tracing::info_span!(
+            "spec.daemon.query_evidence_graph",
+            "rpc.system" = "grpc",
+            "rpc.service" = "spec_oracle.v1.SpecificationGraph",
+            "rpc.method" = "QueryEvidenceGraph",
+            "evidence.page.node_count" = tracing::field::Empty,
+        );
+        so_tracing::set_span_parent_from_metadata(&span, request.metadata());
+        async move { self.query_evidence_graph_inner(request).await }
             .instrument(span)
             .await
     }
@@ -204,6 +246,109 @@ impl SpecificationGraph for SpecificationGraphService {
 }
 
 impl SpecificationGraphService {
+    async fn add_evidence_relation_inner(
+        &self,
+        request: Request<pb::AddEvidenceRelationRequest>,
+    ) -> Result<Response<pb::AddEvidenceRelationResponse>, Status> {
+        let req = request.into_inner();
+        let relation = match pb::EvidenceRelationKind::try_from(req.relation)
+            .unwrap_or(pb::EvidenceRelationKind::Unspecified)
+        {
+            pb::EvidenceRelationKind::Affirms => crate::evidence_graph::Relation::Affirms,
+            pb::EvidenceRelationKind::Denies => crate::evidence_graph::Relation::Denies,
+            pb::EvidenceRelationKind::Unspecified => {
+                return Err(Status::invalid_argument(
+                    "Evidence relation must be affirms or denies",
+                ))
+            }
+        };
+        let relation_name = match relation {
+            crate::evidence_graph::Relation::Affirms => "affirms",
+            crate::evidence_graph::Relation::Denies => "denies",
+        };
+        tracing::Span::current().record("evidence.target", req.target.as_str());
+        tracing::Span::current().record("evidence.relation", relation_name);
+        let client = if req.client.is_empty() {
+            "spec".into()
+        } else {
+            req.client
+        };
+        let client_version = if req.client_version.is_empty() {
+            "unknown".into()
+        } else {
+            req.client_version
+        };
+        let (_, result) = self
+            .commands
+            .add_evidence_relation(AddEvidenceRelationInput {
+                evidence: req.evidence,
+                target: req.target,
+                relation,
+                now: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                client,
+                client_version,
+            })
+            .await
+            .map_err(evidence_command_status)?;
+        tracing::Span::current().record("edge.id", result.edge.id.as_str());
+        Ok(Response::new(pb::AddEvidenceRelationResponse {
+            evidence_node: Some(convert::derived_node_to_pb(&result.evidence_node)),
+            edge: Some(convert::edge_to_pb(&result.edge)),
+            evidence_node_inserted: result.evidence_node_inserted,
+            edge_inserted: result.edge_inserted,
+        }))
+    }
+
+    async fn query_evidence_graph_inner(
+        &self,
+        request: Request<pb::QueryEvidenceGraphRequest>,
+    ) -> Result<Response<pb::QueryEvidenceGraphResponse>, Status> {
+        let req = request.into_inner();
+        let query = crate::graph_query::GraphQuery::parse(&req.query)
+            .and_then(|query| {
+                query.validate(&crate::evidence_graph::query_schema())?;
+                Ok(query)
+            })
+            .map_err(|error| Status::invalid_argument(error.to_string()))?;
+        let limit = clamp_page_size(req.page_size) as usize;
+        let after = (!req.page_token.is_empty()).then_some(req.page_token);
+        let nodes = self.nodes.clone();
+        let page = tokio::task::spawn_blocking(move || {
+            nodes.query_evidence_graph(&query, after.as_deref(), limit)
+        })
+        .await
+        .map_err(|error| Status::internal(format!("Evidence graph task failed: {error}")))?
+        .map_err(|error| Status::internal(error.to_string()))?;
+        tracing::Span::current().record(
+            "evidence.page.node_count",
+            page.selected_evidence_ids.len() as u64,
+        );
+        Ok(Response::new(pb::QueryEvidenceGraphResponse {
+            evidence_nodes: page
+                .evidence_nodes
+                .iter()
+                .map(convert::derived_node_to_pb)
+                .collect(),
+            edges: page.edges.iter().map(convert::edge_to_pb).collect(),
+            specification_nodes: page
+                .specification_nodes
+                .iter()
+                .map(convert::node_to_pb)
+                .collect(),
+            selected_evidence_ids: page.selected_evidence_ids,
+            next_page_token: page.next_cursor.unwrap_or_default(),
+            paths: page
+                .paths
+                .into_iter()
+                .map(|path| pb::GraphPath {
+                    id: path.id,
+                    node_ids: path.node_ids,
+                    edge_ids: path.edge_ids,
+                })
+                .collect(),
+        }))
+    }
+
     async fn get_ledger_inner(
         &self,
         request: Request<pb::GetLedgerRequest>,
@@ -239,7 +384,9 @@ impl SpecificationGraphService {
                         crate::domain::VertexKind::Evidence
                         | crate::domain::VertexKind::Assumption
                         | crate::domain::VertexKind::Guarantee
-                        | crate::domain::VertexKind::Contract => derived_ids.push(id.clone()),
+                        | crate::domain::VertexKind::Contract
+                        | crate::domain::VertexKind::Entity
+                        | crate::domain::VertexKind::Behavior => derived_ids.push(id.clone()),
                         crate::domain::VertexKind::Specification => {}
                     }
                 }
@@ -347,6 +494,7 @@ impl SpecificationGraphService {
         request: Request<pb::GetGraphRequest>,
     ) -> Result<Response<pb::GetGraphResponse>, Status> {
         let req = request.into_inner();
+        let include_relation_assessments = req.include_relation_assessments;
 
         // Resolve the page size against the server's own bounds: 0 means "use
         // the default", and any request is clamped to the hard maximum. The
@@ -379,7 +527,11 @@ impl SpecificationGraphService {
             let population = nodes.selection_population(&ids, &derivations)?;
             let selection = crate::selection::derive_views(&ids, &population);
             let edges = nodes.list_edges(&ids, &derivations)?;
-            let assessments = nodes.list_relation_assessments(&ids)?;
+            let assessments = if include_relation_assessments {
+                nodes.list_relation_assessments(&ids)?
+            } else {
+                Vec::new()
+            };
             let mut term_ids: Vec<String> = edges
                 .iter()
                 .filter(|edge| {
@@ -403,6 +555,8 @@ impl SpecificationGraphService {
                             | crate::domain::VertexKind::Assumption
                             | crate::domain::VertexKind::Guarantee
                             | crate::domain::VertexKind::Contract
+                            | crate::domain::VertexKind::Entity
+                            | crate::domain::VertexKind::Behavior
                     ) {
                         derived_ids.push(id.clone());
                     }
@@ -499,6 +653,25 @@ fn clamp_page_size(requested: u32) -> u32 {
         requested
     };
     size.clamp(1, MAX_PAGE_SIZE)
+}
+
+fn evidence_command_status(error: GraphCommandError) -> Status {
+    let message = error.to_string();
+    match error {
+        GraphCommandError::Evidence(
+            crate::evidence_graph::EvidenceRelationError::EmptyEvidence
+            | crate::evidence_graph::EvidenceRelationError::EmptyTarget
+            | crate::evidence_graph::EvidenceRelationError::Descriptor(_)
+            | crate::evidence_graph::EvidenceRelationError::MultipleDescriptors
+            | crate::evidence_graph::EvidenceRelationError::InvalidTarget(_)
+            | crate::evidence_graph::EvidenceRelationError::InvalidEdge(_),
+        ) => Status::invalid_argument(message),
+        GraphCommandError::Evidence(
+            crate::evidence_graph::EvidenceRelationError::MissingEvidence(_)
+            | crate::evidence_graph::EvidenceRelationError::MissingTarget(_),
+        ) => Status::not_found(message),
+        _ => Status::internal(message),
+    }
 }
 
 fn record_add_error(policy: so_tracing::CapturePolicy, error: &AddError) {
@@ -626,6 +799,55 @@ mod tests {
         }
     }
 
+    fn mark_graph_complete(store: &InMemoryNodeStore, id: &str) {
+        let updates = [
+            (
+                "test-term",
+                "term-projection",
+                serde_json::json!({
+                    "method": crate::graph_generation::TERM_DERIVATION_METHOD,
+                    "version": crate::graph_generation::GENERATION_VERSION,
+                    "operational_method": crate::graph_generation::OPERATIONAL_PROJECTION_METHOD,
+                    "operational_version": crate::graph_generation::operational_projection_derivation().version,
+                }),
+            ),
+            (
+                "test-contract",
+                "contract-projection",
+                serde_json::json!({
+                    "method": crate::graph_generation::CONTRACT_PROJECTION_METHOD,
+                    "version": crate::graph_generation::CONTRACT_PROJECTION_VERSION,
+                }),
+            ),
+            (
+                "test-semantic",
+                "semantic-relation",
+                serde_json::json!({
+                    "candidate_method": crate::graph_generation::CANDIDATE_METHOD,
+                    "candidate_version": crate::graph_generation::CANDIDATE_VERSION,
+                    "lexical_edge_method": crate::graph_generation::LEXICAL_AFFINITY_METHOD,
+                    "lexical_edge_version": crate::graph_generation::lexical_affinity_derivation().version,
+                    "edge_method": crate::graph_generation::SEMANTIC_EDGE_METHOD,
+                    "edge_version": crate::graph_generation::semantic_edge_derivation().version,
+                }),
+            ),
+        ];
+        for (command_id, source, value) in updates {
+            store
+                .apply_command_update(
+                    id,
+                    command_id,
+                    &crate::domain::MetaUpdate {
+                        source: source.into(),
+                        applied_at: "2026-01-01T00:00:00Z".into(),
+                        value,
+                    },
+                    None,
+                )
+                .unwrap();
+        }
+    }
+
     fn ground(store: &InMemoryNodeStore, specification: &str, kind: Kind, locator: &str) {
         let evidence = DerivedNode::evidence(Evidence {
             kind,
@@ -667,6 +889,7 @@ mod tests {
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 2,
                 page_token: String::new(),
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()
@@ -681,6 +904,7 @@ mod tests {
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 2,
                 page_token: resp.next_page_token.clone(),
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()
@@ -750,6 +974,7 @@ mod tests {
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 1,
                 page_token: String::new(),
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()
@@ -769,6 +994,7 @@ mod tests {
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 1,
                 page_token: first.next_page_token,
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()
@@ -796,11 +1022,12 @@ mod tests {
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 10,
                 page_token: String::new(),
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()
             .into_inner();
-        assert_eq!(response.derived_nodes.len(), 3);
+        assert_eq!(response.derived_nodes.len(), 5);
         assert!(response.edges.iter().any(|edge| {
             edge.kind == pb::EdgeKind::HasAssumption as i32
                 && edge.target_kind == pb::VertexKind::Assumption as i32
@@ -809,6 +1036,51 @@ mod tests {
             edge.kind == pb::EdgeKind::HasGuarantee as i32
                 && edge.target_kind == pb::VertexKind::Guarantee as i32
         }));
+        assert!(response.edges.iter().any(|edge| {
+            edge.kind == pb::EdgeKind::HasBehavior as i32
+                && edge.target_kind == pb::VertexKind::Behavior as i32
+        }));
+        assert!(response.edges.iter().any(|edge| {
+            edge.kind == pb::EdgeKind::EngagesEntity as i32
+                && edge.target_kind == pb::VertexKind::Entity as i32
+        }));
+
+        stop_runtime(commands, commands_task, events, events_task).await;
+    }
+
+    #[tokio::test]
+    async fn graph_page_returns_relation_assessments_only_when_requested() {
+        let store = Arc::new(InMemoryNodeStore::new());
+        for id in ["a", "b"] {
+            let specification = node(id);
+            store.add_node(&specification).unwrap();
+            crate::graph_generation::generate_and_persist(&specification, &*store, "t").unwrap();
+        }
+        let blobs = Arc::new(NoBlobs);
+        let (commands, commands_task, events, events_task) = start_runtime(store.clone(), blobs);
+        let service = SpecificationGraphService::new(store, commands.clone());
+
+        let ordinary = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+                include_relation_assessments: false,
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        assert!(ordinary.relation_assessments.is_empty());
+
+        let audited = service
+            .get_graph(Request::new(pb::GetGraphRequest {
+                page_size: 10,
+                page_token: String::new(),
+                include_relation_assessments: true,
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+        assert!(!audited.relation_assessments.is_empty());
 
         stop_runtime(commands, commands_task, events, events_task).await;
     }
@@ -818,6 +1090,8 @@ mod tests {
         let store = Arc::new(InMemoryNodeStore::new());
         store.add_node(&node("candidate-a")).unwrap();
         store.add_node(&node("candidate-z")).unwrap();
+        mark_graph_complete(&store, "candidate-a");
+        mark_graph_complete(&store, "candidate-z");
         let conflict = Edge::specification_relation(
             EdgeKind::HardContradiction,
             "candidate-a",
@@ -844,6 +1118,7 @@ mod tests {
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 10,
                 page_token: String::new(),
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()
@@ -869,6 +1144,7 @@ mod tests {
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 10,
                 page_token: String::new(),
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()
@@ -888,7 +1164,7 @@ mod tests {
             .selection
             .as_ref()
             .unwrap();
-        assert_eq!(winner.support_score, 9);
+        assert_eq!(winner.support_score, 18);
         assert_eq!(
             winner
                 .contributions
@@ -959,19 +1235,21 @@ mod tests {
             .unwrap();
         let first =
             wait_for_captured_evidence(&store, &accepted.id, None, Kind::Demonstrative, None).await;
+        mark_graph_complete(&store, &accepted.id);
         let first_hash = first.meta.evidence[0].snapshot.content_hash.clone();
 
         let graph = service
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 10,
                 page_token: String::new(),
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()
             .into_inner();
         let first_view = graph.nodes[0].selection.as_ref().unwrap();
         assert!(first_view.current);
-        assert_eq!(first_view.support_score, 8);
+        assert_eq!(first_view.support_score, 20);
         assert_eq!(first_view.contributions.len(), 1);
 
         // The descriptor is intentionally unchanged. The persisted request
@@ -1016,13 +1294,14 @@ mod tests {
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 10,
                 page_token: String::new(),
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()
             .into_inner();
         let view = graph.nodes[0].selection.as_ref().unwrap();
         assert!(!view.current);
-        assert_eq!(view.support_score, -8);
+        assert_eq!(view.support_score, -20);
         assert_eq!(view.contributions.len(), 1);
         assert_eq!(view.contributions[0].kind, "counter_evidence");
         assert_eq!(
@@ -1132,6 +1411,7 @@ mod tests {
             .get_graph(Request::new(pb::GetGraphRequest {
                 page_size: 10,
                 page_token: String::new(),
+                include_relation_assessments: false,
             }))
             .await
             .unwrap()

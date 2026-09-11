@@ -120,6 +120,8 @@ fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
         domain::EdgeKind::GuaranteeDischarge => pb::EdgeKind::GuaranteeDischarge,
         domain::EdgeKind::AdmissibilityEnvelope => pb::EdgeKind::AdmissibilityEnvelope,
         domain::EdgeKind::GroundedBy => pb::EdgeKind::GroundedBy,
+        domain::EdgeKind::EvidenceAffirms => pb::EdgeKind::EvidenceAffirms,
+        domain::EdgeKind::EvidenceDenies => pb::EdgeKind::EvidenceDenies,
         domain::EdgeKind::HasAssumption => pb::EdgeKind::HasAssumption,
         domain::EdgeKind::HasGuarantee => pb::EdgeKind::HasGuarantee,
         domain::EdgeKind::HasContract => pb::EdgeKind::HasContract,
@@ -129,6 +131,9 @@ fn edge_kind_to_pb(k: domain::EdgeKind) -> pb::EdgeKind {
         domain::EdgeKind::QuotientDividend => pb::EdgeKind::QuotientDividend,
         domain::EdgeKind::QuotientDivisor => pb::EdgeKind::QuotientDivisor,
         domain::EdgeKind::MergeOperand => pb::EdgeKind::MergeOperand,
+        domain::EdgeKind::HasBehavior => pb::EdgeKind::HasBehavior,
+        domain::EdgeKind::WitnessesEntity => pb::EdgeKind::WitnessesEntity,
+        domain::EdgeKind::EngagesEntity => pb::EdgeKind::EngagesEntity,
     }
 }
 
@@ -137,6 +142,7 @@ fn edge_family_to_pb(family: domain::EdgeFamily) -> pb::EdgeFamily {
         domain::EdgeFamily::Lexical => pb::EdgeFamily::Lexical,
         domain::EdgeFamily::Semantic => pb::EdgeFamily::Semantic,
         domain::EdgeFamily::Projection => pb::EdgeFamily::Projection,
+        domain::EdgeFamily::Epistemic => pb::EdgeFamily::Epistemic,
     }
 }
 
@@ -172,6 +178,20 @@ fn endpoint_role_to_pb(role: domain::EndpointRole) -> pb::EdgeEndpointRole {
         domain::EndpointRole::QuotientResult => pb::EdgeEndpointRole::QuotientResult,
         domain::EndpointRole::MergeOperand => pb::EdgeEndpointRole::MergeOperand,
         domain::EndpointRole::MergeResult => pb::EdgeEndpointRole::MergeResult,
+        domain::EndpointRole::OperationalSpecification => {
+            pb::EdgeEndpointRole::OperationalSpecification
+        }
+        domain::EndpointRole::OperationalBehavior => pb::EdgeEndpointRole::OperationalBehavior,
+        domain::EndpointRole::WitnessingBehavior => pb::EdgeEndpointRole::WitnessingBehavior,
+        domain::EndpointRole::WitnessedEntity => pb::EdgeEndpointRole::WitnessedEntity,
+        domain::EndpointRole::EngagingBehavior => pb::EdgeEndpointRole::EngagingBehavior,
+        domain::EndpointRole::EngagedEntity => pb::EdgeEndpointRole::EngagedEntity,
+        domain::EndpointRole::AffirmingEvidence => pb::EdgeEndpointRole::AffirmingEvidence,
+        domain::EndpointRole::AffirmedSpecification => pb::EdgeEndpointRole::AffirmedSpecification,
+        domain::EndpointRole::AffirmedEvidence => pb::EdgeEndpointRole::AffirmedEvidence,
+        domain::EndpointRole::DenyingEvidence => pb::EdgeEndpointRole::DenyingEvidence,
+        domain::EndpointRole::DeniedSpecification => pb::EdgeEndpointRole::DeniedSpecification,
+        domain::EndpointRole::DeniedEvidence => pb::EdgeEndpointRole::DeniedEvidence,
     }
 }
 
@@ -183,6 +203,8 @@ fn vertex_kind_to_pb(kind: domain::VertexKind) -> pb::VertexKind {
         domain::VertexKind::Assumption => pb::VertexKind::Assumption,
         domain::VertexKind::Guarantee => pb::VertexKind::Guarantee,
         domain::VertexKind::Contract => pb::VertexKind::Contract,
+        domain::VertexKind::Entity => pb::VertexKind::Entity,
+        domain::VertexKind::Behavior => pb::VertexKind::Behavior,
     }
 }
 
@@ -285,6 +307,33 @@ pub fn derived_node_to_pb(node: &domain::DerivedNode) -> pb::DerivedNode {
                 guarantee_json: guarantee_json.clone(),
                 interface_json: interface_json.clone(),
                 operation: operation.clone(),
+                derivation_version: derivation_version.clone(),
+            }),
+        ),
+        domain::DerivedNode::Entity {
+            id,
+            full,
+            head,
+            display,
+            derivation_version,
+        } => (
+            id.clone(),
+            pb::derived_node::Value::Entity(pb::EntityNode {
+                full: full.clone(),
+                head: head.clone(),
+                display: display.clone(),
+                derivation_version: derivation_version.clone(),
+            }),
+        ),
+        domain::DerivedNode::Behavior {
+            id,
+            profile_json,
+            derivation_version,
+            ..
+        } => (
+            id.clone(),
+            pb::derived_node::Value::Behavior(pb::BehaviorNode {
+                profile_json: profile_json.clone(),
                 derivation_version: derivation_version.clone(),
             }),
         ),
@@ -579,6 +628,9 @@ pub fn node_to_pb_with_selection(n: &domain::Node, selection: &domain::Selection
         support_score: selection.support_score,
         evidence_score: selection.evidence_score,
         relation_score: selection.relation_score,
+        evaluation_state: selection.evaluation_state.as_str().into(),
+        structural_score: selection.structural_score,
+        conflict_pressure: selection.conflict_pressure,
         contributions: selection
             .contributions
             .iter()
@@ -589,6 +641,7 @@ pub fn node_to_pb_with_selection(n: &domain::Node, selection: &domain::Selection
                 source_node_id: contribution.source_node_id.clone(),
                 evidence_node_id: contribution.evidence_node_id.clone(),
                 detail: contribution.detail.clone(),
+                path_edge_ids: contribution.path_edge_ids.clone(),
             })
             .collect(),
         exclusions: selection
@@ -912,5 +965,29 @@ mod tests {
             assert_ne!(wire.target_role, pb::EdgeEndpointRole::Unspecified as i32);
             assert_eq!(wire.relied_spec_id.is_some(), kind.is_pairing());
         }
+    }
+
+    #[test]
+    fn evidence_judgment_maps_its_epistemic_family_and_target_role() {
+        let edge = crate::domain::Edge::evidence_relation(
+            crate::domain::EdgeKind::EvidenceDenies,
+            "evidence-new",
+            "spec-old",
+            crate::domain::VertexKind::Specification,
+            crate::evidence_graph::derivation(),
+            "t",
+        )
+        .unwrap();
+        let wire = edge_to_pb(&edge);
+        assert_eq!(wire.kind, pb::EdgeKind::EvidenceDenies as i32);
+        assert_eq!(wire.family, pb::EdgeFamily::Epistemic as i32);
+        assert_eq!(
+            wire.source_role,
+            pb::EdgeEndpointRole::DenyingEvidence as i32
+        );
+        assert_eq!(
+            wire.target_role,
+            pb::EdgeEndpointRole::DeniedSpecification as i32
+        );
     }
 }

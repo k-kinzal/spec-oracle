@@ -10,6 +10,7 @@ import type {
   EndpointRole,
   GraphEdge,
   GraphNode,
+  TextAnchor,
 } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -34,6 +35,11 @@ const EDGE_KINDS: Record<string, EdgeKind> = {
   EDGE_KIND_GROUNDED_BY: "grounded_by",
   EDGE_KIND_HAS_ASSUMPTION: "has_assumption",
   EDGE_KIND_HAS_GUARANTEE: "has_guarantee",
+  EDGE_KIND_HAS_BEHAVIOR: "has_behavior",
+  EDGE_KIND_WITNESSES_ENTITY: "witnesses_entity",
+  EDGE_KIND_ENGAGES_ENTITY: "engages_entity",
+  EDGE_KIND_EVIDENCE_AFFIRMS: "evidence_affirms",
+  EDGE_KIND_EVIDENCE_DENIES: "evidence_denies",
 };
 
 const EDGE_FAMILIES: Record<string, EdgeFamily> = {
@@ -41,6 +47,7 @@ const EDGE_FAMILIES: Record<string, EdgeFamily> = {
   EDGE_FAMILY_SEMANTIC: "semantic",
   EDGE_FAMILY_SELECTION: "selection",
   EDGE_FAMILY_PROJECTION: "projection",
+  EDGE_FAMILY_EPISTEMIC: "epistemic",
 };
 
 const ENDPOINT_ROLES: Record<string, EndpointRole> = {
@@ -67,6 +74,18 @@ const ENDPOINT_ROLES: Record<string, EndpointRole> = {
   EDGE_ENDPOINT_ROLE_DISCHARGED_CONTRACT: "discharged_contract",
   EDGE_ENDPOINT_ROLE_ADMISSIBLE_ENVIRONMENT: "admissible_environment",
   EDGE_ENDPOINT_ROLE_BOUNDED_CONTRACT: "bounded_contract",
+  EDGE_ENDPOINT_ROLE_OPERATIONAL_SPECIFICATION: "operational_specification",
+  EDGE_ENDPOINT_ROLE_OPERATIONAL_BEHAVIOR: "operational_behavior",
+  EDGE_ENDPOINT_ROLE_WITNESSING_BEHAVIOR: "witnessing_behavior",
+  EDGE_ENDPOINT_ROLE_WITNESSED_ENTITY: "witnessed_entity",
+  EDGE_ENDPOINT_ROLE_ENGAGING_BEHAVIOR: "engaging_behavior",
+  EDGE_ENDPOINT_ROLE_ENGAGED_ENTITY: "engaged_entity",
+  EDGE_ENDPOINT_ROLE_AFFIRMING_EVIDENCE: "affirming_evidence",
+  EDGE_ENDPOINT_ROLE_AFFIRMED_SPECIFICATION: "affirmed_specification",
+  EDGE_ENDPOINT_ROLE_AFFIRMED_EVIDENCE: "affirmed_evidence",
+  EDGE_ENDPOINT_ROLE_DENYING_EVIDENCE: "denying_evidence",
+  EDGE_ENDPOINT_ROLE_DENIED_SPECIFICATION: "denied_specification",
+  EDGE_ENDPOINT_ROLE_DENIED_EVIDENCE: "denied_evidence",
 };
 
 export async function GET(req: NextRequest) {
@@ -119,10 +138,12 @@ function toTermNode(raw: unknown): GraphNode {
 function toDerivedNode(raw: unknown): GraphNode {
   const node = raw as {
     id?: string;
-    value?: "evidence" | "assumption" | "guarantee";
+    value?: "evidence" | "assumption" | "guarantee" | "contract" | "entity" | "behavior";
     evidence?: { evidence?: { snapshot?: { content_hash?: string } | null } | null };
     assumption?: { expression?: string };
     guarantee?: { expression?: string };
+    contract?: { operation?: string };
+    entity?: { display?: string; full?: string };
   };
   const kind = node.value ?? "evidence";
   const statement =
@@ -130,7 +151,13 @@ function toDerivedNode(raw: unknown): GraphNode {
       ? node.assumption?.expression ?? ""
       : kind === "guarantee"
         ? node.guarantee?.expression ?? ""
-        : `Evidence ${node.evidence?.evidence?.snapshot?.content_hash ?? ""}`.trim();
+        : kind === "contract"
+          ? `${node.contract?.operation ?? "formed"} A/G contract`
+          : kind === "entity"
+            ? node.entity?.display ?? node.entity?.full ?? ""
+            : kind === "behavior"
+              ? "Operational behavior"
+              : `Evidence ${node.evidence?.evidence?.snapshot?.content_hash ?? ""}`.trim();
   return baseNode(node.id ?? "", kind, statement);
 }
 
@@ -143,6 +170,16 @@ function toEdge(raw: unknown): GraphEdge {
     family?: string;
     source_role?: string;
     target_role?: string;
+    source_anchor?: {
+      selector?: string;
+      text?: string;
+      role?: string;
+    } | null;
+    target_anchor?: {
+      selector?: string;
+      text?: string;
+      role?: string;
+    } | null;
     relied_spec_id?: string | null;
     current?: boolean;
     derivation?: { method?: string; version?: string } | null;
@@ -155,9 +192,25 @@ function toEdge(raw: unknown): GraphEdge {
     family: EDGE_FAMILIES[edge.family ?? ""] ?? "unspecified",
     sourceRole: ENDPOINT_ROLES[edge.source_role ?? ""] ?? "unspecified",
     targetRole: ENDPOINT_ROLES[edge.target_role ?? ""] ?? "unspecified",
+    sourceAnchor: toTextAnchor(edge.source_anchor),
+    targetAnchor: toTextAnchor(edge.target_anchor),
     reliedSpecId: edge.relied_spec_id ?? null,
     current: edge.current ?? false,
     derivationMethod: edge.derivation?.method ?? "",
     derivationVersion: edge.derivation?.version ?? "",
+  };
+}
+
+function toTextAnchor(
+  anchor:
+    | { selector?: string; text?: string; role?: string }
+    | null
+    | undefined,
+): TextAnchor | null {
+  if (!anchor) return null;
+  return {
+    selector: anchor.selector ?? "",
+    text: anchor.text ?? "",
+    role: anchor.role ?? "",
   };
 }

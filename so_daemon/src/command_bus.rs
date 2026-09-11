@@ -26,6 +26,7 @@ const COMMAND_MAILBOX_CAPACITY: usize = 256;
 #[serde(rename_all = "PascalCase")]
 pub enum CommandKind {
     AddNode,
+    AddEvidenceRelation,
     ReplaceEvidenceRequests,
     StartGraphRebuild,
     BeginNodeGraphRebuild,
@@ -52,6 +53,7 @@ impl CommandKind {
     pub const fn event_kind(self) -> EventKind {
         match self {
             CommandKind::AddNode => EventKind::NodeAdded,
+            CommandKind::AddEvidenceRelation => EventKind::EvidenceRelationAdded,
             CommandKind::ReplaceEvidenceRequests => EventKind::EvidenceRequestsReplaced,
             CommandKind::StartGraphRebuild => EventKind::GraphRebuildStarted,
             CommandKind::BeginNodeGraphRebuild => EventKind::NodeGraphRebuildStarted,
@@ -162,6 +164,15 @@ pub struct ReplaceEvidenceRequestsInput {
     pub now: String,
 }
 
+pub struct AddEvidenceRelationInput {
+    pub evidence: String,
+    pub target: String,
+    pub relation: crate::evidence_graph::Relation,
+    pub now: String,
+    pub client: String,
+    pub client_version: String,
+}
+
 pub struct StartGraphRebuildInput {
     pub client: String,
     pub client_version: String,
@@ -238,6 +249,8 @@ pub enum GraphCommandError {
     #[error(transparent)]
     Algebra(#[from] crate::contract_algebra::AlgebraError),
     #[error(transparent)]
+    Evidence(#[from] crate::evidence_graph::EvidenceRelationError),
+    #[error(transparent)]
     Store(#[from] StoreError),
     #[error(transparent)]
     Event(#[from] crate::event_bus::EventBusError),
@@ -253,6 +266,17 @@ enum Message {
         input: AddNodeInput,
         parent_span: tracing::Span,
         reply: oneshot::Sender<Result<(CommandAck, Node), AddError>>,
+    },
+    AddEvidenceRelation {
+        command: CommandEnvelope,
+        input: AddEvidenceRelationInput,
+        parent_span: tracing::Span,
+        reply: oneshot::Sender<
+            Result<
+                (CommandAck, crate::evidence_graph::AddEvidenceRelationResult),
+                GraphCommandError,
+            >,
+        >,
     },
     ReplaceEvidenceRequests {
         command: CommandEnvelope,
@@ -292,6 +316,10 @@ enum Message {
         parent_span: tracing::Span,
         reply: oneshot::Sender<Result<CommandAck, ExecuteCommandError>>,
     },
+    ProcessCompleted {
+        command_id: String,
+        result: Result<CommandAck, ExecuteCommandError>,
+    },
     Shutdown {
         reply: oneshot::Sender<()>,
     },
@@ -300,6 +328,7 @@ enum Message {
 #[derive(Clone)]
 enum CompletedCommand {
     AddNode(CommandAck, Node),
+    AddEvidenceRelation(CommandAck, crate::evidence_graph::AddEvidenceRelationResult),
     ReplaceEvidenceRequests(CommandAck, Node),
     StartGraphRebuild(CommandAck, u64),
     EstablishContractRelation(CommandAck, crate::domain::Edge),
@@ -315,8 +344,10 @@ impl CommandBus {
         events: EventBus,
     ) -> (CommandBus, tokio::task::JoinHandle<()>) {
         let (sender, receiver) = mpsc::channel(COMMAND_MAILBOX_CAPACITY);
-        let bus = CommandBus { sender };
-        let task = tokio::spawn(run(receiver, graph, blobs, events));
+        let bus = CommandBus {
+            sender: sender.clone(),
+        };
+        let task = tokio::spawn(run(receiver, sender, graph, blobs, events));
         (bus, task)
     }
 
@@ -333,6 +364,40 @@ impl CommandBus {
         )
         .await
         .map(|(_, node)| node)
+    }
+
+    pub async fn add_evidence_relation(
+        &self,
+        input: AddEvidenceRelationInput,
+    ) -> Result<(CommandAck, crate::evidence_graph::AddEvidenceRelationResult), GraphCommandError>
+    {
+        let relation = match input.relation {
+            crate::evidence_graph::Relation::Affirms => "affirms",
+            crate::evidence_graph::Relation::Denies => "denies",
+        };
+        let command = CommandEnvelope::new(
+            CommandKind::AddEvidenceRelation,
+            json!({
+                "evidence": input.evidence,
+                "target": input.target,
+                "relation": relation,
+                "client": input.client,
+                "client_version": input.client_version,
+            }),
+        );
+        let (reply, received) = oneshot::channel();
+        self.sender
+            .send(Message::AddEvidenceRelation {
+                command,
+                input,
+                parent_span: tracing::Span::current(),
+                reply,
+            })
+            .await
+            .map_err(|_| GraphCommandError::Closed)?;
+        received
+            .await
+            .map_err(|_| GraphCommandError::ReplyDropped)?
     }
 
     pub async fn add_command(
@@ -562,11 +627,17 @@ impl CommandBus {
 
 async fn run(
     mut receiver: mpsc::Receiver<Message>,
+    sender: mpsc::Sender<Message>,
     graph: Arc<dyn GraphStore + Send + Sync>,
     blobs: Arc<dyn BlobStore + Send + Sync>,
     events: EventBus,
 ) {
     let mut completed: HashMap<String, CompletedCommand> = HashMap::new();
+    let mut processing: HashMap<
+        String,
+        Vec<oneshot::Sender<Result<CommandAck, ExecuteCommandError>>>,
+    > = HashMap::new();
+    let mut shutdown_replies: Vec<oneshot::Sender<()>> = Vec::new();
     while let Some(message) = receiver.recv().await {
         match message {
             Message::AddNode {
@@ -640,6 +711,79 @@ async fn run(
                             "AddNode Command worker failed"
                         );
                         drop(reply);
+                    }
+                }
+            }
+            Message::AddEvidenceRelation {
+                command,
+                input,
+                parent_span,
+                reply,
+            } => {
+                if let Some(CompletedCommand::AddEvidenceRelation(ack, result)) =
+                    completed.get(&command.id)
+                {
+                    let _ = reply.send(Ok((ack.clone(), result.clone())));
+                    continue;
+                }
+                let graph = graph.clone();
+                let blobs = blobs.clone();
+                let worker_parent = parent_span.clone();
+                let written = tokio::task::spawn_blocking(move || {
+                    let _entered = tracing::info_span!(
+                        parent: &worker_parent,
+                        "spec.command.add_evidence_relation",
+                    )
+                    .entered();
+                    crate::evidence_graph::add_relation(
+                        &*graph,
+                        &*blobs,
+                        &input.evidence,
+                        &input.target,
+                        input.relation,
+                        &input.now,
+                    )
+                })
+                .await;
+                match written {
+                    Ok(Ok(result)) => {
+                        let ack = command_ack(&command);
+                        let request = command_event_request(
+                            &command,
+                            command.kind.event_kind(),
+                            vec![
+                                result.evidence_node.id().to_string(),
+                                result.edge.target.clone(),
+                                result.edge.id.clone(),
+                            ],
+                            json!({
+                                "evidence_node_id": result.evidence_node.id(),
+                                "edge_id": result.edge.id,
+                                "kind": result.edge.kind.as_str(),
+                            }),
+                            parent_span,
+                        );
+                        match events.publish(request).await {
+                            Ok(_) => {
+                                completed.insert(
+                                    command.id,
+                                    CompletedCommand::AddEvidenceRelation(
+                                        ack.clone(),
+                                        result.clone(),
+                                    ),
+                                );
+                                let _ = reply.send(Ok((ack, result)));
+                            }
+                            Err(error) => {
+                                let _ = reply.send(Err(GraphCommandError::Event(error)));
+                            }
+                        }
+                    }
+                    Ok(Err(error)) => {
+                        let _ = reply.send(Err(GraphCommandError::Evidence(error)));
+                    }
+                    Err(error) => {
+                        let _ = reply.send(Err(GraphCommandError::Worker(error.to_string())));
                     }
                 }
             }
@@ -999,25 +1143,59 @@ async fn run(
                     let _ = reply.send(Ok(ack.clone()));
                     continue;
                 }
-                let result = process_consumer_command(
-                    &command,
-                    graph.clone(),
-                    blobs.clone(),
-                    &events,
-                    parent_span,
-                )
-                .await;
-                if let Ok(ack) = &result {
-                    completed.insert(
-                        command.id.clone(),
-                        CompletedCommand::Processing(ack.clone()),
-                    );
+                if let Some(replies) = processing.get_mut(&command.id) {
+                    replies.push(reply);
+                    continue;
                 }
-                let _ = reply.send(result);
+                let command_id = command.id.clone();
+                processing.insert(command_id.clone(), vec![reply]);
+                let completion_sender = sender.clone();
+                let graph = graph.clone();
+                let blobs = blobs.clone();
+                let events = events.clone();
+                tokio::spawn(async move {
+                    let result =
+                        process_consumer_command(&command, graph, blobs, &events, parent_span)
+                            .await;
+                    let _ = completion_sender
+                        .send(Message::ProcessCompleted { command_id, result })
+                        .await;
+                });
+            }
+            Message::ProcessCompleted { command_id, result } => {
+                let replies = processing.remove(&command_id).unwrap_or_default();
+                match result {
+                    Ok(ack) => {
+                        completed.insert(command_id, CompletedCommand::Processing(ack.clone()));
+                        for reply in replies {
+                            let _ = reply.send(Ok(ack.clone()));
+                        }
+                    }
+                    Err(error) => {
+                        let error_text = error.to_string();
+                        let mut replies = replies.into_iter();
+                        if let Some(reply) = replies.next() {
+                            let _ = reply.send(Err(error));
+                        }
+                        for reply in replies {
+                            let _ = reply
+                                .send(Err(ExecuteCommandError::Processing(error_text.clone())));
+                        }
+                    }
+                }
+                if processing.is_empty() && !shutdown_replies.is_empty() {
+                    for reply in shutdown_replies.drain(..) {
+                        let _ = reply.send(());
+                    }
+                    break;
+                }
             }
             Message::Shutdown { reply } => {
-                let _ = reply.send(());
-                break;
+                if processing.is_empty() {
+                    let _ = reply.send(());
+                    break;
+                }
+                shutdown_replies.push(reply);
             }
         }
     }
@@ -1161,6 +1339,10 @@ async fn handle_project_node_terms(
                     "terms_seen": report.terms_seen,
                     "terms_inserted": report.terms_inserted,
                     "mention_edges_inserted": report.mention_edges_inserted,
+                    "operational_method": crate::graph_generation::OPERATIONAL_PROJECTION_METHOD,
+                    "operational_version": crate::graph_generation::operational_projection_derivation().version,
+                    "operational_nodes_inserted": report.operational_nodes_inserted,
+                    "operational_edges_inserted": report.operational_edges_inserted,
                 }),
             },
             None,
@@ -1179,10 +1361,14 @@ async fn handle_project_node_terms(
             command.kind.event_kind(),
             vec![node_id],
             json!({
+                "rebuild_id": command.payload.get("rebuild_id"),
                 "version": crate::graph_generation::GENERATION_VERSION,
                 "terms_seen": report.terms_seen,
                 "terms_inserted": report.terms_inserted,
                 "mention_edges_inserted": report.mention_edges_inserted,
+                "operational_version": crate::graph_generation::operational_projection_derivation().version,
+                "operational_nodes_inserted": report.operational_nodes_inserted,
+                "operational_edges_inserted": report.operational_edges_inserted,
             }),
             parent_span,
         )
@@ -1242,6 +1428,7 @@ async fn handle_project_node_contract(
             command.kind.event_kind(),
             vec![node_id],
             json!({
+                "rebuild_id": command.payload.get("rebuild_id"),
                 "contract_id": contract_id,
                 "version": crate::graph_generation::CONTRACT_PROJECTION_VERSION,
                 "contract_nodes_inserted": report.contract_nodes_inserted,
@@ -1262,13 +1449,29 @@ async fn handle_semantic_relations(
 ) -> Result<CommandAck, ExecuteCommandError> {
     let node_id = processing_node_id(command)?;
     let command_id = command.id.clone();
+    let rebuilding = command
+        .payload
+        .get("rebuild_id")
+        .and_then(Value::as_str)
+        .is_some();
     let written = tokio::task::spawn_blocking(move || {
         let Some(node) = graph.get_node(&node_id)? else {
             return Ok(None);
         };
         let recorded_at = now();
-        let report =
-            crate::graph_generation::persist_semantic_relations_only(&node, &*graph, &recorded_at)?;
+        let report = if rebuilding {
+            crate::graph_generation::rebuild_semantic_relations_only(
+                &node,
+                &*graph,
+                &recorded_at,
+            )?
+        } else {
+            crate::graph_generation::persist_semantic_relations_only(
+                &node,
+                &*graph,
+                &recorded_at,
+            )?
+        };
         graph.apply_command_update(
             &node.id,
             &command_id,
@@ -1278,6 +1481,8 @@ async fn handle_semantic_relations(
                 value: json!({
                     "candidate_method": crate::graph_generation::CANDIDATE_METHOD,
                     "candidate_version": crate::graph_generation::CANDIDATE_VERSION,
+                    "lexical_edge_method": crate::graph_generation::LEXICAL_AFFINITY_METHOD,
+                    "lexical_edge_version": crate::graph_generation::lexical_affinity_derivation().version,
                     "assessment_method": crate::graph_generation::SEMANTIC_DERIVATION_METHOD,
                     "assessment_version": crate::graph_generation::SEMANTIC_DERIVATION_VERSION,
                     "edge_method": crate::graph_generation::SEMANTIC_EDGE_METHOD,
@@ -1286,6 +1491,7 @@ async fn handle_semantic_relations(
                     "candidates_examined": report.candidates_examined,
                     "candidates_unassessable": report.candidates_unassessable,
                     "assessments_inserted": report.assessments_inserted,
+                    "lexical_edges_inserted": report.lexical_edges_inserted,
                     "edges_inserted": report.semantic_edges_inserted,
                     "verdicts": report.verdicts,
                 }),
@@ -1306,10 +1512,12 @@ async fn handle_semantic_relations(
             command.kind.event_kind(),
             vec![node_id],
             json!({
+                "rebuild_id": command.payload.get("rebuild_id"),
                 "candidates_discovered": report.candidates_discovered,
                 "candidates_examined": report.candidates_examined,
                 "candidates_unassessable": report.candidates_unassessable,
                 "assessments_inserted": report.assessments_inserted,
+                "lexical_edges_inserted": report.lexical_edges_inserted,
                 "semantic_edges_inserted": report.semantic_edges_inserted,
             }),
             parent_span,
@@ -1327,16 +1535,25 @@ async fn handle_contract_relations(
 ) -> Result<CommandAck, ExecuteCommandError> {
     let node_id = processing_node_id(command)?;
     let command_id = command.id.clone();
+    let rebuilding = command
+        .payload
+        .get("rebuild_id")
+        .and_then(Value::as_str)
+        .is_some();
     let written = tokio::task::spawn_blocking(move || {
         let Some(node) = graph.get_node(&node_id)? else {
             return Ok(None);
         };
         let recorded_at = now();
-        let report = crate::graph_generation::reconcile_contract_relations_only(
-            &node,
-            &*graph,
-            &recorded_at,
-        )?;
+        let report = if rebuilding {
+            crate::graph_generation::rebuild_contract_relations_only(&node, &*graph, &recorded_at)?
+        } else {
+            crate::graph_generation::reconcile_contract_relations_only(
+                &node,
+                &*graph,
+                &recorded_at,
+            )?
+        };
         graph.apply_command_update(
             &node.id,
             &command_id,
@@ -1351,6 +1568,10 @@ async fn handle_contract_relations(
                     "candidates_unassessable": report.candidates_unassessable,
                     "assessments_inserted": report.assessments_inserted,
                     "edges_inserted": report.semantic_edges_inserted,
+                    "composition_method": crate::graph_generation::COMPOSED_SUPPORT_METHOD,
+                    "composition_version": crate::graph_generation::composed_support_derivation().version,
+                    "compositions_examined": report.compositions_examined,
+                    "composition_proofs_inserted": report.composition_proofs_inserted,
                 }),
             },
             None,
@@ -1369,11 +1590,14 @@ async fn handle_contract_relations(
             command.kind.event_kind(),
             vec![node_id],
             json!({
+                "rebuild_id": command.payload.get("rebuild_id"),
                 "subject_has_contract": report.subject_has_contract,
                 "subject_unassessable": report.subject_unassessable,
                 "candidates_unassessable": report.candidates_unassessable,
                 "assessments_inserted": report.assessments_inserted,
                 "semantic_edges_inserted": report.semantic_edges_inserted,
+                "compositions_examined": report.compositions_examined,
+                "composition_proofs_inserted": report.composition_proofs_inserted,
             }),
             parent_span,
         )
@@ -1390,16 +1614,29 @@ async fn handle_discharge_candidates(
 ) -> Result<CommandAck, ExecuteCommandError> {
     let node_id = processing_node_id(command)?;
     let command_id = command.id.clone();
+    let rebuilding = command
+        .payload
+        .get("rebuild_id")
+        .and_then(Value::as_str)
+        .is_some();
     let written = tokio::task::spawn_blocking(move || {
         let Some(node) = graph.get_node(&node_id)? else {
             return Ok(None);
         };
         let recorded_at = now();
-        let report = crate::graph_generation::reconcile_discharge_candidates_only(
-            &node,
-            &*graph,
-            &recorded_at,
-        )?;
+        let report = if rebuilding {
+            crate::graph_generation::rebuild_discharge_candidates_only(
+                &node,
+                &*graph,
+                &recorded_at,
+            )?
+        } else {
+            crate::graph_generation::reconcile_discharge_candidates_only(
+                &node,
+                &*graph,
+                &recorded_at,
+            )?
+        };
         graph.apply_command_update(
             &node.id,
             &command_id,
@@ -1470,7 +1707,11 @@ async fn handle_capture_evidence(
                 applied_at: recorded_at,
                 value: capture.metadata.clone(),
             },
-            capture.captured.then_some(capture.evidence.as_slice()),
+            // Every durable capture result owns the complete current Evidence
+            // view. Rejected or unavailable requests therefore clear stale
+            // current Evidence while immutable historical GroundedBy Edges
+            // remain in the Ledger.
+            Some(capture.evidence.as_slice()),
         )?;
         Ok::<_, StoreError>(Some((node.id, capture.captured)))
     })
@@ -1751,6 +1992,135 @@ mod tests {
         let delivery = events.receive("recorder").await.unwrap();
         assert_eq!(delivery.event.command_id, first.command_id);
         events.ack(&delivery).await.unwrap();
+        events.shutdown().await.unwrap();
+        events_task.await.unwrap();
+        commands.shutdown().await.unwrap();
+        commands_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn unavailable_evidence_is_durable_and_clears_the_current_capture() {
+        let temp = tempfile::tempdir().unwrap();
+        let missing = temp.path().join("removed.md");
+        let request = json!({
+            "kind": "constitutive",
+            "locator": missing.to_string_lossy(),
+        })
+        .to_string();
+        let store = Arc::new(InMemoryNodeStore::new());
+        let stale = crate::domain::Evidence {
+            kind: crate::domain::Kind::Demonstrative,
+            locator: crate::domain::Locator::parse("old-proof.txt"),
+            snapshot: crate::domain::Snapshot {
+                content: String::new(),
+                content_hash: "old-hash".into(),
+                bytes: 1,
+                captured_at: "before".into(),
+                anchor: crate::domain::Anchor::Worktree,
+            },
+            origin: crate::domain::Origin::default(),
+        };
+        store
+            .add_node(&Node {
+                id: "n1".to_string(),
+                statement: "The pump shall stop.".to_string(),
+                lang_version: so_lang::LANG_VERSION.to_string(),
+                meta: crate::domain::Meta {
+                    evidence_requests: vec![request.clone()],
+                    evidence_request_generation: String::new(),
+                    evidence: vec![stale.clone()],
+                    created_at: "t".to_string(),
+                    cli: "test".to_string(),
+                    cli_version: "test".to_string(),
+                    updates: Default::default(),
+                },
+            })
+            .unwrap();
+        for (id, source, value) in [
+            (
+                "test-term",
+                "term-projection",
+                json!({
+                    "method": crate::graph_generation::TERM_DERIVATION_METHOD,
+                    "version": crate::graph_generation::GENERATION_VERSION,
+                    "operational_method": crate::graph_generation::OPERATIONAL_PROJECTION_METHOD,
+                    "operational_version": crate::graph_generation::operational_projection_derivation().version,
+                }),
+            ),
+            (
+                "test-contract",
+                "contract-projection",
+                json!({
+                    "method": crate::graph_generation::CONTRACT_PROJECTION_METHOD,
+                    "version": crate::graph_generation::CONTRACT_PROJECTION_VERSION,
+                }),
+            ),
+            (
+                "test-semantic",
+                "semantic-relation",
+                json!({
+                    "candidate_method": crate::graph_generation::CANDIDATE_METHOD,
+                    "candidate_version": crate::graph_generation::CANDIDATE_VERSION,
+                    "lexical_edge_method": crate::graph_generation::LEXICAL_AFFINITY_METHOD,
+                    "lexical_edge_version": crate::graph_generation::lexical_affinity_derivation().version,
+                    "edge_method": crate::graph_generation::SEMANTIC_EDGE_METHOD,
+                    "edge_version": crate::graph_generation::semantic_edge_derivation().version,
+                }),
+            ),
+        ] {
+            store
+                .apply_command_update(
+                    "n1",
+                    id,
+                    &crate::domain::MetaUpdate {
+                        source: source.into(),
+                        applied_at: "2026-01-01T00:00:00Z".into(),
+                        value,
+                    },
+                    None,
+                )
+                .unwrap();
+        }
+        let stale_node = crate::domain::DerivedNode::evidence(stale);
+        let stale_edge = crate::domain::Edge::projection(
+            crate::domain::EdgeKind::GroundedBy,
+            "n1",
+            stale_node.id(),
+            crate::evidence_capture::evidence_derivation(),
+            "before",
+        )
+        .unwrap();
+        store.put_derived_node(&stale_node, &stale_edge).unwrap();
+        let (events, events_task) = EventBus::start(EventTap::default());
+        let (commands, commands_task) =
+            CommandBus::start(store.clone(), Arc::new(NoBlobs), events.clone());
+        let command = CommandEnvelope::new(CommandKind::CaptureEvidence, json!({"node_id": "n1"}));
+
+        commands.process(command.clone()).await.unwrap();
+
+        let node = store.get_node("n1").unwrap().unwrap();
+        assert_eq!(node.meta.evidence_requests, [request]);
+        assert!(node.meta.evidence.is_empty());
+        let update = &node.meta.updates[&command.id];
+        assert_eq!(update.source, crate::evidence_capture::PLUGIN_NAME);
+        assert_eq!(update.value["status"], "unavailable");
+        assert_eq!(update.value["unavailable"][0]["reason"], "file_not_found");
+        assert!(!crate::evidence_capture::needs_capture(&node));
+        let population = store
+            .selection_population(
+                &["n1".into()],
+                &crate::graph_generation::current_derivations(),
+            )
+            .unwrap();
+        assert!(population.evidence_edges.is_empty());
+        let views = crate::selection::derive_views(&["n1".into()], &population);
+        assert_eq!(views["n1"].support_score, 0);
+        assert!(!views["n1"].current);
+        assert_eq!(
+            views["n1"].exclusions[0].kind,
+            crate::domain::ExclusionKind::EvidenceUnavailable
+        );
+
         events.shutdown().await.unwrap();
         events_task.await.unwrap();
         commands.shutdown().await.unwrap();

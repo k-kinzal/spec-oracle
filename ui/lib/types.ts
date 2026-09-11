@@ -28,6 +28,11 @@ export type EdgeKind =
   | "grounded_by"
   | "has_assumption"
   | "has_guarantee"
+  | "has_behavior"
+  | "witnesses_entity"
+  | "engages_entity"
+  | "evidence_affirms"
+  | "evidence_denies"
   | "unspecified";
 
 export type EdgeFamily =
@@ -35,6 +40,7 @@ export type EdgeFamily =
   | "semantic"
   | "selection"
   | "projection"
+  | "epistemic"
   | "unspecified";
 
 export type EndpointRole =
@@ -61,6 +67,18 @@ export type EndpointRole =
   | "discharged_contract"
   | "admissible_environment"
   | "bounded_contract"
+  | "operational_specification"
+  | "operational_behavior"
+  | "witnessing_behavior"
+  | "witnessed_entity"
+  | "engaging_behavior"
+  | "engaged_entity"
+  | "affirming_evidence"
+  | "affirmed_specification"
+  | "affirmed_evidence"
+  | "denying_evidence"
+  | "denied_specification"
+  | "denied_evidence"
   | "unspecified";
 
 export type GraphViewMode =
@@ -82,6 +100,7 @@ export type ScoreContribution = {
   edgeId: string;
   sourceNodeId: string | null;
   evidenceNodeId: string | null;
+  pathEdgeIds: string[];
   detail: string;
 };
 
@@ -90,6 +109,12 @@ export type SelectionExclusion = {
   edgeId: string | null;
   competingNodeId: string | null;
   detail: string;
+};
+
+export type TextAnchor = {
+  selector: string;
+  text: string;
+  role: string;
 };
 
 /** A node as the UI consumes it — the wire Node projected to what a graph view
@@ -102,16 +127,22 @@ export type GraphNode = {
     | "term"
     | "evidence"
     | "assumption"
-    | "guarantee";
+    | "guarantee"
+    | "contract"
+    | "entity"
+    | "behavior";
   statement: string;
   speechAct: SpeechAct;
   evidenceCount: number;
   evidenceRequestCount: number;
   current: boolean;
+  evaluationState?: "current" | "receded" | "unknown";
   policyVersion: string;
   supportScore: number;
+  structuralScore?: number;
   evidenceScore: number;
   relationScore: number;
+  conflictPressure?: number;
   contributions: ScoreContribution[];
   exclusions: SelectionExclusion[];
 };
@@ -124,6 +155,8 @@ export type GraphEdge = {
   family: EdgeFamily;
   sourceRole: EndpointRole;
   targetRole: EndpointRole;
+  sourceAnchor: TextAnchor | null;
+  targetAnchor: TextAnchor | null;
   reliedSpecId: string | null;
   current: boolean;
   derivationMethod: string;
@@ -135,6 +168,9 @@ export const DERIVED_NODE_COLORS = {
   evidence: "#f0a35e",
   assumption: "#58c4dd",
   guarantee: "#d783e8",
+  contract: "#9b8bea",
+  entity: "#56b8a8",
+  behavior: "#6f9fdf",
 } as const;
 
 export const EDGE_KIND_COLORS: Record<EdgeKind, string> = {
@@ -154,6 +190,11 @@ export const EDGE_KIND_COLORS: Record<EdgeKind, string> = {
   grounded_by: "rgba(240, 163, 94, 0.78)",
   has_assumption: "rgba(88, 196, 221, 0.78)",
   has_guarantee: "rgba(215, 131, 232, 0.78)",
+  has_behavior: "rgba(111, 159, 223, 0.78)",
+  witnesses_entity: "rgba(86, 184, 168, 0.88)",
+  engages_entity: "rgba(92, 137, 203, 0.82)",
+  evidence_affirms: "rgba(126, 217, 87, 0.9)",
+  evidence_denies: "rgba(239, 76, 64, 0.92)",
   unspecified: "rgba(120, 120, 125, 0.3)",
 };
 
@@ -174,6 +215,11 @@ export const EDGE_KIND_LABELS: Record<EdgeKind, string> = {
   grounded_by: "Grounded by",
   has_assumption: "Has assumption",
   has_guarantee: "Has guarantee",
+  has_behavior: "Has operational behavior",
+  witnesses_entity: "Witnesses entity",
+  engages_entity: "Engages entity",
+  evidence_affirms: "Evidence affirms",
+  evidence_denies: "Evidence denies",
   unspecified: "Unspecified",
 };
 
@@ -210,6 +256,16 @@ export const EDGE_KIND_DESCRIPTIONS: Record<EdgeKind, string> = {
     "The assumption vertex is the environment side of the specification's ingest contract.",
   has_guarantee:
     "The guarantee vertex is the behavior side of the specification's ingest contract.",
+  has_behavior:
+    "The behavior vertex is the deterministic operational projection of the authored specification.",
+  witnesses_entity:
+    "The affirmative binding behavior necessarily involves at least one instance of the entity kind.",
+  engages_entity:
+    "The behavior governs or reacts to the entity kind; this is structural non-vacuity, not implication.",
+  evidence_affirms:
+    "The source Evidence manually affirms the target specification or Evidence.",
+  evidence_denies:
+    "The source Evidence manually denies the target specification or Evidence, reversing its support polarity.",
   unspecified: "The relation kind is not recognized by this UI version.",
 };
 
@@ -218,6 +274,7 @@ export const EDGE_FAMILY_LABELS: Record<EdgeFamily, string> = {
   semantic: "Semantic",
   selection: "Selection",
   projection: "Projection",
+  epistemic: "Epistemic",
   unspecified: "Unspecified",
 };
 
@@ -238,6 +295,11 @@ export const EDGE_KIND_FAMILIES: Record<EdgeKind, EdgeFamily> = {
   grounded_by: "projection",
   has_assumption: "projection",
   has_guarantee: "projection",
+  has_behavior: "projection",
+  witnesses_entity: "projection",
+  engages_entity: "projection",
+  evidence_affirms: "epistemic",
+  evidence_denies: "epistemic",
   unspecified: "unspecified",
 };
 
@@ -265,6 +327,18 @@ export const ENDPOINT_ROLE_LABELS: Record<EndpointRole, string> = {
   discharged_contract: "Discharged contract",
   admissible_environment: "Admissible environment",
   bounded_contract: "Bounded contract",
+  operational_specification: "Operational specification",
+  operational_behavior: "Operational behavior",
+  witnessing_behavior: "Witnessing behavior",
+  witnessed_entity: "Witnessed entity",
+  engaging_behavior: "Engaging behavior",
+  engaged_entity: "Engaged entity",
+  affirming_evidence: "Affirming evidence",
+  affirmed_specification: "Affirmed specification",
+  affirmed_evidence: "Affirmed evidence",
+  denying_evidence: "Denying evidence",
+  denied_specification: "Denied specification",
+  denied_evidence: "Denied evidence",
   unspecified: "Unspecified role",
 };
 
@@ -284,6 +358,11 @@ export const EDGE_KIND_ORDER: EdgeKind[] = [
   "grounded_by",
   "has_assumption",
   "has_guarantee",
+  "has_behavior",
+  "witnesses_entity",
+  "engages_entity",
+  "evidence_affirms",
+  "evidence_denies",
   "mentions_term",
   "unspecified",
 ];
@@ -297,9 +376,14 @@ export const DIRECTED_EDGE_KINDS = new Set<EdgeKind>([
   "supports",
   "defeats",
   "supersedes",
+  "has_behavior",
+  "witnesses_entity",
+  "engages_entity",
   "grounded_by",
   "has_assumption",
   "has_guarantee",
+  "evidence_affirms",
+  "evidence_denies",
 ]);
 
 export const SEMANTIC_EDGE_KINDS = new Set<EdgeKind>([
@@ -348,8 +432,8 @@ export type LedgerPage = {
   totalEdges: number;
 };
 
-/** Color by speech act — the dimension that gives the graph its clustered,
- *  legible look. Chosen for contrast on the dark canvas. */
+/** Color by speech act. Position is derived independently from graph proximity,
+ *  so modality never becomes an accidental spatial boundary. */
 export const SPEECH_ACT_COLORS: Record<SpeechAct, string> = {
   obligation: "#4a90d9", // blue — the binding "shall"
   prohibition: "#e0533d", // red — the forbidding "shall not"
